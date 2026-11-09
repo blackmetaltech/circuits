@@ -48,6 +48,11 @@ export interface Source {
   accessed?: string;
   /** Which fields came from where, when not all from `doc` (e.g. "model: Diodes Inc. SPICE 1N4007.spice.txt"). */
   note?: string;
+  /**
+   * M1-D1 addition. true for textbook ideal elements, which are defined by their constitutive equation and have no datasheet:
+   * the provenance test then does not require `url`/`accessed` and the price test skips them (the Textbook bin is free).
+   */
+  definition?: boolean;
 }
 
 /** A rating variant of a part (e.g. a resistor at ¼ W vs 1 W): a different SKU with its own ratings, thermal data and price. */
