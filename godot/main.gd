@@ -64,3 +64,9 @@ func game_smoke() -> void:
 	b.act("closeTicket", []); await get_tree().process_frame
 	CbSmoke._check(b.q("ticketCard") == null, "closeTicket returns to the counter")
 	show_screen(home); await get_tree().process_frame
+
+func _start_up() -> void:   # GATE-A SPIKE: delete after Gate A (BUILD-PLAN GA-2): CB_SPIKE=scope or user://spike.cfg opens the scope spike instead of the title
+	var sc := SpikeScope.config()   # GATE-A SPIKE
+	if not OS.has_environment("CB_SMOKE") and SpikeScope.enabled(sc):   # GATE-A SPIKE
+		var sp := SpikeScope.new(); add_child(sp); sp.setup(self, sc); return   # GATE-A SPIKE
+	super._start_up()   # GATE-A SPIKE

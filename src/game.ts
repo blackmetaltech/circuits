@@ -8,6 +8,7 @@ import { PERSONAS } from './personas';
 import { t } from './i18n';
 import { REGIONS } from './regions';
 import { FAILURE_LOG_CAP, SCOPE_POINTS_CAP, UNDO_CAP, newNodeState, newTicketProgress, type Metrics, type NodeState } from './engine/state';
+import { spikeBench, spikeFrame } from './spike/frame'; // GATE-A SPIKE: delete after Gate A (BUILD-PLAN GA-2)
 import { PLACEHOLDER_TICKETS, openTicketIn, ticketDef } from './engine/tickets';
 
 export const GAME_ID = 'node-circuits';
@@ -63,6 +64,8 @@ export const GAME: GameDef<NodeState> = {
     },
   },
   queries: {
+    spikeBench: () => spikeBench(), // GATE-A SPIKE: delete after Gate A (BUILD-PLAN GA-2); spike-only, mutates module state
+    spikeFrame: (_s, k?: unknown) => spikeFrame(k), // GATE-A SPIKE: delete after Gate A (BUILD-PLAN GA-2)
     /** Campaign progress for the HUD and the chapter board; the wallet is also given formatted for the active region. */
     progress: (s) => {
       const { failureLog, ...rest } = s.progress;
