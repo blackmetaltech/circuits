@@ -1,24 +1,24 @@
 // Levels: a setup, a goal, a failure rule and a solver bot that proves the level can be passed.
+// M0 PLACEHOLDER: one level `0-0` with an empty board whose setup opens the placeholder ticket. It cannot be won (goal is always
+// false, the solver does nothing), so `checkAllLevels` reports exactly one problem for it: PLACEHOLDER_SOLVER_PROBLEM. regions.test.ts
+// asserts that exact problem rather than faking a win. M2 replaces this with one core Level per ticket (setup = open the ticket,
+// goal = bench passed, solver = the ref replay), DESIGN §8.3.
 import type { Level } from '@core/kit';
-import { RIG, type TankState } from './state';
-import { valveFor } from './sim/hydraulics';
+import { openTicketIn } from './engine/tickets';
+import type { NodeState } from './engine/state';
 import { t } from './i18n';
 
-/** Expert: fill at full flow until near the band, then set the exact valve that balances Torricelli outflow at mid-band. */
-const expert = () => (s: Readonly<TankState>) => {
-  const mid = (s.band[0] + s.band[1]) / 2;
-  const want = s.h < mid - 0.05 ? 100 : Math.round(valveFor(mid) * 1000) / 10;
-  return Math.abs(want - s.valve * 100) > 0.05 ? [{ name: 'setValve', args: [want] }] : [];
-};
+/** Ticks the placeholder allows before it is lost. */
+export const PLACEHOLDER_MAX_TICKS = 5;
+/** The one problem `checkAllLevels` must report for the placeholder level. */
+export const PLACEHOLDER_SOLVER_PROBLEM = `solver did not pass (Out of time: ${PLACEHOLDER_MAX_TICKS} ticks allowed.)`;
 
-export const LEVELS: Level<TankState>[] = [
+export const LEVELS: Level<NodeState>[] = [
   {
-    id: 'steady', title: t('level.steady.title'), concepts: ['torricelli', 'mass-balance'],
-    brief: t('level.steady.brief'),
-    setup: (s) => { s.band = [1.0, 1.2]; s.holdTicks = 10; s.valve = 0; },
-    goal: (s) => s.held >= s.holdTicks,
-    fail: (s) => (s.h >= RIG.H ? t('level.steady.overflow') : null),
-    maxTicks: 120,
-    solver: expert,
+    id: '0-0', title: t('level.0-0.title'), brief: t('level.0-0.brief'),
+    setup: (s) => { openTicketIn(s, '0-0'); },
+    goal: () => false,
+    maxTicks: PLACEHOLDER_MAX_TICKS,
+    solver: () => () => [],
   },
 ];

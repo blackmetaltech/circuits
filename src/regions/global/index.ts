@@ -1,12 +1,23 @@
 // The default region: a neutral, fictional setting, US$, international standards. Ships in v0.1.
 import { defineRegion } from '@core/regions';
-import { validateTankData, type TankRegionData } from '../data';
+import { LAWS } from '../../sim/laws';
+import { validateNodeData, type NodeRegionData } from '../data';
+import { PRICES_GLOBAL_CENTS, PRICE_SOURCE_GLOBAL } from './prices';
 
-export const GLOBAL = defineRegion<TankRegionData>({
+export const GLOBAL = defineRegion<NodeRegionData>({
   id: 'global', name: 'Global', status: 'shipping', rulesetVersion: 1,
   currency: { code: 'USD', symbol: '$', decimals: 2, position: 'prefix' },
   numbers: { grouping: 'western', decimal: '.', group: ',' },
-  standards: { fluids: 'ISO 5167' },
-  data: { g: 9.80665, supplyPricePerM3: 1.5 },
-  strings: { site: 'Riverside Test Rig', operator: 'Sam' },
-}, validateTankData);
+  standards: { mains: 'IEC 60038', eseries: 'IEC 60063', suppression: 'IEC 60384-14 X2' },
+  data: {
+    vtAt300K: LAWS.vtAt300K,
+    mains: { volts: 230, hz: 50, tolerance: 0.1 },
+    prices: PRICES_GLOBAL_CENTS, priceSource: PRICE_SOURCE_GLOBAL,
+    unavailable: [], examBridge: { set: 'global' }, syllabus: {},
+  },
+  strings: {
+    stall: 'Stall 14', lane: 'Lantern Lane', mentor: 'Wren', cat: 'Rezzy',
+    'customer.kid_torch': 'Lio', 'customer.cyclist': 'Ash', 'customer.aquarium': 'Mr. Brook', 'customer.toycar': 'Bo', 'customer.weather': 'Kaya',
+    'customer.irrigation': 'Sami', 'customer.wallwart': 'Mrs. Dale', 'customer.radio': 'Iris', 'customer.musician': 'Juno',
+  },
+}, validateNodeData);
