@@ -14,6 +14,12 @@ export const FAILURE_LOG_CAP = 200;
 export const SCOPE_POINTS_CAP = 512;
 /** MNA unknowns kept in `live.x`. */
 export const LIVE_X_CAP = 48;
+/** Device history numbers kept in `live.hist` (capacitor / inductor / macro state). */
+export const LIVE_HIST_CAP = 96;
+/** Most wires on a board (state-size budget, see state.size.test.ts). */
+export const MAX_WIRES = 80;
+/** failures kept per bench result (state-size budget). */
+export const BENCH_FAILURE_CAP = 12;
 
 export type LevelId = string;
 export type CustomerId = string;
@@ -32,12 +38,25 @@ export interface Metrics {
   area: number;
 }
 
-/** Result of one bench run. M0 skeleton: the bench worker (M2) widens `specs`; `metrics` and `pass` are the contract. */
+/** One bench failure: an i18n key + vars (English comes from the locale; explainers upgrade it, see queries `benchResult`). */
+export interface BenchFailureRec { key: string; vars: Record<string, string | number> }
+
+/** Result of one bench run (DESIGN §3.12). `metrics` and `pass` are the contract; the rest feeds the report and the scope overlay. */
 export interface BenchResult {
   pass: boolean;
   metrics: Metrics;
-  /** One row per spec: the i18n key of its name, whether it passed and the margin (positive = inside the band). */
-  specs: { key: string; pass: boolean; margin: number }[];
+  /** One row per spec: the i18n key of its name, whether it passed and the margin (positive = inside the band; units of the spec's own measure, worst over conditions). */
+  specs: { id: string; key: string; pass: boolean; margin: number }[];
+  /** First BENCH_FAILURE_CAP failures over all conditions. */
+  failures: BenchFailureRec[];
+  /** Stars earned by this run: 0 = fail, 1 = pass, 2 = pass and the headline metric is at par (3 needs the tolerance run, M2-3). */
+  stars: 0 | 1 | 2 | 3;
+  /** Smoked part uids found by the ratings check (they smoked on the bench). */
+  smoked: string[];
+  /** Exam-bridge prediction scores. */
+  predictions: { id: string; entered: number; truth: number; grade: string }[];
+  /** Band failing sample times (s), at most 64 per spec, for the scope overlay. */
+  badSamples: Record<string, number[]>;
 }
 
 export interface TicketProgress {
@@ -102,7 +121,13 @@ export interface LiveState {
   hist: number[];
   temps: Record<PartUid, number>;
   smoked: PartUid[];
-  status: 'ok' | 'float' | 'noconv' | 'loop';
+  /** ok; float = a node without a DC path (warn); noconv = the solver could not settle; loop = a blocking topology error (source loop, short, current with nowhere to go); big = over the live caps. */
+  status: 'ok' | 'float' | 'noconv' | 'loop' | 'big';
+  /** Current transient step (s) and the number of backward-Euler restart steps owed: the stepper resumes bit-identically after a save. */
+  h: number;
+  be: number;
+  /** What stopped or warned the last frame (key + vars, at most 4): topology problems, solver failures. */
+  issues: { key: string; vars: Record<string, string | number> }[];
   /** Decimated ring buffer, <= SCOPE_POINTS_CAP points per channel. */
   scope: { ch1: number[]; ch2: number[]; t0: number; dt: number };
 }
@@ -116,6 +141,8 @@ export interface TicketState {
   live: LiveState;
   undo: BoardSnapshot[];
   redo: BoardSnapshot[];
+  /** Hint ladder rung reached on this ticket (0-3). */
+  hintRung: number;
   predictions: Record<string, number>;
   lastBench: BenchResult | null;
   tolerance: { done: number; total: number; failures: number } | null;
@@ -143,17 +170,23 @@ export const newMeter = (): MeterState => ({ mode: 'off', pads: [] });
 export const newSupply = (): SupplyState => ({ on: false, v: 0, ilim: 0.1 });
 export const newGen = (): GenState => ({ shape: 'sine', f: 1000, vpp: 1, offset: 0, on: false });
 export const newScope = (): ScopeSettings => ({ timePerDiv: 1e-3, voltsPerDiv: [1, 1], trigger: { source: 1, level: 0, edge: 'rise', mode: 'auto' } });
-export const newLive = (): LiveState => ({ powered: false, frame: 0, t: 0, x: [], hist: [], temps: {}, smoked: [], status: 'ok', scope: { ch1: [], ch2: [], t0: 0, dt: 0 } });
+export const newLive = (): LiveState => ({ powered: false, frame: 0, t: 0, x: [], hist: [], temps: {}, smoked: [], status: 'ok', h: 0, be: 0, issues: [], scope: { ch1: [], ch2: [], t0: 0, dt: 0 } });
 export const newTicketProgress = (): TicketProgress => ({ best: null, stars: 0, passed: false, assisted: false, attempts: 0, smokes: 0, bestCode: null });
 export const newProgress = (): NodeProgress => ({ tickets: {}, wallet: 0, upgrades: [], reputation: {}, codexSeen: [], failureLog: [] });
 
+/** Initial instrument settings a ticket may preset (all optional). */
+export interface InstrumentPresets { supply?: { v: number; ilim: number }; gen?: Omit<GenState, 'on'>; scope?: { timePerDiv: number; voltsPerDiv: [number, number] } }
+
 /** A freshly opened ticket on `board` (a deep copy is taken, so the level table is never aliased into the state). */
-export function newTicketState(id: LevelId, board: Board): TicketState {
+export function newTicketState(id: LevelId, board: Board, presets: InstrumentPresets = {}, hidden: Record<string, number> = {}): TicketState {
   const b = structuredClone(board);
+  const supply = { ...newSupply(), ...(presets.supply ?? {}) };
+  const gen = { ...newGen(), ...(presets.gen ?? {}) };
+  const scope = { ...newScope(), ...(presets.scope ? { timePerDiv: presets.scope.timePerDiv, voltsPerDiv: [...presets.scope.voltsPerDiv] as [number, number] } : {}) };
   return {
-    id, hidden: {}, board: { ...b, probes: [], meter: newMeter() },
-    instruments: { supply: newSupply(), gen: newGen(), scope: newScope(), bode: null },
-    live: newLive(), undo: [], redo: [], predictions: {}, lastBench: null, tolerance: null,
+    id, hidden: { ...hidden }, board: { ...b, probes: [], meter: newMeter() },
+    instruments: { supply, gen, scope, bode: null },
+    live: newLive(), undo: [], redo: [], hintRung: 0, predictions: {}, lastBench: null, tolerance: null,
   };
 }
 

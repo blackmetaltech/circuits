@@ -30,3 +30,6 @@ Nothing (all workers stopped/landed; working tree clean at handoff).
 - Catalogue 1N4007 now uses the Vishay model line (Is 1.437e-8, N 1.808); ngspice decks use the DESIGN values: regenerate 4-1 refs with
   the catalogue model before calibrate-levels.
 - Zener models: no forward Is/N in catalogue (compiler default Is 1e-14, N 1); D2 decks used estimated Zener/body-diode params (review).
+
+## HALT (2026-11-10, user order) - WIP
+M1 engine tasks A4, B2, B3, C1, C2, C3, D2b, E1, E2 committed and green. M2-4 Godot bench world committed. M2-1 engine wiring (src/engine/actions, queries, board, src/sim/live.ts, src/data/levels) is an UNFINISHED worker WIP commit (tests may be red; check pnpm test). Live-frame profiling on Pixel not yet read (spike logs solve/ser ms; .qa/node-circuits/liveframe.sh). M2-2/3/5/6/7 and gates not started.

@@ -1,24 +1,28 @@
-// Levels: a setup, a goal, a failure rule and a solver bot that proves the level can be passed.
-// M0 PLACEHOLDER: one level `0-0` with an empty board whose setup opens the placeholder ticket. It cannot be won (goal is always
-// false, the solver does nothing), so `checkAllLevels` reports exactly one problem for it: PLACEHOLDER_SOLVER_PROBLEM. regions.test.ts
-// asserts that exact problem rather than faking a win. M2 replaces this with one core Level per ticket (setup = open the ticket,
-// goal = bench passed, solver = the ref replay), DESIGN §8.3.
+// Core Levels (DESIGN §8.3): one per ticket, built from the SAME data as the campaign ticket. setup = open the ticket on a fresh state,
+// goal = the bench passed, solver = the ref replay, so `checkAllLevels` and the persona runner exercise the campaign code path.
+// Adding a ticket is a data-only change (src/data/levels). The campaign never uses startLevel (it would wipe progress): see game.ts.
 import type { Level } from '@core/kit';
-import { openTicketIn } from './engine/tickets';
+import type { LevelDef } from './data/levels/types';
+import { LEVEL_DEFS } from './data/levels';
 import type { NodeState } from './engine/state';
+import { openTicketIn } from './engine/tickets';
+import { refActions } from './engine/replay';
 import { t } from './i18n';
 
-/** Ticks the placeholder allows before it is lost. */
-export const PLACEHOLDER_MAX_TICKS = 5;
-/** The one problem `checkAllLevels` must report for the placeholder level. */
-export const PLACEHOLDER_SOLVER_PROBLEM = `solver did not pass (Out of time: ${PLACEHOLDER_MAX_TICKS} ticks allowed.)`;
+/** Turns a core Level allows before it is lost. */
+export const LEVEL_MAX_TICKS = 10;
 
-export const LEVELS: Level<NodeState>[] = [
-  {
-    id: '0-0', title: t('level.0-0.title'), brief: t('level.0-0.brief'),
-    setup: (s) => { openTicketIn(s, '0-0'); },
-    goal: () => false,
-    maxTicks: PLACEHOLDER_MAX_TICKS,
-    solver: () => () => [],
-  },
-];
+export function coreLevels(defs: readonly LevelDef[]): Level<NodeState>[] {
+  return defs.map((def) => ({
+    id: def.id,
+    title: t(def.titleKey),
+    brief: t('level.brief', { id: def.id, title: t(def.titleKey) }),
+    concepts: def.teaches,
+    setup: (s) => { openTicketIn(s, def); },
+    goal: (s) => !!s.ticket?.lastBench?.pass,
+    maxTicks: LEVEL_MAX_TICKS,
+    solver: () => { let done = false; return () => { if (done) return []; done = true; return refActions(def); }; },
+  }));
+}
+
+export const LEVELS: Level<NodeState>[] = coreLevels(LEVEL_DEFS);

@@ -1,9 +1,11 @@
-// Solution codes: a run of the placeholder level becomes a code; the verifier replays it and gives a clean verdict (never a throw).
-// M0 has only the placeholder level 0-0, which cannot be won, so every code verifies as a clean "not ok" (M2 adds real tickets).
+// Solution codes: a run of the sample ticket 0-0 becomes a code; the verifier replays it and gives a clean verdict (never a throw).
+// An idle run cannot win, so it verifies as a clean "not ok"; the expert's replay of the ref verifies ok with the in-game metrics.
 import { describe, expect, it } from 'vitest';
 import { Engine, Env, decodeSolution, encodeSolution } from '@core/kit';
 import { GAME } from './game';
 import { verify } from './verify';
+import { refActions } from './engine/replay';
+import { LEVEL_DEFS } from './data/levels';
 
 function idleRun(region?: string, level = '0-0'): Engine<any> {
   const env = new Env(GAME); env.reset({ seed: 1, level, region });
@@ -11,15 +13,22 @@ function idleRun(region?: string, level = '0-0'): Engine<any> {
   return env.engine;
 }
 
-describe('solution codes of NODE (placeholder level)', () => {
+describe('solution codes of NODE (sample ticket 0-0)', () => {
   it('free play has no code', () => expect(new Engine(GAME).q('solutionCode')).toBeNull());
-  it('the idle run produces a code that verifies as a clean not-ok (the placeholder cannot be won), the same every time', () => {
+  it('the idle run produces a code that verifies as a clean not-ok (an idle player cannot win), the same every time', () => {
     const code = idleRun().q('solutionCode') as string; expect(code).toMatch(/^CB1\./);
     const r = verify('0-0', code);
     expect(r.ok).toBe(false); expect(r.reason).toMatch(/not won/); expect(r.ruleset).toBe('node-circuits:global@1.1');
     expect(r.metrics).toEqual({});   // a code that is not won reports no metrics
     expect(verify('0-0', code)).toEqual(r);
     expect(idleRun().q('solutionCode')).toBe(code);
+  });
+  it('the expert\'s code verifies ok with exactly the in-game metrics, deterministically', () => {
+    const env = new Env(GAME); env.reset({ seed: 1, level: '0-0' });
+    for (const a of refActions(LEVEL_DEFS[0]!)) env.step(a);
+    expect(env.state.status).toBe('won');
+    const code = env.engine.q('solutionCode') as string, inGame = env.engine.q('metrics');
+    const r = verify('0-0', code); expect(r.ok).toBe(true); expect(r.metrics).toEqual(inGame); expect(verify('0-0', code)).toEqual(r);
   });
   it('a tampered code fails the checksum', () => {
     const parts = (idleRun().q('solutionCode') as string).split('.'); parts[1] = parts[1]!.slice(0, 10) + (parts[1]![10] === 'A' ? 'B' : 'A') + parts[1]!.slice(11);

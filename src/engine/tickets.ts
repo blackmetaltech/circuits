@@ -1,33 +1,36 @@
-// PLACEHOLDER ticket table (M0-2). Replaced in M2 by the real ticket files (src/data/levels/<id>.ts, DESIGN §2.9).
-// One placeholder ticket `0-0` with an empty board and its connectors exists so that openTicket / closeTicket, the core Level
-// harness and the Godot front-end have something to run. It cannot be passed. Nothing here is campaign content.
-import type { Board } from '../sim/board/types';
-import { newTicketState, type CustomerId, type LevelId, type NodeState } from './state';
+// Tickets in the campaign state (DESIGN §8.3): a ticket is opened INSIDE the campaign state (`s.level` stays null) from a data-only LevelDef.
+// The same `openTicketIn` runs for the openTicket action and for the core Level setup (levels.ts), so both take the same code path.
+import { withRng } from '@core/kit';
+import type { Board, PlacedPart } from '../sim/board/types';
+import type { HiddenDef, LevelDef } from '../data/levels/types';
+import { sig } from '../sim/explain';
+import { newTicketState, type NodeState, type TicketState } from './state';
 
-export interface PlaceholderTicket {
-  id: LevelId;
-  /** i18n keys: the ticket's title and brief. The brief may use {customer}, {mentor}, {stall}, {lane} (all region-pack strings). */
-  titleKey: string; briefKey: string;
-  customer: CustomerId;
-  board: Board;
+export const levelDefOf = (defs: readonly LevelDef[], id: unknown): LevelDef | undefined => defs.find((d) => d.id === id);
+
+/** The board a ticket starts with: its connectors and fixed parts, nothing else. */
+export function startBoard(def: LevelDef): Board {
+  return { w: def.board.w, h: def.board.h, connectors: structuredClone(def.board.connectors), parts: structuredClone(def.fixed) as PlacedPart[], wires: [] };
 }
 
-export const PLACEHOLDER_TICKETS: readonly PlaceholderTicket[] = [
-  {
-    id: '0-0', titleKey: 'ticket.0-0.title', briefKey: 'ticket.0-0.brief', customer: 'kid_torch',
-    board: {
-      w: 24, h: 16,
-      connectors: [{ id: 'IN', pad: [0, 4], role: 'source' }, { id: 'OUT', pad: [23, 4], role: 'load' }, { id: 'GND', pad: [0, 12], role: 'ground' }],
-      parts: [], wires: [],
-    },
-  },
-];
+/** Hidden parameters: Learner uses the fixed value, every other mode draws from the save's rng (3 significant figures, so codes stay short). */
+export function drawHidden(s: NodeState, hidden: readonly HiddenDef[] | undefined): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const h of hidden ?? []) out[h.id] = s.mode === 'learner' ? h.learner : withRng(s, (r) => sig(r.range(h.seeded[0], h.seeded[1]), 3));
+  return out;
+}
 
-export const ticketDef = (id: unknown): PlaceholderTicket | undefined => PLACEHOLDER_TICKETS.find((t) => t.id === id);
+/** The ref solution as a board (uids p1, p2... in placement order, wires w1...), used by hints and the expert persona. */
+export function refBoard(def: LevelDef): Board {
+  const b = startBoard(def);
+  def.ref.parts.forEach((p, i) => b.parts.push({ ...p, uid: `p${i + 1}` } as PlacedPart));
+  def.ref.wires.forEach((path, i) => b.wires.push({ wid: `w${i + 1}`, path: path.map((q) => [q[0], q[1]] as [number, number]) }));
+  return b;
+}
 
-/** Open ticket `id` on `s`. Shared by the openTicket action and the core Level setup, so both take the same code path. */
-export function openTicketIn(s: NodeState, id: LevelId): void {
-  const def = ticketDef(id);
-  if (!def) throw new Error(`openTicketIn: unknown ticket '${id}'`);
-  s.ticket = newTicketState(def.id, def.board);
+export function openTicketIn(s: NodeState, def: LevelDef): void {
+  const ps = def.instruments;
+  const presets = { supply: ps.supply, gen: ps.gen, scope: ps.scope };
+  const ticket: TicketState = newTicketState(def.id, startBoard(def), presets, drawHidden(s, def.hidden));
+  s.ticket = ticket;
 }

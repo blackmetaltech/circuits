@@ -63,7 +63,7 @@ export const qTip120: PartDef = {
   source: {
     doc: 'onsemi TIP120/D Rev 9 (DESIGN §4.2 [V]: hFE >= 1000 at 0.5 A and 3 A, Vce(sat) 2.0 V max at 3 A / IB 12 mA, 5 A (8 A peak), 65 W at Tc 25 C, 2 W free air, Vceo 60 V, thetaJC 1.92)',
     url: 'https://www.onsemi.com/pdf/datasheet/tip120-d.pdf', accessed: ACCESSED,
-    note: 'Ratings carried from the DESIGN [V] mark (not re-read: onsemi answers 403 to scripted fetch). thetaJA 62.5 C/W is derived from "2 W free air at 25 C" as (150-25)/2 W (Tj max 150 C), not read. Model: only composite hFE and the internal 8 k / 120 ohm are datasheet items (per-stage Is/Bf are not given; the compiler derives them, DESIGN §3.3). The upper hFE tolerance 5000 is a placeholder window (UNVERIFIED part of the tolerance only). ' + TAU_R,
+    note: 'Ratings carried from the DESIGN [V] mark (not re-read: onsemi answers 403 to scripted fetch). thetaJA 62.5 C/W is derived from the 2 W free-air-at-25-C rating as (150-25)/2 W (Tj max 150 C), not read. Model: only composite hFE and the internal 8 k / 120 ohm are datasheet items (per-stage Is/Bf are not given; the compiler derives them, DESIGN §3.3). The upper hFE tolerance 5000 is a placeholder window (UNVERIFIED part of the tolerance only). ' + TAU_R,
   },
   verified: true, scope: 'campaign', simplifications: ['part.simplify.bjt-em-lite', 'part.simplify.darlington'],
 };

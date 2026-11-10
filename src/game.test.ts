@@ -22,7 +22,7 @@ describe('NODE skeleton', () => {
     const e = new Engine(GAME); const r = e.act('openTicket', ['0-0']);
     expect(r.ok).toBe(true); expect(r.message).toMatch(/Ticket 0-0/);
     const s = e.state as NodeState;
-    expect(s.level).toBeNull(); expect(s.ticket!.id).toBe('0-0'); expect(s.ticket!.board.parts).toEqual([]); expect(s.ticket!.board.connectors.map((c) => c.id)).toEqual(['IN', 'OUT', 'GND']);
+    expect(s.level).toBeNull(); expect(s.ticket!.id).toBe('0-0'); expect(s.ticket!.board.parts.map((p) => p.uid)).toEqual(['f1']); expect(s.ticket!.board.connectors.map((c) => c.id)).toEqual(['VP', 'GND']);
     expect(s.ticket!.undo).toEqual([]); expect(s.ticket!.lastBench).toBeNull();
     expect(e.act('closeTicket').ok).toBe(true); expect(e.state.ticket).toBeNull();
   });
@@ -35,9 +35,9 @@ describe('NODE skeleton', () => {
     expect(e.act('openTicket', ['0-0']).message).toMatch(/already open.*close/i);
     expect(e.state.ticket!.id).toBe('0-0');
   });
-  it('actions of later milestones are not implemented yet and say so through the engine (unknown action)', () => {
+  it('actions of later milestones (upgrades, tolerance Monte Carlo, rewind, EB measurement, code loading) are not implemented yet and say so through the engine (unknown action)', () => {
     const e = new Engine(GAME);
-    for (const a of ['placePart', 'runBench', 'advance', 'buyUpgrade']) expect(e.act(a, []).message).toMatch(/Unknown action/);
+    for (const a of ['buyUpgrade', 'runTolerance', 'rewind', 'submitMeasurement', 'realityCheck', 'loadSolution']) expect(e.act(a, []).message).toMatch(/Unknown action/);
   });
   it('same seed, same game', () => {
     const run = (seed: number) => { const env = new Env(GAME); env.reset({ seed }); env.step({ name: 'openTicket', args: ['0-0'] }); env.step({ name: 'tick' }); env.step({ name: 'closeTicket' }); return env.hash(); };
@@ -80,7 +80,7 @@ describe('NODE skeleton', () => {
   it('protocol: init lists the implemented actions and queries; unknown query teaches', () => {
     const h = createProtocol(new Engine(GAME));
     const init = h({ id: 1, fn: 'init' }); expect(init.ok).toBe(true);
-    expect((init.result as any).actions).toEqual(expect.arrayContaining(['openTicket', 'closeTicket']));
+    expect((init.result as any).actions).toEqual(expect.arrayContaining(['openTicket', 'closeTicket', 'placePart', 'runBench', 'advance']));
     expect((init.result as any).queries).toEqual(expect.arrayContaining(['progress', 'ticketCard', 'region']));
     expect(h({ id: 2, fn: 'act', name: 'openTicket', args: ['0-0'] }).ok).toBe(true);
     expect((h({ id: 3, fn: 'q', name: 'ticketCard' }).result as any).id).toBe('0-0');

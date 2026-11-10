@@ -8,7 +8,6 @@ import { REGIONS } from './regions';
 import { PRICES_GLOBAL_CENTS } from './regions/global/prices';
 import { derivePrices, formatMinor, validateNodeData, type NodeRegionData } from './regions/data';
 import { LAWS } from './sim/laws';
-import { PLACEHOLDER_SOLVER_PROBLEM } from './levels';
 
 const PACKS = REGIONS.list({ includeDrafts: true });
 const CUSTOMERS = ['kid_torch', 'cyclist', 'aquarium', 'toycar', 'weather', 'irrigation', 'wallwart', 'radio', 'musician'];
@@ -80,7 +79,7 @@ describe('region packs of NODE', () => {
     // the registry applies the validator on register
     expect(() => REGIONS.register({ ...REGIONS.get('na'), id: 'xx', data: { ...good, vtAt300K: 0.03 } } as any)).toThrow(/vtAt300K/);
   });
-  it.each(PACKS.map((p) => [p.id]))('region %s: the game starts in the pack, opens the placeholder ticket and plays without violations', (id) => {
+  it.each(PACKS.map((p) => [p.id]))('region %s: the game starts in the pack, opens ticket 0-0 and plays without violations', (id) => {
     const e = new Engine(GAME, { region: id! });
     expect(e.state.region).toBe(id); expect(e.state.ruleset).toBe(rulesetId(GAME.id, REGIONS.get(id!), GAME.rulesetVersion ?? 1));
     expect(e.state.ticket).toBeNull();
@@ -89,10 +88,10 @@ describe('region packs of NODE', () => {
     expect(card.customer).toBe(REGIONS.get(id!).strings['customer.kid_torch']); expect(card.stall).toBe(REGIONS.get(id!).strings.stall); expect(card.mentor).toBe(REGIONS.get(id!).strings.mentor);
     expect(e.act('closeTicket').ok).toBe(true);
     expect(play(GAME, { persona: 'idle', seed: 2, ticks: 20, region: id }).violations, id).toEqual([]);
-    // the only level is the M0 placeholder: its solver cannot win, and that must be the ONLY problem reported (an honest red, not a fake win)
+    // every level (just the sample ticket 0-0 for now) is solvable in every pack, idle does not pass, and nothing degenerate wins
     const reports = checkAllLevels(GAME, { seed: 1, region: id });
     expect(reports.map((r) => r.level)).toEqual(['0-0']);
-    expect(reports[0]!.problems).toEqual([PLACEHOLDER_SOLVER_PROBLEM]);
+    expect(reports[0]!.problems).toEqual([]);
   });
   it('mains differ by pack but physics-facing engine data does not', () => {
     expect(PACKS.map((p) => [p.id, p.data.mains.volts, p.data.mains.hz])).toEqual([['global', 230, 50], ['in', 230, 50], ['na', 120, 60]]);

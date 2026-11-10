@@ -1,0 +1,328 @@
+// Queries (DESIGN §8.5): everything the UI shows. Read-only: none of these mutates the state; derived data is recomputed from the saved
+// solution (live.x / live.hist) on the saved board, so a loaded save answers exactly as the running game did.
+import { dmath } from '@core/numerics';
+import type { QueryFn } from '@core/kit';
+import { PARTS } from '../data/parts';
+import type { LevelDef } from '../data/levels/types';
+import type { Pad } from '../sim/board/types';
+import { pinPads } from '../sim/board/footprints';
+import { checkRatings, ratingProbes } from '../sim/ratings';
+import { explainFailure, si, sig, type ExplainContext } from '../sim/explain';
+import { elementPowers, thermalState } from '../sim/thermal';
+import { SCOPE_SCREEN_POINTS } from '../sim/live';
+import { makeProbe } from '../sim/mna/tran';
+import { solveOp } from '../sim/mna/op';
+import { compileNetlist } from '../sim/mna/compile';
+import { nodeVoltage, terminalCurrents } from '../sim/mna/stamp';
+import type { Circuit, Element } from '../sim/mna/types';
+import type { Rig } from '../sim/rig';
+import { t } from '../i18n';
+import { REGIONS } from '../regions';
+import { formatMinor } from '../regions/data';
+import { padKey } from '../sim/board/grid';
+import { allowedValues, allowedVariants, getDef } from './board';
+import { partPrice } from './metrics';
+import { FAILURE_LOG_CAP, SCOPE_POINTS_CAP, UNDO_CAP, type NodeState, type TicketState } from './state';
+import { levelDefOf } from './tickets';
+import { liveRig } from './ticket-run';
+import { say } from './text';
+
+const regionString = (region: string, key: string): string => { const v = REGIONS.get(region).strings[key]; if (v === undefined) throw new Error(`Region '${region}' has no string '${key}'.`); return v; };
+
+interface Solution { rig: Rig; ckt: Circuit; x: Float64Array; state: number[] }
+function solution(tk: TicketState, def: LevelDef): Solution | null {
+  const rig = liveRig(tk, def), ckt = rig.circuit;
+  if (!ckt || rig.errors.length > 0 || ckt.dim === 0 || tk.live.x.length !== ckt.dim || tk.live.hist.length !== ckt.stateSize) return null;
+  return { rig, ckt, x: Float64Array.from(tk.live.x), state: tk.live.hist };
+}
+
+const text = (f: { key: string; vars: Record<string, string | number> }): string => say(f.key, f.vars);
+
+/** Context the explainers need to put the player's own numbers in (resistances, electrolytics, supply and LED figures). */
+function explainCtx(tk: TicketState | null, def: LevelDef | undefined): ExplainContext {
+  const ctx: ExplainContext = { resistance: {}, electrolytic: [], led: {} };
+  if (!tk || !def) return ctx;
+  const rig = liveRig(tk, def);
+  let vSupply = 0, rSource = 0;
+  for (const e of rig.netlist.elements) {
+    if (e.kind === 'BAT') { vSupply = Math.max(vSupply, e.p.emf ?? 0); rSource = e.p.r ?? 0; }
+    if (e.kind === 'BENCH') vSupply = Math.max(vSupply, e.p.v ?? 0);
+  }
+  for (const p of tk.board.parts) {
+    const d = getDef(p.partId); if (!d) continue;
+    if (d.kind === 'R' || d.kind === 'HEATER') (ctx.resistance as Record<string, number>)[p.uid] = p.value ?? d.model.R ?? 0;
+    if (d.kind === 'CE') (ctx.electrolytic as string[]).push(p.uid);
+    if (d.kind === 'LED') {
+      const v = d.variants.find((x) => x.id === p.variant) ?? d.variants[0]!, iw = v.ratings.IFwork ?? 0.02, m = d.model;
+      const vf = m.N! * 0.025852 * dmath.log(iw / m.Is! + 1) + iw * m.Rs!;
+      (ctx.led as Record<string, { vSupply: number; vForward: number; rSource: number; rLed: number }>)[p.uid] = { vSupply, vForward: vf, rSource, rLed: m.Rs! + (m.N! * 0.025852) / iw };
+    }
+  }
+  return ctx;
+}
+export const explainedText = (f: { key: string; vars: Record<string, string | number> }, tk: TicketState | null, def: LevelDef | undefined): string => text(explainFailure(f, explainCtx(tk, def)));
+
+/** Current into the part at each node (sum over its elements), from the saved solution. */
+function partPinCurrents(sol: Solution, uid: string): Record<number, number> {
+  const out: Record<number, number> = {};
+  for (const ce of sol.ckt.elements) {
+    if ((ce.el.owner || ce.el.id) !== uid) continue;
+    const cur = terminalCurrents(ce, sol.x, sol.state);
+    ce.el.nodes.forEach((n, k) => { out[n] = (out[n] ?? 0) + (cur[k] ?? 0); });
+  }
+  return out;
+}
+
+export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<NodeState>> {
+  const defOf = (s: NodeState): { tk: TicketState; def: LevelDef } | null => { if (!s.ticket) return null; const def = levelDefOf(defs, s.ticket.id); return def ? { tk: s.ticket, def } : null; };
+  const wallet = (s: NodeState): string => formatMinor(s.progress.wallet, REGIONS.get(s.region));
+
+  const Q: Record<string, QueryFn<NodeState>> = {
+    /** Campaign progress for the HUD and the chapter board; the wallet is also given formatted for the active region. */
+    progress: (s) => { const { failureLog, ...rest } = s.progress; return { ...rest, failureCount: failureLog.length, walletText: wallet(s) }; },
+    /** The campaign ticket list with lock state (the core `levels` query is the core-Level list and is reserved). */
+    tickets: (s) => defs.map((d) => {
+      const p = s.progress.tickets[d.id];
+      return { id: d.id, chapter: d.chapter, title: t(d.titleKey), customerId: d.customer, scope: d.scope, passed: !!p?.passed, stars: p?.stars ?? 0, attempts: p?.attempts ?? 0, unlocked: (d.after ?? []).every((a) => s.progress.tickets[a]?.passed) };
+    }),
+    /** The open ticket as a card: title, brief, customer with the region's names, specs, bin, par. Null at the counter. */
+    ticketCard: (s) => {
+      const o = defOf(s); if (!o) return null;
+      const { def } = o;
+      const customer = regionString(s.region, `customer.${def.customer}`), mentor = regionString(s.region, 'mentor');
+      const stall = regionString(s.region, 'stall'), lane = regionString(s.region, 'lane');
+      return {
+        id: def.id, chapter: def.chapter, title: t(def.titleKey), brief: t(def.briefKey, { customer, mentor, stall, lane }), customerId: def.customer, customer, mentor, stall, lane,
+        specs: def.bench.specs.filter((x) => def.bench.names[x.id]).map((x) => ({ id: x.id, name: t(def.bench.names[x.id]!) })),
+        bin: def.bin.map((b) => ({ partId: b.partId, values: allowedValues(getDef(b.partId)!, b), variants: allowedVariants(getDef(b.partId)!, b), max: b.max ?? null })),
+        maxParts: def.constraints?.maxParts ?? 40, stars: def.stars, instruments: { supply: def.supplies.some((x) => x.kind === 'bench'), gen: def.supplies.some((x) => x.kind === 'gen'), scope: !!def.instruments.scope },
+        hasHints: !!def.hints, hintRung: o.tk.hintRung,
+      };
+    },
+    /** The board with part names, rotated pin pads and ratings, probes and meter. */
+    board: (s) => {
+      const o = defOf(s); if (!o) return null;
+      const b = o.tk.board;
+      return {
+        w: b.w, h: b.h, connectors: b.connectors, wires: b.wires, probes: b.probes, meter: b.meter,
+        parts: b.parts.map((p) => { const d = getDef(p.partId)!; const pads = pinPads(p, d); return { ...p, name: t(d.nameKey), kind: d.kind, pins: d.pins.map((n, i) => ({ name: n, pad: pads[i]! })), ratings: (d.variants.find((v) => v.id === p.variant) ?? d.variants[0]!).ratings, smoked: o.tk.live.smoked.includes(p.uid) }; }),
+        undoDepth: o.tk.undo.length, redoDepth: o.tk.redo.length,
+      };
+    },
+    /** The compiled netlist for debugging and agents (nodes, elements, topology findings, board errors). */
+    netlist: (s) => {
+      const o = defOf(s); if (!o) return null;
+      const rig = liveRig(o.tk, o.def), nl = rig.netlist;
+      return { nodes: nl.nodeNames, elements: nl.elements.map((e) => ({ id: e.id, kind: e.kind, owner: e.owner, nodes: e.nodes.map((n) => nl.nodeNames[n]), p: e.p })), issues: (rig.circuit?.issues ?? []).map((i) => ({ code: i.code, severity: i.severity, key: i.key, text: text(i) })), errors: rig.errors.map((e) => ({ ...e, text: text(e) })), dim: rig.circuit?.dim ?? 0 };
+    },
+    /** Voltage of every electrical node with its pads and a 0..1 colour scalar (span of the board's voltages). */
+    nodes: (s) => {
+      const o = defOf(s); if (!o) return null;
+      const sol = solution(o.tk, o.def);
+      const nodes = (sol ? sol.rig.conn : liveRig(o.tk, o.def).conn).nodes.map((n) => {
+        const name = (sol ? sol.rig.netlist : liveRig(o.tk, o.def).netlist).nodeNames[n.id]!;
+        const v = sol ? (n.id === 0 ? 0 : nodeVoltage(sol.x, sol.ckt.nodeIndex[name]!)) : 0;
+        return { id: n.id, name, v, pads: n.pads, connectors: n.connectors };
+      });
+      const vs = nodes.map((n) => n.v), vmin = Math.min(0, ...vs), vmax = Math.max(0, ...vs), span = vmax - vmin;
+      return { valid: !!sol, vmin, vmax, nodes: nodes.map((n) => ({ ...n, norm: span > 0 ? (n.v - vmin) / span : 0 })) };
+    },
+    /** Current per wire (signed along path[0] to the last pad, A) and per part pin (into the part), for the moving dots. */
+    currents: (s) => {
+      const o = defOf(s); if (!o) return null;
+      const sol = solution(o.tk, o.def);
+      if (!sol) return { valid: false, wires: o.tk.board.wires.map((w) => ({ wid: w.wid, i: 0, mag: 0 })), parts: [] };
+      const conn = sol.rig.conn, inj = new Map<string, number>();
+      const parts = o.tk.board.parts.map((p) => {
+        const d = getDef(p.partId)!, pads = pinPads(p, d), nodes = conn.pinNodes[p.uid] ?? [];
+        const into = partPinCurrents(sol, p.uid);
+        const pins = d.pins.map((name, i) => {
+          const nodeIdx = nodes[i]!, share = nodes.filter((n) => n === nodeIdx).length;
+          const cur = (into[nodeIdx] ?? 0) / share;
+          inj.set(padKey(pads[i]!), (inj.get(padKey(pads[i]!)) ?? 0) - cur);
+          return { name, pad: pads[i]!, i: cur };
+        });
+        return { uid: p.uid, pins };
+      });
+      // wire currents: a spanning tree of each connected wire network carries the net injection of its subtree
+      const wires = o.tk.board.wires, adj = new Map<string, { wid: string; other: string; sign: number }[]>();
+      for (const w of wires) {
+        const a = padKey(w.path[0]!), z = padKey(w.path[w.path.length - 1]!);
+        (adj.get(a) ?? adj.set(a, []).get(a)!).push({ wid: w.wid, other: z, sign: 1 });
+        (adj.get(z) ?? adj.set(z, []).get(z)!).push({ wid: w.wid, other: a, sign: -1 });
+      }
+      const flow = new Map<string, number>(), seen = new Set<string>();
+      const roots = [...adj.keys()].sort();
+      for (const r of roots) {
+        if (seen.has(r)) continue;
+        const order: string[] = [r], par = new Map<string, { from: string; wid: string; sign: number }>(); seen.add(r);
+        for (let h = 0; h < order.length; h++) for (const e of adj.get(order[h]!)!) if (!seen.has(e.other)) { seen.add(e.other); par.set(e.other, { from: order[h]!, wid: e.wid, sign: e.sign }); order.push(e.other); }
+        const sub = new Map<string, number>(order.map((k) => [k, inj.get(k) ?? 0]));
+        for (let k = order.length - 1; k > 0; k--) {
+          const v = order[k]!, p = par.get(v)!;
+          const toParent = sub.get(v)!;            // current leaving the subtree of v towards its parent along this wire
+          // wire orientation: sign = +1 when the wire runs path[0] = parent .. path[last] = child (parent -> child)
+          flow.set(p.wid, (flow.get(p.wid) ?? 0) + (p.sign === 1 ? -toParent : toParent));
+          sub.set(p.from, sub.get(p.from)! + toParent);
+        }
+      }
+      return { valid: true, wires: wires.map((w) => { const i = flow.get(w.wid) ?? 0; return { wid: w.wid, i, mag: Math.abs(i) }; }), parts };
+    },
+    /** Part temperatures, thermal state and smoked parts. */
+    thermal: (s) => {
+      const o = defOf(s); if (!o) return null;
+      const sol = solution(o.tk, o.def), rig = sol?.rig ?? liveRig(o.tk, o.def);
+      const pw = sol ? elementPowers(sol.ckt, sol.x, sol.state) : {};
+      return {
+        ambient: o.def.bench.ambientC, smoked: o.tk.live.smoked.slice(),
+        parts: rig.rated.map((p) => { const T = o.tk.live.temps[p.id] ?? o.def.bench.ambientC; return { uid: p.id, temp: T, power: pw[p.id] ?? 0, state: o.tk.live.smoked.includes(p.id) ? 'smoke' : thermalState(p, Math.max(0, pw[p.id] ?? 0), T), smoked: o.tk.live.smoked.includes(p.id) }; }),
+      };
+    },
+    /** Rating ratios per part from the saved solution: power / rating and every rating violated right now. */
+    ratings: (s) => {
+      const o = defOf(s); if (!o) return null;
+      const sol = solution(o.tk, o.def); if (!sol) return { valid: false, parts: [] };
+      const names = ratingProbes(sol.rig, sol.rig.rated), series: Record<string, number[]> = {};
+      for (const n of names) series[n] = [makeProbe(sol.ckt, n)(sol.x, sol.state)];
+      const rr = checkRatings(sol.rig, sol.rig.rated, { t: [o.tk.live.t], series }, { ta: o.def.bench.ambientC });
+      return {
+        valid: true,
+        parts: sol.rig.rated.map((p) => {
+          const P = Math.max(0, rr.power[p.id]?.avg ?? 0), pr = p.ratings.P ?? p.ratings.Pd ?? p.ratings.PD ?? p.ratings.Ptot;
+          const finds = rr.findings.filter((f) => f.part === p.id);
+          const ratio = pr ? P / pr : finds.reduce((m, f) => Math.max(m, f.limit > 0 ? f.value / f.limit : 0), 0);
+          return { uid: p.id, power: P, rated: pr ?? null, ratio, violations: finds.map((f) => ({ what: f.what, value: f.value, limit: f.limit, key: f.key, text: text({ key: f.key, vars: f.vars }) })) };
+        }),
+      };
+    },
+    /** One scope channel: the trigger-aligned window of the capture ring (`window` points, default one screen of 256, at most 512). */
+    scope: (s, ch?: unknown, window?: unknown) => {
+      const o = defOf(s); if (!o) return null;
+      const c = ch === 2 ? 2 : 1, sc = o.tk.live.scope, set = o.tk.instruments.scope;
+      const data = c === 1 ? sc.ch1 : sc.ch2, n = Math.max(8, Math.min(SCOPE_POINTS_CAP, typeof window === 'number' && Number.isFinite(window) ? Math.floor(window) : SCOPE_SCREEN_POINTS));
+      const attached = o.tk.board.probes.some((p) => p.ch === c);
+      const trig = set.trigger, tdata = trig.source === 2 ? sc.ch2 : sc.ch1;
+      let start = Math.max(0, data.length - n), triggered = false;
+      const limit = Math.max(0, tdata.length - n);
+      for (let i = 1; i <= limit; i++) {
+        const a = tdata[i - 1]!, b = tdata[i]!;
+        if (trig.edge === 'rise' ? a < trig.level && b >= trig.level : a > trig.level && b <= trig.level) { start = i; triggered = true; break; }
+      }
+      const end = Math.min(data.length, start + n);
+      return { ch: c, attached, triggered, t0: sc.t0 + start * sc.dt, dt: sc.dt, v: data.slice(start, end), voltsPerDiv: set.voltsPerDiv[c - 1], timePerDiv: set.timePerDiv, trigger: trig };
+    },
+    /** The DMM reading from the saved solution (or a zero-source resistance measurement in ohm mode). */
+    meter: (s) => {
+      const o = defOf(s); if (!o) return null;
+      const m = o.tk.board.meter;
+      if (m.mode === 'off') return { mode: 'off', pads: [], value: null, unit: '', text: '', valid: false };
+      const unit = m.mode === 'dca' ? 'A' : m.mode === 'ohm' ? 'Ω' : 'V';
+      const done = (value: number | null, key = ''): unknown => ({ mode: m.mode, pads: m.pads, value, unit, valid: value !== null, text: value === null ? (key ? t(key) : '') : si(value, unit) });
+      if (m.mode === 'acv') return done(null, 'meter.acvNotYet');
+      if (m.mode === 'ohm') return done(measureOhms(o.tk, o.def));
+      const sol = solution(o.tk, o.def); if (!sol || !sol.rig.dmm) return done(null);
+      const na = sol.rig.padNode(m.pads[0]!), nb = m.pads[1] ? sol.rig.padNode(m.pads[1]) : '0';
+      if (m.mode !== 'dca' && (na === null || nb === null)) return done(null);
+      return done(m.mode === 'dca' ? makeProbe(sol.ckt, 'i(dmm)')(sol.x, sol.state) : makeProbe(sol.ckt, `v(${na},${nb})`)(sol.x, sol.state));
+    },
+    liveStatus: (s) => {
+      const o = defOf(s); if (!o) return null;
+      const l = o.tk.live;
+      return {
+        powered: l.powered, frame: l.frame, t: l.t, status: l.status, running: l.powered && l.x.length > 0, smoked: l.smoked.slice(),
+        issues: l.issues.map((i) => ({ key: i.key, vars: i.vars, text: text(i) })), simSpeed: sig(o.def.live.frameSim * 30, 3), supply: o.tk.instruments.supply, gen: o.tk.instruments.gen,
+      };
+    },
+    benchResult: (s) => {
+      const o = defOf(s); if (!o || !o.tk.lastBench) return null;
+      const b = o.tk.lastBench, pack = REGIONS.get(s.region);
+      return {
+        pass: b.pass, stars: b.stars, metrics: b.metrics, costText: formatMinor(b.metrics.cost, pack), smoked: b.smoked, predictions: b.predictions, badSamples: b.badSamples,
+        specs: b.specs.map((x) => ({ ...x, name: t(x.key) })),
+        failures: b.failures.map((f) => ({ key: f.key, vars: f.vars, text: explainedText(f, o.tk, o.def) })),
+      };
+    },
+    /** An explainer from the failure log (the player's own numbers, DESIGN §7.3); `id` is the failure id. */
+    explain: (s, id?: unknown) => {
+      const f = s.progress.failureLog.find((x) => x.id === id);
+      if (!f) return null;
+      const o = defOf(s), ctxTk = o && o.tk.id === f.ticket ? o : null;
+      const raw = { key: f.kind, vars: f.vars }, up = explainFailure(raw, explainCtx(ctxTk?.tk ?? null, ctxTk?.def));
+      return { id: f.id, ticket: f.ticket, tick: f.tick, key: up.key, vars: up.vars, text: text(up) };
+    },
+    failureLog: (s) => s.progress.failureLog.map((f) => ({ id: f.id, ticket: f.ticket, tick: f.tick, kind: f.kind, text: say(f.kind, f.vars) })),
+    /** The catalogue as the tray shows it: bin parts (default while a ticket is open) or all, with allowed values, variants and prices. */
+    parts: (s, binOnly?: unknown) => {
+      const o = defOf(s), only = binOnly === undefined ? !!o : binOnly === true, pack = REGIONS.get(s.region);
+      return PARTS.filter((d) => !(only && o && s.mode !== 'sandbox' && !o.def.bin.some((b) => b.partId === d.id))).map((d) => {
+        const entry = o && s.mode !== 'sandbox' ? o.def.bin.find((b) => b.partId === d.id) ?? null : null;
+        return {
+          id: d.id, kind: d.kind, name: t(d.nameKey), footprint: d.footprint, pins: d.pins, scope: d.scope, verified: d.verified, inBin: !o || s.mode === 'sandbox' || !!entry,
+          values: allowedValues(d, entry), unavailable: pack.data.unavailable.includes(d.id),
+          variants: allowedVariants(d, entry).map((id) => { const v = d.variants.find((x) => x.id === id)!; const price = partPrice(pack, d.id, id, d.values ? d.values[0]! : null); return { id, ratings: v.ratings, price, priceText: formatMinor(price, pack) }; }),
+        };
+      });
+    },
+    /** The candidate actions the agents and personas choose from (probe-filtered by the core env). */
+    legalActions: (s, full?: unknown) => candidateActions(s, defs, full === true),
+    caps: () => ({ undo: UNDO_CAP, failureLog: FAILURE_LOG_CAP, scopePoints: SCOPE_POINTS_CAP }),
+  };
+  return Q;
+}
+
+/** Resistance between the DMM leads with every source zeroed and 1 mA pushed in: the DMM ohm range (never from the powered state). */
+function measureOhms(tk: TicketState, def: LevelDef): number | null {
+  const m = tk.board.meter;
+  if (m.pads.length < 2) return null;
+  const rig = liveRig(tk, def), ckt = rig.circuit;
+  if (!ckt || rig.errors.length > 0) return null;
+  const a = rig.padNode(m.pads[0]!), b = rig.padNode(m.pads[1]!); if (a === null || b === null) return null;
+  const nl = rig.netlist, ia = nl.nodeNames.indexOf(a), ib = nl.nodeNames.indexOf(b);
+  const els: Element[] = nl.elements.map((e) => {
+    if (e.kind === 'BAT') return { ...e, p: { ...e.p, emf: 0 } };
+    if (e.kind === 'BENCH' || e.kind === 'V') { const { wave: _w, ...rest } = e; return { ...rest, p: { ...e.p, v: 0 } }; }
+    return e;
+  });
+  els.push({ id: 'ohm.i', kind: 'I', owner: '', nodes: [ib, ia], p: { i: 1e-3 } });
+  const r = compileNetlist({ ...nl, elements: els });
+  if (!r.ok) return null;
+  const op = solveOp(r.circuit); if (!op.ok) return null;
+  const k = (n: string): number => r.circuit.nodeIndex[n]!;
+  return (nodeVoltage(op.x, k(a)) - nodeVoltage(op.x, k(b))) / 1e-3;
+}
+
+// ---------------------------------------------------------------- candidate actions
+const SPOTS: Pad[] = [[3, 8], [9, 8], [15, 8], [3, 12], [9, 12], [15, 12], [20, 6]];
+export function candidateActions(s: Readonly<NodeState>, defs: readonly LevelDef[], full: boolean): { name: string; args?: unknown[] }[] {
+  const out: { name: string; args?: unknown[] }[] = [];
+  if (!s.ticket) { for (const d of defs) out.push({ name: 'openTicket', args: [d.id] }); return out; }
+  const tk = s.ticket, def = levelDefOf(defs, tk.id);
+  out.push({ name: 'closeTicket' }, { name: 'power', args: [!tk.live.powered] }, { name: 'advance', args: [2] }, { name: 'runBench' }, { name: 'hint' });
+  if (tk.undo.length) out.push({ name: 'undo' }); if (tk.redo.length) out.push({ name: 'redo' });
+  for (const u of tk.live.smoked) out.push({ name: 'replaceSmoked', args: [u] });
+  if (!def) return out;
+  const placed = tk.board.parts.filter((p) => !p.fixed);
+  for (const p of placed.slice(0, full ? 40 : 6)) {
+    out.push({ name: 'deletePart', args: [p.uid] }, { name: 'rotatePart', args: [p.uid] });
+    const d = getDef(p.partId);
+    if (d) { const vals = allowedValues(d, def.bin.find((b) => b.partId === p.partId) ?? null); if (vals && vals.length > 1) { out.push({ name: 'setValue', args: [p.uid, vals[0]] }, { name: 'setValue', args: [p.uid, vals[vals.length - 1]] }); } }
+  }
+  for (const w of tk.board.wires.slice(0, full ? 40 : 6)) out.push({ name: 'deleteWire', args: [w.wid] });
+  for (const b of def.bin) {
+    const d = getDef(b.partId); if (!d) continue;
+    const vals = allowedValues(d, b), pick = vals ? [vals[0]!, vals[Math.floor(vals.length / 2)]!, vals[vals.length - 1]!].filter((v, i, a) => a.indexOf(v) === i) : [null];
+    for (const v of pick) for (const sp of SPOTS.slice(0, full ? SPOTS.length : 4)) out.push({ name: 'placePart', args: [b.partId, v, null, sp[0], sp[1], 0, false] });
+  }
+  // wires between the interesting pads (pins and connectors), L-shaped
+  const pads: Pad[] = [...tk.board.connectors.map((c) => c.pad)];
+  for (const p of tk.board.parts) { const d = getDef(p.partId); if (d) pads.push(...pinPads(p, d)); }
+  const uniq = pads.filter((p, i) => pads.findIndex((q) => q[0] === p[0] && q[1] === p[1]) === i).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+  let n = 0;
+  for (let i = 0; i < uniq.length && n < (full ? 60 : 16); i++) for (let j = i + 1; j < uniq.length && n < (full ? 60 : 16); j++) {
+    const a = uniq[i]!, z = uniq[j]!;
+    if (a[0] === z[0] || a[1] === z[1]) out.push({ name: 'addWire', args: [[a, z]] }); else out.push({ name: 'addWire', args: [[a, [z[0], a[1]], z]] });
+    n++;
+  }
+  if (tk.board.connectors.length > 0) { out.push({ name: 'attachProbe', args: [1, tk.board.connectors[0]!.pad] }); out.push({ name: 'setMeter', args: ['dcv', [tk.board.connectors[0]!.pad]] }); }
+  return out;
+}
