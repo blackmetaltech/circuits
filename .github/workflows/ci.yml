@@ -48,6 +48,9 @@ jobs:
       - run: ./node_modules/.bin/vitest run
       - name: Golden waveforms (explicit, must pass on every Node in the matrix)
         run: ./node_modules/.bin/vitest run src/trajectory.golden.test.ts
+      - name: Bench cost gate (estimate vs measured within 2x on 10 boards; ticket flop limit)
+        if: matrix.node == '22'
+        run: pnpm bench:cost
       - name: Build the engine sidecar
         if: matrix.node == '22'
         run: ./node_modules/.bin/vite build -c vite.bridge.config.ts

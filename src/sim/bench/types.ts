@@ -53,6 +53,8 @@ export interface BenchOptions {
   ic?: 'zero' | 'op' | Record<string, number>;
   /** Ratings verdict from the power model, or a pure function of the measured window. */
   ratings?: RatingReport | ((w: BenchWindow) => RatingReport);
+  /** Optional pre-check (DESIGN §3.11): refuse with `bench.cost.too-big` when the estimated flops exceed this (use BENCH_FLOP_LIMIT). */
+  maxFlops?: number;
   /** Condition label copied into every failure's vars (`cond`). */
   condition?: string;
 }

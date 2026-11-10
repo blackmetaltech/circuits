@@ -7,6 +7,7 @@ import { interpAt, measure, sliceWindow, type Signal } from './measure';
 import { checkBand } from './band';
 import { checkMask } from './mask';
 import { checkSafety } from './safety';
+import { conditionOf, costGate, estimateCost } from './cost';
 import type { BenchFailure, BenchOptions, BenchResult, BenchSpec, BenchWindow, Measure, PredictionScore, RatingReport } from './types';
 
 export * from './types';
@@ -40,6 +41,10 @@ export function runBench(ckt: Circuit, specs: readonly BenchSpec[], o: BenchOpti
   const cond = o.condition ?? '';
   const settleInfo = { settled: true, periods: 0, t0: 0, t1: 0 };
   const probes = probesOf(specs);
+  if (o.maxFlops !== undefined) {   // optional cost gate (§3.11): refuse before any stepping
+    const g = costGate(estimateCost(ckt, [conditionOf(specs, o)]), o.maxFlops);
+    if (!g.ok) return fail(g.key, { ...g.vars, cond });
+  }
   const ratingFn = typeof o.ratings === 'function' ? o.ratings : null;
   const N = Math.max(1, Math.round(o.measurePeriods ?? 1));
   const periodic = o.settle === 'periodic';
