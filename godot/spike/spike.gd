@@ -24,6 +24,8 @@ var _eng: Array = []      # last WIN engineMs
 var _ft: Array = []       # last WIN render frame times, ms
 var _rt_max := 0.0
 var _eng_max := 0.0
+var _sol: Array = []
+var _ser: Array = []
 var _ft_max := 0.0
 var _last_print := 0.0
 var _out := PackedFloat32Array()
@@ -143,6 +145,7 @@ func _got(r: Dictionary, rt: float) -> void:
 	if not r.get("ok", false) or typeof(res) != TYPE_DICTIONARY: _errs += 1; return
 	_push(_rt, rt); _rt_max = maxf(_rt_max, rt)
 	var e := float(res.get("engineMs", 0.0)); _push(_eng, e); _eng_max = maxf(_eng_max, e)
+	_push(_sol, float(res.get("solveMs", 0.0))); _push(_ser, float(res.get("serMs", 0.0)))
 	_sim_t = float(res.get("t", 0.0))
 	_out = PackedFloat32Array(res.get("out", [])); _inp = PackedFloat32Array(res.get("inp", []))
 	_rebuild()
@@ -209,6 +212,8 @@ func _print_stats(now: float) -> void:
 	var d := {"elapsed_s": snappedf(now, 0.1), "k": k, "thread": threaded, "reqs": _reqs, "errs": _errs, "frames": _frames,
 		"rt_ms": {"p50": snappedf(_pt(_rt, 0.5), 0.01), "p95": snappedf(_pt(_rt, 0.95), 0.01), "max": snappedf(_rt_max, 0.01)},
 		"engine_ms": {"p50": snappedf(_pt(_eng, 0.5), 0.01), "p95": snappedf(_pt(_eng, 0.95), 0.01), "max": snappedf(_eng_max, 0.01)},
+		"solve_ms": {"p50": snappedf(_pt(_sol, 0.5), 0.01), "p95": snappedf(_pt(_sol, 0.95), 0.01)},
+		"ser_ms": {"p50": snappedf(_pt(_ser, 0.5), 0.01), "p95": snappedf(_pt(_ser, 0.95), 0.01)},
 		"frame_ms": {"p50": snappedf(_pt(_ft, 0.5), 0.01), "p95": snappedf(f95, 0.01), "max": snappedf(_ft_max, 0.01)},
 		"fps_p95": snappedf(1000.0 / f95, 0.1) if f95 > 0.0 else 0.0, "req_hz": snappedf(_reqs / maxf(now, 0.001), 0.1)}
 	print("SPIKE ", JSON.stringify(d))

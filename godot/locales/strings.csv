@@ -25,3 +25,11 @@ TICKET_CLOSE,Close ticket
 COACH_BENCH_TITLE,This is your bench
 COACH_BENCH_BODY,The dark rectangle is the bench. Tickets from customers will appear here with a spec card and a board to build on.
 COACH_BENCH_WHY,Every circuit starts as a spec: what goes in and what must come out.
+CONN_IN,IN
+CONN_OUT,OUT
+CONN_GND,GND
+CONN_VP,V+
+CONN_AC1,AC
+CONN_AC2,AC
+PROBE_CH1,CH1
+PROBE_CH2,CH2

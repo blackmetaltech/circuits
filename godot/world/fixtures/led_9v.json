@@ -1,0 +1,28 @@
+{
+  "board": {
+    "w": 19, "h": 10,
+    "connectors": [{"id": "GND", "pad": [18, 8], "role": "ground"}],
+    "parts": [
+      {"uid": "p1", "partId": "bat-pp3", "value": null, "variant": "alkaline", "x": 3, "y": 2, "rot": 1, "flip": false, "fixed": true},
+      {"uid": "p2", "partId": "res-cf", "value": 470, "variant": "q", "x": 6, "y": 2, "rot": 0, "flip": false},
+      {"uid": "p3", "partId": "led-red-5mm", "value": null, "variant": "5mm", "x": 13, "y": 2, "rot": 0, "flip": false}
+    ],
+    "wires": [
+      {"wid": "w1", "path": [[3, 2], [6, 2]]},
+      {"wid": "w2", "path": [[10, 2], [13, 2]]},
+      {"wid": "w3", "path": [[15, 2], [15, 8]]},
+      {"wid": "w4", "path": [[15, 8], [3, 8]]},
+      {"wid": "w5", "path": [[15, 8], [18, 8]]}
+    ],
+    "probes": [{"ch": 1, "pad": [11, 2]}]
+  },
+  "nodes": {"range": [-9, 9], "sets": [
+    {"v": 9.0, "pads": [[3, 2], [6, 2]]},
+    {"v": 1.9, "pads": [[10, 2], [13, 2], [11, 2]]},
+    {"v": 0.0, "pads": [[15, 2], [15, 8], [3, 8], [18, 8]]}
+  ]},
+  "currents": {"wires": {"w1": 0.0151, "w2": 0.0151, "w3": 0.0151, "w4": 0.0151, "w5": 0.0}, "parts": {"p1": 0.0151, "p2": 0.0151, "p3": 0.0151}},
+  "thermal": {"ambient": 25, "temps": {"p1": 27, "p2": 61, "p3": 38}},
+  "ratings": {"p2": {"p": 0.43}, "p3": {"i": 0.5}},
+  "liveStatus": {"powered": true, "status": "ok", "t": 2.0, "frame": 60}
+}

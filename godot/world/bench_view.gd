@@ -1,8 +1,34 @@
 class_name BenchView
 extends Control
-## The world (M0 placeholder): a dark bench rectangle with the stall name and the open ticket's card text. The real bench view
-## (board grid, parts, living wires, instruments) replaces this in M2. It reads only what the engine says (the ticketCard and region
-## queries); the app tells it how much of the right side a drawer covers (set_cover).
+## The bench world (M2-4, DESIGN §5): walnut bench -> matte-black perfboard with gold pads and a silkscreen grid -> wires and parts drawn in
+## code -> living overlays (node-voltage tint, current dots, heat glow, LED bloom, smoke). It shows only what the engine says, read through
+## NodeApi (the thin adapter that documents the query shapes). With no engine data it shows an empty board.
+##
+## Env hooks (screenshots / QA): CB_BOARD=<json path or fixture name> renders that board without the engine, CB_POWER=1 powers it
+## (in engine mode it sends `power(true)` once), CB_SMOKEDEMO=led|res|cap forces that part to be smoked, CB_CAM=close|wide|full|<zoom>.
+## The app tells the view how much of the right side a drawer covers (set_cover).
+
+class Layer extends Control:
+	var fn: Callable
+	func _init(f: Callable, add := false) -> void:
+		fn = f; mouse_filter = Control.MOUSE_FILTER_IGNORE; set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		if add:
+			var mat := CanvasItemMaterial.new(); mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD; material = mat
+	func _draw() -> void: fn.call(self)
+
+const WALNUT := Color("#3B2A20")
+const MASK := Color("#14161A")
+const PAD_GOLD := Color("#D4A74A")
+const SLATE := Color("#5B6573")
+const AMBER := Color("#FFB547")
+const CYAN := Color("#38D6FF")
+const MAGENTA := Color("#FF4FA3")
+const SMOKE_GREY := Color("#8C96A3")
+const DOT_SPACING := 0.65   # pads between current dots (density is fixed; speed carries the magnitude)
+const FIXTURE_DEFAULT := "res://world/fixtures/led_9v.json"
+
+static var _glow_tex: Texture2D
+
 var app
 var stall := ""
 var lane := ""
@@ -11,40 +37,422 @@ var cover := 0.0
 var blocked := false
 var title_mode := false
 var zoom := 1.0
+var electron_flow := false
+var show_ratings := true
+
+var model: Dictionary = {}
+var source := "none"            ## "none" | "engine" | "fixture"
+var t := 0.0
+var p := 40.0                   ## pixels per pad (pitch)
+var org := Vector2.ZERO         ## screen position of pad (0, 0)
+var board_rect := Rect2()
+var _phase: Dictionary = {}     ## id -> dot phase (pad units), accumulated so a speed change never jumps the dots
+var _smoke: Array = []          ## particles {pos, vel, age, life, r, seed}
+var _emit: Dictionary = {}      ## uid -> emit accumulator
+var _burst: Dictionary = {}     ## uid -> true once its pop has fired
+var _layout_key := ""
+var _parts_dirty := true
+var _power_env := false
+var _power_sent := false
+var _smoke_demo := ""
+var _smoke_demo_done := false
+var _parts_layer: Layer
+var _glow_layer: Layer
+var _fx_layer: Layer
+var _empty: Dictionary
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_empty = NodeApi.normalise({"board": {"w": 24, "h": 16}})
+	_parts_layer = Layer.new(_draw_parts); add_child(_parts_layer)
+	_glow_layer = Layer.new(_draw_glow, true); add_child(_glow_layer)
+	_fx_layer = Layer.new(_draw_fx); add_child(_fx_layer)
+	_power_env = OS.get_environment("CB_POWER") == "1"
+	_smoke_demo = OS.get_environment("CB_SMOKEDEMO").to_lower()
+	var bp := OS.get_environment("CB_BOARD")
+	if bp == "" and _smoke_demo != "": bp = FIXTURE_DEFAULT
+	if bp != "":
+		var mm := NodeApi.load_fixture(bp)
+		if mm.is_empty(): push_warning("CB_BOARD: could not read %s" % bp)
+		else: _set_model(mm, "fixture")
+	set_process(true)
 
-func set_cover(px: float) -> void: cover = px; queue_redraw()
+func set_cover(px: float) -> void: cover = px
 func set_blocked(b: bool) -> void: blocked = b
-func set_title(on: bool) -> void: title_mode = on; queue_redraw()
+func set_title(on: bool) -> void: title_mode = on
 
 ## CB_CAM for screenshots: "close", "wide", "full", or a zoom factor.
 func set_camera(spec: String) -> void:
 	match spec:
 		"close": zoom = 1.3
 		"wide": zoom = 0.8
-		"full": zoom = 1.0
-		_: if spec.is_valid_float(): zoom = clampf(float(spec), 0.4, 2.5)
-	queue_redraw()
+		"full", "fit": zoom = 1.0
+		"2x": zoom = 2.0
+		"4x": zoom = 4.0
+		_: if spec.is_valid_float(): zoom = clampf(float(spec), 0.4, 4.0)
 
 func set_state(region_strings: Dictionary, ticket_card) -> void:
 	stall = str(region_strings.get("stall", "")); lane = str(region_strings.get("lane", ""))
 	card = ticket_card if ticket_card is Dictionary else {}
+	if source != "fixture": refresh()
 	queue_redraw()
 
-func _txt(s: String, p: Vector2, size: int, col: Color, align := HORIZONTAL_ALIGNMENT_LEFT) -> void:
-	draw_string(ThemeDB.fallback_font, p, s, align, -1.0, size, col)
+## Re-read the engine's board and queries (the engine tells us when something changed; live frames call this too).
+func refresh() -> void:
+	if app == null or app.get("b") == null: return
+	var mm := NodeApi.from_engine(app.b)
+	if mm.is_empty():
+		if source == "engine": model = {}; source = "none"; _parts_dirty = true
+		return
+	_set_model(mm, "engine")
+	if _power_env and not _power_sent and not mm.powered:
+		_power_sent = true; app.b.act("power", [true])
+
+func _set_model(mm: Dictionary, src: String) -> void:
+	model = mm; source = src; _parts_dirty = true
+	if src == "fixture":
+		model.powered = _power_env
+	if _smoke_demo != "" and not _smoke_demo_done:
+		var kind: String = {"led": "LED", "res": "R", "cap": "CE"}.get(_smoke_demo, _smoke_demo.to_upper())
+		for pt in model.parts:
+			if pt.kind == kind:
+				model.smoked[pt.uid] = true; _smoke_demo_done = true
+				for k in model.wire_i: model.wire_i[k] = 0.0   # the part is open now: no more dots
+				for k in model.part_i: model.part_i[k] = 0.0
+				model.powered = true
+				break
+
+func _m() -> Dictionary: return model if not model.is_empty() else _empty
+
+## -------------------------------------------------------------------------------------------------------------- layout
+
+func _margins() -> Vector4:   # left, top, right, bottom of the free area (app bar, dock / phone rail, drawer cover)
+	var bar := 66.0; var dock := 84.0; var left := 14.0; var bottom := 8.0
+	if app != null:
+		var bv = app.get("_bar_h"); var dv = app.get("_dock_h")
+		if bv != null: bar = float(bv)
+		if dv != null: dock = float(dv)
+	if CbLayout.kind == "phone":
+		left = 92.0 + 8.0; bottom = 6.0   # CbApp.RAIL_W
+	else: bottom = dock + 8.0
+	return Vector4(left, bar + 10.0, cover + 14.0, bottom)
+
+func _relayout() -> void:
+	var mg := _margins(); var m := _m()
+	var top := mg.y + (30.0 if (stall != "" or not card.is_empty()) else 0.0)
+	var area := Rect2(mg.x, top, size.x - mg.x - mg.z, size.y - top - mg.w)
+	var gw := float(m.w - 1) + 2.0 * 1.3 + 0.8; var gh := float(m.h - 1) + 2.0 * 1.3 + 0.8
+	p = clampf(minf(area.size.x / gw, area.size.y / gh), 6.0, 56.0) * zoom
+	org = area.get_center() - Vector2(m.w - 1, m.h - 1) * p * 0.5
+	board_rect = Rect2(org - Vector2(1.3, 1.3) * p, Vector2(m.w - 1 + 2.6, m.h - 1 + 2.6) * p)
+	_parts_dirty = true
+
+func _px(pad: Vector2) -> Vector2: return org + pad * p
+
+## -------------------------------------------------------------------------------------------------------------- frame
+
+func _process(dt: float) -> void:
+	t += dt
+	var key := "%s|%s|%s|%s|%s" % [size, cover, zoom, CbLayout.kind, _margins()]
+	if key != _layout_key: _layout_key = key; _relayout(); queue_redraw()
+	var m := _m()
+	var live: bool = m.powered
+	var has_ac := false
+	if live:
+		for id in m.wire_i: _advance(id, float(m.wire_i[id]), m, dt)
+		for id in m.part_i: _advance("p:" + str(id), float(m.part_i[id]), m, dt, str(id))
+		has_ac = not m.ac_amp.is_empty()
+	_smoke_step(dt, m)
+	if _parts_dirty or has_ac:
+		_parts_dirty = false; _parts_layer.queue_redraw()
+	_glow_layer.queue_redraw(); _fx_layer.queue_redraw()
+
+func _ac_wave() -> float: return sin(TAU * 0.6 * t)
+
+func _advance(id: String, amps: float, m: Dictionary, dt: float, ac_key := "") -> void:
+	var a := absf(amps)
+	if a < 1e-9: return
+	var speed := clampf(log(a / 1e-6) / log(10.0), 0.2, 6.0)   # pads/s, DESIGN §5.2
+	var dir := signf(amps) * (-1.0 if electron_flow else 1.0)
+	if m.ac.has(id if ac_key == "" else ac_key): dir *= _ac_wave()
+	_phase[id] = float(_phase.get(id, 0.0)) + speed * dir * dt
+
+## -------------------------------------------------------------------------------------------------------------- colours
+
+static func volt_color(v: float, lo: float, hi: float) -> Color:
+	if v >= 0.0:
+		var k := v / maxf(hi, 0.001)
+		if k <= 1.0: return SLATE.lerp(AMBER, k)
+		return AMBER.lerp(MAGENTA, clampf((k - 1.0) / 0.5, 0.0, 1.0))
+	return SLATE.lerp(CYAN, clampf(v / minf(lo, -0.001), 0.0, 1.0))
+
+static func heat_color(k: float) -> Color:
+	if k < 0.4: return Color("#7a1208").lerp(Color("#FF3B1F"), k / 0.4)
+	if k < 0.75: return Color("#FF3B1F").lerp(Color("#FF9A2A"), (k - 0.4) / 0.35)
+	return Color("#FF9A2A").lerp(Color("#FFF4D6"), (k - 0.75) / 0.25)
+
+static func glow() -> Texture2D:
+	if _glow_tex == null:
+		var g := Gradient.new(); g.offsets = PackedFloat32Array([0.0, 0.3, 1.0])
+		g.colors = PackedColorArray([Color(1, 1, 1, 1), Color(1, 1, 1, 0.3), Color(1, 1, 1, 0.0)])
+		var tx := GradientTexture2D.new(); tx.gradient = g; tx.fill = GradientTexture2D.FILL_RADIAL
+		tx.fill_from = Vector2(0.5, 0.5); tx.fill_to = Vector2(1.0, 0.5); tx.width = 128; tx.height = 128
+		_glow_tex = tx
+	return _glow_tex
+
+func _blob(ci: CanvasItem, c: Vector2, r: float, col: Color) -> void:
+	ci.draw_texture_rect(glow(), Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0), false, col)
+
+func _node_v(pad: Vector2, m: Dictionary) -> float:
+	if not m.powered: return 0.0
+	var k := NodeApi.key(pad)
+	var v: float = m.volts.get(k, 0.0)
+	if m.ac_amp.has(k): v += float(m.ac_amp[k]) * _ac_wave()
+	return v
+
+func _node_color(pad: Vector2, m: Dictionary) -> Color: return volt_color(_node_v(pad, m), m.vlo, m.vhi)
+
+func _txt(ci: CanvasItem, s: String, pos: Vector2, size_px: int, col: Color, align := HORIZONTAL_ALIGNMENT_LEFT, outline := true) -> void:
+	var f := ThemeDB.fallback_font
+	if outline: ci.draw_string_outline(f, pos, s, align, -1.0, size_px, 4, Color(0.02, 0.02, 0.03, 0.9))
+	ci.draw_string(f, pos, s, align, -1.0, size_px, col)
+
+func _label_key(id: String) -> String:
+	var k := "CONN_" + id
+	var s := tr(k)
+	return id if s == k else s
+
+## -------------------------------------------------------------------------------------------------------------- base (bench + board)
 
 func _draw() -> void:
-	var vs := size
-	var w := (vs.x - cover) * 0.8 * zoom; var h := vs.y * 0.6 * zoom
-	var c := Vector2((vs.x - cover) * 0.5, vs.y * 0.5)
-	var r := Rect2(c - Vector2(w, h) * 0.5, Vector2(w, h))
-	draw_rect(r, Color(0.05, 0.08, 0.1), true)
-	draw_rect(r, Color(0.2, 0.3, 0.32), false, 3.0)
-	_txt(stall, r.position + Vector2(24, 44), 28, CbKit.TX)
-	_txt(lane, r.position + Vector2(24, 76), 18, CbKit.DIM)
+	var m := _m()
+	draw_rect(Rect2(Vector2.ZERO, size), WALNUT, true)
+	var rng := RandomNumberGenerator.new(); rng.seed = 7
+	var plank := 150.0
+	for i in int(size.y / plank) + 2:   # planks with grain lines
+		var y := float(i) * plank
+		draw_rect(Rect2(0, y, size.x, plank - 2.0), WALNUT.lerp(Color("#4a3427"), rng.randf() * 0.55), true)
+		draw_line(Vector2(0, y), Vector2(size.x, y), Color(0.05, 0.03, 0.02, 0.8), 2.0)
+		for k in 9: 
+			var gy := y + rng.randf_range(8.0, plank - 12.0); var gx := rng.randf_range(-100.0, size.x * 0.6)
+			draw_line(Vector2(gx, gy), Vector2(gx + rng.randf_range(160.0, 520.0), gy + rng.randf_range(-3.0, 3.0)), Color(0.12, 0.07, 0.04, 0.35), 1.5)
+	if stall != "": draw_string(ThemeDB.fallback_font, Vector2(_margins().x + 6.0, _margins().y + 20.0), stall, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 20, Color(0.95, 0.88, 0.75, 0.85))
 	if not card.is_empty():
-		_txt(str(card.get("title", "")), r.position + Vector2(24, 128), 22, CbKit.ACC)
+		var tx := str(card.get("title", ""))
+		var sx := _margins().x + 6.0 + (ThemeDB.fallback_font.get_string_size(stall, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 20).x + 18.0 if stall != "" else 0.0)
+		draw_string(ThemeDB.fallback_font, Vector2(sx, _margins().y + 20.0), tx, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 17, CbKit.ACC)
+	var br := board_rect
+	draw_rect(Rect2(br.position + Vector2(p * 0.25, p * 0.4), br.size), Color(0, 0, 0, 0.4), true)   # board drop shadow
+	PartArt.rrect(self, br, p * 0.35, Color("#2a2d33"))                                                # edge bevel
+	PartArt.rrect(self, br.grow(-p * 0.07), p * 0.3, MASK)
+	for gx in range(0, m.w, 5):   # silkscreen grid every 5 pads
+		draw_line(_px(Vector2(gx, 0)) + Vector2(0, -p * 0.9), _px(Vector2(gx, m.h - 1)) + Vector2(0, p * 0.9), Color(1, 1, 1, 0.055), 1.5)
+	for gy in range(0, m.h, 5):
+		draw_line(_px(Vector2(0, gy)) + Vector2(-p * 0.9, 0), _px(Vector2(m.w - 1, gy)) + Vector2(p * 0.9, 0), Color(1, 1, 1, 0.055), 1.5)
+	var pr := p * 0.25; var hr := p * 0.1
+	for y in m.h:
+		for x in m.w:
+			var c := org + Vector2(x, y) * p
+			draw_circle(c, pr, Color(0.62, 0.47, 0.18)); draw_circle(c, pr * 0.9, PAD_GOLD); draw_circle(c, hr, Color(0.03, 0.03, 0.04))
+	for cn in [br.position + Vector2(p * 0.45, p * 0.45), br.position + Vector2(br.size.x - p * 0.45, p * 0.45), br.position + Vector2(p * 0.45, br.size.y - p * 0.45), br.end - Vector2(p * 0.45, p * 0.45)]:
+		draw_circle(cn, p * 0.24, Color("#2a2d33")); draw_circle(cn, p * 0.15, WALNUT.darkened(0.5))   # mounting holes
+	for c in m.connectors: _connector(c, m)
+
+func _connector(c: Dictionary, m: Dictionary) -> void:   # the brass edge connector with its engraved name
+	var pos := _px(c.pad); var br := board_rect
+	var left: bool = c.pad.x < float(m.w - 1) * 0.5
+	var edge := br.position.x - p * 0.35 if left else br.end.x + p * 0.35
+	var r: Rect2
+	if left: r = Rect2(edge, pos.y - p * 0.5, pos.x - edge + p * 0.5, p)
+	else: r = Rect2(pos.x - p * 0.5, pos.y - p * 0.5, edge - pos.x + p * 0.5, p)
+	PartArt.rrect(self, Rect2(r.position + Vector2(p * 0.06, p * 0.1), r.size), p * 0.18, Color(0, 0, 0, 0.4))
+	PartArt.rrect(self, r, p * 0.18, Color("#b8893a"))
+	draw_line(r.position + Vector2(p * 0.1, p * 0.16), Vector2(r.end.x - p * 0.1, r.position.y + p * 0.16), Color(1, 0.9, 0.6, 0.45), p * 0.07)
+	draw_circle(pos, p * 0.26, Color("#e3c070")); draw_circle(pos, p * 0.1, Color(0.05, 0.04, 0.03))
+	var s := _label_key(c.id)
+	var fs := int(clampf(p * 0.34, 9.0, 20.0))
+	var tw := ThemeDB.fallback_font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
+	var ty := pos.y - p * 0.62 if pos.y > br.position.y + p * 1.8 else pos.y + p * 0.62 + fs
+	draw_string(ThemeDB.fallback_font, Vector2(pos.x - tw * 0.5 + (p * 0.5 if left else -p * 0.5), ty), s, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, Color(0.92, 0.88, 0.75, 0.9))
+
+## -------------------------------------------------------------------------------------------------------------- wires, parts, labels
+
+func _along(pts: Array, s: float) -> Vector2:
+	var acc := 0.0
+	for i in pts.size() - 1:
+		var l: float = pts[i].distance_to(pts[i + 1])
+		if s <= acc + l: return pts[i].lerp(pts[i + 1], (s - acc) / maxf(l, 0.001))
+		acc += l
+	return pts[pts.size() - 1]
+
+func _length(pts: Array) -> float:
+	var l := 0.0
+	for i in pts.size() - 1: l += pts[i].distance_to(pts[i + 1])
+	return l
+
+func _draw_parts(ci: Control) -> void:
+	var m := _m(); var live: bool = m.powered
+	# node tint on the pads (a coloured ring + a dark collar)
+	if live:
+		for k in m.volts:
+			var xy: PackedStringArray = k.split(",")
+			var pad := Vector2(float(xy[0]), float(xy[1]))
+			ci.draw_arc(_px(pad), p * 0.34, 0.0, TAU, 18, _node_color(pad, m), maxf(2.0, p * 0.09), true)
+	# soot decals under smoked parts
+	var bounds := {}
+	for pt in m.parts:
+		var pin_px: Array = pt.pins.map(func(v): return _px(v))
+		bounds[pt.uid] = PartArt.screen_bounds(pt, pin_px, p)
+		if m.smoked.has(pt.uid):
+			var c: Vector2 = bounds[pt.uid].get_center()
+			ci.draw_circle(c, bounds[pt.uid].size.length() * 0.38, Color(0, 0, 0, 0.28)); ci.draw_circle(c, bounds[pt.uid].size.length() * 0.24, Color(0, 0, 0, 0.35))
+	# wires (insulated jumpers), tinted by node voltage
+	for w in m.wires:
+		var pts: Array = w.path.map(func(v): return _px(v))
+		if pts.size() < 2: continue
+		var col := _node_color(w.path[0], m)
+		var base := Color(0.34, 0.37, 0.42).lerp(col, 0.9 if live else 0.35)
+		var sh := PackedVector2Array(pts.map(func(v): return v + Vector2(p * 0.1, p * 0.16)))
+		ci.draw_polyline(sh, Color(0, 0, 0, 0.35), p * 0.3, true)
+		var pa := PackedVector2Array(pts)
+		ci.draw_polyline(pa, Color(0.03, 0.035, 0.04), p * 0.32, true)
+		for v in pts: ci.draw_circle(v, p * 0.16, Color(0.03, 0.035, 0.04))
+		ci.draw_polyline(pa, base.darkened(0.25), p * 0.22, true)
+		ci.draw_polyline(PackedVector2Array(pts.map(func(v): return v + Vector2(0, -p * 0.04))), base, p * 0.14, true)
+		ci.draw_polyline(PackedVector2Array(pts.map(func(v): return v + Vector2(0, -p * 0.07))), Color(1, 1, 1, 0.22), p * 0.04, true)
+		for v in pts: ci.draw_circle(v, p * 0.11, base)
+		for e in [pts[0], pts[pts.size() - 1]]:   # solder blobs
+			ci.draw_circle(e, p * 0.27, Color(0.5, 0.52, 0.56)); ci.draw_circle(e, p * 0.23, Color(0.8, 0.82, 0.86)); ci.draw_circle(e + Vector2(-p * 0.07, -p * 0.07), p * 0.07, Color(1, 1, 1, 0.7))
+	# parts
+	for pt in m.parts:
+		var i: float = absf(float(m.part_i.get(pt.uid, 0.0))) if live else 0.0
+		var st := {"lit": _led_k(i) if pt.kind == "LED" else 0.0, "smoked": m.smoked.has(pt.uid)}
+		PartArt.draw(ci, pt, _px(Vector2(pt.x, pt.y)), p, st)
+	for pr in m.probes: _probe(ci, pr)
+	# labels and rating bars
+	var fs := int(clampf(p * 0.34, 10.0, 22.0))
+	for pt in m.parts:
+		var b: Rect2 = bounds[pt.uid]
+		var s: String = pt.label
+		var wtx := ThemeDB.fallback_font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
+		var pos: Vector2
+		if b.size.y > b.size.x * 1.4: pos = Vector2(b.end.x + 4.0, b.get_center().y + fs * 0.35)
+		else: pos = Vector2(b.get_center().x - wtx * 0.5, b.position.y - 4.0)
+		_txt(ci, s, pos, fs, Color(0.96, 0.95, 0.88))
+		if show_ratings and live and m.ratings.has(pt.uid):
+			var r: Dictionary = m.ratings[pt.uid]; var worst := 0.0
+			for k in r: worst = maxf(worst, float(r[k]))
+			var bw := minf(b.size.x, p * 2.4) * 0.8; var bp := Vector2(b.get_center().x - bw * 0.5, b.end.y + 2.0)
+			ci.draw_rect(Rect2(bp, Vector2(bw, p * 0.13)), Color(0, 0, 0, 0.7))
+			var rc := Color("#3fd47a") if worst < 0.7 else (AMBER if worst < 0.95 else Color("#ff4a3a"))
+			ci.draw_rect(Rect2(bp, Vector2(bw * clampf(worst, 0.0, 1.0), p * 0.13)), rc)
+
+func _probe(ci: Control, pr: Dictionary) -> void:
+	var tip := _px(pr.pad); var col := Color("#7CFF6B") if pr.ch == 1 else Color("#FFB547")
+	var h := tip + Vector2(p * 1.1, -p * 1.7); var far := tip + Vector2(p * 2.6, -p * 4.4)
+	ci.draw_line(tip + Vector2(p * 0.1, p * 0.12), far + Vector2(p * 0.1, p * 0.12), Color(0, 0, 0, 0.35), p * 0.3)
+	ci.draw_line(tip, h, SILVER_STEEL, p * 0.1)
+	ci.draw_line(h, far, col.darkened(0.45), p * 0.34)
+	ci.draw_line(h, far, col, p * 0.24)
+	ci.draw_circle(tip, p * 0.12, Color.WHITE)
+	var s := tr("PROBE_CH%d" % pr.ch)
+	_txt(ci, s, far + Vector2(p * 0.3, 0), int(clampf(p * 0.32, 9.0, 18.0)), col)
+
+const SILVER_STEEL := Color(0.8, 0.82, 0.86)
+
+static func _led_k(i: float) -> float: return clampf(log(maxf(i, 1e-9) / 2e-5) / log(10.0) / 3.0, 0.0, 1.0)
+
+## -------------------------------------------------------------------------------------------------------------- additive glow layer
+
+func _led_color(part: Dictionary) -> Color:
+	var id: String = part.partId
+	if "grn" in id or "green" in id: return Color(0.3, 1.0, 0.4)
+	if "blu" in id: return Color(0.35, 0.55, 1.0)
+	if "yel" in id: return Color(1.0, 0.85, 0.2)
+	if "wh" in id: return Color(1.0, 0.95, 0.85)
+	return Color(1.0, 0.2, 0.12)
+
+func _draw_glow(ci: Control) -> void:
+	var m := _m()
+	if not m.powered: return
+	# node halos on the pads
+	for k in m.volts:
+		var xy: PackedStringArray = k.split(",")
+		var pad := Vector2(float(xy[0]), float(xy[1]))
+		var c := _node_color(pad, m)
+		_blob(ci, _px(pad), p * 0.62, Color(c.r, c.g, c.b, 0.34))
+	var pp := {}
+	for pt in m.parts: pp[pt.uid] = pt
+	for pt in m.parts:
+		var pin_px: Array = pt.pins.map(func(v): return _px(v))
+		var b := PartArt.screen_bounds(pt, pin_px, p); var c := b.get_center()
+		var smoked: bool = m.smoked.has(pt.uid)
+		var temp: float = m.temps.get(pt.uid, m.ambient)
+		var hk := clampf((temp - 45.0) / 110.0, 0.0, 1.0)
+		if hk > 0.02 and not smoked:   # heat glow: blackbody ramp over the body
+			_blob(ci, c, maxf(b.size.x, b.size.y) * (0.5 + 0.25 * hk), Color(heat_color(hk), hk * 0.5))
+		if pt.kind == "LED" and not smoked:   # bloom proportional to current (log)
+			var k := _led_k(absf(float(m.part_i.get(pt.uid, 0.0))))
+			if k > 0.0:
+				var lc := _led_color(pt); var lp: Vector2 = _px(Vector2(pt.x, pt.y) + NodeApi._rot_off(Vector2(1, 0), pt.rot, pt.flip))
+				var flick := 1.0 + 0.02 * sin(t * 37.0)
+				_blob(ci, lp, p * (5.0 + 2.0 * k), Color(lc, 0.16 * k * flick))
+				_blob(ci, lp, p * (2.4 + 1.6 * k), Color(lc, 0.55 * k * flick))
+				_blob(ci, lp, p * 1.1, Color(1.0, 0.8, 0.7, 0.8 * k))
+	# current dots along wires ...
+	for w in m.wires:
+		var amps: float = m.wire_i.get(w.wid, 0.0)
+		if absf(amps) < 1e-9: continue
+		var pts: Array = w.path.map(func(v): return _px(v))
+		_dots(ci, pts, str(w.wid), _node_color(w.path[0], m), 1.0)
+	# ... and through parts
+	for pt in m.parts:
+		var amps2: float = m.part_i.get(pt.uid, 0.0)
+		if absf(amps2) < 1e-9 or pt.pins.size() != 2 or pt.kind == "BAT": continue
+		var pts2: Array = [_px(pt.pins[0]), _px(pt.pins[1])]
+		_dots(ci, pts2, "p:" + str(pt.uid), _node_color(pt.pins[0], m), 0.8)
+
+func _dots(ci: CanvasItem, pts: Array, id: String, tint: Color, scale: float) -> void:
+	var total := _length(pts)
+	var sp := DOT_SPACING * p
+	var s := fposmod(float(_phase.get(id, 0.0)) * p, sp)
+	var halo := Color(tint.lerp(Color.WHITE, 0.45), 0.5)
+	while s <= total:
+		var c := _along(pts, s)
+		_blob(ci, c, p * 0.3 * scale, halo)
+		ci.draw_circle(c, p * 0.095 * scale, Color(1.0, 0.97, 0.82, 0.95))
+		s += sp
+
+## -------------------------------------------------------------------------------------------------------------- smoke
+
+func _smoke_step(dt: float, m: Dictionary) -> void:
+	for pt in m.parts:
+		if not m.smoked.has(pt.uid): continue
+		var pin_px: Array = pt.pins.map(func(v): return _px(v))
+		var b := PartArt.screen_bounds(pt, pin_px, p); var c := b.get_center()
+		if not _burst.has(pt.uid):   # the pop
+			_burst[pt.uid] = true
+			for i in 34: _spawn(c, 1.6)
+		_emit[pt.uid] = float(_emit.get(pt.uid, 0.0)) + dt * 36.0
+		while _emit[pt.uid] >= 1.0: _emit[pt.uid] -= 1.0; _spawn(c, 1.0)
+	var keep: Array = []
+	for q in _smoke:
+		q.age += dt
+		if q.age >= q.life: continue
+		q.vel.x += sin(q.age * 2.4 + q.seed) * 55.0 * dt * (p / 40.0)   # curl
+		q.pos += q.vel * dt
+		keep.append(q)
+	_smoke = keep
+
+func _spawn(c: Vector2, power: float) -> void:
+	var a := randf() * TAU; var sc := p / 40.0
+	_smoke.append({"pos": c + Vector2(cos(a), sin(a)) * p * 0.3 * randf(), "vel": Vector2(randf_range(-14.0, 14.0) * power, -randf_range(34.0, 70.0) * power) * sc,
+		"age": 0.0, "life": randf_range(1.8, 3.2), "r": p * randf_range(0.35, 0.6), "seed": randf() * TAU})
+
+func _draw_fx(ci: Control) -> void:
+	for q in _smoke:
+		var k: float = q.age / q.life
+		var a := 0.85 * pow(1.0 - k, 1.2) * minf(1.0, q.age * 6.0)
+		var r: float = q.r * (1.0 + 2.6 * k)
+		_blob(ci, q.pos, r, Color(0.55, 0.6, 0.67, a))
