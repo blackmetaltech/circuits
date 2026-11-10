@@ -1,0 +1,19 @@
+{
+  "device": "Pixel 9a (58071XEBF2C14D), nodejs-mobile 18 in-process, debug APK, GA-2 spike",
+  "date": "2026-11-10",
+  "session": "680 s spike run, k=333 (one 1/30 s live frame at dt 0.1 ms), thermal status 0 at start and end (LITTLE 77 C both)",
+  "desktopNode": "v26.8.1 (GA-1 run)",
+  "bench": {
+    "bridge25kNonlinearMs": { "pixel": 78.26, "desktop": 48.7, "gate": 1500, "pass": true },
+    "luN48Ms": { "pixel": 0.0514, "desktop": 0.0283, "gate": 0.25, "pass": true },
+    "liveFrameK333IsolatedP95Ms": { "pixel": 1.107, "desktop": 0.823 }
+  },
+  "liveLoop": {
+    "engineMsP50": 4.38, "engineMsP95": 6.37, "gateP95": 4.0, "pass": false,
+    "roundTripMsP50": 7.96, "roundTripMsP95": 10.83, "gateRtP95": 20, "rtPass": true,
+    "fpsP95": 60.0, "fpsP95Range": "55.4-60 across the run", "fpsPass": "marginal (pass at end, 55.4 in several windows)",
+    "thermalSlowdown": false, "notes": "engine p50 4.22 ms at 10 s, 4.38 ms at 680 s: flat"
+  },
+  "pixelFactor": { "solver": 1.6, "lu": 1.8, "use": 1.8 },
+  "verdict": "CONDITIONAL GO. Solver/bench budgets pass with >10x margin; bridge round trip passes. The live-frame engine time in the loop (p95 6.4 ms) fails the 4 ms budget although the same frame costs 1.1 ms p95 in isolation, so the overhead is outside the solver (query dispatch, JSON of 2x512 floats, GC, CPU governor at sustained low load). Next session: measure k=100 and thread=1, and time serialisation separately; if still > 4 ms apply BUILD-PLAN fail path step 3 (smaller live.frameSim per frame / sim x k) — the MNA cap need not drop."
+}
