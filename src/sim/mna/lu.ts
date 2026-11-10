@@ -5,10 +5,10 @@
  */
 
 /** Preallocated workspace for one dimension n. */
-export interface LuWork { n: number; a: Float64Array; piv: Int32Array; y: Float64Array }
+export interface LuWork { n: number; a: Float64Array; piv: Int32Array; y: Float64Array; rs: Float64Array }
 
 export interface LuFactorResult {
-  /** false when some |pivot| < 1e-14 * max|A| (or a non-finite pivot). */
+  /** false when some |pivot| < 1e-14 * (max of its original row) (or a non-finite pivot). */
   ok: boolean;
   /** Smallest |pivot| over the columns processed (all columns when ok). */
   minPivot: number;
@@ -18,7 +18,7 @@ export interface LuFactorResult {
 }
 
 export function luWork(n: number): LuWork {
-  return { n, a: new Float64Array(n * n), piv: new Int32Array(n), y: new Float64Array(n) };
+  return { n, a: new Float64Array(n * n), piv: new Int32Array(n), y: new Float64Array(n), rs: new Float64Array(n) };
 }
 
 const REL_TOL = 1e-14;
@@ -27,9 +27,16 @@ const REL_TOL = 1e-14;
 export function luFactor(w: LuWork, A?: Float64Array): LuFactorResult {
   const n = w.n, a = w.a, piv = w.piv;
   if (A !== undefined) a.set(A);
-  let maxAbs = 0;
-  for (let i = 0, m = n * n; i < m; i++) { const v = a[i]! < 0 ? -a[i]! : a[i]!; if (v > maxAbs) maxAbs = v; }
-  const tol = REL_TOL * maxAbs;
+  // Row-scaled singularity test: a pivot is judged against the largest entry of its own ORIGINAL row (`rs`, swapped along with the rows),
+  // not the global max|A|. A global floor (1e-14*max|A|) rises with big companion conductances (2C/h) to gmin level and rejects the
+  // legitimate pivots of floating diode nodes, whose rows are ~gmin everywhere. Pivot choice itself is unchanged (plain partial pivoting).
+  const rs = w.rs;
+  let allZero = true;
+  for (let i = 0; i < n; i++) {
+    let m = 0;
+    for (let j = 0, ir = i * n; j < n; j++) { const v = a[ir + j]! < 0 ? -a[ir + j]! : a[ir + j]!; if (v > m) m = v; }
+    rs[i] = m; if (m > 0) allZero = false;
+  }
   let minP = Infinity, maxP = 0, bad = -1;
   for (let k = 0; k < n; k++) {
     let p = k, best = a[k * n + k]!; if (best < 0) best = -best;
@@ -40,9 +47,10 @@ export function luFactor(w: LuWork, A?: Float64Array): LuFactorResult {
     piv[k] = p;
     if (best < minP) minP = best;
     if (best > maxP) maxP = best;
-    if (!(best >= tol) || best === 0 || best !== best) { bad = k; break; } // also catches NaN and an all-zero matrix
+    if (allZero || !(best >= REL_TOL * rs[p]!) || best === 0 || best !== best) { bad = k; break; } // also catches NaN and an all-zero matrix
     const kr = k * n;
     if (p !== k) {
+      const t = rs[k]!; rs[k] = rs[p]!; rs[p] = t;
       const pr = p * n;
       for (let j = 0; j < n; j++) { const t = a[kr + j]!; a[kr + j] = a[pr + j]!; a[pr + j] = t; }
     }

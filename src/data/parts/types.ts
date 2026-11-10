@@ -67,6 +67,31 @@ export interface Variant {
   thermal: Thermal;
 }
 
+/**
+ * Per-(variant, value) datasheet row of a capacitor family whose ESR/ripple/size depend on the exact SKU (Panasonic EEU-FR). Optional on PartDef.
+ * SI: esr in ohm, ripple in A rms, leakage in A, case in mm. Only rows READ from the datasheet appear here (verified is then true);
+ * a (variant, value) pair with no row is not a series product and stays Sandbox-only (see CAMPAIGN_BLOCKERS).
+ */
+export interface CapValueData {
+  variant: string;
+  value: number;
+  partNo: string;
+  /** Case diameter and length, mm. */
+  caseDia: number;
+  caseLen: number;
+  /** Impedance at 100 kHz, +20 C, used as the ESR proxy (the datasheet lists impedance, not ESR). */
+  esr: number;
+  /** Rated ripple current, 100 kHz, +105 C, A rms. */
+  rippleA: number;
+  /** Maximum DC leakage after 2 min: 0.01 * C(uF) * V (uA), in A. */
+  leakage: number;
+  /** tan delta at 120 Hz / +20 C: series value for the rated voltage plus the datasheet's 0.02 per 1000 uF rule (see source note). */
+  tanDelta: number;
+  verified: boolean;
+  /** Datasheet page id the row was read from, e.g. 'EEE-85'. */
+  page: string;
+}
+
 export interface PartDef {
   id: string;                         // stable id used in level bins, solution codes and region price tables, e.g. 'res-cf', 'led-red-5mm', '1n4007'
   kind: PartKind;
@@ -91,4 +116,6 @@ export interface PartDef {
   codexKey?: string;
   /** Named simplifications (Codex "What we simplified"), as i18n keys. */
   simplifications?: string[];
+  /** Per-SKU datasheet rows (capacitors with value-dependent ESR / ripple). */
+  valueData?: CapValueData[];
 }

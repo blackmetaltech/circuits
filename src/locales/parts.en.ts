@@ -129,7 +129,7 @@ export const partsEn: Record<string, string> = {
   'part.simplify.ww-inductance': 'A real wirewound resistor is a coil and has some inductance. Here it does not.',
   'part.simplify.pot-wiper': 'The wiper never quite reaches either end (0.5 % of the track is always left), so a pot cannot act as a free wire.',
   'part.simplify.x7r-bias': 'A real X7R ceramic capacitor loses capacitance as the voltage across it rises. Here it does not.',
-  'part.simplify.cap-esr': 'A real electrolytic capacitor has some internal resistance (ESR). In this version it has none.',
+  'part.simplify.cap-esr': 'A real electrolytic capacitor has some internal resistance (ESR), and it can only carry so much ripple current. The datasheet numbers are in the catalogue, but in this version the capacitor is simulated without ESR.',
   'part.simplify.l-saturation': 'The inductance stays constant. Above its current rating the coil is simply marked as failing ("core saturated") instead of changing smoothly.',
   'part.simplify.xfmr-ideal': 'The transformer is an ideal ratio with a winding resistance and a magnetising inductance. Leakage inductance and core losses are ignored.',
   'part.simplify.xfmr-fixture': 'This transformer is a fixture made up for the game, not a real catalogue part. Its 6 VA rating, 1.5 ohm winding and 10 H magnetising inductance were picked to teach the lesson, so do not read them as datasheet values.',

@@ -1,8 +1,9 @@
 // Capacitor families (DESIGN §4.1). None of these has a datasheet read by M1-D1 (Murata/TDK/Panasonic/Nichicon PDFs were not
 // reachable or not the cited series): every entry is Sandbox-only and UNVERIFIED. The campaign tickets that use them are listed
-// in CAMPAIGN_BLOCKERS (index.ts). Electrolytic voltages 6.3-50 V and E6 capacitances are standard series values; ESR is v0.2.
+// in CAMPAIGN_BLOCKERS (index.ts). cap-el now carries Panasonic EEU-FR rows (capEl.fr.ts) for 220-4700 uF at 10-35 V; the rest of its grid is unverified.
 import { eseries } from '../eseries';
 import { TAU, TAU_R, semiThermal, variant } from './util';
+import { EEU_FR_ROWS } from './capEl.fr';
 import type { PartDef } from './types';
 
 const GENERIC = 'UNVERIFIED (DESIGN §4.1 [R], no datasheet read by M1-D1). ';
@@ -35,9 +36,12 @@ export const capEl: PartDef = {
   variants: ELEC_V.map((v) => variant(`${v}V`, { Vrated: v, VrevMax: 1 }, semiThermal(40, 105, TAU.electrolytic, { tFail: 125 }))),
   model: {}, tolerance: { C: 0.2 },
   source: {
-    doc: 'Panasonic FR / Nichicon aluminium electrolytic series (DESIGN §4.1 [R]); Panasonic EEU-FR listings found by search state 105 C and +-20 %',
-    note: GENERIC + 'The official Panasonic FR PDF could not be fetched. tMax 105 / tFail 125 follow DESIGN §3.9 (they are rules, 105 C is the series category temperature). thetaJA 40 C/W is an estimate. ESR not modelled (v0.2). ' + TAU_R,
+    doc: 'Panasonic EEU-FR series, datasheet footer 04 May 2013, mirror https://datasheetq.com/pdf-view/EEU-FR0J102B-Panasonic.pdf, accessed 2026-11-10',
+    url: 'https://datasheetq.com/pdf-view/EEU-FR0J102B-Panasonic.pdf',
+    accessed: '2026-11-10',
+    note: 'PARTLY UNVERIFIED. valueData holds the verified rows: 220-4700 uF at 10/16/25/35 V as listed in the series (pages EEE-83 case/impedance/ripple, EEE-84 10 V, EEE-85 16 V and 25 V, EEE-86 35 V, EEE-82 leakage and tan delta). ESR = impedance at 100 kHz, +20 C (the datasheet gives impedance, not ESR; ESR is slightly lower). Ripple = 100 kHz, +105 C. Leakage I = 0.01*C*V uA. Not in the series, so unverified and Sandbox-only: 330 uF at 10 V and 16 V, 4700 uF at 25 V and 35 V, 3300 uF at 35 V (generic E6 values and the 6.3 V / 50 V variants and values below 220 uF are likewise unlisted here). tMax 105 / tFail 125 follow DESIGN §3.9 (they are rules, 105 C is the series category temperature). thetaJA 40 C/W is an estimate. The device model does not use ESR yet (v0.2). ' + TAU_R,
   },
+  valueData: EEU_FR_ROWS,
   verified: false, scope: 'sandbox', simplifications: ['part.simplify.cap-esr'],
 };
 

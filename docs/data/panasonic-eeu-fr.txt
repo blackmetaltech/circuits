@@ -1,0 +1,387 @@
+                                                                                                     Aluminum Electrolytic Capacitors/ FR
+
+Radial Lead Type
+Series:    FR             Type:     A
+■ Features                                                                               ■ Country of origin
+● Low ESR (Same as FM Series)                                                              Malaysia
+● Endurance : 5000 h to 10000 h at +105 °C
+● RoHS directive compliant
+
+■ Attention
+    Not applicable for automotive
+
+■ Specifications
+ Category Temp. Range                                                     –40 °C to +105 °C
+ Rated W.V. Range                                                        6.3 V.DC to 63 V.DC
+ Nominal Cap. Range                                                       4.7 µF to 8200 µF
+ Capacitance Tolerance                                                 ±20 % (120 Hz/+20 °C)
+ DC Leakage Current                                               I < 0.01 CV (µA) After 2 minutes
+                                              W.V.         6.3    10       16     25     35    50                                    63
+                                                                                                                                              (120 Hz/+20 °C)
+ tan δ                                       tan δ        0.22 0.19 0.16 0.14 0.12 0.10                                             0.09
+                                      Add 0.02 per 1000 µF for products of 1000 µF or more.
+                                      After following life test with DC voltage and +105 °C±2 °C ripple current value applied. (The sum
+                                      of DC and ripple peak voltage shall not exceed the rated working voltage) when the capacitors
+                                      are restored to 20 °C, the capacitors shall meet the limits specified below.
+                                       Duration
+                                          φ511/ φ6.311.2 : 5000 hours
+ Endurance                                φ811.5/ φ1012.5 : 6000 hours (✽ Only EEUFR1V331U (φ1012.5) 5000 hours)
+                                          φ815/ φ1016 : 8000 hours, φ8×20 : 9000 hours
+                                          φ1020 to φ1025/ φ12.520 to φ12.535/ φ1620 to φ1625 : 10000 hours
+                                       Capacitance change ±25 % of initial measured value (6.3 V to 10 V : ±30 %)
+                                      tan δ               < 200 % of initial specified value
+                                      DC leakage current  < initial specified value
+                                      After storage for 1000 hours at +105 °C±2 °C with no voltage applied and then being stabilized
+Shelf Life                            at +20 °C, capacitors shall meet the limits specified in Endurance. (With voltage treatment)
+
+
+■ Frequency correction factor for ripple current
+                                                                                                              Frequency (Hz)
+         W.V.(V.DC)                          Cap (µF)
+                                                                            60                  120                        1k              10 k          100 k
+                                         4.7       to       33             0.45                 0.55                  0.75                 0.90          1.00
+                                        47         to     330              0.60                 0.70                  0.85                 0.95          1.00
+          6.3 to 63
+                                      390          to   1000               0.65                 0.75                  0.90                 0.98          1.00
+                                    1200           to   8200               0.75                 0.80                  0.95                 1.00          1.00
+
+■ Dimensions in mm (not to scale)                                                                                                                       (Unit : mm)
+
+                                         Sleeve
+                                                               φd±0.05                                  <φ8                         φ10<
+                 Pressure relief
+                 φ6.3<                                                           +
+                                                                            –
+
+                                             L✽              14 min.       3 min.                      φD±0.5      F±0.5          φD±0.5
+                                      ✽ L<16 : L±1.5
+                                        L>20 : L±2.0
+
+            Body Dia. φD                       5                 6.3                 8                 10                         12.5                    16
+            Body Length L                     —                  —                   —                 —            12.5 to 25           30 to 35         —
+            Lead Dia. φd                     0.5                 0.5                 0.6              0.6                   0.6             0.8          0.8
+            Lead space F                     2.0                 2.5                 3.5              5.0                         5.0                     7.5
+
+Design and specifications are each subject to change without notice. Ask factory for the current technical specifications before purchase and/or use.
+Should a safety concern arise regarding this product, please be sure to contact us immediately.                                                         04 May. 2013
+
+                                                                                – EEE-82 –
+                                                                                                     Aluminum Electrolytic Capacitors/ FR
+
+■ Case size/Impedance/Ripple current
+        W.V.(V.DC)                                    6.3 V to 35 V                                                                  50 V
+                                           Impedance                        Ripple Current                         Impedance                        Ripple Current
+        Case size                         (/100 kHz)                     (mA r.m.s./100 kHz)                     (/100 kHz)                     (mA r.m.s./100 kHz)
+         (φDL)
+                                  +20 °C                 –10 °C                  +105 °C                  +20 °C                 –10 °C                 +105 °C
+    5         11                  0.300                 1.000                       280                   0.340                 1.130                    250
+    6.3       11.2                0.130                 0.430                       455                   0.140                 0.460                    405
+    8         11.5                0.056                 0.168                       950                   0.061                 0.183                    870
+    8         15                  0.041                 0.123                      1240                   0.045                 0.135                   1140
+    8         20                  0.030                 0.090                     1560                    0.033                 0.099                   1430
+    10        12.5                0.043                 0.114                     1290                    0.042                 0.126                   1170
+    10        16                  0.028                 0.078                     1790                    0.030                 0.090                   1650
+    10        20                  0.020                 0.057                     2180                    0.023                 0.069                   1890
+    10        25                  0.018                 0.054                      2470                   0.022                 0.066                   2150
+    12.5  20                      0.018                 0.045                     2600                    0.022                 0.055                   2260
+    12.5  25                      0.015                 0.038                     3190                    0.018                 0.045                   2660
+    12.5  30                      0.013                 0.033                     3630                    0.016                 0.040                   3160
+    12.5  35                      0.012                 0.030                     3750                    0.014                 0.035                   3270
+    16        20                  0.017                 0.043                     3300                    0.019                 0.048                   2870
+    16        25                  0.014                 0.035                     3820                    0.016                 0.040                   3320
+
+
+        W.V.(V.DC)                                           63 V
+                                           Impedance                        Ripple Current
+        Case size                         (/100 kHz)                     (mA r.m.s./100 kHz)
+         (φDL)
+                                  +20 °C                 –10 °C                  +105 °C
+    5         11                  0.510                 2.040                       175
+    6.3       11.2                0.210                 0.840                       284
+    8         11.5                0.092                 0.368                       566
+    8         15                  0.068                 0.272                        741
+    8         20                  0.050                 0.200                       930
+    10        12.5                0.063                 0.252                       761
+    10        16                  0.045                 0.180                      1073
+    10        20                  0.035                 0.140                     1229
+    10        25                  0.033                 0.132                     1500
+    12.5  20                      0.033                 0.125                      1582
+    12.5  25                      0.027                 0.092                     1995
+    12.5  30                      0.024                 0.082                     2528
+    12.5  35                      0.021                 0.071                     2780
+    16        20                  0.029                 0.093                      2153
+    16        25                  0.024                 0.074                     2988
+
+
+
+
+Design and specifications are each subject to change without notice. Ask factory for the current technical specifications before purchase and/or use.
+Should a safety concern arise regarding this product, please be sure to contact us immediately.                                                           04 May. 2013
+
+                                                                              – EEE-83 –
+                                                                                                     Aluminum Electrolytic Capacitors/ FR
+
+■ Standard Products
+                           Case size   Specification             Lead Length                                                                            Min. Packaging Q'ty
+             Cap.                 Ripple  Imped-    Endur- Lead       Lead Space
+  W.V.
+            (±20 %) Dia. Length Current ance ance          Dia.
+                                                                         Taping Taping                                               Part No.
+                                                                                                                                                        Straight
+                                                                                                                                                                 Taping
+                                (100 kHz) (100 kHz)             Straight                                                                                 Leads
+                                (+105 °C) (+20 °C)                         ✽B     ✽H
+   (V)        (µF)  (mm) (mm) (mA r.m.s.) () (hours) (mm) (mm) (mm) (mm)                                                                               (pcs) (pcs)
+              150         5         11           280       0.300       5000         0.5        2.0        5.0        2.5      EEUFR0J151( )             200        2000
+              220         6.3       11.2         455       0.130       5000         0.5        2.5        5.0        2.5      EEUFR0J221( )             200        2000
+              330         6.3       11.2         455       0.130       5000         0.5        2.5        5.0        2.5      EEUFR0J331( )             200        2000
+              470         6.3       11.2         455       0.130       5000         0.5        2.5        5.0        2.5      EEUFR0J471( )             200        2000
+              820         8         11.5         950       0.056       6000         0.6        3.5        5.0                 EEUFR0J821( )             200        1000
+             1000         8         11.5         950       0.056       6000         0.6        3.5        5.0                 EEUFR0J102( )             200        1000
+                          8         15          1240       0.041       8000         0.6        3.5        5.0                 EEUFR0J122L( )            200        1000
+             1200
+                         10         12.5        1290       0.043       6000         0.6        5.0        5.0                 EEUFR0J122( )             200         500
+             1500         8         20          1560       0.030       9000         0.6        3.5        5.0                 EEUFR0J152L( )            200        1000
+   6.3       1800        10         16          1790       0.028       8000         0.6        5.0        5.0                 EEUFR0J182( )             200         500
+             2200        10         20          2180       0.020      10000         0.6        5.0        5.0                 EEUFR0J222( )             200         500
+             2700        10         25          2470       0.018      10000         0.6        5.0        5.0                 EEUFR0J272L( )            200         500
+             3300        10         25          2470       0.018      10000         0.6        5.0        5.0                 EEUFR0J332L( )            200         500
+             3900        12.5       20          2600       0.018      10000         0.6        5.0        5.0                 EEUFR0J392( )             200         500
+             4700        12.5       25          3190       0.015      10000         0.6        5.0        5.0                 EEUFR0J472( )             200         500
+             5600        12.5       30          3630       0.013      10000         0.8        5.0                            EEUFR0J562L               100
+                         12.5       35          3750       0.012      10000         0.8        5.0                            EEUFR0J682L               100
+             6800
+                         16         20          3300       0.017      10000         0.8        7.5        7.5                 EEUFR0J682S( )            100         250
+             8200        16         25          3820       0.014      10000         0.8        7.5        7.5                 EEUFR0J822( )             100         250
+              100         5         11           280       0.300       5000         0.5        2.0        5.0        2.5      EEUFR1A101( )             200        2000
+              150         5         11           280       0.300       5000         0.5        2.0        5.0        2.5      EEUFR1A151( )             200        2000
+              220         6.3       11.2         455       0.130       5000         0.5        2.5        5.0        2.5      EEUFR1A221( )             200        2000
+              270         6.3       11.2         455       0.130       5000         0.5        2.5        5.0        2.5      EEUFR1A271( )             200        2000
+              470         8         11.5         950       0.056       6000         0.6        3.5        5.0                 EEUFR1A471( )             200        1000
+              680         8         11.5         950       0.056       6000         0.6        3.5        5.0                 EEUFR1A681( )             200        1000
+              820        10         12.5        1290       0.043       6000         0.6        5.0        5.0                 EEUFR1A821( )             200         500
+                         10         16          1790       0.028       8000         0.6        5.0        5.0                 EEUFR1A102( )             200         500
+             1000
+                          8         15          1240       0.041       8000         0.6        3.5        5.0                 EEUFR1A102L( )            200        1000
+                          8         20          1560       0.030       9000         0.6        3.5        5.0                 EEUFR1A152L( )            200        1000
+    10       1500
+                         10         16          1790       0.028       8000         0.6        5.0        5.0                 EEUFR1A152( )             200         500
+             1800        10         20          2180       0.020      10000         0.6        5.0        5.0                 EEUFR1A182( )             200         500
+             2200        10         25          2470       0.018      10000         0.6        5.0        5.0                 EEUFR1A222L( )            200         500
+             3300        12.5       20          2600       0.018      10000         0.6        5.0        5.0                 EEUFR1A332( )             200         500
+             3900        12.5       25          3190       0.015      10000         0.6        5.0        5.0                 EEUFR1A392( )             200         500
+                         12.5       30          3630       0.013      10000         0.8        5.0                            EEUFR1A472L               100
+             4700
+                         16         20          3300       0.017      10000         0.8        7.5        7.5                 EEUFR1A472S( )            100          250
+             5600        12.5       35          3750       0.012      10000         0.8        5.0                            EEUFR1A562L               100
+                         12.5       35          3750       0.012      10000         0.8        5.0                            EEUFR1A682L               100
+             6800
+                         16         25          3820       0.014      10000         0.8        7.5        7.5                 EEUFR1A682( )             100          250
+· When requesting taped product, please put the letter "B" or "H" between the "( )". Lead wire pitch B=5 mm, 7.5 mm, H=2.5 mm.
+· Please refer to the page of “Taping Dimensions”.
+
+
+
+
+Design and specifications are each subject to change without notice. Ask factory for the current technical specifications before purchase and/or use.
+Should a safety concern arise regarding this product, please be sure to contact us immediately.                                                           04 May. 2013
+
+                                                                              – EEE-84 –
+                                                                                                     Aluminum Electrolytic Capacitors/ FR
+
+■ Standard Products
+                           Case size   Specification             Lead Length                                                                            Min. Packaging Q'ty
+             Cap.                 Ripple  Imped-    Endur- Lead       Lead Space
+  W.V.
+            (±20 %) Dia. Length Current ance ance          Dia.
+                                                                         Taping Taping                                               Part No.
+                                                                                                                                                        Straight
+                                                                                                                                                                 Taping
+                                (100 kHz) (100 kHz)             Straight                                                                                 Leads
+                                (+105 °C) (+20 °C)                         ✽B     ✽H
+   (V)        (µF)  (mm) (mm) (mA r.m.s.) () (hours) (mm) (mm) (mm) (mm)                                                                               (pcs) (pcs)
+                68       5           11           280      0.300       5000         0.5        2.0        5.0        2.5      EEUFR1C680( )             200        2000
+               100       5           11           280      0.300       5000         0.5        2.0        5.0        2.5      EEUFR1C101( )             200        2000
+               120       6.3         11.2         455      0.130       5000         0.5        2.5        5.0        2.5      EEUFR1C121( )             200        2000
+               220       6.3         11.2         455      0.130       5000         0.5        2.5        5.0        2.5      EEUFR1C221( )             200        2000
+               470       8           11.5         950      0.056       6000         0.6        3.5        5.0                 EEUFR1C471( )             200        1000
+                         8          15          1240       0.041       8000         0.6        3.5        5.0                 EEUFR1C681L( )            200        1000
+               680
+                        10           12.5       1290       0.043       6000         0.6        5.0        5.0                 EEUFR1C681( )             200         500
+                         8          20          1560       0.030       9000         0.6        3.5        5.0                 EEUFR1C102L( )            200        1000
+             1000
+                        10          16          1790       0.028       8000         0.6        5.0        5.0                 EEUFR1C102( )             200         500
+                        10          20          2180       0.020      10000         0.6        5.0        5.0                 EEUFR1C152( )             200         500
+             1500
+    16                  10          25          2470       0.018      10000         0.6        5.0        5.0                 EEUFR1C152L( )            200         500
+             1800       10          25          2470       0.018      10000         0.6        5.0        5.0                 EEUFR1C182L( )            200         500
+             2200       12.5        20          2600       0.018      10000         0.6        5.0        5.0                 EEUFR1C222( )             200         500
+             2700       12.5        25          3190       0.015      10000         0.6        5.0        5.0                 EEUFR1C272( )             200         500
+                        12.5        30          3630       0.013      10000         0.8        5.0                            EEUFR1C332L               100
+             3300
+                        16          20          3300       0.017      10000         0.8        7.5        7.5                 EEUFR1C332S( )            100          250
+                        12.5        35          3750       0.012      10000         0.8        5.0                            EEUFR1C392L               100
+             3900
+                        16          20          3300       0.017      10000         0.8        7.5        7.5                 EEUFR1C392S( )            100          250
+                        12.5        35          3750       0.012      10000         0.8        5.0                            EEUFR1C472L               100
+             4700
+                        16          25          3820       0.014      10000         0.8        7.5        7.5                 EEUFR1C472( )             100         250
+             5600       16          25          3820       0.014      10000         0.8        7.5        7.5                 EEUFR1C562( )             100         250
+               47        5          11            280      0.300       5000         0.5        2.0        5.0        2.5      EEUFR1E470( )             200        2000
+               68        5          11            280      0.300       5000         0.5        2.0        5.0        2.5      EEUFR1E680( )             200        2000
+              100        6.3        11.2          455      0.130       5000         0.5        2.5        5.0        2.5      EEUFR1E101( )             200        2000
+              150        6.3        11.2          455      0.130       5000         0.5        2.5        5.0        2.5      EEUFR1E151( )             200        2000
+              220        8          11.5          950      0.056       6000         0.6        3.5        5.0                 EEUFR1E221( )             200        1000
+              330        8          11.5          950      0.056       6000         0.6        3.5        5.0                 EEUFR1E331( )             200        1000
+              390        8          15           1240      0.041       8000         0.6        3.5        5.0                 EEUFR1E391L( )            200        1000
+                         8          15          1240       0.041       8000         0.6        3.5        5.0                 EEUFR1E471Y( )            200        1000
+               470       8          20          1560       0.030       9000         0.6        3.5        5.0                 EEUFR1E471L( )            200        1000
+                        10          12.5        1290       0.043       6000         0.6        5.0        5.0                 EEUFR1E471( )             200         500
+               560       8          20          1560       0.030       9000         0.6        3.5        5.0                 EEUFR1E561L( )            200        1000
+                         8          20          1560       0.030       9000         0.6        3.5        5.0                 EEUFR1E681L( )            200        1000
+               680
+   25                   10          16          1790       0.028       8000         0.6        5.0        5.0                 EEUFR1E681( )             200         500
+               820      10          20          2180       0.020      10000         0.6        5.0        5.0                 EEUFR1E821( )             200         500
+                        10          20          2180       0.020      10000         0.6        5.0        5.0                 EEUFR1E102( )             200         500
+             1000
+                        10          25           2470      0.018      10000         0.6        5.0        5.0                 EEUFR1E102L( )            200         500
+             1200       10          25           2470      0.018      10000         0.6        5.0        5.0                 EEUFR1E122L( )            200         500
+             1500       12.5        20          2600       0.018      10000         0.6        5.0        5.0                 EEUFR1E152( )             200         500
+                        12.5        25          3190       0.015      10000         0.6        5.0        5.0                 EEUFR1E182( )             200         500
+             1800
+                        16          20          3300       0.017      10000         0.8        7.5        7.5                 EEUFR1E182S( )            100         250
+                        12.5        30          3630       0.013      10000         0.8        5.0                            EEUFR1E222L               100
+             2200
+                        16          20          3300       0.017      10000         0.8        7.5        7.5                 EEUFR1E222S( )            100          250
+                        12.5        35          3750       0.012      10000         0.8        5.0                            EEUFR1E272L               100
+             2700
+                        16          20          3300       0.017      10000         0.8        7.5        7.5                 EEUFR1E272S( )            100          250
+             3300       16          25          3820       0.014      10000         0.8        7.5        7.5                 EEUFR1E332( )             100          250
+· When requesting taped product, please put the letter "B" or "H" between the "( )". Lead wire pitch B=5 mm, 7.5 mm, H=2.5 mm.
+· Please refer to the page of “Taping Dimensions”.
+
+Design and specifications are each subject to change without notice. Ask factory for the current technical specifications before purchase and/or use.
+Should a safety concern arise regarding this product, please be sure to contact us immediately.                                                           04 May. 2013
+
+                                                                              – EEE-85 –
+                                                                                                     Aluminum Electrolytic Capacitors/ FR
+
+■ Standard Products
+                           Case size   Specification             Lead Length                          Min. Packaging Q'ty
+             Cap.                 Ripple  Imped-    Endur- Lead       Lead  Space
+  W.V.
+            (±20 %) Dia. Length Current ance ance          Dia.
+                                                                         Taping Taping    Part No.
+                                                                                                      Straight
+                                                                                                               Taping
+                                (100 kHz) (100 kHz)             Straight                               Leads
+                                (+105 °C) (+20 °C)                         ✽B     ✽H
+   (V)        (µF)  (mm) (mm) (mA r.m.s.) () (hours) (mm) (mm) (mm) (mm)                              (pcs) (pcs)
+                33   5    11        280 0.300 5000          0.5   2.0      5.0    2.5 EEUFR1V330( )     200 2000
+                68   6.3  11.2      455 0.130 5000          0.5   2.5      5.0    2.5 EEUFR1V680( )     200 2000
+               100   8    11.5      950 0.056 6000          0.6   3.5      5.0         EEUFR1V101( )    200 1000
+               180   8    11.5      950 0.056 6000          0.6   3.5      5.0         EEUFR1V181( )    200 1000
+               220   8    11.5      950 0.056 6000          0.6   3.5      5.0         EEUFR1V221( )    200 1000
+                     8    15       1240 0.041 8000          0.6   3.5      5.0         EEUFR1V271L( ) 200 1000
+               270
+                    10    12.5     1290 0.043 6000          0.6   5.0      5.0         EEUFR1V271( )    200        500
+               330 10     12.5     1330 0.043 5000          0.6   5.0      5.0         EEUFR1V331U( ) 200          500
+               390   8    20       1560 0.030 9000          0.6   3.5      5.0         EEUFR1V391L( ) 200 1000
+                     8    20       1560 0.030 9000          0.6   3.5      5.0         EEUFR1V471L( )   200 1000
+               470
+                    10    16       1790 0.028 8000          0.6   5.0      5.0         EEUFR1V471( )    200        500
+   35          560 10     20       2180 0.020 10000         0.6   5.0      5.0         EEUFR1V561( )    200        500
+                    10    20       2180 0.020 10000         0.6   5.0      5.0         EEUFR1V681( )    200        500
+               680
+                    10    25       2470 0.018 10000         0.6   5.0      5.0         EEUFR1V681L( ) 200          500
+               820 10     25       2470 0.018 10000         0.6   5.0      5.0         EEUFR1V821L( ) 200          500
+             1000 12.5    20      2600 0.018 10000          0.6   5.0      5.0         EEUFR1V102( )    200        500
+             1200 12.5    25       3190 0.015 10000         0.6   5.0      5.0         EEUFR1V122( )    200        500
+                    12.5  30      3630 0.013 10000          0.8   5.0                  EEUFR1V152L      100
+             1500
+                    16    20      3300 0.017 10000          0.8   7.5      7.5         EEUFR1V152S( ) 100          250
+                    12.5  35       3750 0.012 10000         0.8   5.0                  EEUFR1V182L      100
+             1800
+                    16    25      3820 0.014 10000          0.8   7.5      7.5         EEUFR1V182( )    100        250
+                    12.5  35       3750 0.012 10000         0.8   5.0                  EEUFR1V222L      100
+             2200
+                    16    25      3820 0.014 10000          0.8   7.5      7.5         EEUFR1V222( )    100        250
+                4.7  5    11        185 0.620 5000          0.5   2.0      5.0    2.5 EEUFR1H4R7( )     200 2000
+                10   5    11        250 0.340 5000          0.5   2.0      5.0    2.5 EEUFR1H100( )     200 2000
+                22   5    11        250 0.340 5000          0.5   2.0      5.0    2.5 EEUFR1H220( )     200 2000
+                47   6.3  11.2      405 0.140 5000          0.5   2.5      5.0         EEUFR1H470( )    200 2000
+                56   6.3  11.2      405 0.140 5000          0.5   2.5      5.0    2.5 EEUFR1H560( )     200 2000
+               100   8    11.5      870 0.061 6000          0.6   3.5      5.0         EEUFR1H101( )    200 1000
+               120   8    15       1140 0.045 8000          0.6   3.5      5.0         EEUFR1H121L( ) 200 1000
+               150 10     12.5     1170 0.042 6000          0.6   5.0      5.0         EEUFR1H151( )    200        500
+               180   8    20       1430 0.033 9000          0.6   3.5      5.0         EEUFR1H181L( ) 200 1000
+   50
+               220 10     16       1650 0.030 8000          0.6   5.0      5.0         EEUFR1H221( )    200        500
+               270 10     20       1890 0.023 10000         0.6   5.0      5.0         EEUFR1H271( )    200        500
+               330 10     25       2150 0.022 10000         0.6   5.0      5.0         EEUFR1H331L( ) 200          500
+               470 12.5   20      2260 0.022 10000          0.6   5.0      5.0         EEUFR1H471( )    200        500
+               560 12.5   25      2660 0.018 10000          0.6   5.0      5.0         EEUFR1H561( )    200        500
+               680 12.5   30       3160 0.016 10000         0.8   5.0                  EEUFR1H681L      100
+                    12.5  35       3270 0.014 10000         0.8   5.0                  EEUFR1H821L      100
+               820
+                    16    20       2870 0.019 10000         0.8   7.5      7.5         EEUFR1H821S( ) 100          250
+             1000 16      25      3320 0.016 10000          0.8   7.5      7.5         EEUFR1H102( )    100        250
+                18   5    11        175 0.510 5000          0.5   2.0      5.0    2.5 EEUFR1J180( )     200 2000
+                47   6.3  11.2      284 0.210 5000          0.5   2.5      5.0    2.5 EEUFR1J470( )     200 2000
+                82   8    11.5      566 0.092 6000          0.6   3.5      5.0         EEUFR1J820( )    200 1000
+                     8    15        741 0.068 8000          0.6   3.5      5.0         EEUFR1J101L( )   200 1000
+               100
+                    10    12.5      761 0.063 6000          0.6   5.0      5.0         EEUFR1J101( )    200        500
+                     8    20        930 0.050 9000          0.6   3.5      5.0         EEUFR1J121L( )   200 1000
+               120
+                    10    16       1073 0.045 8000          0.6   5.0      5.0         EEUFR1J121( )    200        500
+                     8    20        930 0.050 9000          0.6   3.5      5.0         EEUFR1J151L( )   200 1000
+               150
+                    10    16       1073 0.045 8000          0.6   5.0      5.0         EEUFR1J151( )    200        500
+               180 10     20       1229 0.035 10000         0.6   5.0      5.0         EEUFR1J181( )    200        500
+   63          220 10     25       1500 0.033 10000         0.6   5.0      5.0         EEUFR1J221L( )   200        500
+                    10    20       1229 0.035 10000         0.6   5.0      5.0         EEUFR1J271U( ) 200          500
+               270 10     25       1500 0.033 10000         0.6   5.0      5.0         EEUFR1J271L( )   200        500
+                    12.5  20       1582 0.033 10000         0.6   5.0      5.0         EEUFR1J271( )    200        500
+               330 12.5   20       1582 0.033 10000         0.6   5.0      5.0         EEUFR1J331( )    200        500
+               390 12.5   25       1995 0.027 10000         0.6   5.0      5.0         EEUFR1J391( )    200        500
+               470 12.5   25       1995 0.027 10000         0.6   5.0      5.0         EEUFR1J471( )    200        500
+                    12.5  30       2528 0.024 10000         0.8   5.0                  EEUFR1J561L      100
+               560
+                    16    20       2153 0.029 10000         0.8   7.5      7.5         EEUFR1J561S( ) 100          250
+               680 12.5   35       2780 0.021 10000         0.8   5.0                  EEUFR1J681L      100
+               820 16     25      2988 0.024 10000          0.8   7.5      7.5         EEUFR1J821( )    100        250
+· When requesting taped product, please put the letter "B" or "H" between the "( )". Lead wire pitch B=5 mm, 7.5 mm, H=2.5 mm.
+· Please refer to the page of “Taping Dimensions”.
+
+Design and specifications are each subject to change without notice. Ask factory for the current technical specifications before purchase and/or use.
+Should a safety concern arise regarding this product, please be sure to contact us immediately.                                                         04 May. 2013
+
+                                                                              – EEE-86 –
+Mouser Electronics
+
+Authorized Distributor
+
+
+
+Click to View Pricing, Inventory, Delivery & Lifecycle Information:
+
+
+
+Panasonic:
+ EEU-FR1E471 EEU-FR0J151 EEU-FR1A151 EEU-FR1A221 EEU-FR1A682L EEU-FR1C101 EEU-FR1C121
+EEU-FR1C182L EEU-FR1C221 EEU-FR1C392S EEU-FR1C472L EEU-FR1C562 EEU-FR1C680 EEU-FR1C681
+EEU-FR1E122L EEU-FR1E151 EEU-FR1E272S EEU-FR1E680 EEU-FR1E681 EEU-FR1E681L EEU-FR1H220
+EEU-FR1H560 EEU-FR1V222L EEU-FR1V330 EEU-FR1V471L EEU-FR1V680 EEU-FR1V821L EEU-FR1V681
+EEU-FR1V681B EEU-FR0J122 EEU-FR0J152L EEU-FR0J222 EEU-FR1A101 EEU-FR1A102L EEU-FR1C102
+EEU-FR1C222 EEU-FR1C332L EEU-FR1C471 EEU-FR1E102L EEU-FR1E222L EEU-FR1E331 EEU-FR1H101
+EEU-FR1H102 EEU-FR1H221 EEU-FR1H331L EEU-FR1H471 EEU-FR1V102 EEU-FR1V152L EEU-FR1V471
+EEU-FR0J122L EEU-FR0J182 EEU-FR0J272L EEU-FR0J392 EEU-FR0J472 EEU-FR0J562L EEU-FR0J682L
+EEU-FR0J682S EEU-FR0J821 EEU-FR0J822 EEU-FR1A152 EEU-FR1A152L EEU-FR1A182 EEU-FR1A222L
+EEU-FR1A332 EEU-FR1A392 EEU-FR1A472L EEU-FR1A472S EEU-FR1A562L EEU-FR1A681 EEU-FR1A682
+EEU-FR1A821 EEU-FR1C102L EEU-FR1C152 EEU-FR1C152L EEU-FR1C272 EEU-FR1C332S EEU-FR1C392L
+EEU-FR1C472 EEU-FR1C681L EEU-FR1E152 EEU-FR1E182 EEU-FR1E222S EEU-FR1E272L EEU-FR1E332
+EEU-FR1E391L EEU-FR1E561L EEU-FR1E821 EEU-FR1H121L EEU-FR1H181L EEU-FR1H271 EEU-FR1H561
+EEU-FR1H681L EEU-FR1H821L EEU-FR1H821S EEU-FR1V122 EEU-FR1V152S EEU-FR1V181 EEU-FR1V182L
+ EEU-FR1V222 EEU-FR1V561
+

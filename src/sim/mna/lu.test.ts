@@ -77,4 +77,10 @@ describe('flat LU', () => {
     luSolve(w, Float64Array.from([2, 4]), x);
     expect(Array.from(x)).toEqual([1, 1]);
   });
+
+  it('row-scaled pivot test: a gmin-sized floating row beside 1e9-sized rows is not singular, an exactly dependent row still is', () => {
+    const w = luWork(3);
+    expect(luFactor(w, flat([[1e9, 0, 0], [0, 3e-12, -1e-12], [0, -1e-12, 2e-12]])).ok).toBe(true);
+    expect(luFactor(w, flat([[1e9, 0, 0], [0, 1e-12, 1e-12], [0, 1e-12, 1e-12]])).ok).toBe(false);
+  });
 });

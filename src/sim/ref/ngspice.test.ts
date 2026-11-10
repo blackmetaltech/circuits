@@ -112,15 +112,25 @@ describe('NODE vs ngspice-47: diode decks (0.5 % of range)', () => {
     check('02 v_in', ref(c, 'time_s', 'v_in_V'), s('v(in)'), [4.8, 4.9999]);
   }, 300000);
 
-  // h = 50 us: NODE FAILS this floating bridge with 'singular' at the first zero crossing (t = 11 ms) for every h <= 40 us (see report: LU pivot floor
-  // 1e-14*max|A| with max|A| = 2C/h is at gmin 1e-12 for the floating diode nodes). Deck 14 (also floating) passes at 40 us.
+  // Floating bridge at the natural 10 us step (was 'singular' with the global LU pivot floor; fixed by the row-scaled pivot test in mna/lu.ts).
   const bridge = `${card('D1N4007')}\nV1 sp sn 0\nRw sp a 1.5\nD1 a out d1n4007\nD2 sn out d1n4007\nD3 0 a d1n4007\nD4 0 sn d1n4007\nC1 out 0 1000u\nRL out 0 150`;
   it('03a bridge inrush: 17 V pk 50 Hz behind 1.5 ohm, catalogue 1N4007 x4, 1000 uF, 150 ohm; power-on 0-100 ms', () => {
     const c = csv('03-bridge-inrush');
-    const s = tran(bridge, { V1: sine(17, 50) }, { h: 50e-6, tStop: 99.95e-3, probes: ['v(out)', 'i(V1)'] });
+    const s = tran(bridge, { V1: sine(17, 50) }, { h: 10e-6, tStop: 99.99e-3, probes: ['v(out)', 'i(V1)'] });
     check('03a v_out', ref(c, 'time_s', 'v_out_V'), s('v(out)'));
     const i = s('i(V1)'); // ngspice i_src = -i(Vin): current leaving the + terminal
     check('03a i_src', ref(c, 'time_s', 'i_src_A'), { x: i.x, y: i.y.map((v) => -v) });
+  }, 120000);
+  it('03a regression: floating bridge solves at h = 10, 20, 40 us and agrees with h = 50 us within 0.5 %', () => {
+    const run = (h: number) => tran(bridge, { V1: sine(17, 50) }, { h, tStop: 40e-3, probes: ['v(out)'] })('v(out)');
+    const base = run(50e-6);
+    const range = Math.max(...base.y) - Math.min(...base.y);
+    for (const h of [10e-6, 20e-6, 40e-6]) {
+      const s = run(h);
+      let worst = 0;
+      for (let k = 0; k <= 200; k++) { const x = k * 0.2e-3; worst = Math.max(worst, Math.abs(interp(s.x, s.y, x) - interp(base.x, base.y, x))); }
+      expect(worst / range, `h = ${h}`).toBeLessThan(0.005);
+    }
   }, 120000);
   it('03b bridge settled: window 1.9-2 s', () => {
     const c = csv('03-bridge-settled');

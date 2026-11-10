@@ -227,6 +227,47 @@ describe('every part a DESIGN bin names exists (ch1 + 4-1)', () => {
   });
 });
 
+describe('cap-el: Panasonic EEU-FR per-SKU rows', () => {
+  const el = partById('cap-el');
+  const rows = el.valueData ?? [];
+  const row = (v: string, c: number) => rows.find((r) => r.variant === v && r.value === c);
+  const VARS = ['10V', '16V', '25V', '35V'];
+  const VALS = [220e-6, 330e-6, 470e-6, 680e-6, 1000e-6, 1500e-6, 2200e-6, 3300e-6, 4700e-6];
+  it('cites the datasheet with doc, url, accessed date and a page id on every row', () => {
+    expect(el.source.doc).toContain('Panasonic EEU-FR series, datasheet footer 04 May 2013');
+    expect(el.source.doc).toContain('https://datasheetq.com/pdf-view/EEU-FR0J102B-Panasonic.pdf, accessed 2026-11-10');
+    expect(el.source.url).toMatch(/^https:\/\//); expect(el.source.accessed).toBe('2026-11-10');
+    for (const r of rows) expect(r.page, `${r.variant} ${r.value}`).toMatch(/^EEE-8[4-6]$/);
+  });
+  it('lists exactly the pairs the series does not offer as unverified (no invented rows)', () => {
+    const missing: string[] = [];
+    for (const v of VARS) for (const c of VALS) if (!row(v, c)) missing.push(`${v}/${c * 1e6}`);
+    expect(missing.sort()).toEqual(['10V/330', '16V/330', '25V/4700', '35V/3300', '35V/4700']);
+    const b = CAMPAIGN_BLOCKERS.find((x) => x.partId === 'cap-el')!;
+    for (const m of ['330 uF at 10 V', '330 uF at 16 V', '4700 uF at 25 V', '4700 uF at 35 V', '3300 uF at 35 V']) expect(b.reason).toContain(m);
+    expect(el.verified).toBe(false); expect(el.scope).toBe('sandbox');
+  });
+  it('spot-checks datasheet rows (EEUFR1E102 25 V 1000 uF, EEUFR1E681 680 uF, EEUFR1V222 35 V 2200 uF)', () => {
+    expect(row('25V', 1000e-6)).toMatchObject({ partNo: 'EEUFR1E102', caseDia: 10, caseLen: 20, esr: 0.02, rippleA: 2.18, verified: true, page: 'EEE-85' });
+    expect(row('25V', 680e-6)).toMatchObject({ partNo: 'EEUFR1E681', caseDia: 10, caseLen: 16, esr: 0.028, rippleA: 1.79, verified: true });
+    expect(row('35V', 2200e-6)).toMatchObject({ partNo: 'EEUFR1V222', esr: 0.014, rippleA: 3.82 });
+    expect(row('10V', 4700e-6)).toMatchObject({ partNo: 'EEUFR1A472L', esr: 0.013, rippleA: 3.63 });
+  });
+  it('leakage is 0.01 C V uA and tan delta follows the rated-voltage column', () => {
+    for (const r of rows) {
+      const V = Number(r.variant.slice(0, -1));
+      expect(r.leakage).toBeCloseTo(0.01 * (r.value * 1e6) * V * 1e-6, 12);
+      expect(r.tanDelta).toBeGreaterThanOrEqual({ 10: 0.19, 16: 0.16, 25: 0.14, 35: 0.12 }[V]!);
+      expect(r.esr).toBeGreaterThan(0); expect(r.rippleA).toBeGreaterThan(0);
+    }
+    expect(row('25V', 1000e-6)!.leakage).toBeCloseTo(250e-6, 12);
+    expect(row('25V', 220e-6)!.tanDelta).toBe(0.14);
+  });
+  it('4-1 campaign values 680 uF and 1000 uF at 25 V are verified', () => {
+    for (const c of [680e-6, 1000e-6]) expect(row('25V', c)?.verified, String(c)).toBe(true);
+  });
+});
+
 describe('CAMPAIGN_BLOCKERS: parts a must-ship ticket needs but this task could not verify', () => {
   it('lists only existing, sandbox-only, unverified parts with a reason', () => {
     expect(CAMPAIGN_BLOCKERS.length).toBeGreaterThan(0);
