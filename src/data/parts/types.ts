@@ -53,6 +53,11 @@ export interface Source {
    * the provenance test then does not require `url`/`accessed` and the price test skips them (the Textbook bin is free).
    */
   definition?: boolean;
+  /**
+   * M1-D2b addition. true for a GAME-DEFINED level fixture (a pre-placed board part such as the 4-1 mains transformer): no datasheet exists
+   * by design, every number is a lesson value. The provenance test then requires note to say GAME-DEFINED and a codex-note simplification key.
+   */
+  gameFixture?: boolean;
 }
 
 /** A rating variant of a part (e.g. a resistor at ¼ W vs 1 W): a different SKU with its own ratings, thermal data and price. */

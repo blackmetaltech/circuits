@@ -42,6 +42,18 @@ describe('catalogue provenance (DESIGN §4.0)', () => {
     }
   });
 
+  it('game-defined level fixtures are labelled as such (GAME-DEFINED note + doc, codex-note key) and stay sandbox-only and unverified', () => {
+    const fixtures = PARTS.filter((p) => p.source.gameFixture);
+    expect(fixtures.map((p) => p.id)).toContain('xfmr-12');
+    for (const p of fixtures) {
+      expect(p.source.doc, p.id).toContain('GAME-DEFINED');
+      expect(p.source.note ?? '', p.id).toContain('GAME-DEFINED');
+      expect(p.verified, p.id).toBe(false);
+      expect(p.scope, p.id).toBe('sandbox');
+      expect((p.simplifications ?? []).some((k) => /fixture/.test(k)), `${p.id} codex-note key`).toBe(true);
+    }
+  });
+
   it('every nameKey, description and simplification key exists in parts.en.ts', () => {
     for (const p of PARTS) {
       expect(partsEn[p.nameKey], p.nameKey).toBeTruthy();

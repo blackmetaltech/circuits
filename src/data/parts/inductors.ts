@@ -54,8 +54,13 @@ export const xfmr12: PartDef = {
   variants: [variant('6VA', { VA: 6 }, semiThermal(15, 105, TAU.to220Bare, { tFail: 130 }))],
   model: { primaryNominal: 230, secRms: 12, Rw: 1.5, Lm: 10, VA: 6 },
   tolerance: { Rw: 0.1 },
-  source: { doc: 'generic 6 VA PCB mains transformer (DESIGN §4.1 [R], §2.8 ticket 4-1: winding R 1.5 ohm)', note: 'UNVERIFIED: 6 VA, Rw 1.5 ohm, Lm 10 H are game-defined (DESIGN) with no datasheet; primary nominal 230 V is the `global` mains (IEC 60038). The thermal numbers are estimates. ' + TAU_R },
-  verified: false, scope: 'sandbox', simplifications: ['part.simplify.xfmr-ideal'],
+  source: {
+    doc: 'GAME-DEFINED level fixture, not a datasheet part: 12 V mains wall-wart transformer of ticket 4-1 (DESIGN §4.1 [R], §2.8: ideal ratio, winding R 1.5 ohm)',
+    gameFixture: true,
+    note: 'UNVERIFIED, GAME-DEFINED level fixture: 6 VA, Rw 1.5 ohm (secondary side) and Lm 10 H (primary side) are lesson values from DESIGN with no datasheet by design; '
+      + 'primary nominal 230 V is the `global` mains (IEC 60038). Placed by the level as a fixed part, never offered from a shop bin. The thermal numbers are estimates. ' + TAU_R,
+  },
+  verified: false, scope: 'sandbox', simplifications: ['part.simplify.xfmr-ideal', 'part.simplify.xfmr-fixture'],
 };
 
 export const INDUCTORS: PartDef[] = [indAx, indPwr, indCoil, xfmr12];

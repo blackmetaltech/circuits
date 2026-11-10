@@ -4,7 +4,7 @@
 * Analysis : transient from zero state, 20 ms of power-on (settling tau = 2RC = 2 ms), CSV window t = 19.8..19.9999 ms (10 switching
 *            periods, 100 ns grid, 2000 rows). Time is absolute with the control pulse starting high at t = 0 (10 ns edges).
 * Outputs  : 12-buck.csv = time_s, v_sw_V, v_out_V, i_L_A.
-* Parameters: 1N4007 (Is 76.9p N 1.45 Rs 0.042, CJO=0 TT=0: no reverse recovery); switch Ron 0.05 Roff 1e9.
+* Parameters: 1N4007 CATALOGUE model (Vishay: Is 1.43733e-8 N 1.80829 Rs 0.0414712, CJO=0 TT=0: no reverse recovery; was DESIGN Is 76.9p N 1.45 Rs 0.042 before M1-D2b); switch Ron 0.05 Roff 1e9.
 .include common.inc
 Vin in 0 12
 S1 in sw ctl 0 SW1

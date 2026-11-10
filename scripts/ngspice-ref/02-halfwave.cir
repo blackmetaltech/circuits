@@ -4,7 +4,7 @@
 *            grid, 2000 rows). Time is absolute (source phase 0 at t = 0), so a NODE run from t = 0 aligns without shifting.
 * Outputs  : 02-halfwave.csv = time_s, v_in_V, v_out_V.
 * NODE circuit: Vsrc sin(0, 12 V, 50 Hz); D1N4007 anode=in, cathode=out; C 470 uF out-gnd; R 1k out-gnd.
-* Parameters: 1N4007 (Is 76.9p N 1.45 Rs 0.042 BV 1000, CJO=0 TT=0). C ideal (no ESR).
+* Parameters: 1N4007 CATALOGUE model (Vishay: Is 1.43733e-8 N 1.80829 Rs 0.0414712 BV 1100, CJO=0 TT=0; was DESIGN Is 76.9p N 1.45 Rs 0.042 before M1-D2b). C ideal (no ESR).
 .include common.inc
 Vin in 0 SIN(0 12 50)
 D1 in out D1N4007

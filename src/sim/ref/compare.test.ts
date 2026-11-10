@@ -173,7 +173,7 @@ describe('committed reference CSVs', () => {
     expect(Math.abs(v[k] - 13.509) / 13.509).toBeLessThan(0.005);
     expect(Math.abs(t[k] - 1.0472e-3) / 1.0472e-3).toBeLessThan(0.005);
   });
-  it('4-1 cross-check: mean 12.54/14.20/15.86 V, ripple 0.75-0.77 Vpp (1000 uF), 1.10-1.13 Vpp (680 uF)', () => {
+  it('4-1 cross-check (catalogue 1N4007): mean 12.62/14.28/15.94 V (DESIGN claims 12.54/14.20/15.86 are 0.08 V low), ripple 0.75-0.77 Vpp (1000 uF), 1.10-1.13 Vpp (680 uF)', () => {
     const c = load('14-cases');
     const get = (v: number, cuf: number, il: number) => {
       for (let i = 0; i < c.rows; i++) {
@@ -181,10 +181,14 @@ describe('committed reference CSVs', () => {
       }
       throw new Error('case missing');
     };
-    const want: [number, number][] = [[207, 12.54], [230, 14.2], [253, 15.86]];
+    // M1-D2b: the deck now uses the CATALOGUE 1N4007 (Vishay Is 1.437e-8, N 1.808: about 40 mV less forward drop per diode at ~0.1 A than the
+    // DESIGN recall, so two diodes in the path raise the mean by 0.08 V). DESIGN 4-1 text (12.54 / 14.20 / 15.86) should be updated to these.
+    const want: [number, number][] = [[207, 12.6226], [230, 14.2801], [253, 15.9403]];
     for (const [v, mean] of want) {
       const r = get(v, 1000, 0.1);
       expect(Math.abs(r.mean - mean)).toBeLessThan(0.01);
+      expect(r.mean - ({ 207: 12.54, 230: 14.2, 253: 15.86 } as Record<number, number>)[v]).toBeGreaterThan(0.07); // shift vs the DESIGN claim: +0.08 V
+      expect(r.mean - ({ 207: 12.54, 230: 14.2, 253: 15.86 } as Record<number, number>)[v]).toBeLessThan(0.09);
       expect(r.rip).toBeGreaterThan(0.75 - 0.005);
       expect(r.rip).toBeLessThan(0.77 + 0.005);
       const r2 = get(v, 680, 0.1);

@@ -11,8 +11,11 @@
 * emission coefficient; NODE's Nbv), (no high-injection knee). Reverse breakdown only where BV is given.
 * 1N4148  Is 2.52n N 1.752 Rs 0.568                                   (DESIGN 4.2)
 .model D1N4148 D(IS=2.52n N=1.752 RS=0.568 CJO=0 TT=0 BV=1e30 IBV=1e-3 NBV=1)
-* 1N4007  Is 76.9p N 1.45 Rs 0.042 BV 1000 (IBV 1 mA is the SPICE default: not in DESIGN, estimate; never reached here)
-.model D1N4007 D(IS=76.9p N=1.45 RS=0.042 CJO=0 TT=0 BV=1000 IBV=1e-3 NBV=1)
+* 1N4007  CATALOGUE model (src/data/parts/diodes.ts d1n4007, Vishay doc 89789 1n4007.txt): Is 1.43733e-8, N 1.80829, Rs 0.0414712,
+*          BV 1100, IBV 10 (breakdown never reached in these decks). MODEL CHANGE (M1-D2b): the earlier decks used the DESIGN recall
+*          Is 76.9p N 1.45 Rs 0.042 BV 1000; the reference CSVs of decks 02, 03, 08, 12, 14 were regenerated with the Vishay line.
+*          Vishay's cjo 28.1 pF / tt 4.109 us are NOT used (CJO=0 TT=0): NODE models no junction or diffusion capacitance.
+.model D1N4007 D(IS=1.43733e-8 N=1.80829 RS=0.0414712 CJO=0 TT=0 BV=1100 IBV=10 NBV=1)
 * red LED  N 2.0 Is 1.19e-17 Rs 9.9                                    (DESIGN 4.2 review refit)
 .model DLEDRED D(IS=1.19e-17 N=2.0 RS=9.9 CJO=0 TT=0 BV=1e30 IBV=1e-3 NBV=1)
 * 1N4733A-style 5.1 V Zener: BV 5.1, IBV 49 mA (Izt), Rs = Zzt 7 ohm - Nbv*Vt/Izt (0.53) = 6.47 ohm.

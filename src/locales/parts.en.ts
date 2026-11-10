@@ -132,6 +132,7 @@ export const partsEn: Record<string, string> = {
   'part.simplify.cap-esr': 'A real electrolytic capacitor has some internal resistance (ESR). In this version it has none.',
   'part.simplify.l-saturation': 'The inductance stays constant. Above its current rating the coil is simply marked as failing ("core saturated") instead of changing smoothly.',
   'part.simplify.xfmr-ideal': 'The transformer is an ideal ratio with a winding resistance and a magnetising inductance. Leakage inductance and core losses are ignored.',
+  'part.simplify.xfmr-fixture': 'This transformer is a fixture made up for the game, not a real catalogue part. Its 6 VA rating, 1.5 ohm winding and 10 H magnetising inductance were picked to teach the lesson, so do not read them as datasheet values.',
   'part.simplify.diode-no-cap': 'Junction capacitance is ignored. It matters above roughly 1 MHz.',
   'part.simplify.diode-no-recovery': 'Reverse recovery is not modelled: a slow diode shows its loss only as its forward drop.',
   'part.simplify.schottky-worstcase': 'The Schottky model follows the datasheet maximum curve, the worst case, so real diodes drop about 0.2 V less than shown.',

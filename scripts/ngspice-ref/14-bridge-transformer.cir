@@ -8,7 +8,7 @@
 *                 0.5 s from zero state, mean / max / min of V(out) measured over t = 0.4..0.5 s (5 whole cycles = steady state).
 * Outputs  : 14-bridge-transformer.csv = time_s, v_sec_V (secondary terminals after the winding R), v_out_V, i_sec_A.
 *            14-cases.csv = vrms_V, c_uF, i_load_A, mean_V, ripple_Vpp, vmax_V, vmin_V.
-* Parameters: 1N4007 (Is 76.9p N 1.45 Rs 0.042 BV 1000, CJO=0 TT=0), ideal C, constant-current load = ideal source.
+* Parameters: 1N4007 CATALOGUE model (Vishay: Is 1.43733e-8 N 1.80829 Rs 0.0414712 BV 1100, CJO=0 TT=0; was DESIGN Is 76.9p N 1.45 Rs 0.042 before M1-D2b), ideal C, constant-current load = ideal source.
 .include common.inc
 * Numerical aid: 1 pF from every node to ground. Without it ngspice (any method) fails with "timestep too small" when the
 * floating, capacitance-free bridge nodes / regenerative BJT nodes switch. 1 pF is 1e-5 of the smallest real capacitor here, so it

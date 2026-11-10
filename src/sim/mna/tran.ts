@@ -15,7 +15,7 @@
 import type { CElem, Circuit, TranMethod } from './types';
 import { assemble, nodeVoltage, StampCtx, terminalCurrents, terminalVoltages } from './stamp';
 import { makeSolver, type LinearSolver } from './solver';
-import { explainSingular, solveOp, type Failure } from './op';
+import { explainSingular, solveNewton, solveOp, type Failure } from './op';
 import { POWER_ON_RAMP, waveBreakpoints } from './waveforms';
 
 export type TranFailure = Failure;
@@ -129,26 +129,16 @@ function newton(ws: TranWork, gmin: number, tNew: number, lambda: number, method
     x.set(xNew);
     return { ok: true, iters: 1, failure: null };
   }
-  const reltol = 1e-4, vntol = 1e-6, abstol = 1e-12, maxIter = 50;
-  let worst = -1;
-  for (let it = 1; it <= maxIter; it++) {
-    ctx.x.set(x);
-    assemble(ckt, ctx, asm);
-    if (equil) equilibrate(ctx);
-    const f = ws.solver.factor(ctx.A);
-    if (!f.ok) return { ok: false, iters: it, failure: explainSingular(ckt, ctx.A, f.badColumn) };
-    ws.solver.solve(ctx.b, xNew);
-    for (const e of ckt.elements) e.dev.limit?.(e, xNew, x);
-    let conv = true; worst = -1; let wd = 0;
-    for (let i = 0; i < ckt.dim; i++) {
-      if (!Number.isFinite(xNew[i])) return { ok: false, iters: it, failure: failNC(ckt, tNew, h, i) };
-      const d = Math.abs(xNew[i] - x[i]), tol = reltol * Math.max(Math.abs(xNew[i]), Math.abs(x[i])) + (i < ckt.n + ckt.nInternal ? vntol : abstol);
-      if (d > tol) { conv = false; if (d > wd) { wd = d; worst = i; } }
-    }
-    x.set(xNew);
-    if (conv && it > 1) return { ok: true, iters: it, failure: null };
-  }
-  return { ok: false, iters: maxIter, failure: failNC(ckt, tNew, h, worst) };
+  // nonlinear: op.ts `solveNewton` (damped Newton, limit hooks, KCL residual test) at this time / method / h
+  const r = solveNewton(ckt, x, {
+    gmin, lambda, time: tNew, mode: 'tran', method, h, maxIter: 50, state: ctx.state,
+    ws: { ctx, solver: ws.solver, xNew },
+    extra: equil ? (c) => equilibrate(c) : undefined,
+  });
+  x.set(r.x);
+  if (r.ok) return { ok: true, iters: r.iterations, failure: null };
+  if (r.reason === 'singular') return { ok: false, iters: r.iterations, failure: explainSingular(ckt, ctx.A, r.badColumn) };
+  return { ok: false, iters: r.iterations, failure: failNC(ckt, tNew, h, r.reason === 'nonfinite' ? r.x.findIndex((v) => !Number.isFinite(v)) : r.worst) };
 }
 
 const rampAt = (ramp: boolean, t: number): number => (ramp ? Math.min(1, t / POWER_ON_RAMP) : 1);

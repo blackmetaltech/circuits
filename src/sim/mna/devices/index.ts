@@ -14,5 +14,6 @@ import { L } from './l';
 import { D } from './diode';
 import { Q, DAR } from './bjt';
 import { M } from './mosfet';
+import { T } from './xfmr';
 
-export const DEVICES: Readonly<Record<string, Device>> = Object.freeze({ R, V, I, BAT, BENCH, AM, E, G, C, L, D, Q, DAR, M });
+export const DEVICES: Readonly<Record<string, Device>> = Object.freeze({ R, V, I, BAT, BENCH, AM, E, G, C, L, D, Q, DAR, M, T });

@@ -3,7 +3,7 @@
 *            (anode = drain, cathode = Vdd) across the load; gate pulse 0 -> 10 V at 100 us, 1 us edges, 600 us wide.
 * Analysis : transient from the DC operating point, t = 0..1.5 ms (1 us grid, 1501 rows).
 * Outputs  : 08-nmos-flyback.csv = time_s, v_gate_V, v_drain_V, i_load_A (inductor current).
-* Parameters: 2N7000 Level-1 (Vt 2.1 Kp 0.052743 lambda 0.02, no capacitances) + explicit body diode (estimate); 1N4007; ideal pulse.
+* Parameters: 2N7000 Level-1 (Vt 2.1 Kp 0.052743 lambda 0.02, no capacitances) + explicit body diode (estimate); 1N4007 (CATALOGUE Vishay model, see common.inc; was DESIGN values before M1-D2b); ideal pulse.
 .include common.inc
 Vdd vdd 0 12
 Vg g 0 PULSE(0 10 100u 1u 1u 600u 3m)

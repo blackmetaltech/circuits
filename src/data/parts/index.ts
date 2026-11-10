@@ -58,7 +58,7 @@ export function partById(id: string): PartDef {
 export interface CampaignBlocker { partId: string; tickets: string[]; reason: string }
 export const CAMPAIGN_BLOCKERS: CampaignBlocker[] = [
   { partId: 'cap-el', tickets: ['3-1', '3-2', '4-1', '8-1'], reason: 'No Panasonic FR / Nichicon datasheet could be read (official PDFs not fetchable); 4-1 needs 220-4700 uF at 10/16/25/35 V.' },
-  { partId: 'xfmr-12', tickets: ['4-1'], reason: 'Game-defined 6 VA / 1.5 ohm / 10 H generic transformer with no datasheet; DESIGN marks it [R]. The 9 V tap and 12-0-12 versions need a 5-pin footprint.' },
+  { partId: 'xfmr-12', tickets: ['4-1'], reason: 'GAME-DEFINED level fixture (6 VA / 1.5 ohm / 10 H), no datasheet by design (DESIGN marks it [R]): ticket 4-1 must carry it as a fixed board part, not a shop bin item. Needs no data work; open items are the region-driven turns ratio and the 9 V tap / 12-0-12 versions (need a 5-pin footprint).' },
   { partId: 'cap-cer', tickets: ['3-2', '7-2', '8-5'], reason: 'Murata/TDK C0G/X7R tables not read.' },
   { partId: 'cap-x2', tickets: ['7-1'], reason: 'Generic X2 film capacitor, IEC 60384-14 not read.' },
   { partId: 'cap-var', tickets: ['7-3'], reason: 'Generic AM tuning gang, no datasheet.' },

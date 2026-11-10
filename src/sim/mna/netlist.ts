@@ -4,6 +4,7 @@
 //   R1 a b 4k        resistor            V1 in 0 12 | V1 in 0 DC 12 [AC 1]   voltage source (a = +)
 //   I1 a b 0.5       current source a→b through the source (so `I1 0 n 5m` pushes 5 mA INTO n)
 //   E1 a b c d 2     VCVS (v(a)−v(b) = 2·(v(c)−v(d)))     G1 a b c d 1e-3   VCCS (current a→b through the element)
+//   T1 p1 p2 s1 s2 10 [rp=.. rs=.. lm=..]   ideal transformer, turns ratio Np/Ns, dots at p1 / s1 (devices/xfmr.ts)
 //   C1 a 0 1u        capacitor      L1 a b 1m  inductor      D1 a k model    diode       .model name type (k=v …)
 //   Node `0` / `gnd` is ground. Values take engineering suffixes: f p n u µ m k meg g t (SPICE: m = milli, meg = 1e6). Trailing unit
 //   letters are ignored (`10kohm`). Cards give kinds R V I E G C L D; BAT / BENCH / AM come from boards or are built directly.
@@ -62,6 +63,7 @@ const CARD: Record<string, { kind: string; nodes: number; key?: string; model?: 
   E: { kind: 'E', nodes: 4, key: 'gain' }, G: { kind: 'G', nodes: 4, key: 'gm' }, C: { kind: 'C', nodes: 2, key: 'c' },
   L: { kind: 'L', nodes: 2, key: 'l' }, D: { kind: 'D', nodes: 2, model: true },
   Q: { kind: 'Q', nodes: 3, model: true }, M: { kind: 'M', nodes: 3, model: true },
+  T: { kind: 'T', nodes: 4, key: 'n' },
 };
 
 /** Parse cards into a Netlist. @throws NetlistError (developer-facing; cards are authored by tests and agents, not players). */
@@ -106,6 +108,7 @@ export function parseNetlist(text: string): Netlist {
       else {
         let k = 0; if (args[0].toLowerCase() === 'dc') k = 1;
         p[spec.key!] = parseValue(args[k]);
+        if (spec.kind === 'T') for (const kv of args.slice(k + 1)) { const [kk, vv] = kv.split('='); if (vv !== undefined) p[kk.toLowerCase()] = parseValue(vv); }
         const ai = args.findIndex((a) => a.toLowerCase() === 'ac');
         if (ai >= 0 && args[ai + 1] !== undefined) p.ac = parseValue(args[ai + 1]);
       }
@@ -187,10 +190,20 @@ const mosfet: Expander = (x) => {
   return [el(x, 'M', [pinNode(x, 'D'), pinNode(x, 'G'), pinNode(x, 'S')], p)];
 };
 
+/** XFMR: pins P1 P2 S1 S2 → T [p1, p2, s1, s2] (dots at P1 / S1). Turns ratio n = model.primaryNominal / model.secRms (the catalogue's nominal pair;
+ *  region-pack mains scaling is a caller concern: override with part.value = n). model.Rw → secondary winding resistance rs (ASSUMPTION: the
+ *  1.5 Ω of DESIGN §2.8 is the 12 V side), model.Lm → magnetising inductance on the primary. No centre-tap variants exist in the catalogue. */
+const transformer: Expander = (x) => {
+  const m = modelOf(x), n = x.part.value ?? m.primarynominal / m.secrms, p: Params = { n };
+  if (m.rw !== undefined) p.rs = m.rw;
+  if (m.lm !== undefined) p.lm = m.lm;
+  return [el(x, 'T', [pinNode(x, 'P1'), pinNode(x, 'P2'), pinNode(x, 'S1'), pinNode(x, 'S2')], p)];
+};
+
 /** Per-PartKind expanders. EXTENSION POINT: add D / LED / Z / NPN / ... here. */
 export const EXPANDERS: Readonly<Partial<Record<PartKind, Expander>>> = Object.freeze({
   NPN: bjt(1), PNP: bjt(-1), DARLINGTON: darlington, NMOS: mosfet,
-  D: diode, LED: diode, Z: diode, SCHOTTKY: diode,
+  XFMR: transformer, D: diode, LED: diode, Z: diode, SCHOTTKY: diode,
   R: resistor, HEATER: resistor, SPEAKER: resistor, MOTOR: resistor, FUSE: resistor, NTC: resistor,
   POT: (x) => {
     const R = resistance(x), a = x.part.pos ?? 0.5;
