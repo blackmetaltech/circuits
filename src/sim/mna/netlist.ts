@@ -20,6 +20,8 @@ import type { PartDef, PartKind } from '../../data/parts/types';
 import type { Board, PlacedPart } from '../board/types';
 import { buildConnectivity, type BoardError, type Connectivity } from '../board/connectivity';
 import type { Element, Netlist, Params } from './types';
+import { MACRO_TYPES, comparatorParams, fuseParams, opampParams, regulatorParams, relayParams, timerParams } from './devices/macros';
+import { ntcResistance } from './devices/ntc';
 
 // ---------------------------------------------------------------- values
 const SUFFIX: [string, number][] = [['meg', 6], ['mil', 0], ['f', -15], ['p', -12], ['n', -9], ['u', -6], ['µ', -6], ['m', -3], ['k', 3], ['g', 9], ['t', 12]];
@@ -94,6 +96,14 @@ export function parseNetlist(text: string): Netlist {
       if (d === '.title' || d === '.op' || d === '.options') continue;
       throw new NetlistError(`unsupported directive ${head}`, n);
     }
+    if (head[0].toUpperCase() === 'U') {
+      // macro card `U1 n1 … nk model`: the terminal count and kind come from the model's type (opamp, cmp, 555, reg, relay, fuse, logic), see macros.ts
+      if (seen.has(head.toLowerCase())) throw new NetlistError(`duplicate element name ${head}`, n);
+      seen.add(head.toLowerCase());
+      if (tok.length < 3) throw new NetlistError(`${head}: expected nodes and a model`, n);
+      b.add({ id: head, kind: '', owner: '', nodes: tok.slice(1, -1).map((x) => b.node(x)), p: {}, model: tok[tok.length - 1].toLowerCase() });
+      continue;
+    }
     const spec = CARD[head[0].toUpperCase()];
     if (!spec) throw new NetlistError(`unknown element '${head}'`, n);
     if (seen.has(head.toLowerCase())) throw new NetlistError(`duplicate element name ${head}`, n);
@@ -117,6 +127,7 @@ export function parseNetlist(text: string): Netlist {
   }
   resolveDiodeModels(b);
   resolveTransistorModels(b);
+  resolveMacroModels(b);
   return b.build();
 }
 
@@ -128,6 +139,18 @@ function resolveDiodeModels(b: NetlistBuilder): void {
     const ty = b.modelTypes[e.model];
     e.p = { ...(b.models[e.model] ?? {}), ...e.p };
     if (ty === 'd07' || ty === 'ideal07' || ty === 'ideal') e.p.ideal = 1;
+  }
+}
+
+/** Macro cards `U1 n1 … nk model`: the model type picks the device kind; the `.model` numbers (plus the sim defaults of macros.ts) become el.p. */
+function resolveMacroModels(b: NetlistBuilder): void {
+  for (const e of b.elements) {
+    if (e.kind !== '' || !e.model) continue;
+    const ty = b.modelTypes[e.model], mt = ty ? MACRO_TYPES[ty] : undefined;
+    if (!mt) throw new NetlistError(`${e.id}: model '${e.model}' is not a macro model (opamp, cmp, 555, reg, relay, fuse, logic)`);
+    if (e.nodes.length !== mt.terminals) throw new NetlistError(`${e.id}: a ${ty} has ${mt.terminals} terminals, got ${e.nodes.length}`);
+    e.kind = mt.kind;
+    e.p = mt.params(b.models[e.model] ?? {});
   }
 }
 
@@ -147,7 +170,8 @@ function resolveTransistorModels(b: NetlistBuilder): void {
 }
 
 // ---------------------------------------------------------------- board expansion
-export interface ExpandCtx { part: PlacedPart; def: PartDef; /** netlist node id of every pin, PartDef.pins order */ nodes: number[] }
+export interface ExpandEnv { /** Ambient / ticket temperature, °C (NTC thermistors read it; default 25). */ tempC?: number }
+export interface ExpandCtx { part: PlacedPart; def: PartDef; /** netlist node id of every pin, PartDef.pins order */ nodes: number[]; env?: ExpandEnv }
 export type Expander = (x: ExpandCtx) => Element[];
 
 const el = (x: ExpandCtx, kind: string, nodes: number[], p: Params, suffix = ''): Element =>
@@ -200,13 +224,51 @@ const transformer: Expander = (x) => {
   return [el(x, 'T', [pinNode(x, 'P1'), pinNode(x, 'P2'), pinNode(x, 'S1'), pinNode(x, 'S2')], p)];
 };
 
+const variantOf = (x: ExpandCtx): PartDef['variants'][number] | undefined => x.def.variants.find((v) => v.id === x.part.variant) ?? x.def.variants[0];
+
+/** OPAMP: single (pins IN+ IN- OUT V+ V-) or dual (IN1+ … OUT2) packages → one OA per channel; model keys (any case) → opampParams defaults (macros.ts).
+ *  A dual package's Iq is split between its channels. Unused channels are left with floating inputs (topology warns). */
+const opamp: Expander = (x) => {
+  const p = opampParams(modelOf(x)), single = x.def.pins.includes('OUT');
+  const ch = single ? [['IN+', 'IN-', 'OUT']] : [['IN1+', 'IN1-', 'OUT1'], ['IN2+', 'IN2-', 'OUT2']];
+  return ch.map((c, i) => el(x, 'OA', [pinNode(x, c[0]), pinNode(x, c[1]), pinNode(x, c[2]), pinNode(x, 'V+'), pinNode(x, 'V-')], { ...p, iq: p.iq / ch.length }, single ? '' : String(i + 1)));
+};
+/** CMP (LM393 dual): pins IN1+ IN1- OUT1 GND IN2+ IN2- OUT2 VCC → one CMP per channel (supply V+ = VCC, V− = GND). */
+const comparator: Expander = (x) => {
+  const p = comparatorParams(modelOf(x)), ch = [['IN1+', 'IN1-', 'OUT1'], ['IN2+', 'IN2-', 'OUT2']];
+  return ch.map((c, i) => el(x, 'CMP', [pinNode(x, c[0]), pinNode(x, c[1]), pinNode(x, c[2]), pinNode(x, 'VCC'), pinNode(x, 'GND')], { ...p, iq: p.iq / 2 }, String(i + 1)));
+};
+/** 555: pins GND TRIG OUT RESET CTRL THR DIS VCC → TMR in that order. */
+const timer555: Expander = (x) => [el(x, 'TMR', ['GND', 'TRIG', 'OUT', 'RESET', 'CTRL', 'THR', 'DIS', 'VCC'].map((n) => pinNode(x, n)), timerParams(modelOf(x)))];
+/** REG: terminals [IN, REF, OUT], REF = GND (7805) or ADJ (LM317). Catalogue model: Vreg | Vref, Vdo, Isc | Ilim, IminLoad (→ injected into OUT), Iadj, tShutdown, tHyst; variant
+ *  thermal: thetaJA, tauS. The 7805's 5 mA Iq to GND is the DESIGN §3.7 value (absent from the catalogue model) and applies when the model has Vreg. */
+const regulator: Expander = (x) => {
+  const m = modelOf(x), th = variantOf(x)?.thermal;
+  const raw: Record<string, number | undefined> = { ...m, vref: m.vref, iqgnd: m.vreg !== undefined ? 5e-3 : undefined, iqout: m.iminload, thetaja: th?.thetaJA, tau: th?.tauS };
+  const ref = x.def.pins.includes('GND') ? 'GND' : 'ADJ';
+  return [el(x, 'REG', [pinNode(x, 'IN'), pinNode(x, ref), pinNode(x, 'OUT')], regulatorParams(raw))];
+};
+/** RELAY: pins C1 C2 COM NO NC; model Rcoil Lcoil Ipull Idrop RonContact RoffContact. */
+const relay: Expander = (x) => [el(x, 'RLY', ['C1', 'C2', 'COM', 'NO', 'NC'].map((n) => pinNode(x, n)), relayParams(modelOf(x)))];
+/** FUSE: Irated from the variant ratings, I²t window from the model (windowS); R_cold is a sim default (macros.ts). */
+const fuse: Expander = (x) => [el(x, 'FUSE', [x.nodes[0], x.nodes[1]], fuseParams({ ...modelOf(x), irated: variantOf(x)?.ratings.Irated }))];
+/** NTC: R(T) at the environment temperature (default 25 °C) from model R25, B, T0. */
+const ntc: Expander = (x) => { const m = modelOf(x); return [el(x, 'R', [x.nodes[0], x.nodes[1]], { r: ntcResistance(m.r25, m.b, x.env?.tempC ?? 25, m.t0 ?? 298.15) })]; };
+/** SLIDEWIRE: pins A J B, jockey at part.pos ∈ [0, 1] of the length from A (default 0.5): R(A–J) = Rtotal·pos, R(J–B) = Rtotal·(1 − pos), each floored at 1 µΩ so a jockey at an end stays solvable. */
+const slidewire: Expander = (x) => {
+  const m = modelOf(x), R = m.rtotal, a = Math.min(1, Math.max(0, x.part.pos ?? 0.5));
+  return [el(x, 'R', [x.nodes[0], x.nodes[1]], { r: Math.max(R * a, 1e-6) }, 'aj'), el(x, 'R', [x.nodes[1], x.nodes[2]], { r: Math.max(R * (1 - a), 1e-6) }, 'jb')];
+};
+
 /** Per-PartKind expanders. EXTENSION POINT: add D / LED / Z / NPN / ... here. */
 export const EXPANDERS: Readonly<Partial<Record<PartKind, Expander>>> = Object.freeze({
   NPN: bjt(1), PNP: bjt(-1), DARLINGTON: darlington, NMOS: mosfet,
+  OPAMP: opamp, CMP: comparator, '555': timer555, REG: regulator, RELAY: relay, FUSE: fuse, NTC: ntc, SLIDEWIRE: slidewire,
   XFMR: transformer, D: diode, LED: diode, Z: diode, SCHOTTKY: diode,
-  R: resistor, HEATER: resistor, SPEAKER: resistor, MOTOR: resistor, FUSE: resistor, NTC: resistor,
+  R: resistor, HEATER: resistor, SPEAKER: resistor, MOTOR: resistor,
   POT: (x) => {
-    const R = resistance(x), a = x.part.pos ?? 0.5;
+    // wiper α ∈ [alphaMin, alphaMax] when the part model gives them (0.5 % end resistance: a 0 Ω exploit stops here, DESIGN §3.7)
+    const R = resistance(x), m = modelOf(x), a = Math.min(m.alphamax ?? 1, Math.max(m.alphamin ?? 0, x.part.pos ?? 0.5));
     return [el(x, 'R', [x.nodes[0], x.nodes[1]], { r: R * a }, 'aw'), el(x, 'R', [x.nodes[1], x.nodes[2]], { r: R * (1 - a) }, 'wb')];
   },
   METER: (x) => {
@@ -225,7 +287,7 @@ export interface ExpandError { code: BoardError['code'] | 'noExpander' | 'noGrou
 export interface BoardNetlist { netlist: Netlist; conn: Connectivity; errors: ExpandError[] }
 
 /** Board → Netlist (+ the connectivity it came from). Parts without an expander are reported and skipped. */
-export function boardToNetlist(board: Board, getDef: (partId: string) => PartDef | undefined, expanders: Readonly<Partial<Record<PartKind, Expander>>> = EXPANDERS): BoardNetlist {
+export function boardToNetlist(board: Board, getDef: (partId: string) => PartDef | undefined, expanders: Readonly<Partial<Record<PartKind, Expander>>> = EXPANDERS, env: ExpandEnv = {}): BoardNetlist {
   const conn = buildConnectivity(board, getDef);
   const errors: ExpandError[] = conn.errors.map((e) => ({ code: e.code, uid: e.uid }));
   if (!conn.hasGround) errors.push({ code: 'noGround' });
@@ -235,7 +297,7 @@ export function boardToNetlist(board: Board, getDef: (partId: string) => PartDef
     if (!def || !nodes) continue;
     const ex = expanders[def.kind];
     if (!ex) { errors.push({ code: 'noExpander', uid: part.uid }); continue; }
-    for (const e of ex({ part, def, nodes })) {
+    for (const e of ex({ part, def, nodes, env })) {
       if (Object.values(e.p).some((v) => typeof v !== 'number' || Number.isNaN(v))) { errors.push({ code: 'badValue', uid: part.uid }); continue; }
       elements.push(e);
     }

@@ -107,6 +107,9 @@ export interface Device {
   /** Roll the history forward after an accepted step. */
   update?(e: CElem, x: Float64Array, state: number[], method: TranMethod, h: number): void;
   initState?(e: CElem, x: Float64Array, state: number[]): void;
+  /** Event surface and toggle (see EventDevice below). */
+  eventValue?(e: CElem, x: Float64Array, state: number[], h: number): number;
+  fire?(e: CElem, x: Float64Array, state: number[]): void;
   /** Current INTO the element at each terminal, A (passive sign), at solution x. */
   terminalCurrents(e: CElem, x: Float64Array, state: number[]): number[];
   topo(el: Element): TopoInfo;
@@ -140,4 +143,16 @@ export interface TopoIssue {
   elements: string[];                        // element ids involved
   key: string;                               // i18n key in locales/sim.en.ts
   vars: Record<string, string | number>;
+}
+
+// EVENTS (§3.5, added with the macros). A device with `eventValue` owns discrete state in `ctx.state` (555 flip-flop, relay armature,
+// fuse blown, thermal-shutdown latch) and one event surface g: g > 0 while the state is "armed" (no change due), g ≤ 0 once the threshold is
+// crossed. tran.ts evaluates g at the start and end of every step; on a crossing it rejects the step, refines the crossing time (false
+// position, ≤ 10 re-solves), accepts the step there, calls `fire` (toggle the state) and restarts with backward Euler.
+// Devices with events are nonlinear (isLinear false): their matrix depends on the discrete state.
+export interface EventDevice {
+  /** g at solution x, history `state`, after a step of length h (h = 0: the start of the step). */
+  eventValue(e: CElem, x: Float64Array, state: number[], h: number): number;
+  /** Toggle the discrete state (called once per crossing, after `update`). */
+  fire(e: CElem, x: Float64Array, state: number[]): void;
 }

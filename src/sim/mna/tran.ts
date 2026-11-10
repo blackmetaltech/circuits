@@ -72,6 +72,10 @@ export interface TranWork {
   cache: Record<TranMethod, Cache>;
   solver: LinearSolver;               // scratch solver for nonlinear circuits
   bp: number[]; bpHint: number;
+  /** Elements with an event surface (§3.5); empty for every circuit without 555 / relay / fuse / regulator macros. */
+  ev: CElem[];
+  /** Event elements to fire on the step being accepted (scratch, reset by resolveEvents). */
+  fire: Set<CElem>;
 }
 
 export function tranBreakpoints(ckt: Circuit, tStop: number, ramp: boolean): number[] {
@@ -89,6 +93,7 @@ export function tranWork(ckt: Circuit, st: Pick<TranState, 'tStop' | 'ramp' | 's
   return {
     ckt, ctx: new StampCtx(ckt.dim, st.state), reuse, x: new Float64Array(ckt.dim), xNew: new Float64Array(ckt.dim),
     cache: { BE: mk(), TRAP: mk() }, solver: makeSolver(ckt.dim), bp: tranBreakpoints(ckt, st.tStop, st.ramp), bpHint: 0,
+    ev: ckt.elements.filter((e) => e.dev.eventValue), fire: new Set<CElem>(),
   };
 }
 
@@ -191,6 +196,55 @@ export function tranInit(ckt: Circuit, o: TranOptions): { ok: boolean; st: TranS
 }
 
 // ---------------------------------------------------------------- advance
+
+// ---------------------------------------------------------------- events (§3.5)
+/**
+ * After a converged step of length hs: evaluate every event surface g at the step start (history state, x = xs, h = 0) and end (ws.x, h = hs).
+ *  - g0 > 0 and g1 ≤ 0: a crossing. The earliest (smallest linear-interpolation fraction) is refined by false position with bisection safeguards
+ *    (≤ 10 re-solves of the shortened step, stops when |g| ≤ 1e-9·(|g0| + |g1|) or the bracket is < 1e-7 of the step); the step is accepted at the
+ *    refined time, that element fires (plus any other element with g ≤ 0 there).
+ *  - g0 ≤ 0 and g1 ≤ 0: the condition already held at the start (power-up): fire at the end of this step, no refinement.
+ * ws.x holds the solution of the step to accept, ws.fire the elements to fire. Never touches `st`.
+ */
+function resolveEvents(ws: TranWork, st: TranState, xs: Float64Array, method: TranMethod, hs: number, tNew: number): { h: number; t: number; fired: boolean; failure: TranFailure | null } {
+  ws.fire.clear();
+  const margin = (e: CElem, x: Float64Array, h: number): number => e.dev.eventValue!(e, x, st.state, h);
+  let tgt: CElem | null = null, g0t = 0, g1t = 0, best = Infinity;
+  const late: CElem[] = [];
+  for (const e of ws.ev) {
+    const g0 = margin(e, xs, 0), g1 = margin(e, ws.x, hs);
+    if (g1 > 0) continue;
+    if (g0 <= 0) { late.push(e); continue; }
+    const f = g0 / (g0 - g1);
+    if (f < best) { best = f; tgt = e; g0t = g0; g1t = g1; }
+  }
+  let h = hs, t = tNew;
+  if (tgt) {
+    let lo = 0, hi = 1, glo = g0t, ghi = g1t, f = Math.min(Math.max(best, 1e-6), 1 - 1e-6), last = 1;
+    const tol = 1e-9 * (Math.abs(g0t) + Math.abs(g1t));
+    for (let it = 0; it < 10; it++) {
+      const hTry = hs * f, r = newton(ws, st.gmin, st.t + hTry, rampAt(st.ramp, st.t + hTry), method, hTry, xs, true);
+      st.stats.newtonIters += r.iters; st.stats.rejected++;
+      if (!r.ok) break;
+      last = f;
+      const g = margin(tgt, ws.x, hTry);
+      if (g <= 0) { hi = f; ghi = g; } else { lo = f; glo = g; }
+      if (Math.abs(g) <= tol || hi - lo <= 1e-7) break;
+      const fp = lo + (glo * (hi - lo)) / (glo - ghi);
+      f = it % 3 === 2 || !(fp > lo && fp < hi) ? 0.5 * (lo + hi) : fp;
+    }
+    if (last !== f || last === 1) {
+      // the final solve failed (or never ran): redo the accepted point so ws.x matches h
+      const hTry = hs * last, r = newton(ws, st.gmin, st.t + hTry, rampAt(st.ramp, st.t + hTry), method, hTry, xs, true);
+      if (!r.ok) return { h, t, fired: false, failure: r.failure };
+    }
+    h = hs * last; t = st.t + h;
+    ws.fire.add(tgt);
+    for (const e of ws.ev) if (e !== tgt && margin(e, ws.x, h) <= 0 && margin(e, xs, 0) > 0) ws.fire.add(e);
+  }
+  for (const e of late) ws.fire.add(e);
+  return { h, t, fired: ws.fire.size > 0, failure: null };
+}
 function nextBreakpoint(ws: TranWork, t: number): number {
   const bp = ws.bp;
   while (ws.bpHint > 0 && bp[ws.bpHint - 1] > t + BP_EPS * 1e-3) ws.bpHint--;
@@ -219,14 +273,21 @@ export function tranAdvance(ws: TranWork, st: TranState, k: number, cb?: (s: Ste
         st.h *= 0.5;
         continue;
       }
-      for (const e of ckt.elements) e.dev.update?.(e, ws.x, st.state, method, hs);
+      let hAcc = hs, tAcc = tNew, fired = false;
+      if (ws.ev.length) {
+        const ev = resolveEvents(ws, st, xs, method, hs, tNew);
+        if (ev.failure) return { steps: taken, failure: ev.failure };
+        hAcc = ev.h; tAcc = ev.t; fired = ev.fired;
+      }
+      for (const e of ckt.elements) e.dev.update?.(e, ws.x, st.state, method, hAcc);
+      if (fired) for (const e of ws.ev) if (ws.fire.has(e)) e.dev.fire!(e, ws.x, st.state);
       xs.set(ws.x);
       for (let i = 0; i < ckt.dim; i++) st.x[i] = xs[i];
-      st.t = tNew; st.stats.steps++; taken++;
-      if (st.method === 'auto') st.be = land && nb < st.tStop ? 1 : st.be > 0 ? st.be - 1 : 0;
+      st.t = tAcc; st.stats.steps++; taken++;
+      if (st.method === 'auto') st.be = (land && hAcc === hs && nb < st.tStop) || fired ? 1 : st.be > 0 ? st.be - 1 : 0;
       st.h = Math.min(st.h0, st.h * 2);
       if (st.t >= st.tStop - BP_EPS * st.h0 * 1e-3) st.done = true;
-      cb?.({ index: st.stats.steps, t: st.t, h: hs, method, x: xs, state: st.state });
+      cb?.({ index: st.stats.steps, t: st.t, h: hAcc, method, x: xs, state: st.state });
       break;
     }
   }

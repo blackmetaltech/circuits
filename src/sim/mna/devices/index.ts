@@ -15,5 +15,12 @@ import { D } from './diode';
 import { Q, DAR } from './bjt';
 import { M } from './mosfet';
 import { T } from './xfmr';
+import { OA } from './opamp';
+import { CMP } from './comparator';
+import { TMR } from './timer';
+import { REG } from './regulator';
+import { LOGIC } from './logic';
+import { RLY } from './relay';
+import { FUSE } from './fuse';
 
-export const DEVICES: Readonly<Record<string, Device>> = Object.freeze({ R, V, I, BAT, BENCH, AM, E, G, C, L, D, Q, DAR, M, T });
+export const DEVICES: Readonly<Record<string, Device>> = Object.freeze({ R, V, I, BAT, BENCH, AM, E, G, C, L, D, Q, DAR, M, T, OA, CMP, TMR, REG, LOGIC, RLY, FUSE });

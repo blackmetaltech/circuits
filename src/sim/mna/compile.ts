@@ -8,7 +8,7 @@ import { hashOf } from '@core/kit/hash';
 import type { PartDef, PartKind } from '../../data/parts/types';
 import type { Board } from '../board/types';
 import type { Connectivity } from '../board/connectivity';
-import { boardToNetlist, EXPANDERS, type Expander, type ExpandError } from './netlist';
+import { boardToNetlist, EXPANDERS, type Expander, type ExpandEnv, type ExpandError } from './netlist';
 import { DEVICES } from './devices';
 import { checkTopology } from './topology';
 import type { CElem, Circuit, Device, Netlist } from './types';
@@ -82,13 +82,13 @@ export function compileNetlist(nl: Netlist, devices: Readonly<Record<string, Dev
 export interface CompiledBoard { circuit: Circuit | null; netlist: Netlist; conn: Connectivity; expandErrors: ExpandError[]; compileErrors: CompileError[] }
 
 /** Board → netlist → circuit, memoised by the board hash (+ the relevant fields of the part defs used: `getDef` must be pure). */
-export function compileBoard(board: Board, getDef: (partId: string) => PartDef | undefined, expanders: Readonly<Partial<Record<PartKind, Expander>>> = EXPANDERS): CompiledBoard {
+export function compileBoard(board: Board, getDef: (partId: string) => PartDef | undefined, expanders: Readonly<Partial<Record<PartKind, Expander>>> = EXPANDERS, env: ExpandEnv = {}): CompiledBoard {
   const make = (): CompiledBoard => {
-    const { netlist, conn, errors } = boardToNetlist(board, getDef, expanders);
+    const { netlist, conn, errors } = boardToNetlist(board, getDef, expanders, env);
     const r = compileNetlist(netlist);
     return { circuit: r.ok ? r.circuit : null, netlist, conn, expandErrors: errors, compileErrors: r.ok ? [] : r.errors };
   };
   if (expanders !== EXPANDERS) return make();
-  const used = [...new Set(board.parts.map((p) => p.partId))].sort().map((id) => { const d = getDef(id); return d ? { id, kind: d.kind, fp: d.footprint, pins: d.pins, model: d.model } : { id }; });
-  return memo('B:' + hashOf({ board, used }), make);
+  const used = [...new Set(board.parts.map((p) => p.partId))].sort().map((id) => { const d = getDef(id); return d ? { id, kind: d.kind, fp: d.footprint, pins: d.pins, model: d.model, variants: d.variants } : { id }; });
+  return memo('B:' + hashOf({ board, used, env }), make);
 }
