@@ -12,4 +12,13 @@ export const simEn: Record<string, string> = {
   'solve.badValue': 'A part value is not usable: {detail}.',
   'tran.noConverge': 'The simulation could not advance past t = {t} s even with the smallest step; the circuit changes too violently near {where}.',
   'solve.noConverge': "The solver couldn't settle this circuit; it was still moving at {node} (parts there: {elements}). Usually: a loop of diodes with no resistance, or a latch with two stable states and nothing to pick one. Try adding a resistor here.",
+  'bench.level.fail': '{probe} measured {value} in the {cond} test, outside the allowed {lo} to {hi}.',
+  'bench.metric.fail': '{metric} of {probe} measured {value} in the {cond} test, outside the allowed {lo} to {hi}.',
+  'bench.metric.nan': '{metric} of {probe} could not be measured in the {cond} test (the signal never did what it needs to).',
+  'bench.band.fail': '{probe} left the target band in the {cond} test: {count} samples outside, first at t = {t} s with {value}; the tolerance is {dv} up or down and {dt} s sideways.',
+  'bench.mask.fail': 'Gain or phase at {f} Hz is {value} in the {cond} test, outside the allowed {lo} to {hi} for {f1} to {f2} Hz.',
+  'bench.rating.violation': '{part} was over its {what} rating in the {cond} test: {value} against a limit of {limit}.',
+  'bench.rating.smoked': '{part} smoked in the {cond} test.',
+  'bench.safety.fail': 'Safety rule {rule} is not met ({detail}).',
+  'bench.settle.fail': 'The circuit had not settled into a steady cycle after {periods} periods in the {cond} test.',
 };
