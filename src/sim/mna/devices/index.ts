@@ -12,5 +12,7 @@ import { G } from './vccs';
 import { C } from './c';
 import { L } from './l';
 import { D } from './diode';
+import { Q, DAR } from './bjt';
+import { M } from './mosfet';
 
-export const DEVICES: Readonly<Record<string, Device>> = Object.freeze({ R, V, I, BAT, BENCH, AM, E, G, C, L, D });
+export const DEVICES: Readonly<Record<string, Device>> = Object.freeze({ R, V, I, BAT, BENCH, AM, E, G, C, L, D, Q, DAR, M });

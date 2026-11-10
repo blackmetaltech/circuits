@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '@core/kit/rng';
 import { compileNetlist } from './compile';
 import { randomDiodeBoard } from './diode.fuzz';
+import { randomTransistorBoard } from './transistor.fuzz';
 import { parseNetlist } from './netlist';
 import { solveOp, type OpResult, type OpStrategy } from './op';
 import { elementCurrent, nodeVoltage } from './stamp';
@@ -133,12 +134,88 @@ describe('convergence suite: diode family', () => {
   });
   it('summary (all cases, by strategy that solved them)', () => { console.log('convergence tally (named + random):', JSON.stringify(tally)); });
 
-  it.todo('BJT cross-coupled latch (deterministic state): needs the BJT device (M1-B2)');
-  it.todo('BJT Schmitt trigger: needs the BJT device');
-  it.todo('3-stage BJT ring oscillator (transient): needs BJT + tran');
-  it.todo('MOSFET with a floating gate (expect the floating explainer): needs the MOSFET device');
+  it.todo('3-stage BJT ring oscillator (transient): needs BJT + tran frequency measurement');
   it.todo('op-amp comparator with positive feedback / op-amp with no feedback at DC: needs the op-amp macro');
-  it.todo('Darlington with 8k/120 ohm, 555 with C = 100 pF, buck at 50 kHz: need those devices + tran');
+  it.todo('555 with C = 100 pF, buck at 50 kHz: need those devices + tran');
+});
+
+describe('convergence suite: transistors', () => {
+  const NPN = '.model N npn(is=6.734e-15 bf=200 br=0.7371 vaf=74.03)';
+  it('BJT cross-coupled latch (bistable): from a biased start it settles to one stable state, deterministically, with saturated/cut-off halves', () => {
+    const nl = parseNetlist(`V1 vcc 0 5\nRC1 vcc c1 1k\nRC2 vcc c2 1k\nRB1 c1 b2 10k\nRB2 c2 b1 10k\nQ1 c1 b1 0 N\nQ2 c2 b2 0 N\n${NPN}`);
+    const a = solveTimed(nl, 'latch'), b = solveTimed(nl, 'latch again');
+    for (const r of [a, b]) expect(r.op.ok).toBe(true);
+    expect(Array.from(a.op.x)).toEqual(Array.from(b.op.x));
+    const c1 = nodeVoltage(a.op.x, a.c.nodeIndex.c1), c2 = nodeVoltage(a.op.x, a.c.nodeIndex.c2);
+    expect(Number.isFinite(c1) && Number.isFinite(c2)).toBe(true);           // the symmetric metastable point is a legal OP too
+    // seeded into each state it keeps it
+    for (const [v1, v2] of [[0.2, 4.5], [4.5, 0.2]]) {
+      const x0 = new Float64Array(a.c.dim); x0[a.c.nodeIndex.c1 - 1] = v1; x0[a.c.nodeIndex.c2 - 1] = v2; x0[a.c.nodeIndex.vcc - 1] = 5;
+      x0[a.c.nodeIndex.b1 - 1] = v1 < 1 ? 0.7 : 0.2; x0[a.c.nodeIndex.b2 - 1] = v2 < 1 ? 0.7 : 0.2;   // a low collector means that transistor is ON
+      const s = solveTimed(nl, `latch seeded ${v1}`, x0); expect(s.op.ok).toBe(true);
+      const w1 = nodeVoltage(s.op.x, s.c.nodeIndex.c1), w2 = nodeVoltage(s.op.x, s.c.nodeIndex.c2);
+      expect(Math.abs(w1 - w2)).toBeGreaterThan(3); expect(w1 < w2).toBe(v1 < v2);
+    }
+  });
+  it('BJT Schmitt trigger (emitter-coupled): solves for inputs below, inside and above the hysteresis window, warm-started and cold', () => {
+    let warm: Float64Array | undefined;
+    for (const vin of [0, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 4, 3, 2, 1, 0]) {
+      const cards = `V1 vcc 0 9\nVI in 0 ${vin}\nRC1 vcc c1 2k\nRC2 vcc c2 1k\nR1 c1 b2 5k\nR2 b2 0 10k\nRE e 0 500\nQ1 c1 in e N\nQ2 c2 b2 e N\n${NPN}`;
+      const cold = solveTimed(parseNetlist(cards), `schmitt cold ${vin}`); expect(cold.op.ok).toBe(true);
+      const w = solveTimed(parseNetlist(cards), `schmitt warm ${vin}`, warm); expect(w.op.ok).toBe(true); warm = w.op.x;
+      expect(nodeVoltage(w.op.x, w.c.nodeIndex.e)).toBeGreaterThanOrEqual(0);
+    }
+  });
+  it('MOSFET with a floating gate: the topology check reports it (dcFloating on the gate node) and the solve still returns an OFF device', () => {
+    const nl = parseNetlist('V1 vcc 0 5\nRD vcc d 1k\nM1 d g 0 N\n.model N nmos(vt=2.1 kp=0.0527 lambda=0.02)');
+    const c = compile(nl);
+    expect(c.issues.some((i) => i.code === 'dcFloating' && i.nodes.includes('g'))).toBe(true);
+    const { op } = solveTimed(nl, 'floating gate'); expect(op.ok).toBe(true); expect(nodeVoltage(op.x, c.nodeIndex.d)).toBeCloseTo(5, 6);
+  });
+  it('Darlington (8k / 120 ohm internal) driven from 5 V through 4.7k, 12 V / 100 ohm load; and with the base left open', () => {
+    const mk = (base: string) => { const nl = parseNetlist(`V1 vcc 0 12\nRL vcc c 100\n${base}`); const id = (n: string) => nl.nodeNames.indexOf(n);
+      nl.elements.push({ id: 'Q1', kind: 'DAR', owner: 'p1', nodes: [id('c'), id('b'), 0], p: { is: 1e-12, bf: 31.1, br: 1, rb: 8000, re: 120 } }); return nl; };
+    const on = solveTimed(mk('V2 s 0 5\nRB s b 4.7k'), 'darlington on'); expect(on.op.ok).toBe(true);
+    expect(nodeVoltage(on.op.x, on.c.nodeIndex.c)).toBeLessThan(2);
+    const open = solveTimed(mk('R9 b 0 1e9'), 'darlington open'); expect(open.op.ok).toBe(true);
+    expect(nodeVoltage(open.op.x, open.c.nodeIndex.c)).toBeCloseTo(12, 3);
+  });
+  it('NMOS inverter transfer curve (DC sweep, 0..5 V in 0.1 V steps, warm-started and cold) is monotone decreasing', () => {
+    let warm: Float64Array | undefined, prev = Infinity;
+    for (let k = 0; k <= 50; k++) {
+      const cards = `V1 vcc 0 5\nVI g 0 ${k / 10}\nRD vcc d 10k\nM1 d g 0 N\n.model N nmos(vt=1 kp=1m lambda=0.01)`;
+      const cold = solveTimed(parseNetlist(cards), `inv cold ${k}`); expect(cold.op.ok).toBe(true);
+      const w = solveTimed(parseNetlist(cards), `inv warm ${k}`, warm); expect(w.op.ok).toBe(true); warm = w.op.x;
+      const vd = nodeVoltage(w.op.x, w.c.nodeIndex.d); expect(vd).toBeLessThanOrEqual(prev + 1e-9); prev = vd;
+      expect(Math.abs(vd - nodeVoltage(cold.op.x, cold.c.nodeIndex.d))).toBeLessThan(1e-6);
+    }
+  });
+  it('300 seeded random BJT / MOSFET / Darlington boards: >= 95 % plain Newton, 100 % solved or explained, none over the wall guard', () => {
+    const own: Record<string, number> = { newton: 0, gmin: 0, source: 0, pseudo: 0, explained: 0 };
+    for (let s = 1; s <= 300; s++) {
+      const c = compile(randomTransistorBoard(new Rng(41000 + s))), t0 = performance.now(), op = solveOp(c);
+      expect(performance.now() - t0, `board ${s} wall`).toBeLessThan(WALL_MS);
+      if (op.ok) own[op.strategy]++;
+      else { own.explained++; expect(op.failure, `board ${s}`).toMatchObject({ code: 'noConverge', key: 'solve.noConverge' }); }
+    }
+    console.log('convergence (300 random transistor boards):', JSON.stringify(own));
+    expect(own.newton / 300).toBeGreaterThanOrEqual(0.95);
+  });
+  it('each homotopy stage ALONE on 300 random transistor boards: % solved per stage', () => {
+    const boards = Array.from({ length: 300 }, (_, k) => randomTransistorBoard(new Rng(41000 + k + 1)));
+    const stages: { name: OpStrategy; skip: OpStrategy[]; min: number }[] = [
+      { name: 'newton', skip: ['gmin', 'source', 'pseudo'], min: 0.95 }, { name: 'gmin', skip: ['newton', 'source', 'pseudo'], min: 0.9 },
+      { name: 'source', skip: ['newton', 'gmin', 'pseudo'], min: 0.9 }, { name: 'pseudo', skip: ['newton', 'gmin', 'source'], min: 0.9 },
+    ];
+    const pct: Record<string, string> = {};
+    for (const st of stages) {
+      let ok = 0;
+      for (const nl of boards) { const op = solveOp(compile(nl), { skip: st.skip }); if (op.ok) ok++; else expect(op.failure!.key).toMatch(/^solve\./); }
+      pct[st.name] = `${((100 * ok) / boards.length).toFixed(1)}%`;
+      expect(ok / boards.length, `stage ${st.name} alone`).toBeGreaterThanOrEqual(st.min);
+    }
+    console.log('transistor stage-alone solve rates:', JSON.stringify(pct));
+  });
 });
 
 export type { OpStrategy };

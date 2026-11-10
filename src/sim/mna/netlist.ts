@@ -61,6 +61,7 @@ const CARD: Record<string, { kind: string; nodes: number; key?: string; model?: 
   R: { kind: 'R', nodes: 2, key: 'r' }, V: { kind: 'V', nodes: 2, key: 'v' }, I: { kind: 'I', nodes: 2, key: 'i' },
   E: { kind: 'E', nodes: 4, key: 'gain' }, G: { kind: 'G', nodes: 4, key: 'gm' }, C: { kind: 'C', nodes: 2, key: 'c' },
   L: { kind: 'L', nodes: 2, key: 'l' }, D: { kind: 'D', nodes: 2, model: true },
+  Q: { kind: 'Q', nodes: 3, model: true }, M: { kind: 'M', nodes: 3, model: true },
 };
 
 /** Parse cards into a Netlist. @throws NetlistError (developer-facing; cards are authored by tests and agents, not players). */
@@ -112,6 +113,7 @@ export function parseNetlist(text: string): Netlist {
     b.add({ id: head, kind: spec.kind, owner: '', nodes, p, ...(model ? { model } : {}) });
   }
   resolveDiodeModels(b);
+  resolveTransistorModels(b);
   return b.build();
 }
 
@@ -123,6 +125,21 @@ function resolveDiodeModels(b: NetlistBuilder): void {
     const ty = b.modelTypes[e.model];
     e.p = { ...(b.models[e.model] ?? {}), ...e.p };
     if (ty === 'd07' || ty === 'ideal07' || ty === 'ideal') e.p.ideal = 1;
+  }
+}
+
+/** Transistor cards `Q1 c b e model` / `M1 d g s model`: copy the `.model` numbers into el.p. Model types npn / pnp / nmos / pmos set the
+ *  polarity (p.pol ±1); `vto` is accepted as an alias of `vt`; `ideal=1` on a BJT selects the textbook constant-0.7 V model. */
+function resolveTransistorModels(b: NetlistBuilder): void {
+  for (const e of b.elements) {
+    if ((e.kind !== 'Q' && e.kind !== 'M') || !e.model) continue;
+    const ty = b.modelTypes[e.model];
+    e.p = { ...(b.models[e.model] ?? {}), ...e.p };
+    if (e.p.vto !== undefined && e.p.vt === undefined) e.p.vt = e.p.vto;
+    delete e.p.vto;
+    e.p.pol = ty === 'pnp' || ty === 'pmos' ? -1 : 1;
+    if (e.kind === 'M' && e.p.vt === undefined) e.p.vt = 1;
+    if (e.kind === 'M' && e.p.kp === undefined) e.p.kp = 2e-5;
   }
 }
 
@@ -146,8 +163,33 @@ const diode: Expander = (x) => {
   return [el(x, 'D', [x.nodes[0], x.nodes[1]], p)];
 };
 
+const modelOf = (x: ExpandCtx): Params => { const p: Params = {}; for (const [k, v] of Object.entries(x.def.model)) p[k.toLowerCase()] = v; return p; };
+/** Pin NAME → netlist node, so the catalogue's pin order (2N2222A is E B C, 2N7000 is S G D) never matters. */
+const pinNode = (x: ExpandCtx, name: string): number => x.nodes[x.def.pins.indexOf(name)];
+
+/** NPN / PNP: pins C B E → Q [C, B, E]; model Is / Bf / Br / Vaf (lower-cased). PNP sets pol −1. */
+const bjt = (pol: number): Expander => (x) => {
+  const m = modelOf(x), p: Params = { pol };
+  for (const k of ['is', 'bf', 'br', 'vaf']) if (m[k] !== undefined) p[k] = m[k];
+  return [el(x, 'Q', [pinNode(x, 'C'), pinNode(x, 'B'), pinNode(x, 'E')], p)];
+};
+/** DARLINGTON: pins B C E → DAR [C, B, E]. Model: composite hFEmin, Rb, Re. Per-stage bf solves bf·(bf + 1) = hFE (two cascaded stages), per-stage Is 1e-12 A
+ *  is an ESTIMATE (power-transistor class; the datasheet gives no junction data). */
+const darlington: Expander = (x) => {
+  const m = modelOf(x), hfe = m.hfemin ?? 1000, bf = (Math.sqrt(1 + 4 * hfe) - 1) / 2;
+  return [el(x, 'DAR', [pinNode(x, 'C'), pinNode(x, 'B'), pinNode(x, 'E')], { is: m.is ?? 1e-12, bf, br: 1, rb: m.rb ?? 8000, re: m.re ?? 120 })];
+};
+/** NMOS: pins D G S (any order) → M [D, G, S]; model Vt / Kp / lambda (+ optional body diode Dis / Dn). */
+const mosfet: Expander = (x) => {
+  const m = modelOf(x), p: Params = { vt: m.vt, kp: m.kp, lambda: m.lambda ?? 0, pol: m.pmos ? -1 : 1 };
+  if (m.dis !== undefined) p.dis = m.dis;
+  if (m.dn !== undefined) p.dn = m.dn;
+  return [el(x, 'M', [pinNode(x, 'D'), pinNode(x, 'G'), pinNode(x, 'S')], p)];
+};
+
 /** Per-PartKind expanders. EXTENSION POINT: add D / LED / Z / NPN / ... here. */
 export const EXPANDERS: Readonly<Partial<Record<PartKind, Expander>>> = Object.freeze({
+  NPN: bjt(1), PNP: bjt(-1), DARLINGTON: darlington, NMOS: mosfet,
   D: diode, LED: diode, Z: diode, SCHOTTKY: diode,
   R: resistor, HEATER: resistor, SPEAKER: resistor, MOTOR: resistor, FUSE: resistor, NTC: resistor,
   POT: (x) => {
