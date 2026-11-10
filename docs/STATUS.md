@@ -7,10 +7,17 @@
 - M1-A1/A2 linear MNA, M1-A3 transient, M1-B1 diodes + homotopy, M1-D1 catalogue, M1-D2 ngspice refs.
 - Oracles green: NC-01..10, CA-01..06, CAP-01..07, TR-01..03, SD-01, SC-01..03 (26 of 57). 335 tests.
 
-## In flight
-- Gate A Pixel run (`.qa/node-circuits/gatea.sh` under phone.lock): log at `.qa/node-circuits/gatea.log`.
+## Gate A (Pixel 9a, 2026-11-10): CONDITIONAL GO
+See docs/perf/pixel-factor.json + gatea-2026-11-10.log. Pass: 25k-step nonlinear bridge 78 ms (≤1.5 s), LU n48 0.051 ms (≤0.25),
+round trip p95 10.8 ms (≤20), no thermal slowdown in 11 min, fps p95 55-60 (marginal). FAIL: in-loop live-frame engine p95 6.4 ms
+(budget 4) although the isolated frame is 1.1 ms → investigate the live path (JSON of 2x512 floats, dispatch, GC; try k=100 and
+`thread=1` in user://spike.cfg) before M2-7. Session script: /home/ixaxaar/src/ORGS/cobanana/.qa/node-circuits/gatea.sh (run under
+phone.lock). Spike code (src/spike, godot/spike, spike queries in game.ts, _start_up hook in main.gd) is deleted after that re-check.
 
-## Next (queued: subagent slots were full)
+## In flight
+Nothing (all workers stopped/landed; working tree clean at handoff).
+
+## Next (exact order; briefs for the first four were written by the Opus director — reconstruct from BUILD-PLAN rows + docs/briefs/COMMON.md)
 - M1-A4 AC (ac.ts + AC-01..07, TR-04, FI-01/02/04, Sallen-Key ref)
 - M1-B2 BJT/MOSFET (SC-04, SD-02, SD-03, refs 06/07/08/13/15)
 - M1-C1 bench spec engine (sim/bench/*)
