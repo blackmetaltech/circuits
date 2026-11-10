@@ -10,5 +10,6 @@ export const simEn: Record<string, string> = {
   'topo.unconnected': 'Pin of {element} at {node} is not connected to anything.',
   'solve.singular': 'The solver cannot find one answer for this circuit. Check {nodes} and {elements}: something is floating or two parts demand contradictory voltages.',
   'solve.badValue': 'A part value is not usable: {detail}.',
-  'solve.noConverge': 'The solver could not settle this circuit.',
+  'tran.noConverge': 'The simulation could not advance past t = {t} s even with the smallest step; the circuit changes too violently near {where}.',
+  'solve.noConverge': "The solver couldn't settle this circuit; it was still moving at {node} (parts there: {elements}). Usually: a loop of diodes with no resistance, or a latch with two stable states and nothing to pick one. Try adding a resistor here.",
 };

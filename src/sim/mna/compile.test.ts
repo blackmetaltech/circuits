@@ -18,9 +18,11 @@ describe('compile', () => {
     expect(c.elements[0].branch).toEqual([3]); expect(c.elements[0].nodes).toEqual([0, -1]);
   });
   it('rejects unknown kinds, bad values, duplicate ids, wrong arity', () => {
-    const r = compileNetlist(parseNetlist('C1 a 0 1u\nR1 a 0 -5'));
+    // C is a registered kind now: reject it through its own validate (non-positive value); 'Z1' has no device at all
+    const nl = parseNetlist('C1 a 0 1u\nR1 a 0 -5'); nl.elements[0].p.c = -1; nl.elements.push({ id: 'Z1', kind: 'Z', owner: '', nodes: [1, 0], p: {} });
+    const r = compileNetlist(nl);
     expect(r.ok).toBe(false);
-    expect(!r.ok && r.errors.map((e) => e.id)).toEqual(['C1', 'R1']);
+    expect(!r.ok && r.errors.map((e) => e.id)).toEqual(['C1', 'R1', 'Z1']);
   });
   it('supports internal nodes, extra branches and state through the device interface', () => {
     // test device: 2-terminal resistor split by an internal node, one extra branch row (0 V probe), 2 state slots

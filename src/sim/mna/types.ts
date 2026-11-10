@@ -47,6 +47,8 @@ export interface Element {
   nodes: NodeId[];                           // terminals, meaning per kind (see the device file)
   p: Params;
   model?: string;
+  /** Time-varying independent source (V / I only; see waveforms.ts). Absent = DC from p.v / p.i. */
+  wave?: import('./waveforms').Wave;
 }
 
 export interface Netlist {

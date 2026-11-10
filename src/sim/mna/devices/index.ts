@@ -9,5 +9,8 @@ import { BENCH } from './bench';
 import { AM } from './meter';
 import { E } from './vcvs';
 import { G } from './vccs';
+import { C } from './c';
+import { L } from './l';
+import { D } from './diode';
 
-export const DEVICES: Readonly<Record<string, Device>> = Object.freeze({ R, V, I, BAT, BENCH, AM, E, G });
+export const DEVICES: Readonly<Record<string, Device>> = Object.freeze({ R, V, I, BAT, BENCH, AM, E, G, C, L, D });

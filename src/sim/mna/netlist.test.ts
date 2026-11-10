@@ -28,7 +28,7 @@ const def = (id: string, kind: PartDef['kind'], footprint: PartDef['footprint'],
   ({ id, kind, nameKey: id, footprint, pins, variants: [], model, source: { doc: 't' }, verified: false, scope: 'sandbox' });
 const DEFS: Record<string, PartDef> = {
   r: def('r', 'R', 'axial2', ['A', 'B']), bat: def('bat', 'MISC', 'block2', ['+', '-'], { emf: 9, r: 1.7 }), pot: def('pot', 'POT', 'pot3', ['A', 'W', 'B']),
-  dmm: def('dmm', 'METER', 'block2', ['+', '-']), dmmA: def('dmmA', 'METER', 'block2', ['+', '-'], { burden: 0.1 }), bench: def('bench', 'MISC', 'block2', ['+', '-'], { bench: 1, ilim: 0.5 }), led: def('led', 'LED', 'radial2', ['A', 'K']),
+  dmm: def('dmm', 'METER', 'block2', ['+', '-']), dmmA: def('dmmA', 'METER', 'block2', ['+', '-'], { burden: 0.1 }), bench: def('bench', 'MISC', 'block2', ['+', '-'], { bench: 1, ilim: 0.5 }), relay: def('relay', 'RELAY', 'radial2', ['A', 'K']),
 };
 const P = (uid: string, partId: string, x: number, y: number, extra: object = {}) => ({ uid, partId, value: null, variant: '', x, y, rot: 0 as const, flip: false, ...extra });
 
@@ -53,7 +53,7 @@ describe('boardToNetlist', () => {
     expect(byId.s1).toMatchObject({ kind: 'BENCH', p: { v: 5, ilim: 0.5 } });
   });
   it('reports unsupported kinds and a missing ground', () => {
-    const { errors } = boardToNetlist({ w: 10, h: 10, connectors: [], wires: [], parts: [P('d1', 'led', 1, 1)] }, (id) => DEFS[id]);
+    const { errors } = boardToNetlist({ w: 10, h: 10, connectors: [], wires: [], parts: [P('d1', 'relay', 1, 1)] }, (id) => DEFS[id]);
     expect(errors.map((e) => e.code).sort()).toEqual(['noExpander', 'noGround']);
   });
 });

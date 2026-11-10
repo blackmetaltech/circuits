@@ -111,7 +111,19 @@ export function parseNetlist(text: string): Netlist {
     } catch (e) { throw new NetlistError(`${head}: ${(e as Error).message}`, n); }
     b.add({ id: head, kind: spec.kind, owner: '', nodes, p, ...(model ? { model } : {}) });
   }
+  resolveDiodeModels(b);
   return b.build();
+}
+
+/** Diode cards `D1 a k model`: copy the `.model` numbers into el.p (device params are plain numbers). Model types `d07` / `ideal` set the
+ *  textbook constant-0.7 V variant (p.ideal = 1); an unknown model name gives SPICE defaults (Is 1e-14, N 1). */
+function resolveDiodeModels(b: NetlistBuilder): void {
+  for (const e of b.elements) {
+    if (e.kind !== 'D' || !e.model) continue;
+    const ty = b.modelTypes[e.model];
+    e.p = { ...(b.models[e.model] ?? {}), ...e.p };
+    if (ty === 'd07' || ty === 'ideal07' || ty === 'ideal') e.p.ideal = 1;
+  }
 }
 
 // ---------------------------------------------------------------- board expansion
@@ -124,8 +136,19 @@ const resistance = (x: ExpandCtx): number => x.part.value ?? x.def.model.R;
 
 const resistor: Expander = (x) => [el(x, 'R', [x.nodes[0], x.nodes[1]], { r: resistance(x) })];
 
+/** Diode family (D, LED, Z, SCHOTTKY): pins [A, K]; def.model keys Is / N / Rs / BV / Ibv / Nbv (any case) → device params (lower case);
+ *  model.ideal ≠ 0 selects the textbook constant-0.7 V diode (optional model.vf, model.ron). */
+const diode: Expander = (x) => {
+  const p: Params = {};
+  for (const [k, v] of Object.entries(x.def.model)) p[k.toLowerCase()] = v;
+  if (p.ideal !== undefined) p.ideal = p.ideal ? 1 : 0;
+  if (p.ideal === 0) delete p.ideal;
+  return [el(x, 'D', [x.nodes[0], x.nodes[1]], p)];
+};
+
 /** Per-PartKind expanders. EXTENSION POINT: add D / LED / Z / NPN / ... here. */
 export const EXPANDERS: Readonly<Partial<Record<PartKind, Expander>>> = Object.freeze({
+  D: diode, LED: diode, Z: diode, SCHOTTKY: diode,
   R: resistor, HEATER: resistor, SPEAKER: resistor, MOTOR: resistor, FUSE: resistor, NTC: resistor,
   POT: (x) => {
     const R = resistance(x), a = x.part.pos ?? 0.5;
