@@ -1,0 +1,119 @@
+{
+ "555-astable": {
+  "tran.samples": 3007,
+  "tran.steps": 3006,
+  "tran.newtonIters": 6066,
+  "tran.rejected": 27,
+  "tran.t": "6e65ddf360c05fc9",
+  "tran.v(t)": "4b6a57b54b15e12b",
+  "tran.v(out)": "d81df93a1b3a5d60",
+  "tran.i(U1)": "56e533a682842714",
+  "tran.finalState": "2817b92538d5f7cf"
+ },
+ "_note": "INITIAL SET (M1-E1): hashes of Float64 bits per probe; written by GOLDEN_UPDATE only",
+ "bjt-ce-amp": {
+  "tran.samples": 802,
+  "tran.steps": 801,
+  "tran.newtonIters": 1645,
+  "tran.rejected": 0,
+  "tran.t": "9a1db96416304fe6",
+  "tran.v(b)": "92ac9e8eea2a650c",
+  "tran.v(c)": "c879156804802076",
+  "tran.v(e)": "f9eced4a20087c24",
+  "tran.i(Q1)": "0363a4985d3daab6",
+  "tran.finalState": "43fa234d8f2d47db"
+ },
+ "bridge-cap": {
+  "tran.samples": 5015,
+  "tran.steps": 5014,
+  "tran.newtonIters": 13992,
+  "tran.rejected": 23,
+  "tran.t": "ec8ac1e60a9c6e34",
+  "tran.v(sp,sn)": "d2de7c2faea10c85",
+  "tran.v(out)": "1a152fcd8e9f86b3",
+  "tran.i(Rw)": "4a03f57c132b383a",
+  "tran.finalState": "8b6a9ac700b6d479"
+ },
+ "halfwave-cap": {
+  "tran.samples": 5007,
+  "tran.steps": 5006,
+  "tran.newtonIters": 11121,
+  "tran.rejected": 8,
+  "tran.t": "fba88934389877d6",
+  "tran.v(in)": "b2bde658890f7b22",
+  "tran.v(out)": "2e356719bb564317",
+  "tran.i(D1)": "af9b9029fb18e8c7",
+  "tran.finalState": "475876be74903d0c"
+ },
+ "rc-step": {
+  "tran.samples": 502,
+  "tran.steps": 501,
+  "tran.newtonIters": 501,
+  "tran.rejected": 0,
+  "tran.t": "9278d8e95afe390f",
+  "tran.v(in)": "b872e0b281749004",
+  "tran.v(out)": "d21e0331bfa4efa3",
+  "tran.i(R1)": "27fdc1c3e77b2f61",
+  "tran.finalState": "fd1362dc1ad0dbba"
+ },
+ "regulator-7805": {
+  "tran.samples": 502,
+  "tran.steps": 501,
+  "tran.newtonIters": 681,
+  "tran.rejected": 0,
+  "tran.t": "9278d8e95afe390f",
+  "tran.v(in)": "54c38a02958f4e68",
+  "tran.v(out)": "5275b8c633679f94",
+  "tran.i(U1)": "a291cae76208f2f9",
+  "tran.finalState": "065fc53ee1bc4900"
+ },
+ "regulator-short-thermal": {
+  "tran.samples": 1514,
+  "tran.steps": 1513,
+  "tran.newtonIters": 1599,
+  "tran.rejected": 63,
+  "tran.t": "5da7291f4791e295",
+  "tran.v(out)": "104f38f8d8af184e",
+  "tran.i(U1)": "b658fc4dbf2ab17f",
+  "tran.finalState": "35da896a91eb92c4"
+ },
+ "rlc-step": {
+  "tran.samples": 1002,
+  "tran.steps": 1001,
+  "tran.newtonIters": 1001,
+  "tran.rejected": 0,
+  "tran.t": "f14c9a4af3f50f88",
+  "tran.v(a)": "eadab27242b26d94",
+  "tran.v(b)": "994b358b35206ec5",
+  "tran.i(L1)": "c9a7f66614e5cb10",
+  "tran.finalState": "98d9656e9152396c"
+ },
+ "sallen-key-opamp": {
+  "tran.samples": 1504,
+  "tran.steps": 1503,
+  "tran.newtonIters": 3162,
+  "tran.rejected": 3,
+  "tran.t": "fce5b4f8d8847032",
+  "tran.v(in)": "60937b0780620e25",
+  "tran.v(np)": "ae8ce6628dd0cf48",
+  "tran.v(out)": "4b533bfcd240872e",
+  "tran.finalState": "501c63ebc1f26961",
+  "ac.points": 161,
+  "ac.f": "6a763626505bf404",
+  "ac.re": "f67282be3f0a6210",
+  "ac.im": "bb023424fd297d62",
+  "ac.magDb": "272e41ad37dab0f7",
+  "ac.phaseDeg": "b44d73bf69f866a9"
+ },
+ "wallwart-4-1": {
+  "tran.samples": 2508,
+  "tran.steps": 2507,
+  "tran.newtonIters": 7494,
+  "tran.rejected": 10,
+  "tran.t": "ae809ed2370e4aa8",
+  "tran.v(p)": "d48a2fff3c1ad819",
+  "tran.v(sp,sn)": "841036e1aa987043",
+  "tran.v(out)": "d12db5258e7f51ff",
+  "tran.finalState": "acce306ec40ad620"
+ }
+}
