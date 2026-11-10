@@ -1,0 +1,38 @@
+* 03 Shockley bridge + 1000 uF + 150 ohm: ripple, peak, inrush.
+* Source: 17 V peak 50 Hz (= 12 V rms) behind 1.5 ohm (winding resistance); 4x 1N4007 bridge; C 1000 uF; R 150 ohm.
+* Analysis : two runs. (a) power-on from zero state t = 0..99.95 ms, 50 us grid (2000 rows): shows the inrush current.
+*            (b) 2 s power-on, CSV window t = 1.9..1.99995 s (5 cycles, 50 us grid, 2000 rows): settled ripple.
+*            Time is absolute from power-on (source phase 0 at t = 0).
+* Outputs  : 03-bridge-inrush.csv  = time_s, v_src_V, v_out_V, i_src_A   (v_src at the source terminals, i_src = current
+*                                    leaving the source's + terminal)
+*            03-bridge-settled.csv = same columns.
+* NODE circuit: Vsrc sin(0, 17 V, 50 Hz) floating -> Rw 1.5 -> bridge D1..D4 (1N4007) -> C 1000 uF || R 150 out-gnd.
+* Parameters: 1N4007 (Is 76.9p N 1.45 Rs 0.042 BV 1000, CJO=0 TT=0), ideal C.
+.include common.inc
+* Numerical aid: 1 pF from every node to ground. Without it ngspice (any method) fails with "timestep too small" when the
+* floating, capacitance-free bridge nodes / regenerative BJT nodes switch. 1 pF is 1e-5 of the smallest real capacitor here, so it
+* changes no result at the reference tolerance (checked against 0.1 pF; see README). NODE has no shunt capacitance: this is ngspice-only.
+.options cshunt=1p
+Vin sp sn SIN(0 17 50)
+Rw sp a 1.5
+D1 a out D1N4007
+D2 sn out D1N4007
+D3 0 a D1N4007
+D4 0 sn D1N4007
+C1 out 0 1000u
+RL out 0 150
+.control
+set wr_singlescale
+set numdgt=8
+tran 50u 99.95m 0 10u uic
+let v_src = v(sp) - v(sn)
+let i_src = -i(Vin)
+linearize v_src v(out) i_src
+wrdata build/03a.dat v_src v(out) i_src
+tran 50u 1.99995 1.9 10u uic
+let v_src = v(sp) - v(sn)
+let i_src = -i(Vin)
+linearize v_src v(out) i_src
+wrdata build/03b.dat v_src v(out) i_src
+.endc
+.end

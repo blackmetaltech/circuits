@@ -1,0 +1,29 @@
+* 11 Wien-bridge oscillator start-up (frequency only): R = 10k, C = 10 nF, f0 = 1/(2 pi R C) = 1591.5 Hz.
+* Circuit  : op-amp (ideal VCVS, gain 1e6, unlimited) with out -> series R1C1 -> p; p -> parallel R2C2 -> gnd (positive feedback);
+*            negative feedback n: Rg 10k (n-gnd), Rf = 10k + (22k || 2 anti-parallel 1N4148) (out-n); the diodes shunt the 22k when the
+*            swing grows, which sets the amplitude (small-signal gain 1 + 32k/10k = 4.2, steady state about 3).
+* Start-up : "kick" = initial capacitor voltage 1 mV on node p (.ic with uic), the NODE oscillator-kick equivalent.
+* Analysis : transient with uic, t = 0..39.98 ms (20 us grid, 2000 rows). Only the oscillation FREQUENCY is a reference (not the
+*            amplitude or the start-up delay); measure it on the last cycles (see README).
+* Outputs  : 11-wien-startup.csv = time_s, v_out_V, v_p_V.
+* Parameters: 1N4148 (Is 2.52n N 1.752 Rs 0.568, CJO=0 TT=0), ideal R/C, ideal op-amp.
+.include common.inc
+E1 out 0 p n 1e6
+R1 out a 10k
+C1 a p 10n
+R2 p 0 10k
+C2 p 0 10n
+Rg n 0 10k
+Rf1 out m 10k
+Rf2 m n 22k
+Df1 m n D1N4148
+Df2 n m D1N4148
+.ic v(p)=1m
+.control
+tran 20u 39.98m 0 2u uic
+linearize v(out) v(p)
+set wr_singlescale
+set numdgt=8
+wrdata build/11.dat v(out) v(p)
+.endc
+.end

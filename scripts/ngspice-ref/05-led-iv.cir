@@ -1,0 +1,17 @@
+* 05 red LED + series resistor (150 ohm) I-V sweep.
+* Analysis : DC sweep of the source 0..5 V in 25 mV steps (201 rows).
+* Outputs  : 05-led-iv.csv = v_src_V, v_led_V, i_A.
+* NODE circuit: Vsrc -> R 150 -> LED anode; LED cathode = gnd. (about 20 mA at 5 V.)
+* Parameters: red LED N 2.0 Is 1.19e-17 Rs 9.9, CJO=0 TT=0, R 150.
+.include common.inc
+Vs in 0 0
+R1 in a 150
+D1 a 0 DLEDRED
+.control
+dc Vs 0 5 0.025
+let i_led = -i(Vs)
+set wr_singlescale
+set numdgt=8
+wrdata build/05.dat v(a) i_led
+.endc
+.end

@@ -1,0 +1,24 @@
+* 08 NMOS low-side switch with an RL load and a flyback diode: turn-off spike.
+* Circuit  : 12 V supply; load = 10 mH in series with 60 ohm (a fan), from Vdd to the 2N7000 drain; 1N4007 flyback diode
+*            (anode = drain, cathode = Vdd) across the load; gate pulse 0 -> 10 V at 100 us, 1 us edges, 600 us wide.
+* Analysis : transient from the DC operating point, t = 0..1.5 ms (1 us grid, 1501 rows).
+* Outputs  : 08-nmos-flyback.csv = time_s, v_gate_V, v_drain_V, i_load_A (inductor current).
+* Parameters: 2N7000 Level-1 (Vt 2.1 Kp 0.052743 lambda 0.02, no capacitances) + explicit body diode (estimate); 1N4007; ideal pulse.
+.include common.inc
+Vdd vdd 0 12
+Vg g 0 PULSE(0 10 100u 1u 1u 600u 3m)
+Vsl vdd a 0
+L1 a b 10m
+Rl b d 60
+Dfw d vdd D1N4007
+M1 d g 0 0 M2N7000 W=1 L=1
+Db 0 d DBODY
+.control
+tran 1u 1.5m 0 0.25u
+let i_load = i(Vsl)
+linearize v(g) v(d) i_load
+set wr_singlescale
+set numdgt=8
+wrdata build/08.dat v(g) v(d) i_load
+.endc
+.end

@@ -1,0 +1,20 @@
+* 02 half-wave rectifier: 12 V peak 50 Hz, 1N4007, 470 uF, 1 kohm load.
+* Analysis : transient from zero charge (capacitor 0 V, source starts at its zero crossing). 5 s of power-on so that the
+*            periodic steady state is reached (tau = RC = 0.47 s); the CSV is the window t = 4.8..4.9999 s (10 cycles, 100 us
+*            grid, 2000 rows). Time is absolute (source phase 0 at t = 0), so a NODE run from t = 0 aligns without shifting.
+* Outputs  : 02-halfwave.csv = time_s, v_in_V, v_out_V.
+* NODE circuit: Vsrc sin(0, 12 V, 50 Hz); D1N4007 anode=in, cathode=out; C 470 uF out-gnd; R 1k out-gnd.
+* Parameters: 1N4007 (Is 76.9p N 1.45 Rs 0.042 BV 1000, CJO=0 TT=0). C ideal (no ESR).
+.include common.inc
+Vin in 0 SIN(0 12 50)
+D1 in out D1N4007
+C1 out 0 470u
+R1 out 0 1k
+.control
+tran 100u 4.9999 4.8 20u
+linearize v(in) v(out)
+set wr_singlescale
+set numdgt=8
+wrdata build/02.dat v(in) v(out)
+.endc
+.end

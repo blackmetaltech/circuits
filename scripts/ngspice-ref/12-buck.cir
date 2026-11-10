@@ -1,0 +1,23 @@
+* 12 buck converter: ideal switch + 1N4007 freewheel diode, steady-state ripple.
+* Circuit  : Vin 12 V -> ideal switch (Ron 50 mohm, Roff 1e9, closes when the 50 kHz 44 % control is high) -> node sw;
+*            1N4007 from gnd (anode) to sw (cathode); L 220 uH sw -> out (no DCR); C 100 uF out-gnd (no ESR); load 10 ohm.
+* Analysis : transient from zero state, 20 ms of power-on (settling tau = 2RC = 2 ms), CSV window t = 19.8..19.9999 ms (10 switching
+*            periods, 100 ns grid, 2000 rows). Time is absolute with the control pulse starting high at t = 0 (10 ns edges).
+* Outputs  : 12-buck.csv = time_s, v_sw_V, v_out_V, i_L_A.
+* Parameters: 1N4007 (Is 76.9p N 1.45 Rs 0.042, CJO=0 TT=0: no reverse recovery); switch Ron 0.05 Roff 1e9.
+.include common.inc
+Vin in 0 12
+S1 in sw ctl 0 SW1
+Vc ctl 0 PULSE(0 5 0 10n 10n 8.8u 20u)
+Dfw 0 sw D1N4007
+L1 sw out 220u
+C1 out 0 100u
+RL out 0 10
+.control
+tran 100n 19.9999m 19.8m 100n uic
+linearize v(sw) v(out) i(L1)
+set wr_singlescale
+set numdgt=8
+wrdata build/12.dat v(sw) v(out) i(L1)
+.endc
+.end

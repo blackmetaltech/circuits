@@ -1,0 +1,18 @@
+* 04 Zener shunt regulator with the breakdown model: 220 ohm series R, 1N4733A-style 5.1 V Zener, Vin swept 0..20 V.
+* Analysis : DC sweep, Vin 0 to 20 V in 50 mV steps (401 rows).
+* Outputs  : 04-zener-shunt.csv = vin_V, v_out_V, i_in_A (current from Vin through R into the Zener).
+* NODE circuit: Vin -> R 220 -> node out; Zener (cathode = out, anode = gnd), no load.
+* Parameters: Zener Is 1e-14 (estimate) N 1 Rs 6.47 BV 5.1 IBV 49 mA NBV 1 (breakdown I = -Ibv*exp(-(Vd+BV)/(NBV*Vt))).
+*             ngspice shifts its internal breakdown knee so the current is exactly IBV at Vd = -BV: same law as DESIGN 3.3.
+.include common.inc
+Vin in 0 0
+R1 in out 220
+DZ 0 out DZ5V1
+.control
+dc Vin 0 20 0.05
+let i_in = -i(Vin)
+set wr_singlescale
+set numdgt=8
+wrdata build/04.dat v(out) i_in
+.endc
+.end

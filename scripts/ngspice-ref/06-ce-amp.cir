@@ -1,0 +1,39 @@
+* 06 common-emitter amplifier (the 5-4 "Synth Preamp" reference), 1 kHz 100 mV peak source EMF, transient.
+* Circuit  : 9 V supply; source EMF sin 100 mV pk 1 kHz through Rsrc 600 ohm and Cin 10 uF to the base; R1 68k (Vcc-base),
+*            R2 10k (base-gnd); RC 4.7k (Vcc-collector); RE 390 (emitter-gnd, NO bypass); Cout 10 uF to RL 47k to gnd; 2N3904.
+* Analysis : transient from the DC operating point (the coupling capacitors start at their bias charge), t = 0..9.995 ms
+*            (10 cycles, 5 us grid, 2000 rows).
+* Outputs  : 06-ce-amp.csv = time_s, v_src_V, v_base_V, v_coll_V, v_out_V, v_out_noearly_V.
+*            v_out_noearly_V is the SAME circuit with the 2N3904 model without the Early effect (VAF infinite): it does not
+*            depend on how the Early effect is formulated, so NODE can be checked against it with Vaf set to infinity.
+* Parameters: 2N3904 Is 6.734f Bf 200 Br 0.737 Vaf 74 (Ebers-Moll: ISE=ISC=IKF=0, RB=RC=RE=0, all C and TF/TR 0).
+.include common.inc
+Vcc vcc 0 9
+Vs src 0 SIN(0 0.1 1k)
+Rsrc src a 600
+Cin a b 10u
+R1 vcc b 68k
+R2 b 0 10k
+RC vcc c 4.7k
+RE e 0 390
+Q1 c b e Q2N3904
+Cout c o 10u
+RL o 0 47k
+* copy without Early effect
+Rsrcn src an 600
+Cinn an bn 10u
+R1n vcc bn 68k
+R2n bn 0 10k
+RCn vcc cn 4.7k
+REn en 0 390
+Q1n cn bn en Q2N3904N
+Coutn cn on 10u
+RLn on 0 47k
+.control
+tran 5u 9.995m 0 2u
+linearize v(src) v(b) v(c) v(o) v(on)
+set wr_singlescale
+set numdgt=8
+wrdata build/06.dat v(src) v(b) v(c) v(o) v(on)
+.endc
+.end

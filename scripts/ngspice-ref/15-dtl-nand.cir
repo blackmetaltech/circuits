@@ -1,0 +1,28 @@
+* 15 CMOS-less DTL NAND gate, DC transfer (the 5-3 "Gate Builder" reference).
+* Circuit  : Vcc 5 V; input diodes D1 (anode P, cathode A) and D2 (anode P, cathode B); R1 4.7k Vcc-P; two series 1N4148 P -> x -> base;
+*            R2 10k base-gnd; Q1 2N3904 (collector out, emitter gnd); R3 2.2k Vcc-out; load 10k out-gnd (VOH = 5*10/12.2 = 4.10 V).
+*            Input B tied high (5 V); input A swept.
+* Analysis : DC sweep of A 0..5 V in 10 mV steps (501 rows).
+* Outputs  : 15-dtl-nand.csv = vin_A_V, v_out_V, v_P_V, v_base_V, i_vcc_A.
+* Parameters: 1N4148 x4, 2N3904 Is 6.734f Bf 200 Br 0.737 Vaf 74 (Ebers-Moll, no capacitances).
+.include common.inc
+Vcc vcc 0 5
+Va a 0 0
+Vb b 0 5
+D1 p a D1N4148
+D2 p b D1N4148
+R1 vcc p 4.7k
+D3 p x D1N4148
+D4 x bs D1N4148
+R2 bs 0 10k
+Q1 out bs 0 Q2N3904
+R3 vcc out 2.2k
+RL out 0 10k
+.control
+dc Va 0 5 0.01
+let i_vcc = -i(Vcc)
+set wr_singlescale
+set numdgt=8
+wrdata build/15.dat v(out) v(p) v(bs) i_vcc
+.endc
+.end

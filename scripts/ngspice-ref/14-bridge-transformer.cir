@@ -1,0 +1,64 @@
+* 14 diode bridge + ideal transformer: the DESIGN 4-1 "Wall Wart" cross-check.
+* Circuit  : mains source (peak = rms*sqrt2, 50 Hz) -> ideal transformer, ratio 12/230 (12 V rms secondary at nominal 230 V; the
+*            secondary EMF is E1 = Vp*12/230) -> winding R 1.5 ohm (referred to the secondary) -> 4x 1N4007 bridge -> C (1000 uF or 680 uF)
+*            -> constant-current load (ideal current source, 100 mA or 0 mA). The primary is ideal, so only the secondary matters.
+* Analysis : (a) the main CSV: 230 V rms, 1000 uF, 100 mA, 0.5 s of power-on from zero state, window t = 0.4..0.47996 s (4 cycles,
+*                 40 us grid, 2000 rows; absolute time, source phase 0 at t = 0).
+*            (b) the case table: mains 207 / 230 / 253 V rms x {1000 uF, 680 uF} at 100 mA, plus 207/230/253 V no load (1000 uF); each run
+*                 0.5 s from zero state, mean / max / min of V(out) measured over t = 0.4..0.5 s (5 whole cycles = steady state).
+* Outputs  : 14-bridge-transformer.csv = time_s, v_sec_V (secondary terminals after the winding R), v_out_V, i_sec_A.
+*            14-cases.csv = vrms_V, c_uF, i_load_A, mean_V, ripple_Vpp, vmax_V, vmin_V.
+* Parameters: 1N4007 (Is 76.9p N 1.45 Rs 0.042 BV 1000, CJO=0 TT=0), ideal C, constant-current load = ideal source.
+.include common.inc
+* Numerical aid: 1 pF from every node to ground. Without it ngspice (any method) fails with "timestep too small" when the
+* floating, capacitance-free bridge nodes / regenerative BJT nodes switch. 1 pF is 1e-5 of the smallest real capacitor here, so it
+* changes no result at the reference tolerance (checked against 0.1 pF; see README). NODE has no shunt capacitance: this is ngspice-only.
+.options cshunt=1p
+Vp p 0 SIN(0 325.269119 50)
+E1 se sn p 0 {12/230}
+Vs se sa 0
+Rw sa sp 1.5
+D1 sp out D1N4007
+D2 sn out D1N4007
+D3 0 sp D1N4007
+D4 0 sn D1N4007
+C1 out 0 1000u
+Iload out 0 DC 0.1
+.control
+set numdgt=8
+* (a) nominal CSV
+tran 40u 0.47996 0.4 10u uic
+let v_sec = v(sp) - v(sn)
+let i_sec = i(Vs)
+linearize v_sec v(out) i_sec
+set wr_singlescale
+wrdata build/14.dat v_sec v(out) i_sec
+* (b) case table
+echo "vrms_V,c_uF,i_load_A,mean_V,ripple_Vpp,vmax_V,vmin_V" > build/14-cases.csv
+let ci = 0
+foreach cuf 1000 680
+  foreach vr 207 230 253
+    alter E1 gain = {12/230*$vr/230}
+    alter C1 = {$cuf}u
+    alter Iload = 0.1
+    tran 20u 0.5 0 10u uic
+    meas tran vmean avg v(out) from=0.4 to=0.5
+    meas tran vmax max v(out) from=0.4 to=0.5
+    meas tran vmin min v(out) from=0.4 to=0.5
+    let rip = vmax - vmin
+    echo "$vr,$cuf,0.1,$&vmean,$&rip,$&vmax,$&vmin" >> build/14-cases.csv
+  end
+end
+foreach vr 207 230 253
+  alter E1 gain = {12/230*$vr/230}
+  alter C1 = 1000u
+  alter Iload = 0
+  tran 20u 0.5 0 10u uic
+  meas tran vmean avg v(out) from=0.4 to=0.5
+  meas tran vmax max v(out) from=0.4 to=0.5
+  meas tran vmin min v(out) from=0.4 to=0.5
+  let rip = vmax - vmin
+  echo "$vr,1000,0,$&vmean,$&rip,$&vmax,$&vmin" >> build/14-cases.csv
+end
+.endc
+.end
