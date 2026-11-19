@@ -52,10 +52,10 @@ export const L1_4: LevelDef = {
   gauge: { spec: 'power', unit: 'W', flip: true },
   chit: { x: 0.3, y: 0.62 },
   coach: [
+    { id: 'switch-on', key: 'coach.1-4.s0', anchor: { target: 'power' }, done: 'powered' },
     { id: 'open-circuit', key: 'coach.1-4.s1', anchor: { target: 'dmm' }, done: 'measured' },
     { id: 'load', key: 'coach.1-4.s2', anchor: { target: 'bin', partId: 'res-ww5' }, done: 'part:res-ww5|part:res-cf' },
     { id: 'wire', key: 'coach.1-4.s3', anchor: { target: 'connector', connector: 'VP' }, done: 'wired' },
-    { id: 'power', key: 'coach.1-4.s4', anchor: { target: 'power' }, done: 'powered', when: 'wired&!smoked' },
     { id: 'smoke', key: 'coach.1-4.s5', anchor: { target: 'bin', partId: 'res-ww5' }, done: '!smoked', when: 'smoked' },
     { id: 'run-bench', key: 'coach.1-4.s6', anchor: { target: 'bench' }, done: 'benched', when: 'wired&!smoked' },
     { id: 'done', key: 'coach.1-4.s7', anchor: { target: 'chit' }, done: '!passed', when: 'passed' },

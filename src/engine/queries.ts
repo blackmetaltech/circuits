@@ -26,6 +26,7 @@ import { FAILURE_LOG_CAP, SCOPE_POINTS_CAP, UNDO_CAP, type NodeState, type Ticke
 import { levelDefOf } from './tickets';
 import { liveRig } from './ticket-run';
 import { say } from './text';
+import { makeUiQueries, scopeTarget, shoebox } from './ui';
 
 const regionString = (region: string, key: string): string => { const v = REGIONS.get(region).strings[key]; if (v === undefined) throw new Error(`Region '${region}' has no string '${key}'.`); return v; };
 
@@ -36,6 +37,12 @@ function solution(tk: TicketState, def: LevelDef): Solution | null {
   return { rig, ckt, x: Float64Array.from(tk.live.x), state: tk.live.hist };
 }
 
+/** Solutions this module built (liveFrame passes its one solution to nodes / currents / thermal / ratings so the rig is built once per frame). */
+const MINE = new WeakSet<object>();
+const given = (pre: unknown): Solution | null => (typeof pre === 'object' && pre !== null && MINE.has(pre) ? (pre as Solution) : null);
+const mineSolution = (tk: TicketState, def: LevelDef): Solution | null => { const s = solution(tk, def); if (s) MINE.add(s); return s; };
+
+const PREDICT_GRADE: Record<string, string> = { exact: 'bench.predict.exact', close: 'bench.predict.close', miss: 'bench.predict.miss' };
 const text = (f: { key: string; vars: Record<string, string | number> }): string => say(f.key, f.vars);
 
 /** Context the explainers need to put the player's own numbers in (resistances, electrolytics, supply and LED figures). */
@@ -97,6 +104,11 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         bin: def.bin.map((b) => ({ partId: b.partId, values: allowedValues(getDef(b.partId)!, b), variants: allowedVariants(getDef(b.partId)!, b), max: b.max ?? null })),
         maxParts: def.constraints?.maxParts ?? 40, stars: def.stars, instruments: { supply: def.supplies.some((x) => x.kind === 'bench'), gen: def.supplies.some((x) => x.kind === 'gen'), scope: !!def.instruments.scope },
         hasHints: !!def.hints, hintRung: o.tk.hintRung,
+        shoebox: shoebox(s, o.tk, def), eb: def.eb === true, fee: def.pay?.fee ?? 0, feeText: def.pay ? formatMinor(def.pay.fee, REGIONS.get(s.region)) : '',
+        conditions: def.bench.conditions.map((c) => ({ id: c.id, set: c.set ?? [], ambientC: c.ambientC ?? def.bench.ambientC })),
+        targets: def.bench.specs.flatMap((x) => (x.kind === 'level' ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', lo: x.lo, hi: x.hi }] : [])),
+        predictions: def.bench.specs.flatMap((x) => (x.kind === 'predict' ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', unit: x.of.probe.trim().toLowerCase().startsWith('i(') ? 'A' : 'V', entered: o.tk.predictions[x.id] ?? null }] : [])),
+        gauge: def.gauge ?? null, supplies: def.supplies, chit: def.chit ?? null, ambientC: def.bench.ambientC,
       };
     },
     /** The board with part names, rotated pin pads and ratings, probes and meter. */
@@ -116,9 +128,9 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
       return { nodes: nl.nodeNames, elements: nl.elements.map((e) => ({ id: e.id, kind: e.kind, owner: e.owner, nodes: e.nodes.map((n) => nl.nodeNames[n]), p: e.p })), issues: (rig.circuit?.issues ?? []).map((i) => ({ code: i.code, severity: i.severity, key: i.key, text: text(i) })), errors: rig.errors.map((e) => ({ ...e, text: text(e) })), dim: rig.circuit?.dim ?? 0 };
     },
     /** Voltage of every electrical node with its pads and a 0..1 colour scalar (span of the board's voltages). */
-    nodes: (s) => {
+    nodes: (s, pre?: unknown) => {
       const o = defOf(s); if (!o) return null;
-      const sol = solution(o.tk, o.def);
+      const sol = given(pre) ?? solution(o.tk, o.def);
       const nodes = (sol ? sol.rig.conn : liveRig(o.tk, o.def).conn).nodes.map((n) => {
         const name = (sol ? sol.rig.netlist : liveRig(o.tk, o.def).netlist).nodeNames[n.id]!;
         const v = sol ? (n.id === 0 ? 0 : nodeVoltage(sol.x, sol.ckt.nodeIndex[name]!)) : 0;
@@ -128,9 +140,9 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
       return { valid: !!sol, vmin, vmax, nodes: nodes.map((n) => ({ ...n, norm: span > 0 ? (n.v - vmin) / span : 0 })) };
     },
     /** Current per wire (signed along path[0] to the last pad, A) and per part pin (into the part), for the moving dots. */
-    currents: (s) => {
+    currents: (s, pre?: unknown) => {
       const o = defOf(s); if (!o) return null;
-      const sol = solution(o.tk, o.def);
+      const sol = given(pre) ?? solution(o.tk, o.def);
       if (!sol) return { valid: false, wires: o.tk.board.wires.map((w) => ({ wid: w.wid, i: 0, mag: 0 })), parts: [] };
       const conn = sol.rig.conn, inj = new Map<string, number>();
       const parts = o.tk.board.parts.map((p) => {
@@ -169,9 +181,9 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
       return { valid: true, wires: wires.map((w) => { const i = flow.get(w.wid) ?? 0; return { wid: w.wid, i, mag: Math.abs(i) }; }), parts };
     },
     /** Part temperatures, thermal state and smoked parts. */
-    thermal: (s) => {
+    thermal: (s, pre?: unknown) => {
       const o = defOf(s); if (!o) return null;
-      const sol = solution(o.tk, o.def), rig = sol?.rig ?? liveRig(o.tk, o.def);
+      const sol = given(pre) ?? solution(o.tk, o.def), rig = sol?.rig ?? liveRig(o.tk, o.def);
       const pw = sol ? elementPowers(sol.ckt, sol.x, sol.state) : {};
       return {
         ambient: o.def.bench.ambientC, smoked: o.tk.live.smoked.slice(),
@@ -179,9 +191,9 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
       };
     },
     /** Rating ratios per part from the saved solution: power / rating and every rating violated right now. */
-    ratings: (s) => {
+    ratings: (s, pre?: unknown) => {
       const o = defOf(s); if (!o) return null;
-      const sol = solution(o.tk, o.def); if (!sol) return { valid: false, parts: [] };
+      const sol = given(pre) ?? solution(o.tk, o.def); if (!sol) return { valid: false, parts: [] };
       const names = ratingProbes(sol.rig, sol.rig.rated), series: Record<string, number[]> = {};
       for (const n of names) series[n] = [makeProbe(sol.ckt, n)(sol.x, sol.state)];
       const rr = checkRatings(sol.rig, sol.rig.rated, { t: [o.tk.live.t], series }, { ta: o.def.bench.ambientC });
@@ -209,7 +221,10 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         if (trig.edge === 'rise' ? a < trig.level && b >= trig.level : a > trig.level && b <= trig.level) { start = i; triggered = true; break; }
       }
       const end = Math.min(data.length, start + n);
-      return { ch: c, attached, triggered, t0: sc.t0 + start * sc.dt, dt: sc.dt, v: data.slice(start, end), voltsPerDiv: set.voltsPerDiv[c - 1], timePerDiv: set.timePerDiv, trigger: trig };
+      return {
+        ch: c, attached, triggered, t0: sc.t0 + start * sc.dt, dt: sc.dt, v: data.slice(start, end), voltsPerDiv: set.voltsPerDiv[c - 1], timePerDiv: set.timePerDiv, trigger: trig,
+        unit: 'V', badSamples: o.tk.lastBench?.badSamples ?? {}, ...scopeTarget(s, o.tk, o.def, solution(o.tk, o.def)),
+      };
     },
     /** The DMM reading from the saved solution (or a zero-source resistance measurement in ohm mode). */
     meter: (s) => {
@@ -237,7 +252,9 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
       const o = defOf(s); if (!o || !o.tk.lastBench) return null;
       const b = o.tk.lastBench, pack = REGIONS.get(s.region);
       return {
-        pass: b.pass, stars: b.stars, metrics: b.metrics, costText: formatMinor(b.metrics.cost, pack), smoked: b.smoked, predictions: b.predictions, badSamples: b.badSamples,
+        pass: b.pass, stars: b.stars, metrics: b.metrics, costText: formatMinor(b.metrics.cost, pack), smoked: b.smoked, badSamples: b.badSamples,
+        pay: b.pay ?? 0, payText: b.pay ? formatMinor(b.pay, pack) : '',
+        predictions: b.predictions.map((p) => ({ ...p, name: o.def.bench.names[p.id] ? t(o.def.bench.names[p.id]!) : p.id, gradeText: t(PREDICT_GRADE[p.grade] ?? 'bench.predict.miss'), gap: p.truth === 0 ? 0 : sig(((p.entered - p.truth) / Math.abs(p.truth)) * 100, 3) })),
         specs: b.specs.map((x) => ({ ...x, name: t(x.key) })),
         failures: b.failures.map((f) => ({ key: f.key, vars: f.vars, text: explainedText(f, o.tk, o.def) })),
       };
@@ -267,6 +284,7 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
     legalActions: (s, full?: unknown) => candidateActions(s, defs, full === true),
     caps: () => ({ undo: UNDO_CAP, failureLog: FAILURE_LOG_CAP, scopePoints: SCOPE_POINTS_CAP }),
   };
+  Object.assign(Q, makeUiQueries({ defs, Q, mine: mineSolution, regionString }));
   return Q;
 }
 

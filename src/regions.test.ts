@@ -88,10 +88,10 @@ describe('region packs of NODE', () => {
     expect(card.customer).toBe(REGIONS.get(id!).strings['customer.kid_torch']); expect(card.stall).toBe(REGIONS.get(id!).strings.stall); expect(card.mentor).toBe(REGIONS.get(id!).strings.mentor);
     expect(e.act('closeTicket').ok).toBe(true);
     expect(play(GAME, { persona: 'idle', seed: 2, ticks: 20, region: id }).violations, id).toEqual([]);
-    // every level (just the sample ticket 0-0 for now) is solvable in every pack, idle does not pass, and nothing degenerate wins
+    // every level (the sample ticket 0-0 and chapter 1) is solvable in every pack, idle does not pass, and nothing degenerate wins
     const reports = checkAllLevels(GAME, { seed: 1, region: id });
-    expect(reports.map((r) => r.level)).toEqual(['0-0']);
-    expect(reports[0]!.problems).toEqual([]);
+    expect(reports.map((r) => r.level)).toEqual(['0-0', '1-1', '1-2', '1-3', '1-4', '1-5']);
+    for (const r of reports) expect(r.problems, r.level).toEqual([]);
   });
   it('mains differ by pack but physics-facing engine data does not', () => {
     expect(PACKS.map((p) => [p.id, p.data.mains.volts, p.data.mains.hz])).toEqual([['global', 230, 50], ['in', 230, 50], ['na', 120, 60]]);

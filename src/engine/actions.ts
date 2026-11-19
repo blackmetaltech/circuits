@@ -152,6 +152,19 @@ function newWire(tk: TicketState, path: unknown, wid?: string): Wire {
   return { wid: wid ?? nextId('w', tk.board.wires.map((w) => w.wid)), path: pts };
 }
 
+// ---------------------------------------------------------------- pad-to-pad routing (the `wire` action)
+/** Candidate orthogonal routes from a to b, simplest first: straight, the two L shapes, then Z shapes through nearby columns and rows. */
+function routes(a: Pad, b: Pad, w: number, h: number): Pad[][] {
+  const out: Pad[][] = [];
+  if (a[0] === b[0] || a[1] === b[1]) out.push([a, b]);
+  out.push([a, [b[0], a[1]], b], [a, [a[0], b[1]], b]);
+  const near = (c: number, span: number): number[] => { const r: number[] = []; for (let d = 1; d <= span; d++) r.push(c + d, c - d); return r; };
+  const mx = Math.floor((a[0] + b[0]) / 2), my = Math.floor((a[1] + b[1]) / 2);
+  for (const x of [mx, ...near(mx, Math.max(w, h))]) if (x >= 0 && x < w) out.push([a, [x, a[1]], [x, b[1]], b]);
+  for (const y of [my, ...near(my, Math.max(w, h))]) if (y >= 0 && y < h) out.push([a, [a[0], y], [b[0], y], b]);
+  return out;
+}
+
 // ---------------------------------------------------------------- the action table
 export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
   const A: Record<string, ActionFn<NodeState>> = {
@@ -225,6 +238,36 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       tk.board.wires.push(w); sortWires(tk.board); commit(tk, 'addWire', before);
       return ok(say('wire.added', { wid: w.wid }), { wid: w.wid });
     },
+    /** Pad-to-pad wire: the engine picks a clean orthogonal route (the click-drag of the UI). */
+    wire: (s, a: unknown, b: unknown) => {
+      const { tk } = open(s, defs), before = copyBoard(tk);
+      const pa = validPad(tk, a, 'a'), pb = validPad(tk, b, 'b');
+      if (pa[0] === pb[0] && pa[1] === pb[1]) refuseKey('err.wire.samePad');
+      let found: Pad[] | null = null;
+      for (const r of routes(pa, pb, tk.board.w, tk.board.h)) {
+        const pts = normalisePath(r.map((p) => [p[0], p[1]] as Pad));
+        if (!checkWire(tk.board, pts)) { found = pts; break; }
+      }
+      if (!found) refuseKey('err.wire.noRoute', { a: `${pa[0]},${pa[1]}`, b: `${pb[0]},${pb[1]}` });
+      const w = newWire(tk, found);
+      tk.board.wires.push(w); sortWires(tk.board); commit(tk, 'wire', before);
+      return ok(say('wire.added', { wid: w.wid }), { wid: w.wid, path: w.path });
+    },
+    /** Remove a wire by id, or every wire that ends on a pad. */
+    unwire: (s, target: unknown) => {
+      const { tk } = open(s, defs), before = copyBoard(tk);
+      if (typeof target === 'string') {
+        if (!tk.board.wires.some((w) => w.wid === target)) refuseKey('err.wire.none', { wid: target, have: tk.board.wires.map((w) => w.wid).join(', ') || '-' });
+        tk.board.wires = tk.board.wires.filter((w) => w.wid !== target); commit(tk, 'unwire', before);
+        return ok(say('wire.deleted', { wid: target }), { removed: [target] });
+      }
+      const p = validPad(tk, target, 'pad');
+      const hit = tk.board.wires.filter((w) => { const f = w.path[0]!, l = w.path[w.path.length - 1]!; return (f[0] === p[0] && f[1] === p[1]) || (l[0] === p[0] && l[1] === p[1]); });
+      if (hit.length === 0) refuseKey('err.unwire.none', { pad: `${p[0]},${p[1]}` });
+      const ids = hit.map((w) => w.wid);
+      tk.board.wires = tk.board.wires.filter((w) => !ids.includes(w.wid)); commit(tk, 'unwire', before);
+      return ok(say('wire.unwired', { n: ids.length, pad: `${p[0]},${p[1]}` }), { removed: ids });
+    },
     deleteWire: (s, wid: unknown) => {
       const { tk } = open(s, defs), id = str(wid, 'wid'), before = copyBoard(tk);
       if (!tk.board.wires.some((w) => w.wid === id)) refuseKey('err.wire.none', { wid: id, have: tk.board.wires.map((w) => w.wid).join(', ') || '-' });
@@ -261,8 +304,27 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       const conn = buildConnectivity(tk.board, getDef);
       if ((mode === 'dca' || mode === 'ohm') && ps.length < 2) refuseKey('err.meter.twoLeads', { mode: mode as string });
       if (ps.length === 2 && conn.nodeOfPad(ps[0]!) === conn.nodeOfPad(ps[1]!)) refuseKey('err.meter.sameNode', { mode: mode as string });
-      tk.board.meter = { mode: mode as 'dcv' | 'dca' | 'ohm' | 'acv', pads: ps };
+      tk.board.meter = { mode: mode as 'dcv' | 'dca' | 'ohm' | 'acv', pads: ps, red: ps[0] ?? null, black: ps[1] ?? null };
       return ok(say('meter.set', { mode: mode as string }));
+    },
+    /** Drag one DMM lead ('red' | 'black') onto a pad, or take it off the board (pad null). The first lead turns the dial from off to volts. */
+    dmmLead: (s, lead: unknown, pad: unknown) => {
+      const { tk } = open(s, defs);
+      if (lead !== 'red' && lead !== 'black') refuseKey('err.meter.lead', { lead: String(lead) });
+      const m = tk.board.meter, key = lead as 'red' | 'black';
+      if (pad === null || pad === undefined) m[key] = null;
+      else { const p = validPad(tk, pad, 'pad'); if (!nodeAt(tk, p)) refuseKey('err.probe.nothing', { pad: `${p[0]},${p[1]}` }); m[key] = p; }
+      m.pads = m.red && m.black ? [m.red, m.black] : [];
+      if (m.mode === 'off' && (m.red || m.black)) m.mode = 'dcv';
+      return ok(say(m[key] ? 'meter.lead.set' : 'meter.lead.off', { lead: key, pad: m[key] ? `${m[key]![0]},${m[key]![1]}` : '-' }));
+    },
+    /** Turn the DMM dial: 'off' | 'dcv' (V) | 'dca' (mA) | 'ohm'. Leads stay where they are. */
+    dmmDial: (s, mode: unknown) => {
+      const { tk } = open(s, defs);
+      const MODES = ['off', 'dcv', 'dca', 'ohm'];
+      if (typeof mode !== 'string' || !MODES.includes(mode)) refuseKey('err.meter.dial', { mode: String(mode), modes: MODES.join(', ') });
+      tk.board.meter.mode = mode as 'off' | 'dcv' | 'dca' | 'ohm';
+      return ok(say('meter.dial', { mode: mode as string }));
     },
     setSupply: (s, v: unknown, ilim?: unknown) => {
       const { tk, def } = open(s, defs);
@@ -331,13 +393,21 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       const { tk } = open(s, defs);
       if (typeof on !== 'boolean') refuseKey('err.arg.bool', { name: 'on' });
       tk.live.powered = on as boolean; tk.instruments.supply.on = on as boolean; tk.instruments.gen.on = on as boolean;
-      resetLive(tk.live);
+      delete tk.live.paused; resetLive(tk.live);
       return ok(say(on ? 'power.on' : 'power.off'));
+    },
+    /** Run or pause the sim (the UI's run/pause button): while paused, `advance` does nothing. Powering on or off resumes. */
+    setRunning: (s, on: unknown) => {
+      const { tk } = open(s, defs);
+      if (typeof on !== 'boolean') refuseKey('err.arg.bool', { name: 'on' });
+      if (on) delete tk.live.paused; else tk.live.paused = true;
+      return ok(say(on ? 'run.running' : 'run.paused'), { paused: !on });
     },
     advance: (s, frames?: unknown) => {
       const { tk, def } = open(s, defs);
       const n = frames === undefined ? 1 : int(frames, 'frames');
       if (n < 1 || n > 8) refuseKey('err.advance.frames', { frames: n });
+      if (tk.live.paused) return ok(say('run.paused'), { frames: 0, smoked: [], status: tk.live.status, paused: true });
       const live = tk.live, onBoard = new Set(tk.board.parts.map((p) => p.uid));
       live.smoked = live.smoked.filter((u) => onBoard.has(u));
       for (const u of Object.keys(live.temps)) if (!onBoard.has(u)) delete live.temps[u];
@@ -366,12 +436,15 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
         pushFailure(s.progress, { id, ticket: tk.id, tick: s.tick, kind: c.key, vars });
       }
       if (result.pass) {
+        // payment: the fee on the first pass plus a bonus for every star earned for the first time (never paid twice)
+        const first = !rec.passed, newStars = Math.max(0, result.stars - rec.stars), pay = def.pay ? (first ? def.pay.fee : 0) + def.pay.perStar * newStars : 0;
+        if (pay > 0) { s.progress.wallet += pay; result.pay = pay; s.log.push({ tick: s.tick, level: 'good', text: say('wallet.paid', { amount: formatMinor(pay, REGIONS.get(s.region)) }) }); }
         rec.passed = true; rec.stars = Math.max(rec.stars, result.stars) as 0 | 1 | 2 | 3;
         const head = def.stars.head;
         if (rec.best === null || result.metrics[head] < rec.best[head]) rec.best = { ...result.metrics };
         const pack = REGIONS.get(s.region);
         s.log.push({ tick: s.tick, level: 'good', text: say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }) });
-        return ok(say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }), { pass: true, stars: result.stars, metrics: result.metrics });
+        return ok(say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }), { pass: true, stars: result.stars, metrics: result.metrics, pay: result.pay ?? 0 });
       }
       return ok(say('bench.fail', { id: tk.id, n: result.failures.length }), { pass: false, stars: 0, metrics: result.metrics });
     },

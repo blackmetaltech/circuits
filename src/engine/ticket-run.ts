@@ -51,7 +51,12 @@ export function benchTicket(s: NodeState, def: LevelDef): { result: BenchResult;
   });
   const metrics = boardMetrics(tk.board, REGIONS.get(s.region), out.supplyPowerW * 1e6);
   const pass = out.pass;
-  const stars: 0 | 1 | 2 = !pass ? 0 : metrics[def.stars.head] <= def.stars.par[def.stars.head] ? 2 : 1;
+  let stars: 0 | 1 | 2 | 3 = !pass ? 0 : metrics[def.stars.head] <= def.stars.par[def.stars.head] ? 2 : 1;
+  if (def.eb && pass) {
+    // exam bridge (DESIGN §2.5): a star for every prediction within 5 %, one for every prediction within 1 %, one for building it right on the first bench run
+    const g = out.predictions, first = (s.progress.tickets[tk.id]?.attempts ?? 0) === 0;
+    stars = Math.max(1, (g.length > 0 && g.every((p) => p.grade !== 'miss') ? 1 : 0) + (g.length > 0 && g.every((p) => p.grade === 'exact') ? 1 : 0) + (first ? 1 : 0)) as 1 | 2 | 3;
+  }
   const result: BenchResult = {
     pass, metrics,
     specs: out.rows.map((r) => ({ id: r.id, key: def.bench.names[r.id] ?? IMPLICIT_SPEC[r.id] ?? 'bench.spec.other', pass: r.pass, margin: Number.isFinite(r.margin) ? sig(r.margin, 4) : 0 })),

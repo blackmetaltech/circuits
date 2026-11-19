@@ -57,6 +57,8 @@ export interface BenchResult {
   predictions: { id: string; entered: number; truth: number; grade: string }[];
   /** Band failing sample times (s), at most 64 per spec, for the scope overlay. */
   badSamples: Record<string, number[]>;
+  /** Minor units paid into the wallet by THIS pass (absent when nothing was paid). */
+  pay?: number;
 }
 
 export interface TicketProgress {
@@ -84,7 +86,11 @@ export interface Probe { ch: 1 | 2; pad: Pad }
 
 export interface MeterState {
   mode: 'off' | 'dcv' | 'dca' | 'ohm' | 'acv';
+  /** The pads the meter reads between: [red, black] (one pad = red against ground). Derived from the leads when both are placed. */
   pads: Pad[];
+  /** Lead tips dragged onto the board one at a time (absent until a lead is placed). `pads` follows once both are on. */
+  red?: Pad | null;
+  black?: Pad | null;
 }
 
 export interface SupplyState { on: boolean; v: number; ilim: number }
@@ -112,6 +118,8 @@ export type TicketBoard = Board & { probes: Probe[]; meter: MeterState };
 
 export interface LiveState {
   powered: boolean;
+  /** The player paused the sim (absent = running): `advance` then does nothing. */
+  paused?: boolean;
   frame: number;
   /** Sim seconds. */
   t: number;

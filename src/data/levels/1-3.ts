@@ -3,7 +3,10 @@
 // BAND (reviewed): the design text says "8.0 V +-0.3 V" but also that Ref A (22 ohm, 8.33 V) passes and 27 ohm (7.79 V) fails; no centred +-0.3 V band does both
 // (8.33 is out of 7.7-8.3). The band here is 7.85-8.40 V (about the same width, centre 8.125 V): 22 ohm 8.333 V, 2x47 ohm in parallel 8.16 V and 2x51 ohm 7.95 V pass,
 // 27 ohm 7.79 V fails.
-// Fail: one 22 ohm 1/4 W: right voltage, 0.61 W in a 0.25 W part (2.4x): it glows, then smokes.
+// Fail: one 22 ohm 1/4 W: right voltage, 0.61 W in a 0.25 W part (2.44x): it glows, then smokes.
+// AMBIENT (reviewed): the design says smoke arrives at about 2.6x rated power at Ta 25 C (T_fail 250 C, theta 340 C/W for 1/4 W), but 0.61 W is only 2.44x, which settles at
+// 233 C and never smokes. The controller sits in the aquarium hood, a warm 50 C: steady state 258 C > 250 C, so the naive part smokes (live after ~4 s, and on the bench).
+// Every good design stays far under: 22 ohm 1 W settles at 102 C, 2 x 47 ohm 1/2 W at 103 C.
 // PRICES: a 1 W resistor is 5 c and 2 x 1/2 W is 6 c in the price table, so Ref B (two 47 ohm 1/2 W) is NOT cheaper here; cost par = 5 c (Ref A).
 import type { LevelDef } from './types';
 
@@ -21,7 +24,7 @@ export const L1_3: LevelDef = {
   bin: [{ partId: 'res-cf', values: [22, 27, 47, 51, 100], variants: ['0.25W', '0.5W', '1W'] }],
   constraints: { maxParts: 4 },
   bench: {
-    h: 1e-4, settle: 1e-3, window: 1e-3, ic: 'zero', ambientC: 25,
+    h: 1e-4, settle: 1e-3, window: 1e-3, ic: 'zero', ambientC: 50,
     conditions: [{ id: 'nominal', set: [{ target: 'psu', key: 'v', value: 12 }, { target: 'psu', key: 'ilim', value: 0.5 }] }],
     specs: [
       { kind: 'level', id: 'vout', probe: 'v(out)', lo: 7.85, hi: 8.40 },
