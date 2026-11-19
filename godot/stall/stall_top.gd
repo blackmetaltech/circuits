@@ -23,6 +23,7 @@ var bubble_alpha := 0.0
 var toast := ""
 var toast_age := 9.0
 var hint_box_drop := false
+var peek: Dictionary = {}
 var _arrow_k := 0.0
 var _last_slip := ""
 var _props: StallProps
@@ -44,7 +45,8 @@ func _draw() -> void:
 	if L.is_empty(): return
 	for c in cables: _cable(c)
 	if not scope_lead.is_empty(): _scope_lead()
-	_chit()
+	if not peek.is_empty(): _peek()
+	else: _chit()
 	for ld in leads: _lead(ld)
 	if not held.is_empty(): _held()
 	_slip()
@@ -148,3 +150,26 @@ func _toast() -> void:
 	var r := Rect2(size.x * 0.5 - 330, 196, 660, 46)
 	S.paper(self, r, -0.6, Color(0.97, 0.93, 0.8, a))
 	S.text(self, S.hand(), toast, r.position + Vector2(20, 31), 22, Color(S.INK, a))
+
+## The folded scope drawer on phones: a peek strip with a mini trace, the amber/green band and the LOCK lamp, always in view.
+func _peek() -> void:
+	var r: Rect2 = peek.rect; var sc: Dictionary = peek.sc
+	S.shadow(self, r, 14, Vector2(-6, 8), 0.5)
+	S.rr(self, r, 14, Color("#4e5348")); S.rr(self, r.grow(-4), 12, Color("#6c7263"))
+	var scr := Rect2(r.position + Vector2(10, 14), Vector2(r.size.x - 20, 150))
+	S.rr(self, scr.grow(5), 10, Color("#15171a")); S.rr(self, scr, 8, Color("#0a1a10"))
+	var lo := float(sc.lo); var hi := float(sc.hi); var top_v := float(sc.vdiv) * 7.0
+	var y_of := func(v: float) -> float: return scr.end.y - 8.0 - clampf(v / top_v, 0.0, 1.0) * (scr.size.y - 16.0)
+	var col: Color = S.PHOS if peek.locked else S.AMBER
+	var y1: float = y_of.call(hi); var y0: float = y_of.call(lo)
+	draw_rect(Rect2(scr.position.x, y1, scr.size.x, maxf(y0 - y1, 6.0)), Color(col, 0.28), true)
+	var pts := PackedVector2Array(); var smp: Array = peek.samples
+	for i in smp.size(): pts.append(Vector2(scr.position.x + 4.0 + float(i) / (smp.size() - 1) * (scr.size.x - 8.0), y_of.call(float(smp[i]))))
+	if peek.live and pts.size() > 1: draw_polyline(pts, Color(0.5, 1.0, 0.5, 0.95), 2.5, true)
+	var lamp := Vector2(r.position.x + r.size.x * 0.5, scr.end.y + 40.0)
+	draw_circle(lamp, 14, Color("#0a1a14")); draw_circle(lamp, 10, Color("#7fffd4") if peek.locked else Color(0.1, 0.25, 0.2))
+	if peek.locked: S.glow(self, lamp, 44.0, Color("#7fffd4", 0.5))
+	S.text(self, S.mono(), "LOCK", lamp + Vector2(-22, 38), 18, Color("#7fffd4", 1.0 if peek.locked else 0.4))
+	S.text(self, S.hand(), "scope", lamp + Vector2(-24, 74), 18, Color("#e8e0c8"))
+	S.text(self, S.hand(), "<", lamp + Vector2(-8, 112), 34, Color("#e8e0c8", 0.8))
+	S.text(self, S.hand(), str(peek.id), lamp + Vector2(-16, 150), 16, Color("#e8e0c8", 0.7))

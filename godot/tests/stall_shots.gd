@@ -72,7 +72,7 @@ func _s_dmm_probing() -> void:
 	sc.backend.place(sc.backend.bin()[4], 18, 2, 2)   # 4.7 ohm 5 W
 	_w([19, 2], [18, 2]); _w([14, 2], [14, 8]); _w([14, 8], [19, 8])
 	await _wait(0.3); sc.backend.set_power(true)
-	sc.backend.set_probe("red", [14, 2]); sc.backend.set_probe("black", [14, 8]); sc.backend.set_dial("V")
+	sc.backend.set_probe("red", [19, 2]); sc.backend.set_probe("black", [19, 8]); sc.backend.set_dial("V")
 	await _wait(2.2); await _shot("dmm_probing")
 
 func _s_notebook() -> void:
@@ -83,9 +83,9 @@ func _s_notebook() -> void:
 func _s_cute() -> void:
 	sc.cute = true; sc._apply_prefs()
 	sc.start_ticket("1-2")
-	sc.backend.place(sc.backend.bin()[0], 11, 2, 2); sc.backend.place(sc.backend.bin()[1], 11, 5, 2); sc.backend.place(sc.backend.bin()[2], 11, 8, 2)
-	sc.backend.place(sc.backend.bin()[5], 18, 2, 2)
-	_w([19, 2], [18, 2]); _w([14, 2], [11, 2]); _w([9, 2], [13, 5]); _w([9, 5], [13, 8]); _w([9, 8], [19, 8])
+	var bk = sc.backend   # three LEDs in series with 150 ohm: 19.7 mA each, in the 14-20 mA band
+	bk.place(bk.bin()[0], 11, 2, 2); bk.place(bk.bin()[1], 11, 5, 2); bk.place(bk.bin()[2], 11, 8, 2); bk.place(bk.bin()[5], 18, 2, 2)
+	_w([19, 2], [18, 2]); _w([14, 2], [11, 2]); _w([9, 2], [11, 5]); _w([9, 5], [11, 8]); _w([9, 8], [19, 8])
 	await _wait(0.4); sc.backend.set_power(true); await _wait(2.6)
 	await _shot("cute"); await _shot("cute_zoom", sc.board_rect.grow(10))
 

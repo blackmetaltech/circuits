@@ -215,7 +215,7 @@ func _layout() -> void:
 	L.customer = Rect2(780, 765 + dy, 300, 270)
 	L.bubble = Rect2(1060, 815 + dy, 250, 118)
 	L.next = Rect2(1070, 945 + dy, 220, 50)
-	L.chit = Rect2(rx + 404.0 if not phone else rx + 404.0, 190.0 + dy * 0.05 + 258.0, 190, 172)
+	L.chit = Rect2(sc_x + 404.0, 190.0 + dy * 0.05 + 258.0, 190, 172)
 	L.slip = Rect2(318, 870 + dy, 420, 160)
 	L.probe_rest = {"red": Vector2(dmm_x - 52, 968 + dy * 0.8), "black": Vector2(dmm_x - 112, 998 + dy * 0.8)}
 	var bx0 := 372.0; var bx1 := (rx - 44.0) if not phone else (sup_x - 30.0)
@@ -365,13 +365,25 @@ func _sync_views(dt: float) -> void:
 	top.bubble_alpha = move_toward(top.bubble_alpha, 1.0 if (t < bubble_until and phase == "bench" and pages.mode == "") else 0.0, dt * 3.0)
 	# coach slip and arrow
 	top.ticket = bt; top.locked = backend.locked
+	top.peek = {}
+	if phone and scope_t < 0.98:   # the scope drawer is folded: a peek strip keeps the trace and the LOCK lamp in view (tap it, or Tab, to open)
+		var samples: Array = []
+		for k in 48: samples.append(scope._vals[(scope._head + scope.COLS - 1 - (47 - k) * 3 + scope.COLS * 2) % scope.COLS])
+		top.peek = {"rect": Rect2(size.x - 92.0, scope.position.y + 6.0, 86.0, 330.0), "locked": backend.locked, "live": backend.powered, "samples": samples, "sc": bt.scope, "id": str(bt.id), "alpha": 1.0 - scope_t}
 	var steps := CoachData.steps(str(bt.id))
 	var ci := CoachData.current(str(bt.id), backend)
+	pages.coach_vis = steps.map(func(s): return not s.has("when") or backend.cond(str(s.when)))
 	pages.coach_steps = steps; pages.coach_cur = ci; pages.coach_done = steps.map(func(s): return backend.cond(str(s.get("done", "never"))))
 	var in_play := phase == "bench" and pages.mode == ""
 	if ci >= 0 and in_play and not backend.locked:
 		var st: Dictionary = steps[ci]
-		top.slip_text = str(st.text); top.slip_step = "Wren's note  %d / %d" % [ci + 1, steps.size()]
+		top.slip_text = str(st.text); var vis := 0; var tot := 0
+		for k in steps.size():
+			var sk: Dictionary = steps[k]
+			if sk.has("when") and k != ci: continue
+			tot += 1
+			if k <= ci: vis += 1
+		top.slip_step = "Wren's note  %d / %d" % [vis, tot]
 		_fit_slip()
 		top.arrow_to = _target_pos(str(st.target)); top.show_arrow = top.arrow_to != Vector2.ZERO and not drag.has("kind")
 	elif backend.locked and in_play:
@@ -426,7 +438,9 @@ func _hottest_screen() -> Vector2:
 
 func _target_pos(name: String) -> Vector2:
 	match name:
-		"box": return (L.box as Rect2).get_center() + Vector2(40, -40)
+		"box":
+			var sl := StallProps.slots(props.box_inner(), props.items.size(), props.bin_scroll)
+			return (sl[0] as Rect2).get_center() if sl.size() > 0 and (sl[0] as Rect2).size != Vector2.ZERO else (L.box as Rect2).get_center()
 		"board": return board_rect.get_center()
 		"pad:IN":
 			for c in backend.ticket.board.connectors: if c.id == "IN": return pad_screen(Vector2(c.pad[0], c.pad[1])) + Vector2(10, 0)
@@ -503,6 +517,7 @@ func _where(sp: Vector2) -> String:
 	if supply.hit_rocker((sp - supply.position) / supply.scale.x) and Rect2(supply.position, supply.size * supply.scale.x).has_point(sp): return "rocker"
 	var dl := (sp - dmm.position) / dmm.scale.x
 	if Rect2(dmm.position, dmm.size * dmm.scale.x).has_point(sp) and dmm.hit_dial(dl): return "dial"
+	if phone and scope_t < 0.5 and Rect2(size.x - 96.0, scope.position.y, 96.0, 340.0).has_point(sp): return "peek"
 	if Rect2(scope.position, scope.size * scope.scale.x).has_point(sp):
 		var ik := scope.hit_knob((sp - scope.position) / scope.scale.x)
 		return "knob%d" % ik if ik >= 0 else "scope"
@@ -548,6 +563,7 @@ func _press(sp: Vector2) -> void:
 		"dial":
 			backend.set_dial(dmm.dial_click((sp - dmm.position) / dmm.scale.x)); sfx.play("tick"); return
 		"scope": if phone: scope_open = not scope_open; return
+		"peek": scope_open = not scope_open; return
 	if hover.begins_with("probe_"):
 		var w := hover.substr(6); drag = {"kind": "probe", "which": w, "pos": sp}; backend.set_probe(w, null); return
 	if hover == "box":

@@ -25,6 +25,7 @@ var coach_ticket: Dictionary = {}
 var coach_steps: Array = []
 var coach_cur := 0
 var coach_done: Array = []                ## bool per step (for the ticks)
+var coach_vis: Array = []                 ## false for conditional steps that do not apply now (e.g. the smoke note)
 var tab := "coach"
 var codex_i := 0
 var mouse := Vector2.ZERO
@@ -195,8 +196,8 @@ func _map(a: float) -> void:
 		S.text(self, f, str(tk.spec), q.position + Vector2(14, 144), 18, Color(S.INK, 0.9 if open else 0.4), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 26)
 		S.text(self, f, "%d coins" % int(tk.price), q.position + Vector2(q.size.x - 104, 48), 17, Color(S.INK, 0.7))
 		if tk.done:
-			draw_set_transform(cr.get_center() + Vector2(30, 36), deg_to_rad(-12), Vector2.ONE)
-			S.rr_line(self, Rect2(-70, -24, 140, 48), 6, Color(0.1, 0.55, 0.2, 0.9), 4.0); S.text(self, f, "FIXED", Vector2(-46, 11), 32, Color(0.1, 0.55, 0.2, 0.9))
+			draw_set_transform(cr.get_center() + Vector2(cr.size.x * 0.28, -cr.size.y * 0.12), deg_to_rad(-12), Vector2.ONE)
+			S.rr_line(self, Rect2(-52, -20, 104, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5); S.text(self, f, "FIXED", Vector2(-36, 10), 26, Color(0.1, 0.55, 0.2, 0.9))
 		elif not open:
 			S.text(self, f, "locked", q.position + Vector2(q.size.x - 96, q.size.y - 20), 18, Color(S.INK, 0.45))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
@@ -223,7 +224,7 @@ func _notebook(a: float) -> void:
 	var y := lp.y + 190.0
 	for i in coach_steps.size():
 		var st: Dictionary = coach_steps[i]
-		if st.get("target", "") == "none": continue
+		if st.get("target", "") == "none" or (i < coach_vis.size() and not coach_vis[i]): continue
 		var txt := str(st.text); var fs := 22
 		var hh := S.wrapped_h(f, txt, fs, half - 170) + 8.0
 		if y + hh > r.end.y - 90: break
