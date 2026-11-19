@@ -72,6 +72,7 @@ static func _body(ci: CanvasItem, part: Dictionary, p: float, st: Dictionary, sh
 		"BAT": _battery(ci, lp, p, sh)
 		"BRIDGE": _bridge(ci, part, p, sh, smoked)
 		"SW": _switch(ci, lp, p, sh, bool(part.on))
+		"LOAD": _load(ci, lp, p, sh, float(st.get("hot", 0.0)))
 		_: _generic(ci, lp, p, sh)
 
 static func _resistor(ci: CanvasItem, part: Dictionary, p: float, sh: bool, smoked: bool) -> void:
@@ -204,6 +205,21 @@ static func _switch(ci: CanvasItem, lp: Array, p: float, sh: bool, on: bool) -> 
 	if sh: return
 	ci.draw_circle(a, p * 0.2, SILVER); ci.draw_circle(b, p * 0.2, SILVER)
 	ci.draw_line(a, a.lerp(b, 0.97 if on else 0.7) + Vector2(0, 0 if on else -p * 0.6), Color(0.9, 0.35, 0.2), p * 0.22)
+
+## The customer's fixed load (1-3 heater element): a ceramic block with a visible nichrome coil that glows with heat.
+static func _load(ci: CanvasItem, lp: Array, p: float, sh: bool, hot: float) -> void:
+	var mn := Vector2(1e9, 1e9); var mx := Vector2(-1e9, -1e9)
+	for v in lp: mn = mn.min(v); mx = mx.max(v)
+	_leads(ci, lp, p, [mn + Vector2(0, 0.5), mx - Vector2(0, 0.5)])
+	var r := Rect2(mn * p + Vector2(-p * 0.75, p * 0.5), (mx - mn) * p + Vector2(p * 1.5, -p * 1.0))
+	rrect(ci, r, p * 0.3, _c(Color(0.78, 0.74, 0.66), sh))
+	if sh: return
+	rrect(ci, r.grow(-p * 0.12), p * 0.22, Color(0.9, 0.87, 0.8))
+	var cx := r.get_center().x; var n := 9
+	for i in n:
+		var y := r.position.y + p * 0.45 + (r.size.y - p * 0.9) * float(i) / float(n - 1)
+		ci.draw_line(Vector2(cx - p * 0.5, y), Vector2(cx + p * 0.5, y + p * 0.12), Color(0.55, 0.2, 0.1).lerp(Color(1.0, 0.6, 0.2), hot), p * 0.09)
+	ci.draw_line(Vector2(r.position.x + p * 0.15, r.position.y + p * 0.3), Vector2(r.position.x + p * 0.15, r.end.y - p * 0.3), Color(1, 1, 1, 0.3), p * 0.06)
 
 static func _generic(ci: CanvasItem, lp: Array, p: float, sh: bool) -> void:
 	if lp.is_empty(): return

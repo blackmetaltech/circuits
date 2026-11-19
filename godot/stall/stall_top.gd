@@ -1,0 +1,150 @@
+class_name StallTop
+extends Control
+## The topmost bench layer (below the paper pages): supply cables with alligator clips, the DMM's leads and draggable probe tips, the scope's
+## CH1 clip lead, the ticket chit pinned to the scope bezel, Wren's coach slip with a hand-drawn arrow, the customer's speech bubble and the
+## part icon that follows the pointer. Pure drawing; StallScene owns state and fills the fields below.
+
+const S = preload("res://stall/stall_style.gd")
+var t := 0.0
+var L: Dictionary = {}
+var ticket: Dictionary = {}
+var locked := false
+var cables: Array = []            ## [{a: Vector2, b: Vector2, col: Color}] supply cables (a at the supply port, b at the connector clip)
+var leads: Array = []             ## [{from: Vector2 (socket), tip: Vector2, col: Color, on_pad: bool, hover: bool}]
+var scope_lead: Dictionary = {}   ## {from, to}
+var held: Dictionary = {}         ## {part: Dictionary, pos: Vector2, p: float} icon following the pointer off the board
+var tag: Dictionary = {}          ## hover readout {text, pos}
+var slip_text := ""
+var slip_step := ""
+var arrow_to := Vector2.ZERO
+var show_arrow := false
+var bubble := ""
+var bubble_alpha := 0.0
+var toast := ""
+var toast_age := 9.0
+var hint_box_drop := false
+var _arrow_k := 0.0
+var _last_slip := ""
+var _props: StallProps
+
+func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE; set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); set_process(true)
+
+func _process(dt: float) -> void:
+	t += dt; toast_age += dt
+	if slip_text != _last_slip: _last_slip = slip_text; _arrow_k = 0.0   # a new step: the pen draws the arrow again
+	_arrow_k = minf(1.0, _arrow_k + dt * 1.6)
+	queue_redraw()
+
+func say(s: String) -> void: toast = s; toast_age = 0.0
+
+func slip_rect() -> Rect2: return L.get("slip", Rect2())
+
+func _draw() -> void:
+	if L.is_empty(): return
+	for c in cables: _cable(c)
+	if not scope_lead.is_empty(): _scope_lead()
+	_chit()
+	for ld in leads: _lead(ld)
+	if not held.is_empty(): _held()
+	_slip()
+	if bubble_alpha > 0.01: _bubble()
+	if not tag.is_empty(): _tag()
+	if toast_age < 3.5: _toast()
+
+func _cable(c: Dictionary) -> void:
+	var pts := S.cable(self, c.a, c.b, 46.0, c.col, 7.0)
+	var clip: Vector2 = c.b
+	S.rr(self, Rect2(clip + Vector2(-16, -10), Vector2(32, 20)), 5, Color("#14161a")); S.rr(self, Rect2(clip + Vector2(-13, -8), Vector2(26, 16)), 4, c.col.lightened(0.05))
+	draw_line(clip + Vector2(-16, -4), clip + Vector2(-26, -8), Color("#9aa0a8"), 3.0); draw_line(clip + Vector2(-16, 4), clip + Vector2(-26, 8), Color("#9aa0a8"), 3.0)
+
+func _scope_lead() -> void:
+	S.cable(self, scope_lead.from, scope_lead.to, 60.0, Color("#2a2d33"), 4.0)
+	var c: Vector2 = scope_lead.to
+	S.rr(self, Rect2(c + Vector2(-9, -26), Vector2(18, 32)), 5, Color("#2e7d32")); S.rr(self, Rect2(c + Vector2(-6, -22), Vector2(12, 12)), 3, Color("#7CFF6B"))
+	draw_line(c + Vector2(0, 6), c + Vector2(0, 12), Color("#d8dce0"), 3.0)
+	S.text(self, S.hand(), "CH1", c + Vector2(12, -12), 14, Color("#9dffa0"))
+
+func _lead(ld: Dictionary) -> void:
+	var a: Vector2 = ld.from; var tip: Vector2 = ld.tip; var col: Color = ld.col
+	var grip := tip + Vector2(52, -96)     # the probe body is held up and to the right of its tip
+	S.cable(self, a, grip, 70.0, col.darkened(0.55) if col.r > col.g else Color("#1b1c20"), 5.0)
+	var dir := (tip - grip).normalized(); var side := dir.orthogonal()
+	var body := PackedVector2Array([grip + side * 11, grip - side * 11, grip + dir * 70 - side * 6, grip + dir * 70 + side * 6])
+	draw_colored_polygon(body.duplicate(), Color(0, 0, 0, 0.3))
+	for i in body.size(): body[i] = body[i] + Vector2(0, -2)
+	draw_colored_polygon(body, col.darkened(0.25)); draw_line(grip + dir * 4, grip + dir * 66, col.lightened(0.15), 5.0)
+	draw_line(grip + dir * 70, tip, Color("#c9ced4"), 3.0); draw_circle(tip, 2.5, Color.WHITE)
+	if ld.get("hover", false) or ld.get("on_pad", false): S.glow(self, tip, 30.0, Color(col, 0.35))
+	if ld.get("on_pad", false): draw_arc(tip, 12.0, 0, TAU, 20, Color(col.lightened(0.3), 0.9), 2.5)
+
+func _held() -> void:
+	var p: float = held.p; var o: Vector2 = held.pos
+	var pd: Dictionary = held.part
+	draw_circle(o + Vector2(0, 22), 0.0, Color.BLACK)
+	PartArt.draw(self, pd, o - Vector2(p * 1.0, 0), p, {"lit": 0.0, "smoked": false})
+
+func _chit() -> void:
+	var r: Rect2 = L.get("chit", Rect2())
+	if ticket.is_empty() or r.size == Vector2.ZERO: return
+	S.paper(self, r, -3.0, Color("#f6efd8"))
+	var c := r.get_center(); draw_set_transform(c, deg_to_rad(-3.0), Vector2.ONE)
+	var q := Rect2(-r.size * 0.5, r.size)
+	S.pin(self, q.position + Vector2(r.size.x * 0.5, 10))
+	S.text(self, S.hand(), "TICKET %s" % str(ticket.id), q.position + Vector2(14, 44), 17, S.INK_RED)
+	S.text(self, S.hand(), str(ticket.title), q.position + Vector2(14, 74), 28, S.INK)
+	S.text(self, S.hand(), "for %s" % str(ticket.customer), q.position + Vector2(14, 98), 18, Color(S.INK, 0.8))
+	draw_line(q.position + Vector2(12, 108), q.position + Vector2(r.size.x - 12, 108), Color(S.INK, 0.25), 1.5)
+	S.text(self, S.hand(), str(ticket.spec), q.position + Vector2(14, 132), 17, S.INK, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 28)
+	S.text(self, S.hand(), "%d coins" % int(ticket.price), q.position + Vector2(r.size.x - 96, 44), 16, Color(S.INK, 0.8))
+	if locked:   # a rubber stamp
+		draw_set_transform(c + Vector2(20, 40), deg_to_rad(-14.0), Vector2.ONE)
+		S.rr_line(self, Rect2(-72, -26, 144, 52), 6, Color(0.1, 0.55, 0.2, 0.9), 4.0)
+		S.text(self, S.hand(), "FIXED", Vector2(-48, 12), 34, Color(0.1, 0.55, 0.2, 0.9))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+func _slip() -> void:
+	if slip_text == "": return
+	var r := slip_rect()
+	var w := r.size.x - 40.0; var fs := 21
+	S.paper(self, r, 1.5, Color("#f7f0d6"))
+	var c := r.get_center(); draw_set_transform(c, deg_to_rad(1.5), Vector2.ONE)
+	var q := Rect2(-r.size * 0.5, r.size)
+	S.text(self, S.hand(), slip_step, q.position + Vector2(18, 28), 15, S.INK_RED)
+	S.text(self, S.hand(), slip_text, q.position + Vector2(18, 56), fs, S.INK, HORIZONTAL_ALIGNMENT_LEFT, w)
+	S.pin(self, q.position + Vector2(r.size.x - 20, 14), Color("#3a8f5a"))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if show_arrow:
+		var from := Vector2(clampf(arrow_to.x, r.position.x + 30, r.end.x - 30), r.position.y - 4)
+		if arrow_to.y > r.position.y: from = Vector2(r.end.x if arrow_to.x > r.end.x else clampf(arrow_to.x, r.position.x, r.end.x), r.get_center().y)
+		var d := arrow_to - from
+		var to := arrow_to - d.normalized() * 34.0
+		S.hand_arrow(self, from, to, Color("#2b3a67"), 4.5, _arrow_k, 0.18)
+		if _arrow_k >= 1.0:
+			var pulse := 0.5 + 0.5 * sin(t * 4.0)
+			draw_arc(arrow_to, 22.0 + 4.0 * pulse, 0.0, TAU, 24, Color("#ffd98a", 0.6 * pulse + 0.2), 3.0)
+
+func _bubble() -> void:
+	var r: Rect2 = L.get("bubble", Rect2())
+	if bubble == "" or r.size == Vector2.ZERO: return
+	var a := bubble_alpha
+	modulate = Color(1, 1, 1, 1)
+	var q := r
+	S.shadow(self, q, 22, Vector2(5, 7), 0.3 * a)
+	S.rr(self, q, 22, Color(0.98, 0.96, 0.9, a)); S.rr_line(self, q, 22, Color(S.INK, 0.5 * a), 2.0)
+	var tail := PackedVector2Array([Vector2(q.position.x + 6, q.end.y - 22), Vector2(q.position.x - 30, q.end.y + 6), Vector2(q.position.x + 30, q.end.y - 4)])
+	draw_colored_polygon(tail, Color(0.98, 0.96, 0.9, a))
+	S.text(self, S.hand(), bubble, q.position + Vector2(16, 36), 22, Color(S.INK, a), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 32)
+
+func _tag() -> void:
+	var s: String = tag.text; var p: Vector2 = tag.pos
+	var w := S.tw(S.mono(), s, 20) + 22.0
+	var r := Rect2(p + Vector2(18, -44), Vector2(w, 32))
+	S.rr(self, r, 6, Color("#14161a", 0.92)); S.rr_line(self, r, 6, Color(S.AMBER, 0.8), 1.5)
+	S.text(self, S.mono(), s, r.position + Vector2(11, 23), 20, S.AMBER)
+
+func _toast() -> void:
+	var a := clampf(minf(toast_age * 4.0, (3.5 - toast_age) * 2.0), 0.0, 1.0)
+	var r := Rect2(size.x * 0.5 - 330, 196, 660, 46)
+	S.paper(self, r, -0.6, Color(0.97, 0.93, 0.8, a))
+	S.text(self, S.hand(), toast, r.position + Vector2(20, 31), 22, Color(S.INK, a))
