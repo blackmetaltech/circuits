@@ -127,7 +127,7 @@ func _panel() -> void:
 	var rd := "%s %s" % [_fmt(value if live else 0.0), unit] if live else "--"
 	S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14, Color(vc, 0.55))
 	S.text(self, S.mono(), rd, Vector2(px + 10, 242), 20, Color(vc, 0.9 if live else 0.3))
-	S.text(self, S.mono(), "%s/DIV" % _fmt(float(sc.get("vdiv", 4.0))), Vector2(px + 100, 222), 13, Color(vc, 0.4))
+	S.text(self, S.mono(), "%s/DIV" % _fmt(float(sc.get("vdiv", 4.0))), Vector2(px + 98, 206), 12, Color(vc, 0.4))
 	# knobs
 	var kc := knob_centres(); var names := ["VOLTS", "TIME", "LEVEL", "FOCUS"]
 	for i in kc.size():
@@ -168,12 +168,12 @@ func _draw_glow(ci: Control) -> void:
 		for k in COLS:
 			var idx := (_head + k) % COLS
 			var age := t - _stamp[idx]
-			if age > 3.2 or _stamp[idx] < 0.0: have = false; continue
+			if age > 4.0 or _stamp[idx] < 0.0: have = false; continue
 			var x := SCREEN.position.x + float(idx) / float(COLS - 1) * SCREEN.size.x
 			var y := clampf(_y_of(_vals[idx]) + sin(float(idx) * 3.1 + t * 40.0) * 0.35, SCREEN.position.y - 4, SCREEN.end.y + 4)
 			var p := Vector2(x, y)
 			if have and (k > 0) and idx != 0:
-				a = exp(-age / 0.55) * _warm
+				a = (0.28 + 0.72 * exp(-age / 0.7)) * _warm
 				ci.draw_line(prev, p, Color(tr, 0.10 * a), 10.0)
 				ci.draw_line(prev, p, Color(tr, 0.22 * a), 5.0)
 				ci.draw_line(prev, p, Color(0.8, 1.0, 0.75, 0.95 * a), 2.0)

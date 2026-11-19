@@ -43,7 +43,7 @@ const TICKETS := {
 		"ask": "The heater runs too hot for the fish.", "thanks": "The fish are comfortable again.",
 		"spec": "load 8.0 V  +/- 0.35 V, nothing over rating", "supply": {"label": "12 V supply", "emf": 12.0, "r": 0.2, "kind": "bench"},
 		"board": {"w": 20, "h": 11, "connectors": [{"id": "IN", "pad": [19, 2], "role": "supply"}, {"id": "GND", "pad": [19, 8], "role": "ground"}],
-			"fixed": [{"uid": "load", "partId": "load-heater", "value": 50.0, "x": 14, "y": 2, "label": "50 Ω heater", "fixed": true, "pins": [[14, 2], [14, 8]], "kind": "LOAD"}]},
+			"fixed": [{"uid": "load", "partId": "load-heater", "value": 50.0, "x": 9, "y": 2, "label": "50 Ω heater", "fixed": true, "pins": [[9, 2], [9, 8]], "kind": "LOAD"}]},
 		"bin": [["res-cf", 22.0, "¼ W", ""], ["res-mf5", 22.0, "½ W", ""], ["res-1w", 22.0, "1 W", ""], ["res-cf", 27.0, "¼ W", ""], ["res-mf5", 47.0, "½ W", ""],
 			["res-mf5", 47.0, "½ W", ""], ["res-1w", 47.0, "1 W", ""], ["res-cf", 51.0, "¼ W", ""], ["res-1w", 100.0, "1 W", ""]],
 		"scope": {"q": "vLoad", "unit": "V", "lo": 7.65, "hi": 8.35, "vdiv": 2.0, "scale": 1.0, "label": "V LOAD"},
@@ -276,7 +276,7 @@ func _solve() -> void:
 	var vv := PackedFloat64Array(); vv.resize(N)
 	var vj_old := {}
 	for led in leds: vj_old[led.uid] = 0.0
-	for it in 120:
+	for it in 200:
 		var A: Array = []; for i in N: var row := PackedFloat64Array(); row.resize(N + 1); A.append(row)
 		for i in N: A[i][i] += 1e-12   # gmin: floating nets stay solvable
 		for e in els:
@@ -285,11 +285,14 @@ func _solve() -> void:
 				var g: float = 1.0 / e.r; _stamp_g(A, e.a, e.b, g)
 				if e.a >= 0: A[e.a][N] += float(e.emf) * g
 				if e.b >= 0: A[e.b][N] -= float(e.emf) * g
+		var limited := false
 		for led in leds:
 			var nvt: float = led.n * 0.02585
 			var vj := _vd(vv, led.k) - _vd(vv, led.b)
 			var vcrit: float = nvt * log(nvt / (sqrt(2.0) * led.is))
-			vj = _pnjlim(vj, float(vj_old[led.uid]), nvt, vcrit); vj_old[led.uid] = vj
+			var vlim := _pnjlim(vj, float(vj_old[led.uid]), nvt, vcrit)
+			if absf(vlim - vj) > 1e-4: limited = true
+			vj = vlim; vj_old[led.uid] = vj
 			var ex := exp(minf(vj / nvt, 80.0))
 			var gd: float = led.is / nvt * ex + 1e-12; var idd: float = led.is * (ex - 1.0)
 			var ieq := idd - gd * vj
@@ -300,7 +303,7 @@ func _solve() -> void:
 		var dmax := 0.0
 		for i in N: dmax = maxf(dmax, absf(nv[i] - vv[i]))
 		vv = nv
-		if dmax < 1e-7 and it > 1: break
+		if dmax < 1e-7 and it > 1 and not limited: break
 	# results
 	for k in par:
 		var ni := -1 if _find(par, k) == gnd else int(net_idx[_find(par, k)])

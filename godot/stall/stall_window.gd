@@ -11,7 +11,7 @@ var rain := false
 var neon_on := true
 var reduced := false
 var tram_period := 31.0
-var tram_phase := 0.35         ## where the tram starts in its cycle (screenshots: it is visible at t = 0)
+var tram_phase := 0.12         ## where the tram starts in its cycle (screenshots: it is visible at t = 0)
 var gear_hover := false
 var _skyline: Array = []
 var _built_w := 0.0
@@ -36,7 +36,7 @@ func _build(w: float, h: float) -> void:
 			var bh := rng.randf_range(0.28, 0.62) * h * (1.0 - 0.18 * layer) + (0.0 if layer == 0 else 8.0)
 			var wins: Array = []
 			for i in int(bw / 22.0): for j in int(bh / 24.0):
-				if rng.randf() < (0.30 - 0.06 * layer): wins.append([i, j, rng.randf() < 0.25, rng.randf_range(0.0, TAU)])
+				if rng.randf() < (0.42 - 0.07 * layer): wins.append([i, j, rng.randf() < 0.25, rng.randf_range(0.0, TAU)])
 			row.append({"x": x, "w": bw, "h": bh, "wins": wins, "roof": rng.randi() % 3})
 			x += bw + rng.randf_range(-6.0, 12.0)
 		_skyline.append(row)
@@ -47,14 +47,14 @@ func _draw() -> void:
 	if absf(_built_w - w) > 1.0 or _skyline.is_empty(): _build(w, h)
 	var f := h / 190.0
 	# ---- sky
-	var top := Color("#070b1c").lerp(Color("#2a2f63"), dusk); var mid := Color("#171b3f").lerp(Color("#a2477a"), dusk); var low := Color("#3b2347").lerp(Color("#f0a45f"), dusk)
+	var top := Color("#0a1030").lerp(Color("#2a2f63"), dusk); var mid := Color("#222d62").lerp(Color("#a2477a"), dusk); var low := Color("#6a3f78").lerp(Color("#f0a45f"), dusk)
 	S.vgrad(self, Rect2(0, 0, w, h * 0.55), top, mid, 14); S.vgrad(self, Rect2(0, h * 0.55, w, h * 0.45), mid, low, 12)
 	var rng := RandomNumberGenerator.new(); rng.seed = 99
 	if dusk < 0.7:
 		for i in 38: draw_circle(Vector2(rng.randf() * w, rng.randf() * h * 0.38), rng.randf_range(0.6, 1.5), Color(1, 1, 0.9, (0.25 + 0.3 * sin(t * 1.3 + float(i))) * (1.0 - dusk)))
 	# ---- skyline (far -> near)
 	for layer in 3:
-		var shade: Color = [Color("#1a1f3e"), Color("#141833"), Color("#0d1026")][layer].lerp(Color("#3a2a52"), dusk * (1.0 - 0.25 * layer))
+		var shade: Color = [Color("#38437a"), Color("#262e5c"), Color("#12163a")][layer].lerp(Color("#3a2a52"), dusk * (1.0 - 0.25 * layer))
 		for b in _skyline[layer]:
 			var base := h * (0.86 + 0.04 * layer)
 			var r := Rect2(b.x, base - b.h, b.w, b.h + 4.0)
@@ -68,16 +68,18 @@ func _draw() -> void:
 				if wr.end.x < r.end.x - 4 and wr.end.y < r.end.y - 4:
 					draw_rect(wr, Color(col, (0.75 - 0.15 * layer) * fl), true)
 					if layer == 0: S.glow(self, wr.get_center(), 18.0, Color(col, 0.10))
-	# ---- neon signs on the near shopfronts
-	_neon(Vector2(w * 0.69, h * 0.18), "REPAIR", S.MAGENTA, 0, 34.0 * f)
-	_neon(Vector2(w * 0.34, h * 0.30), "TEA", S.CYAN, 1, 30.0 * f)
-	_neon(Vector2(w * 0.885, h * 0.34), "NOODLE", Color("#ffb547"), 2, 26.0 * f)
+	S.vgrad(self, Rect2(0, h * 0.55, w, h * 0.45), Color(1.0, 0.55, 0.25, 0.0), Color(1.0, 0.55, 0.25, 0.20 * (1.0 - dusk * 0.5)), 10)   # street lamps' glow
+	draw_circle(Vector2(w * 0.08, h * 0.30), 16.0 * f, Color(1.0, 0.96, 0.8, 0.85 * (1.0 - dusk))); draw_circle(Vector2(w * 0.08 + 6 * f, h * 0.30 - 3 * f), 14.0 * f, Color(0.16, 0.2, 0.42, 0.95 * (1.0 - dusk)))
 	# ---- tram
 	var ph := fposmod(t / tram_period + tram_phase, 1.0)
 	if ph < 0.42:
 		var k := ph / 0.42
 		var tx := lerpf(-w * 0.35, w * 1.1, k); var ty := h * 0.93
 		_tram(Vector2(tx, ty), f)
+	# ---- neon signs on the near shopfronts
+	_neon(Vector2(w * 0.66, h * 0.50), "REPAIR", S.MAGENTA, 0, 36.0 * f)
+	_neon(Vector2(w * 0.30, h * 0.56), "TEA", S.CYAN, 1, 32.0 * f)
+	_neon(Vector2(w * 0.865, h * 0.54), "NOODLE", Color("#ffb547"), 2, 30.0 * f)
 	# ---- cables
 	for i in 6:
 		var y0 := h * (0.06 + 0.07 * i) + float(i % 3) * 3.0; var sag := 14.0 + 7.0 * (i % 4)
@@ -98,9 +100,9 @@ func _draw() -> void:
 				draw_circle(lc, 11.0 * f, lcol.darkened(0.15)); draw_circle(lc, 8.0 * f, lcol.lightened(0.25))
 				draw_line(lc + Vector2(-5 * f, 0), lc + Vector2(5 * f, 0), lcol.darkened(0.4), 1.0)
 	# ---- awnings (left and right), striped canvas with scalloped edges
-	_awning(Rect2(w * 0.54, 0, w * 0.2, h * 0.30), Color("#7b2a3a"), f, true)
-	_awning(Rect2(w * 0.80, 0, w * 0.2, h * 0.24), Color("#2c5d6b"), f, true)
-	_awning(Rect2(w * 0.20, 0, w * 0.16, h * 0.20), Color("#8a6a2a"), f, true)
+	_awning(Rect2(w * 0.56, 0, w * 0.17, h * 0.13), Color("#7b2a3a"), f, true)
+	_awning(Rect2(w * 0.80, 0, w * 0.2, h * 0.13), Color("#2c5d6b"), f, true)
+	_awning(Rect2(w * 0.14, 0, w * 0.2, h * 0.13), Color("#8a6a2a"), f, true)
 	# ---- rain
 	if rain and not reduced:
 		var rr := RandomNumberGenerator.new(); rr.seed = 3
@@ -119,15 +121,15 @@ func _neon(c: Vector2, word: String, col: Color, style: int, size: float) -> voi
 	else: fl = 0.12
 	var f := S.hand(); var fs := int(size)
 	var tw := S.tw(f, word, fs)
-	var board := Rect2(c - Vector2(tw * 0.5 + 12, size * 0.9), Vector2(tw + 24, size * 1.35))
+	var board := Rect2(c - Vector2(tw * 0.5 + 14, size * 1.02), Vector2(tw + 28, size * 1.62))
 	draw_rect(board, Color(0.02, 0.02, 0.05, 0.85), true); S.rr_line(self, board, 6.0, Color(0.25, 0.27, 0.35), 2.0)
 	draw_line(Vector2(board.position.x + 10, board.position.y), Vector2(board.position.x + 10, -20), Color(0.05, 0.05, 0.08), 3.0)
 	draw_line(Vector2(board.end.x - 10, board.position.y), Vector2(board.end.x - 10, -20), Color(0.05, 0.05, 0.08), 3.0)
 	S.glow(self, board.get_center(), tw * 0.85, Color(col, 0.30 * fl))
 	for pass_i in 3:
 		var wd: int = [10, 6, 3][pass_i]
-		draw_string_outline(f, c + Vector2(-tw * 0.5, size * 0.28), word, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, wd, Color(col, [0.10, 0.22, 0.5][pass_i] * fl))
-	draw_string(f, c + Vector2(-tw * 0.5, size * 0.28), word, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, Color(col.lerp(Color.WHITE, 0.75), fl))
+		draw_string_outline(f, c + Vector2(-tw * 0.5, size * 0.34), word, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, wd, Color(col, [0.10, 0.22, 0.5][pass_i] * fl))
+	draw_string(f, c + Vector2(-tw * 0.5, size * 0.34), word, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, Color(col.lerp(Color.WHITE, 0.75), fl))
 
 func _tram(p: Vector2, f: float) -> void:
 	var bw := 360.0 * f; var bh := 66.0 * f
@@ -135,7 +137,7 @@ func _tram(p: Vector2, f: float) -> void:
 	draw_line(Vector2(p.x - 200, 0), Vector2(p.x + bw + 200, 0), Color(0.03, 0.03, 0.05), 2.0)   # overhead wire
 	draw_line(Vector2(p.x + bw * 0.55, 0), Vector2(p.x + bw * 0.5, body.position.y - 14 * f), Color(0.05, 0.05, 0.07), 3.0)   # pantograph
 	draw_line(Vector2(p.x + bw * 0.5, body.position.y - 14 * f), Vector2(p.x + bw * 0.62, body.position.y), Color(0.05, 0.05, 0.07), 3.0)
-	S.rr(self, body, 12 * f, Color("#0b0d16")); draw_rect(Rect2(body.position.x, body.end.y - 14 * f, bw, 14 * f), Color("#1a1124"), true)
+	S.rr(self, body, 12 * f, Color("#3a3556")); S.rr(self, body.grow(-3), 10 * f, Color("#2a2640")); draw_rect(Rect2(body.position.x, body.end.y - 14 * f, bw, 14 * f), Color("#d9b24a"), true)
 	for i in 9:
 		var wr := Rect2(body.position.x + 20 * f + float(i) * 38 * f, body.position.y + 12 * f, 28 * f, 24 * f)
 		draw_rect(wr, Color("#ffd98a"), true); S.glow(self, wr.get_center(), 34 * f, Color("#ffd98a", 0.22))

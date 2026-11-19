@@ -24,6 +24,7 @@ const AMBER := Color("#FFB547")
 const CYAN := Color("#38D6FF")
 const MAGENTA := Color("#FF4FA3")
 const SMOKE_GREY := Color("#8C96A3")
+var _spacing := 0.65
 const DOT_SPACING := 0.65   # pads between current dots (density is fixed; speed carries the magnitude)
 const FIXTURE_DEFAULT := "res://world/fixtures/led_9v.json"
 
@@ -411,7 +412,7 @@ func _draw_glow(ci: Control) -> void:
 		var temp: float = m.temps.get(pt.uid, m.ambient)
 		var hk := clampf((temp - 45.0) / 110.0, 0.0, 1.0)
 		if hk > 0.02 and not smoked:   # heat glow: blackbody ramp over the body
-			_blob(ci, c, maxf(b.size.x, b.size.y) * (0.5 + 0.25 * hk), Color(heat_color(hk), hk * 0.5))
+			_blob(ci, c, maxf(b.size.x, b.size.y) * (0.75 + 0.45 * hk), Color(heat_color(hk), minf(1.0, hk * 0.95)))
 		if pt.kind == "LED" and not smoked:   # bloom proportional to current (log)
 			var k := _led_k(absf(float(m.part_i.get(pt.uid, 0.0))))
 			if k > 0.0:
@@ -435,7 +436,7 @@ func _draw_glow(ci: Control) -> void:
 
 func _dots(ci: CanvasItem, pts: Array, id: String, tint: Color, scale: float, body := true) -> void:
 	var total := _length(pts)
-	var sp := DOT_SPACING * p
+	var sp := (1.15 if cute else DOT_SPACING) * p
 	var s := fposmod(float(_phase.get(id, 0.0)) * p, sp)
 	var halo := Color(tint.lerp(Color.WHITE, 0.45), 0.5)
 	while s <= total:
@@ -501,7 +502,7 @@ func _draw_cute(ci: Control) -> void:
 		_led_face(ci, cen, ma, m.smoked.has(pt.uid), pt.uid)
 
 func _critter(ci: CanvasItem, c: Vector2, dir: Vector2, sc: float, ph: float) -> void:
-	var r := p * 0.17 * sc
+	var r := p * 0.27 * sc
 	var bob := sin(ph * 0.35 + t * 9.0) * r * 0.14
 	var c2 := c + Vector2(0, bob)
 	ci.draw_circle(c2 + Vector2(r * 0.12, r * 0.45), r * 1.0, Color(0, 0, 0, 0.28))   # little shadow

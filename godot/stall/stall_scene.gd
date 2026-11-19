@@ -372,9 +372,10 @@ func _sync_views(dt: float) -> void:
 	if ci >= 0 and in_play and not backend.locked:
 		var st: Dictionary = steps[ci]
 		top.slip_text = str(st.text); top.slip_step = "Wren's note  %d / %d" % [ci + 1, steps.size()]
+		_fit_slip()
 		top.arrow_to = _target_pos(str(st.target)); top.show_arrow = top.arrow_to != Vector2.ZERO and not drag.has("kind")
 	elif backend.locked and in_play:
-		top.slip_text = "Fixed! Open the notebook, or tap the slip, for the next ticket."; top.slip_step = "Wren's note"; top.show_arrow = true; top.arrow_to = (L.notebook as Rect2).get_center() + Vector2(0, -30)
+		top.slip_text = "Fixed! Click here (or open the notebook) for the next ticket."; top.slip_step = "Wren's note"; _fit_slip(); top.show_arrow = true; top.arrow_to = (L.notebook as Rect2).get_center() + Vector2(0, -30)
 	else: top.slip_text = ""; top.show_arrow = false
 	top.visible = true
 	# cables, probe leads, the scope's clip lead
@@ -389,9 +390,13 @@ func _sync_views(dt: float) -> void:
 	for w in ["red", "black"]:
 		var tip := _probe_tip(w)
 		top.leads.append({"from": _dmm_socket(w), "tip": tip, "col": Color("#e0453a") if w == "red" else Color("#33363c"), "on_pad": backend.probes[w] != null or (drag.get("kind", "") == "probe" and drag.which == w and drag.get("snap", Vector2(-1, -1)).x >= 0), "hover": hover == "probe_" + w})
-	var sp := Vector2(-1, -1)
-	for p in backend.parts: if p.kind == "LED" or p.kind == "LOAD" or p.kind == "R": sp = pad_screen(Vector2(p.pins[0][0], p.pins[0][1])); break
-	top.scope_lead = {} if sp.x < 0 else {"from": scope.position + Vector2(330, 414) * scope.scale.x, "to": sp + Vector2(0, 8)}
+	var bnc := scope.position + Vector2(330, 414) * scope.scale.x
+	var sp := Vector2(-1, -1); var bestd := 1e9
+	for p in backend.parts:
+		for q in p.pins:
+			var ps := pad_screen(Vector2(q[0], q[1]))
+			if ps.distance_to(bnc) < bestd: bestd = ps.distance_to(bnc); sp = ps
+	top.scope_lead = {} if sp.x < 0 else {"from": bnc, "to": sp + Vector2(0, 10)}
 	# the part icon that follows the pointer while it is off the board
 	top.held = {}
 	if drag.get("kind", "") == "part" and not board_rect.grow(20).has_point(_mouse):
@@ -404,6 +409,12 @@ func _sync_views(dt: float) -> void:
 	window.gear_hover = hover == "gear"
 	window.neon_on = true
 	mouse_default_cursor_shape = Control.CURSOR_DRAG if drag.has("kind") else (Control.CURSOR_POINTING_HAND if hover != "" else Control.CURSOR_ARROW)
+
+func _fit_slip() -> void:
+	var w := 440.0
+	var h := 58.0 + S.wrapped_h(S.hand(), top.slip_text, 21, w - 40.0) + 26.0
+	var dy := maxf(0.0, size.y - 1080.0)
+	L["slip"] = Rect2(312, 1038.0 + dy - h, w, h)
 
 func _hottest_screen() -> Vector2:
 	var best := 0.0; var out := Vector2.ZERO

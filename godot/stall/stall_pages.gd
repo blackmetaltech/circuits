@@ -76,7 +76,8 @@ func _draw() -> void:
 
 func _title() -> void:
 	var w := size.x; var h := size.y
-	draw_rect(Rect2(0, 0, w, h), Color(0.02, 0.02, 0.06, 0.28), true)
+	draw_rect(Rect2(0, 0, w, h), Color(0.02, 0.02, 0.06, 0.2), true)
+	S.vgrad(self, Rect2(0, h * 0.28, w, h * 0.72), Color(0.02, 0.01, 0.04, 0.0), Color(0.02, 0.01, 0.04, 0.62), 12)
 	S.vgrad(self, Rect2(0, 0, w, h * 0.45), Color(0, 0, 0, 0.0), Color(0.05, 0.02, 0.1, 0.0), 2)
 	# the neon sign, hung in front of the window: tubes in a frame, letters light up one by one, one flickers
 	var cx := w * 0.5; var cy := h * 0.19

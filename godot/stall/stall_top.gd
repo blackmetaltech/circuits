@@ -91,16 +91,16 @@ func _chit() -> void:
 	var c := r.get_center(); draw_set_transform(c, deg_to_rad(-3.0), Vector2.ONE)
 	var q := Rect2(-r.size * 0.5, r.size)
 	S.pin(self, q.position + Vector2(r.size.x * 0.5, 10))
-	S.text(self, S.hand(), "TICKET %s" % str(ticket.id), q.position + Vector2(14, 44), 17, S.INK_RED)
+	S.text(self, S.hand(), "TICKET %s" % str(ticket.id), q.position + Vector2(14, 44), 16, S.INK_RED)
 	S.text(self, S.hand(), str(ticket.title), q.position + Vector2(14, 74), 28, S.INK)
 	S.text(self, S.hand(), "for %s" % str(ticket.customer), q.position + Vector2(14, 98), 18, Color(S.INK, 0.8))
 	draw_line(q.position + Vector2(12, 108), q.position + Vector2(r.size.x - 12, 108), Color(S.INK, 0.25), 1.5)
 	S.text(self, S.hand(), str(ticket.spec), q.position + Vector2(14, 132), 17, S.INK, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 28)
-	S.text(self, S.hand(), "%d coins" % int(ticket.price), q.position + Vector2(r.size.x - 96, 44), 16, Color(S.INK, 0.8))
+	S.text(self, S.hand(), "%d coins" % int(ticket.price), q.position + Vector2(r.size.x - 92, 98), 15, Color(S.INK, 0.75))
 	if locked:   # a rubber stamp
-		draw_set_transform(c + Vector2(20, 40), deg_to_rad(-14.0), Vector2.ONE)
-		S.rr_line(self, Rect2(-72, -26, 144, 52), 6, Color(0.1, 0.55, 0.2, 0.9), 4.0)
-		S.text(self, S.hand(), "FIXED", Vector2(-48, 12), 34, Color(0.1, 0.55, 0.2, 0.9))
+		draw_set_transform(c + Vector2(28, 62), deg_to_rad(-12.0), Vector2.ONE)
+		S.rr_line(self, Rect2(-56, -20, 112, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5)
+		S.text(self, S.hand(), "FIXED", Vector2(-38, 10), 28, Color(0.1, 0.55, 0.2, 0.9))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _slip() -> void:

@@ -27,6 +27,8 @@ var tin_shake := 0.0
 var _awake := 0.0
 var _blink := 0.0
 var _item_cache: Dictionary = {}
+var _cs := 1.0
+var _cc := Vector2.ZERO
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE; set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); set_process(true)
@@ -100,7 +102,7 @@ func _notebook() -> void:
 	for cc in [q.position, Vector2(q.end.x, q.position.y), Vector2(q.position.x, q.end.y), q.end]:
 		draw_circle(cc + Vector2(signf(-cc.x) * 0.0, 0.0), 0.0, Color.BLACK)
 	var lab := Rect2(q.position.x + 60, q.position.y + 28, 118, 76)
-	S.paper(self, lab, 2.0)
+	S.paper(self, lab, 2.0, S.PAPER, false, Transform2D(deg_to_rad(-5.0), c))
 	S.text(self, S.hand(), "Wren's", lab.position + Vector2(18, 32), 22, S.INK)
 	S.text(self, S.hand(), "notebook", lab.position + Vector2(10, 58), 24, S.INK)
 	if notebook_flag:   # a ribbon bookmark that wiggles when Wren has left a note
@@ -232,7 +234,7 @@ func _box() -> void:
 	# front lip and a hand-lettered label
 	var lip := Rect2(q.position.x, q.end.y - 24, q.size.x, 24)
 	S.rr(self, lip, 4, Color("#a98050")); draw_rect(Rect2(lip.position.x + 2, lip.position.y, lip.size.x - 4, 3), Color(1, 0.9, 0.7, 0.35), true)
-	S.paper(self, Rect2(q.position.x + 60, q.end.y - 46, 130, 34), -1.5)
+	S.paper(self, Rect2(q.position.x + 60, q.end.y - 46, 130, 34), -1.5, S.PAPER, false, Transform2D(deg_to_rad(1.6), c))
 	S.text(self, S.hand(), "PARTS", Vector2(q.position.x + 94, q.end.y - 22), 22, S.INK)
 	# flaps
 	draw_colored_polygon(PackedVector2Array([q.position, q.position + Vector2(40, 0), q.position + Vector2(0, 40)]), Color("#b58b55"))
@@ -249,7 +251,7 @@ func part_dict(it: Dictionary) -> Dictionary:
 func _items(c: Vector2) -> void:
 	var inner := box_inner(); var n := items.size()
 	var sl := slots(inner, n, bin_scroll)
-	var pp := 17.0
+	var pp := 20.0
 	for i in n:
 		var cell: Rect2 = sl[i]
 		if cell.size == Vector2.ZERO: continue
@@ -260,8 +262,8 @@ func _items(c: Vector2) -> void:
 		var pd := part_dict(it)
 		var org := Vector2(cell.position.x + 16.0, cell.position.y + 24.0)
 		if it.kind == "LED": org.x += 10.0
-		if it.kind == "BAT": org.x -= 4.0; pp = 14.0
-		else: pp = 17.0
+		if it.kind == "BAT": org.x -= 4.0; pp = 15.0
+		else: pp = 20.0
 		var mod := Color(1, 1, 1, a)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		# PartArt draws with its own colours; fade by drawing under a modulated canvas group via self_modulate is not per-draw, so lift alpha with a veil
@@ -287,6 +289,7 @@ func _customer() -> void:
 		"Bo": cloth = Color("#3f8f5a"); hair = Color("#6b3a1e"); skin = Color("#f0bf94"); kind = "cap"
 		"Eb": cloth = Color("#6a4fa0"); hair = Color("#14100d"); skin = Color("#b9784e"); kind = "glasses"
 	var s := r.size.x / 280.0
+	_cs = s; _cc = c
 	draw_set_transform(c, 0.0, Vector2(s, s))
 	# shoulders and torso rising from the bottom edge, with a soft drop shadow
 	_ellipse(Vector2(8, 150), Vector2(132, 40), Color(0, 0, 0, 0.3))
@@ -325,9 +328,9 @@ func _customer() -> void:
 			draw_arc(hc + Vector2(0, 26), 24, 0.3, PI - 0.3, 12, Color("#7a3b2a"), 4.0)
 			draw_colored_polygon(PackedVector2Array([hc + Vector2(-18, 34), hc + Vector2(18, 34), hc + Vector2(0, 50)]), Color(0.45, 0.1, 0.1, 0.0))
 	# arms up on the counter holding the gadget
-	var g := Vector2(0, 112)
+	var g := Vector2(58, 120)
 	for sgn in [-1.0, 1.0]:
-		draw_line(Vector2(sgn * 92, 100), g + Vector2(sgn * 34, 6), cloth.darkened(0.15), 24.0, true); draw_circle(g + Vector2(sgn * 34, 6), 13, skin)
+		draw_line(Vector2(sgn * 92, 100), g + Vector2(sgn * 26, 6), cloth.darkened(0.15), 24.0, true); draw_circle(g + Vector2(sgn * 26, 6), 13, skin)
 	_gadget(g)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
@@ -352,5 +355,5 @@ func _gadget(g: Vector2) -> void:
 			for sgn in [-1.0, 1.0]: draw_circle(g + Vector2(sgn * 30, 2), 12, Color("#14100d")); draw_circle(g + Vector2(sgn * 30, 2), 5, Color("#8b8f98"))
 			if ok: draw_line(g + Vector2(-70, -10), g + Vector2(-100, -10), Color(1, 1, 1, 0.5), 3.0); draw_line(g + Vector2(-66, 4), g + Vector2(-110, 4), Color(1, 1, 1, 0.4), 3.0)
 		_:   # exam sheet
-			S.paper(self, Rect2(g.x - 40, g.y - 76, 80, 100), -4.0)
+			S.paper(self, Rect2(g.x - 40, g.y - 76, 80, 100), -4.0, S.PAPER, false, Transform2D(0.0, Vector2(_cs, _cs), 0.0, _cc))
 			S.text(self, S.hand(), "✓" if ok else "?", Vector2(g.x - 12, g.y - 20), 56, S.INK_RED if ok else S.INK)

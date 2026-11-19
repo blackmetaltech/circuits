@@ -62,7 +62,7 @@ static func _body(ci: CanvasItem, part: Dictionary, p: float, st: Dictionary, sh
 	var lp: Array = part.local_pins
 	var smoked: bool = st.get("smoked", false)
 	match str(part.kind):
-		"R", "POT": _resistor(ci, part, p, sh, smoked)
+		"R", "POT": _resistor(ci, part, p, sh, smoked, float(st.get("hot", 0.0)))
 		"LED": _led(ci, p, sh, float(st.get("lit", 0.0)), smoked)
 		"CE": _electrolytic(ci, p, sh, smoked)
 		"C": _ceramic(ci, part, p, sh, smoked)
@@ -75,11 +75,12 @@ static func _body(ci: CanvasItem, part: Dictionary, p: float, st: Dictionary, sh
 		"LOAD": _load(ci, lp, p, sh, float(st.get("hot", 0.0)))
 		_: _generic(ci, lp, p, sh)
 
-static func _resistor(ci: CanvasItem, part: Dictionary, p: float, sh: bool, smoked: bool) -> void:
+static func _resistor(ci: CanvasItem, part: Dictionary, p: float, sh: bool, smoked: bool, hot := 0.0) -> void:
 	var big: bool = str(part.partId).begins_with("res-ww")
 	_leads(ci, [Vector2(0, 0), Vector2(4, 0)], p, [Vector2(1.0, 0), Vector2(3.0, 0)] if not big else [Vector2(0.6, 0), Vector2(3.4, 0)])
 	var x0 := (0.9 if not big else 0.6) * p; var x1 := (3.1 if not big else 3.4) * p; var hh := (0.42 if not big else 0.62) * p
 	var body := Color(0.84, 0.74, 0.5) if not big else Color(0.93, 0.9, 0.82)
+	if hot > 0.05: body = body.lerp(Color(1.0, 0.45, 0.18).lerp(Color(1.0, 0.92, 0.7), maxf(0.0, hot - 0.6)), minf(1.0, hot * 1.1))
 	if smoked: body = Color(0.07, 0.06, 0.06)
 	rrect(ci, Rect2(x0, -hh, x1 - x0, hh * 2.0), p * 0.22, _c(body, sh))
 	if sh: return

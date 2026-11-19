@@ -110,9 +110,9 @@ static func gear(ci: CanvasItem, c: Vector2, r: float, col: Color, hole: Color) 
 	ci.draw_circle(c, r * 0.5, hole); ci.draw_arc(c, r * 0.5, 0, TAU, 24, col.darkened(0.3), 2.0)
 
 ## A paper chit / page: cream, slightly rotated about `r`'s centre, soft shadow, faint fibres and a curled bottom-right.
-static func paper(ci: CanvasItem, r: Rect2, rot_deg := 0.0, tint := PAPER, lines := false) -> void:
+static func paper(ci: CanvasItem, r: Rect2, rot_deg := 0.0, tint := PAPER, lines := false, base := Transform2D.IDENTITY) -> void:
 	var c := r.get_center()
-	ci.draw_set_transform(c, deg_to_rad(rot_deg), Vector2.ONE)
+	ci.draw_set_transform_matrix(base * Transform2D(deg_to_rad(rot_deg), c))
 	var q := Rect2(-r.size * 0.5, r.size)
 	shadow(ci, q, 3.0, Vector2(4, 6), 0.4)
 	ci.draw_rect(q, tint, true)
@@ -124,7 +124,7 @@ static func paper(ci: CanvasItem, r: Rect2, rot_deg := 0.0, tint := PAPER, lines
 		var y := q.position.y + 54.0
 		while y < q.end.y - 14.0: ci.draw_line(Vector2(q.position.x + 10, y), Vector2(q.end.x - 10, y), Color(0.3, 0.4, 0.7, 0.18), 1.5); y += 34.0
 	ci.draw_colored_polygon(PackedVector2Array([q.end, q.end + Vector2(-18, 0), q.end + Vector2(0, -18)]), tint.darkened(0.2))
-	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	ci.draw_set_transform_matrix(base)
 
 static func pin(ci: CanvasItem, c: Vector2, col := Color("#d23a2e")) -> void:
 	ci.draw_circle(c + Vector2(3, 4), 7.0, Color(0, 0, 0, 0.35))
