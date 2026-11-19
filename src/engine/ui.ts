@@ -8,7 +8,7 @@ import type { PartDef } from '../data/parts/types';
 import type { Pad } from '../sim/board/types';
 import { pinPads } from '../sim/board/footprints';
 import { makeProbe } from '../sim/mna/tran';
-import { si } from '../sim/explain';
+import { si, sig } from '../sim/explain';
 import type { Circuit } from '../sim/mna/types';
 import type { Rig } from '../sim/rig';
 import { t } from '../i18n';
@@ -178,11 +178,11 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
         const d = getDef(p.partId)!, c = cur.parts.find((x) => x.uid === p.uid), h = th.parts.find((x) => x.uid === p.uid), r = rt.parts.find((x) => x.uid === p.uid);
         const smoked = tk.live.smoked.includes(p.uid), iPin = c ? Math.abs(c.pins[0]?.i ?? 0) : 0;
         const o2: Record<string, unknown> = {
-          uid: p.uid, temp: h?.temp ?? th.ambient, power: h?.power ?? 0, state: smoked ? 'smoke' : (h?.state ?? 'normal'), smoked,
+          uid: p.uid, temp: h?.temp ?? th.ambient, power: sig(h?.power ?? 0, 5), state: smoked ? 'smoke' : (h?.state ?? 'normal'), smoked,
           ratio: r ? r4(r.ratio) : 0, rated: r?.rated ?? null, violations: r?.violations ?? [],
-          pins: (c?.pins ?? []).map((q) => ({ name: q.name, pad: q.pad, i: q.i, speed: dotSpeed(q.i) })),
+          pins: (c?.pins ?? []).map((q) => ({ name: q.name, pad: q.pad, i: sig(q.i, 5), speed: dotSpeed(q.i) })),
         };
-        if (d.kind === 'LED') Object.assign(o2, { led: { i: iPin, mA: r4(iPin * 1000), bloom: smoked ? 0 : ledBloom(iPin), mood: ledMood(iPin, smoked) } });
+        if (d.kind === 'LED') Object.assign(o2, { led: { i: sig(iPin, 5), mA: r4(iPin * 1000), bloom: smoked ? 0 : ledBloom(iPin), mood: ledMood(iPin, smoked) } });
         return o2;
       });
       const events = tk.live.smoked.map((uid) => {
@@ -193,8 +193,8 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       return {
         valid: !!sol, powered: tk.live.powered, paused: tk.live.paused === true, frame: tk.live.frame, t: tk.live.t, status: tk.live.status,
         issues: tk.live.issues.map((i) => ({ key: i.key, text: text(i) })),
-        vmin: nodes.vmin, vmax: nodes.vmax, nodes: nodes.nodes, ambient: th.ambient,
-        parts, wires: cur.wires.map((w) => ({ wid: w.wid, i: w.i, speed: dotSpeed(w.i) })), events,
+        vmin: sig(nodes.vmin, 5), vmax: sig(nodes.vmax, 5), nodes: (nodes.nodes as { v: number; norm: number }[]).map((n) => ({ ...n, v: sig(n.v, 5), norm: r4(n.norm) })), ambient: th.ambient,
+        parts, wires: cur.wires.map((w) => ({ wid: w.wid, i: sig(w.i, 5), speed: dotSpeed(w.i) })), events,
       };
     },
 
@@ -219,7 +219,7 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       if (m.mode !== 'off' && m.pads.length < 2) note = t('meter.leads');
       else if (m.pads.length === 2 && m.mode !== 'off' && !m.valid && o.tk.live.powered) note = m.mode === 'ohm' ? '' : t('meter.sameNode');
       return {
-        mode: m.mode, label: modeLabel(m.mode), red: b.red ?? b.pads[0] ?? null, black: b.black ?? b.pads[1] ?? null, valid: m.valid, value: m.value, unit: m.unit,
+        mode: m.mode, label: modeLabel(m.mode), red: b.red ?? b.pads[0] ?? null, black: b.black ?? b.pads[1] ?? null, valid: m.valid, value: m.value === null ? null : sig(m.value, 6), unit: m.unit,
         display: { value: m.value === null ? null : r4(mA ? m.value! * 1000 : m.value), unit: mA ? 'mA' : m.unit, text: m.text }, negative: wrongWay, note,
       };
     },

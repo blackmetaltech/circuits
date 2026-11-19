@@ -33,3 +33,8 @@ Nothing (all workers stopped/landed; working tree clean at handoff).
 
 ## HALT (2026-11-10, user order) - WIP
 M1 engine tasks A4, B2, B3, C1, C2, C3, D2b, E1, E2 committed and green. M2-4 Godot bench world committed. M2-1 engine wiring (src/engine/actions, queries, board, src/sim/live.ts, src/data/levels) is an UNFINISHED worker WIP commit (tests may be red; check pnpm test). Live-frame profiling on Pixel not yet read (spike logs solve/ser ms; .qa/node-circuits/liveframe.sh). M2-2/3/5/6/7 and gates not started.
+
+## 2026-11-20 engine lane for chapter 1 (M2-1 wiring + M2-2 data)
+Engine finished for the Godot rebuild: board/probe/DMM/run actions, `bench` `liveFrame` `coach` `scope` (band + lock) `dmm` `wallet` `chapterMap` `ghost` queries, tickets 1-1..1-5 with oracles/tests
+(`src/engine/ch1.test.ts`), payment on pass, exam-bridge stars. Contract and examples: docs/API-CH1.md (incl. the deviations from DESIGN §2.8 that need director sign-off).
+Not done: NiMH reality check for 1-5, tolerance star (runTolerance), M2-3 verify/board-code, Pixel profiling of the live frame.

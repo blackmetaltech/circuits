@@ -1,7 +1,7 @@
 // Chapter 1 "First Light" (tickets 1-1 .. 1-5): every naive build fails for the stated reason, every ref passes, bands are calibrated, and the UI queries
 // (bench, liveFrame, ticketCard, coach, scope, dmm, wallet, chapterMap, ghost) answer from the real engine. DESIGN §2.8, docs/API-CH1.md.
 import { describe, expect, it } from 'vitest';
-import { Engine, createProtocol, play } from '@core/kit';
+import { Engine, createProtocol } from '@core/kit';
 import { GAME } from '../game';
 import { LEVEL_DEFS } from '../data/levels';
 import { refActions } from './replay';
@@ -274,7 +274,11 @@ describe('UI queries and board actions', () => {
     const e = new Engine(GAME); e.autosave = false;
     for (const d of CH1) { ok(e, 'openTicket', d.id); runRef(e, d.id); expect(bench(e).pass, d.id).toBe(true); ok(e, 'closeTicket'); }
     expect(q(e, 'chapterMap').complete).toBe(true); expect(st(e).progress.wallet).toBeGreaterThan(2000);
-    const p = createProtocol(GAME); expect(p).toBeTruthy(); void play;
+    // the sidecar protocol exposes the whole contract of docs/API-CH1.md
+    const h = createProtocol(new Engine(GAME)); const init = (h({ id: 1, fn: 'init' }).result as any);
+    expect(init.actions).toEqual(expect.arrayContaining(['wire', 'unwire', 'dmmLead', 'dmmDial', 'setRunning', 'power', 'attachProbe', 'detachProbe', 'predict']));
+    expect(init.queries).toEqual(expect.arrayContaining(['bench', 'liveFrame', 'ticketCard', 'coach', 'scope', 'dmm', 'wallet', 'chapterMap', 'ghost', 'shoebox']));
+    expect(h({ id: 2, fn: 'q', name: 'wallet' }).ok).toBe(true);
   });
   it('the state stays JSON and the state hash is the same on a fresh replay (determinism)', () => {
     const run = () => { const e = open('1-2'); runRef(e, '1-2'); ok(e, 'runBench'); powerUp(e, 4); return JSON.stringify([e.state, q(e, 'liveFrame'), q(e, 'scope')]); };
