@@ -50,7 +50,7 @@ const IDEAL_THERMAL = { thetaJA: 1, tauS: 1, tMax: 1000, tFail: 2000 }; // never
 
 export const idealV: PartDef = {
   id: 'ideal-vsource', kind: 'MISC', nameKey: 'part.ideal-vsource.name', footprint: 'block2', pins: ['+', '-'],
-  variants: [variant('ideal', {}, IDEAL_THERMAL)], model: { r: 0 },
+  variants: [variant('ideal', {}, IDEAL_THERMAL)], model: { emf: 0, r: 0 },
   source: { doc: IDEAL_DOC, definition: true, note: 'V = E for every current; r = 0. Textbook bins only (DESIGN §3.7). [R] no thermal model (ideal parts never heat).' },
   verified: true, scope: 'campaign', simplifications: [],
 };

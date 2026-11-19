@@ -122,7 +122,8 @@ const unitOf = (d: PartDef): string => (d.kind === 'C' || d.kind === 'CE' ? 'F' 
 
 /** Allowed values of a part under a bin entry (null = the part has no value). */
 export function allowedValues(d: PartDef, entry: BinEntry | null): number[] | null {
-  if (!d.values) return null;
+  // a bin entry with an explicit list gives values to a part the catalogue leaves valueless (textbook ideal sources / exact resistors)
+  if (!d.values) return Array.isArray(entry?.values) ? entry!.values.slice() : null;
   const v = entry?.values;
   if (Array.isArray(v)) return v.slice();
   if (v === 'E12' || v === 'E24') {

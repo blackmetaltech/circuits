@@ -66,6 +66,32 @@ export interface HintDef {
   equation?: { key: string; vars: Record<string, HintExpr> };
 }
 
+/** Where Wren's hand-drawn arrow points. The query resolves it to a uid / pad on the live board (`coach` in API-CH1.md). */
+export type CoachAnchor =
+  | { target: 'bin'; partId: string }
+  | { target: 'part'; partId: string; pin?: string }
+  | { target: 'connector'; connector: string }
+  | { target: 'power' | 'scope' | 'dmm' | 'bench' | 'chit' | 'notebook' };
+
+/**
+ * One coach step (DESIGN §7.1). Steps advance on ENGINE conditions, never timers. A step is the active one when `when` holds (default: always) and
+ * `done` does not, scanning in order. Conditions are `&`-joined atoms, `!` negates: `always`, `part:<partId>` (one is on the board), `wired` (every placed
+ * part has every pin on a node shared with another pin or a connector), `powered`, `flowing` (powered and solved), `smoked`, `benched` (a bench run is on record),
+ * `passed` (the last bench passed), `failed`, `probing` (a scope probe or the DMM is attached), `measured` (the DMM shows a reading), `predicted` (every prediction is entered).
+ */
+export interface CoachStep { id: string; key: string; anchor: CoachAnchor; done: string; when?: string }
+
+/** The one quantity the scope's amber band is drawn for (DESIGN §5.3): a bench spec of kind `level`, shown in `unit` (V, A or W). */
+export interface GaugeDef {
+  /** Spec id (a `level` spec in `bench.specs`). */
+  spec: string;
+  unit: 'V' | 'A' | 'W';
+  /** Connector id to clip CH1 on when the spec is a node voltage (the arrow's target); the trace then comes from the real probe. */
+  clip?: string;
+  /** The spec quantity is a source's terminal current / power (negative when it delivers): show its magnitude. */
+  flip?: boolean;
+}
+
 export interface LevelDef {
   id: string;
   chapter: number;
@@ -96,6 +122,14 @@ export interface LevelDef {
   /** Reference solution the expert persona replays: parts in placement order (uids are assigned p1, p2... in that order) and wires. */
   ref: { parts: Omit<PlacedPart, 'uid'>[]; wires: Pad[][]; /** Exam-bridge predictions the expert enters (spec id -> value). */ predictions?: Record<string, number> };
   scope: 'must' | 'stretch';
+  /** Payment in the pack currency's minor units: `fee` on the first pass plus `perStar` for every star earned for the first time (estimates: game values). */
+  pay?: { fee: number; perStar: number };
+  coach?: CoachStep[];
+  gauge?: GaugeDef;
+  /** Exam-bridge ticket (printed exam card, predict then probe). */
+  eb?: boolean;
+  /** Where the ticket's chit hangs on the chapter-1 notebook page, in 0..1 page coordinates. */
+  chit?: { x: number; y: number };
   /** Chapter-1 tickets of the vertical slice etc.; a ticket unlocks when every id here is passed (empty = open). */
   after?: string[];
 }

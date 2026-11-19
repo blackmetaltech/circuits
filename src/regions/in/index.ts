@@ -24,7 +24,7 @@ export const IN = defineRegion<NodeRegionData>({
   strings: {
     stall: 'Stall 14', lane: 'Signal Gully', mentor: 'Meera Aunty', cat: 'Rezzy',
     'customer.kid_torch': 'Priya', 'customer.cyclist': 'Arjun', 'customer.aquarium': 'Mr. Iyer', 'customer.toycar': 'Bunty', 'customer.weather': 'Kavya',
-    'customer.irrigation': 'Ravi', 'customer.wallwart': "Mrs. D'Souza", 'customer.radio': 'Abba', 'customer.musician': 'Lata',
+    'customer.exam': 'The exam desk', 'customer.irrigation': 'Ravi', 'customer.wallwart': "Mrs. D'Souza", 'customer.radio': 'Abba', 'customer.musician': 'Lata',
   },
   leakMarkers: ['₹', 'lakh', 'crore', 'Diwali', 'NCERT', 'JEE', 'bazaar', 'Lamington'],
 }, validateNodeData);
