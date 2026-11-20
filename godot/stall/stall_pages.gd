@@ -200,12 +200,12 @@ func _map(a: float) -> void:
 		S.text(self, f, str(tk.spec), q.position + Vector2(14, 144), 18, Color(S.INK, 0.9 if open else 0.4), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 26)
 		var fee: String = str(tk.get("price_text", "")) if str(tk.get("price_text", "")) != "" else "%d coins" % int(tk.price)
 		S.text(self, f, fee, q.position + Vector2(q.size.x - 20 - S.tw(f, fee, 17), 48), 17, Color(S.INK, 0.7))
-		if int(tk.get("stars", 0)) > 0: S.text(self, f, "*".repeat(int(tk.stars)), q.position + Vector2(q.size.x - 20 - S.tw(f, "*".repeat(int(tk.stars)), 26), 76), 26, S.INK_RED)
+		if int(tk.get("stars", 0)) > 0: S.text(self, f, "*".repeat(int(tk.stars)), q.position + Vector2(118, 52), 30, S.INK_RED)
 		if tk.done:
-			draw_set_transform(cr.get_center() + Vector2(cr.size.x * 0.28, -cr.size.y * 0.12), deg_to_rad(-12), Vector2.ONE)
+			draw_set_transform(cr.get_center() + Vector2(cr.size.x * 0.27, -cr.size.y * 0.01), deg_to_rad(-12), Vector2.ONE)
 			S.rr_line(self, Rect2(-52, -20, 104, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5); S.text(self, f, "FIXED", Vector2(-36, 10), 26, Color(0.1, 0.55, 0.2, 0.9))
 		elif not open:
-			S.text(self, f, "locked", q.position + Vector2(q.size.x - 96, q.size.y - 20), 18, Color(S.INK, 0.45))
+			S.text(self, f, "locked", q.position + Vector2(q.size.x - 86, 78), 18, Color(S.INK, 0.45))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		if hv: S.rr_line(self, Rect2(cr.position + Vector2(-3, lift - 3), cr.size + Vector2(6, 6)), 4, Color("#ffd98a", 0.85), 3.0)
 	# back to the title
