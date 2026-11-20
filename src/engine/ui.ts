@@ -75,6 +75,10 @@ export function evalCond(expr: string | undefined, s: NodeState, tk: TicketState
     else if (atom === 'failed') v = !!tk.lastBench && !tk.lastBench.pass;
     else if (atom === 'probing') v = tk.board.probes.length > 0 || (tk.board.meter.mode !== 'off' && tk.board.meter.pads.length === 2);
     else if (atom === 'probed') v = tk.probed === true;
+    else if (atom.startsWith('joined:')) {   // the named connector has a part leg on its node (the A pad is where the junction must be, not just anywhere)
+      const c = tk.board.connectors.find((x) => x.id === atom.slice(7)), conn = liveRig(tk, def).conn, n = c ? conn.nodeOfPad(c.pad) : -1;
+      v = n >= 0 && (conn.nodes[n]?.pins.length ?? 0) > 0;
+    }
     else if (atom === 'measured') { const m = deps.Q.meter!(s) as { value: number | null } | null; v = !!m && m.value !== null; }
     else if (atom === 'predicted') v = def.bench.specs.filter((x) => x.kind === 'predict').every((x) => tk.predictions[x.id] !== undefined);
     else v = false;

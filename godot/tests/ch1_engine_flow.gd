@@ -8,15 +8,25 @@ var bk: EngineBench
 var fails := 0
 var checks := 0
 var evlog: Array = []
+var trap := ErrorTrap.new()
+const NO_ID := "\\b[pf]\\d+\\b"   # a part id (p1, f2) must never reach the player's eyes
 
 func _initialize() -> void:
 	OS.set_environment("CB_NOSAVE", "1")
+	OS.add_logger(trap)
 	_run()
 
 func ok(cond: bool, what: String) -> void:
 	checks += 1
 	if cond: print("  ok   ", what)
 	else: fails += 1; print("  FAIL ", what)
+
+func _no_id(s: String) -> bool:
+	var re := RegEx.new(); re.compile(NO_ID)
+	return re.search(s) == null
+
+func _click_rect(r: Rect2) -> void:
+	var p := r.get_center(); sc._motion(p); sc._press(p)
 
 func _frames(n: int) -> void:
 	for i in n: await process_frame
@@ -114,6 +124,7 @@ func _build(id: String) -> bool:   # the level's reference design, dragged in by
 	return good
 
 func _start(id: String) -> void:
+	sc.size = Vector2(1920, 1080)   # the desk the checks are written for (something in the headless window resets it)
 	sc.start_ticket(id)
 	await _frames(4)
 	evlog.clear()
@@ -122,6 +133,7 @@ func _start(id: String) -> void:
 
 func _run() -> void:
 	sc = StallScene.new(); root.add_child(sc)
+	sc.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT); sc.size = Vector2(1920, 1080)   # a known desk (the headless window default is not, and a full-rect anchor would follow it)
 	await _frames(6)
 	if not sc.backend.ENGINE:
 		print("FAIL the engine sidecar did not start (build it: npx vite build -c vite.bridge.config.ts)"); quit(2); return
@@ -168,10 +180,17 @@ func _run() -> void:
 	_rocker(); _clock(0.5)
 	ok(bk.smoked.size() == 1, "the LED across the battery smokes at once")
 	ok(str(bk.frame.events[0].text).begins_with("Burned: too much current,") and str(bk.frame.events[0].text).contains("mA vs 30 mA max"), "engine note: %s" % str(bk.frame.events[0].text).left(70))
+	var b1: String = str(bk.frame.events[0].text)
+	ok(b1.contains("voltage law") and not b1.contains("470") and not b1.contains("R = ") and _no_id(b1), "FIRST burn: the cause and KVL, no 470, no part id")
+	var cvb: Dictionary = bk.coach_view()
+	ok(str(cvb.steps[cvb.cur].text).contains("burned") and not str(cvb.steps[cvb.cur].text).to_lower().contains("clip"), "the coach says the LED burned (%s)" % str(cvb.steps[cvb.cur].text).left(50))
 	ok(sc.top.toast.begins_with("Burned: too much current"), "the toast shows the engine's burned note")
 	ok(bk.model.led["p1"].mood == "cracked", "the cute-mode LED face is cracked")
 	_ctrl_z()
 	ok(bk.smoked.is_empty() and sc.top.toast.contains("Fresh part"), "Ctrl+Z after a burn swaps in a fresh LED (%s)" % sc.top.toast)
+	bk.set_power(false); bk.set_power(true); _clock(0.5)   # burn it again: the SECOND burn gets the worked formula
+	ok(bk.smoked.size() == 1 and str(bk.frame.events[0].text).contains("Burned again") and str(bk.frame.events[0].text).contains("R = (9 V - 2") and _no_id(str(bk.frame.events[0].text)), "SECOND burn: the worked formula (%s)" % str(bk.frame.events[0].text).left(60))
+	_ctrl_z()
 	await _start("1-1")
 	_drag_part("led-red-5mm", null, "5mm", 8, 5, 0)
 	sc.run_bench()
@@ -226,6 +245,11 @@ func _run() -> void:
 	var conds: Array = bk.ticket.conditions
 	ok(conds.size() == 2 and str(conds[0].id) == "fresh" and str(conds[1].id) == "tired", "the ticket carries both battery conditions: fresh and tired")
 	ok(sc.supply.conditions.size() == 2, "the battery holder shows the bench-test tag")
+	_drag_part("led-red-5mm", null, "5mm", 8, 5, 0); _drag_wire([2, 2], [8, 5]); _drag_wire([10, 5], [8, 2])
+	_rocker(); _clock(0.5)
+	var cv2: Dictionary = bk.coach_view()
+	ok(bk.smoked.size() == 1 and str(cv2.steps[cv2.cur].id) == "burned" and str(cv2.steps[cv2.cur].text).begins_with("The LED burned") and _no_id(str(cv2.steps[cv2.cur].text)), "1-2: a burnt LED -> the coach says so, not 'clip the meter' (%s)" % str(cv2.steps[cv2.cur].text).left(40))
+	await _start("1-2")
 	# naive: 180 ohm passes the live (fresh) band but the bench's tired battery fails it
 	var R2: Dictionary = EngineBench.REFS["1-2"]
 	_drag_part("res-cf", 180, "0.25W", 2, 5, 0)
@@ -267,6 +291,20 @@ func _run() -> void:
 	ok(seen.hot, "the 1/4 W resistor glows (warm / hot state from the engine) before it goes")
 	ok(bk.smoked.size() == 1 and evlog.has("smoked"), "NAIVE: 22 ohm 1/4 W smokes after thermal time (0.61 W in 0.25 W) %s %s" % [str(bk.smoked.keys()), str(evlog)])
 	ok(str(bk.frame.events[0].kind) == "smoke" and str(bk.frame.events[0].text).contains("rated"), "the smoke explanation names the rating")
+	ok(str(bk.frame.events[0].text).begins_with("The 22 \u03a9 \u00bc W resistor") and _no_id(str(bk.frame.events[0].text)), "and the part by name, not by id: %s" % str(bk.frame.events[0].text).left(34))
+	# the shoebox: 15 parts need scrolling; one row per wheel notch or arrow click, arrows only where there is somewhere to go
+	var inner: Rect2 = sc.props.box_inner(); var nitems: int = sc.props.items.size(); var mx: int = StallProps.max_scroll(inner, nitems)
+	print("   (desk %s, box %s, inner %s)" % [str(sc.size), str(sc.L.box), str(inner)])
+	ok(mx > 0 and StallProps.arrows(inner, nitems, 0).down.size != Vector2.ZERO and StallProps.arrows(inner, nitems, 0).up.size == Vector2.ZERO, "1-3 shoebox: %d parts, %d rows hidden: a down arrow at the top, no up arrow" % [nitems, mx])
+	var bc: Vector2 = (sc.L.box as Rect2).get_center()
+	sc._wheel(bc, -1); sc._wheel(bc, -1)
+	ok(sc.props.bin_scroll == 2, "two wheel notches scroll two rows (%d)" % sc.props.bin_scroll)
+	_click_rect(StallProps.arrows(inner, nitems, sc.props.bin_scroll).down)
+	ok(sc.props.bin_scroll == 3, "an arrow click scrolls one row (%d)" % sc.props.bin_scroll)
+	for k in 12: sc._wheel(bc, -1)
+	ok(sc.props.bin_scroll == mx and StallProps.arrows(inner, nitems, mx).down.size == Vector2.ZERO and StallProps.arrows(inner, nitems, mx).up.size != Vector2.ZERO, "it stops at the last row (%d): no down arrow, an up arrow" % sc.props.bin_scroll)
+	for k in 12: sc._wheel(bc, 1)
+	ok(sc.props.bin_scroll == 0, "and back to the top")
 	await _frames(3)
 	ok(sc.props.hot > 0.5 or sc.props.smoked, "Rezzy is awake")
 	# the Omega mode on the DMM: heater in parallel with what the zeroed supply leaves
@@ -297,6 +335,10 @@ func _run() -> void:
 	print("== 1-4 Tired Battery")
 	await _start("1-4")
 	ok(bk.ticket.supply.tired and sc.supply.tired, "the battery holder wears the 'tired' sticker (the engine's tired PP3)")
+	ok(_build("1-4"), "the load is built")
+	evlog.clear(); _bench_key()
+	ok(evlog.has("bench_failed") and not bk.passed and sc.top.toast.begins_with("Measure it first"), "1-4: the bench refuses until the pack has been measured (%s)" % sc.top.toast.left(40))
+	await _start("1-4")
 	_rocker()
 	_drag_probe("red", [2, 2]); _drag_probe("black", [8, 2])
 	_clock(0.3)
@@ -318,15 +360,26 @@ func _run() -> void:
 	print("== 1-5 EB Two Batteries (predict first)")
 	await _start("1-5")
 	ok(sc.pages.mode == "predict" and sc.pages.pred_fields.size() == 2, "the exam slip asks for V(A) and I(E2) before building")
+	var fig: Dictionary = bk.ticket.get("figure", {}) if bk.ticket.get("figure", null) is Dictionary else {}
+	ok(fig.get("node", "") == "A" and fig.sources.size() == 2 and float(fig.sources[0].volts) == 10.0 and float(fig.sources[1].r.ohm) == 3.0 and float(fig.load.ohm) == 6.0, "the engine hands over the exam figure: E1 10 V + R1 2, E2 5 V + R2 3, R3 6 to ground, node A")
+	ok(not sc.props.exam_fig.is_empty() and str(bk.ticket.pay_text).contains("per new star"), "the problem card is on the bench, and the chit explains the payout (%s)" % str(bk.ticket.pay_text))
+	ok(sc.supply.kind == "sources" and sc.supply.sources.size() == 2 and sc.supply.label == "textbook sources", "the supply panel lists the two ideal sources (not a single-battery 0.0 V display)")
+	ok(sc.pages.coach_ticket.get("id", "") == "1-5", "the notebook header is this ticket, 1-5 (%s)" % str(sc.pages.coach_ticket.get("id", "")))
 	_type("6.6667"); _key(KEY_TAB); _type("0.5556")
 	ok(sc.pages.pred_fields[0].text == "6.6667" and sc.pages.pred_fields[1].text == "0.5556", "digits typed into the slip fields")
 	_key(KEY_ENTER)
 	ok(sc.pages.mode == "" and bk.predictions_done(), "Enter locks both predictions into the engine")
 	ok(_build("1-5"), "the exam bridge (R1 2, R2 3, R3 6 ohm) is built by pointer")
 	_rocker()
+	_drag_probe("ch1", [8, 7])   # NOT the brass A pad: R3's top leg, which is node A as well
+	_clock(0.4); await _frames(2)
+	ok(sc.scope.attached and absf(bk.scope_value() - 6.6667) < 0.001, "a clip on R3's top leg is on node A: the scope reads %.4f V (it read 0 when only the exact connector pad counted)" % bk.scope_value())
+	_drag_probe("red", [8, 6]); _drag_probe("black", [8, 12]); _clock(0.3)
+	ok(bk.dmm().text.begins_with("6.66") or bk.dmm().text.begins_with("6.67"), "the DMM across A and GND reads %s V" % bk.dmm().text)
 	_drag_probe("ch1", [8, 6])
 	_clock(0.4); await _frames(2)
 	ok(sc.scope.attached and absf(bk.scope_value() - 6.6667) < 0.001, "V(A) on the scope: %.4f V" % bk.scope_value())
+	ok(str(sc.supply.label) == "textbook sources" and not (sc.supply.kind == "bench"), "the supply panel never claims a 0.0 V bench supply on 1-5")
 	ok(bk.locked, "LOCK on the 0.1 % band")
 	_bench_key()
 	ok(bk.passed and bk.last_result.stars == 3, "the BENCH key checks the predictions and the build: 3 stars (%s)" % str(bk.last_result.predictions.map(func(p): return p.gradeText)))
@@ -339,11 +392,30 @@ func _run() -> void:
 	_bench_key()
 	ok(not bk.passed and sc.pages.mode == "predict", "the bench refuses until the predictions are in, and the slip opens again")
 	_key(KEY_ESCAPE)
+	ok(sc.pages.mode == "", "'later' closes the slip")
+	_click_rect(sc.L.exam)
+	ok(sc.pages.mode == "predict", "the exam slip on the bench reopens it after 'later'")
+	_key(KEY_ESCAPE)
 
 	print("== the chapter map")
 	sc.go_map(); await _frames(3)
 	var done_n := 0
 	for tk in sc.pages.tickets: if tk.done: done_n += 1
 	ok(done_n == 5 and sc.pages.wallet_text == bk.wallet_text, "the map shows five FIXED chits and the engine wallet (%s)" % sc.pages.wallet_text)
+	var t11: Dictionary = sc.pages.tickets[0]
+	ok(str(t11.pay_text) == "fee $3.00 + $1.00 per new star" and int(t11.stars_max) == 2, "a chit explains its payout: %s" % str(t11.pay_text))
+	var w_before: int = bk.wallet_minor
+	var btn := {}
+	for b in sc.pages._buttons: if b.id == "ticket" and b.arg == "1-1": btn = b
+	ok(not btn.is_empty(), "the FIXED 1-1 chit is a button")
+	if not btn.is_empty():
+		var ev := InputEventMouseButton.new(); ev.pressed = true; ev.button_index = MOUSE_BUTTON_LEFT; ev.position = (btn.rect as Rect2).get_center()
+		sc.pages._gui_input(ev)
+	await _frames(4)
+	ok(sc.phase == "bench" and bk.ticket.id == "1-1" and bk.parts.filter(func(p): return not p.fixed).is_empty(), "clicking a FIXED chit reopens the ticket on a fresh board")
+	ok(_build("1-1"), "replay: the torch is built again")
+	_rocker(); _clock(6.0, func(): return bk.passed)
+	ok(bk.passed and bk.wallet_minor == w_before, "replay: it passes again and pays nothing twice (wallet %s)" % bk.wallet_text)
+	ok(trap.count == 0, "zero script errors in the whole run (%d: %s)" % [trap.count, str(trap.lines.slice(0, 3))])
 	print("\n%d checks, %d failed" % [checks, fails])
 	quit(1 if fails > 0 else 0)

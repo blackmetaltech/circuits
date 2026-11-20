@@ -36,7 +36,7 @@ A refused action returns `ok:false` with a teaching `message`. Queries never mut
 | `dmmDial` | `'off'|'dcv'|'dca'|'ohm'` | V / mA / ohm. `dca` puts a 0.1 ohm burden in the leg (the DMM is in series between its leads) |
 | `setSupply` | `v, ilim` | bench supply (1-3); `setScope` for time/div, volts/div |
 | `predict` | `id, value` | exam bridge (1-5): enter before benching |
-| `runBench` | | formal test (all conditions). `{pass, stars, metrics, pay}` |
+| `runBench` | `[coached]` | formal test (all conditions). `{pass, stars, metrics, pay}`. The player's own bench button passes `true`: a ticket with `measureFirst` (1-4) then refuses with "Measure it first..." until the meter leads or the scope clip have been on the board once (`tk.probed`) |
 | `undo` / `redo` / `replaceSmoked` / `hint` | `[uid]` | hint rungs: nudge, equation with your numbers, ghost part |
 
 ## Queries
@@ -155,7 +155,17 @@ Steps advance on engine state (never a timer). `active` is the first step that i
 | `chit` | | the ticket chit |
 | `notebook` | | the notebook |
 
-A `part` anchor falls back to `bin` while that part is not on the board yet. 1-1 has 7 steps (place LED, wire it, power on, the smoke branch `undo-smoke`, `see-dots`, run bench, done).
+A `part` anchor falls back to `bin` while that part is not on the board yet.
+N2 additions. **A burnt part** (any ticket, unless the ticket's own burn step is the active one) puts a first row `{id:'burned', text:'The LED burned: undo it (Ctrl+Z) or swap it...', anchor:{target:'part', uid, pad}}` in front of the steps and makes it the active one, so the coach never moves on to "clip the meter" over a smoking part. **Optional steps** (`optional: true` in the level file: the measuring steps of 1-1, 1-2, 1-3, 1-5) never hold the coach back: the next required step is active and its text carries `Optional: ...` for the pending one. 1-4 measuring is required (`measureFirst`). `done: 'probed'` = the meter leads or scope clip have been on the board at least once. 1-1 has 7 steps (place LED, wire it, power on, the smoke branch `undo-smoke`, `see-dots`, run bench, done).
+
+### Part names (N2)
+No message the engine writes carries a part id. `placePart` says `Placed the 100 Ω ¼ W resistor.`; moves, rotations, deletes, value / rating changes, replacements, wire landings (`the LED leg A +`), pad clashes, burns, rating and bench failures all name the part: `the LED` (`LED 1` / `LED 2` when there are several), `the 100 Ω ¼ W resistor` (a second one with the same value is `(no. 2)`), `the battery`, `the heater`, `source E1`. Sentence-start forms are capitalised by the engine.
+
+### Burn text follows the live circuit (N2)
+An LED burn (instant crack or thermal) is explained from the actual board: a bare LED on the battery says only the battery's own r and the LED's own r limited the current; with a resistor on the board it names it ("the 100 Ω ¼ W resistor ... was too small") and uses the measured mA. Cadence: the **first** failure on a ticket explains the cause and points at Kirchhoff's voltage law (the battery's V minus the LED's ~2 V must fall across something that limits the current to about 15 mA) without a resistor value; a **repeat** (`Burned again`) gives the worked formula `R = (9 V - 2 V) / 15 mA = about 470 Ω`.
+
+### Exam figure and payout text (N2)
+`ticketCard().figure` (exam-bridge tickets) = `{node:'A', sources:[{name:'E1', volts:10, r:{name:'R1', ohm:2}}, ...], load:{name:'R3', ohm:6}}`: what the exam slip draws (the one place a schematic is allowed). `ticketCard().payText` and `chapterMap().tickets[].payText` = `fee $3.00 + $1.00 per new star` (also `starsMax`, `perStar`, `best.costText`); a FIXED ticket can be reopened from the notebook to earn more stars or a lower cost; only new stars pay. `scope().target.clipped` is true for a CH1 clip anywhere on the node of the gauge connector (R3's top leg is node A as much as the brass A pad).
 
 ### `benchResult()` - after `runBench`
 `{pass, stars, metrics:{cost,parts,power,area}, costText, pay, payText, smoked:[uid], specs:[{id,key,name,pass,margin}], failures:[{key,vars,text}], predictions:[{id,name,entered,truth,grade,gradeText,gap}], badSamples}`.

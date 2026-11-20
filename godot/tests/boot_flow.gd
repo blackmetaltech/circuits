@@ -22,7 +22,7 @@ func _frames(n: int) -> void:
 	for i in n: await process_frame
 
 func _size(w: int, h: int) -> void:
-	root.size = Vector2i(w, h)
+	sc.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)   # a fixed desk size (a full-rect anchor would follow the headless window)
 	sc.size = Vector2(w, h)
 	await _frames(4)
 
@@ -35,7 +35,7 @@ func _run() -> void:
 		print("== %dx%d" % [res.x, res.y])
 		await _size(res.x, res.y)
 		sc.go_title(); await _frames(30)
-		ok(sc.pages.mode == "title", "the title is up")
+		ok(sc.pages.mode == "title" and sc.size == Vector2(res.x, res.y), "the title is up at %s" % str(sc.size))
 		sc._on_page("new", ""); await _frames(10)
 		ok(sc.pages.mode == "map", "New game opens the chapter map")
 		await _frames(30)
