@@ -101,7 +101,7 @@ func _draw() -> void:
 	_panel()
 
 func _band_back() -> void:
-	if sc.is_empty(): return
+	if sc.is_empty() or bool(sc.get("hidden", false)): return
 	var y1 := _y_of(float(sc.hi)); var y0 := _y_of(float(sc.lo))
 	if y0 - y1 < 7.0: var m := (y0 + y1) * 0.5; y1 = m - 3.5; y0 = m + 3.5
 	var col := S.PHOS if locked else S.AMBER
@@ -188,7 +188,7 @@ func _draw_glow(ci: Control) -> void:
 		var x := SCREEN.position.x + fposmod(t / SWEEP, 1.0) * SCREEN.size.x
 		S.glow(ci, Vector2(x, _y_of(0.0)), 14.0, Color(0.4, 1.0, 0.45, 0.35))
 		ci.draw_line(Vector2(SCREEN.position.x, _y_of(0.0)), Vector2(SCREEN.end.x, _y_of(0.0)), Color(tr, 0.05), 3.0)
-	if not sc.is_empty():
+	if not sc.is_empty() and not bool(sc.get("hidden", false)):
 		var y1 := _y_of(float(sc.hi)); var y0 := _y_of(float(sc.lo))
 		var col := S.PHOS if locked else S.AMBER
 		S.glow(ci, Vector2(SCREEN.get_center().x, (y0 + y1) * 0.5), 200.0, Color(col, 0.05 + (0.14 * _lock_flash if locked else 0.0)))

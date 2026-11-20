@@ -138,8 +138,9 @@ func _load_ticket() -> void:
 		"specs": card.get("specs", []), "targets": card.get("targets", []), "conditions": card.get("conditions", []), "predictions": card.get("predictions", []),
 		"supply": supply, "board": {"w": int(bench_q.get("w", 24)), "h": int(bench_q.get("h", 16)), "connectors": conns}}
 	_scope_setup(tg)
-	ticket["spec"] = _short_spec(tg)
+	ticket["spec_full"] = _short_spec(tg)
 	ticket["scope"] = scope_view
+	_exam_hide()
 	_rebuild_model()
 
 func _supply_info() -> Dictionary:
@@ -330,7 +331,14 @@ func set_dial(mode: String) -> void:
 func predict(id: String, value: float) -> Dictionary:
 	var r := _act("predict", [id, value])
 	card = _q("ticketCard"); ticket["predictions"] = card.get("predictions", [])
+	_exam_hide()
 	return {"ok": bool(r.get("ok", false)), "msg": str(r.get("message", ""))}
+
+## Exam bridge: predict first. The target band (chit and scope) stays hidden until every prediction is locked in, or it gives the answer away.
+func _exam_hide() -> void:
+	var hide := bool(ticket.get("eb", false)) and not predictions_done()
+	scope_view["hidden"] = hide
+	ticket["spec"] = "predict first, then build" if hide else str(ticket.get("spec_full", ""))
 
 func predictions_done() -> bool:
 	for p in ticket.get("predictions", []): if p.get("entered", null) == null: return false
