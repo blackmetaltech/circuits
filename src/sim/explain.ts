@@ -204,6 +204,19 @@ export function explainLevelMiss(f: BenchFailure, ctx: MissCtx = {}): Explained 
   return { key: `bench.plain.${q}.${low ? 'low' : 'high'}.${open}`, vars };
 }
 
+/** The solver stalled: say what the bench last saw, in the player's units, and never mention the solver. */
+function explainStuck(f: BenchFailure, ctx: MissCtx = {}): Explained | null {
+  const v = f.vars, value = Number(v.value), probe = String(v.probe ?? '');
+  const m = /^([ivp])\((.*)\)$/.exec(probe);
+  if (!Number.isFinite(value) || !m) return null;
+  const q = m[1]!, arg = m[2]!;
+  const what = q === 'v' ? arg.split(',')[0]!.toUpperCase() : ctx.names?.[arg];
+  if (what === undefined) return null;
+  const unit = q === 'i' ? 'mA' : q === 'v' ? 'V' : 'W', k = q === 'i' ? 1000 : 1;
+  const cond = String(v.cond ?? 'nominal');
+  return { key: 'bench.stuck.last', vars: { what, value: sig(Math.abs(value) * k, 3), unit, cond: cond === 'nominal' ? '' : ` in the ${cond} test` } };
+}
+
 export interface ExplainContext {
   /** Part names and kinds for the plain-words bench failures (explainLevelMiss). */
   miss?: MissCtx;
@@ -253,6 +266,7 @@ function explainRaw(f: BenchFailure, ctx: ExplainContext): Explained {
       break;
     }
     case 'bench.level.fail': case 'bench.metric.fail': { const e = explainLevelMiss(f, ctx.miss); if (e) return e; break; }
+    case 'tran.noConverge': case 'solve.noConverge': { const e = explainStuck(f, ctx.miss); if (e) return e; return { key: 'bench.stuck', vars: { cond: String(v.cond ?? 'nominal') === 'nominal' ? '' : ` in the ${String(v.cond)} test` } }; }
     default: break;
   }
   return { key: f.key, vars: f.vars };

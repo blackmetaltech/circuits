@@ -84,6 +84,8 @@ export interface NewtonOpts {
   kclAbs?: number;
   /** Max step halvings when the residual norm grows more than 2x (default 6). */
   maxHalvings?: number;
+  /** Residual 2-norm at or below which the damping test is skipped (default 0: always on). A retry after a stall at the rounding floor sets ~1e-12. */
+  noiseFloor?: number;
   ws?: Workspace;
   state?: number[];
   /** Extra stamps added after assembly (pseudo-transient capacitors). */
@@ -145,7 +147,7 @@ export function solveNewton(ckt: Circuit, x0: ArrayLike<number>, o: NewtonOpts =
   const c = ws.ctx; if (o.state) c.state = o.state;
   const tran = o.mode === 'tran';
   const maxIter = o.maxIter ?? (tran ? 25 : 150);
-  const reltol = o.reltol ?? 1e-4, vntol = o.vntol ?? 1e-6, abstol = o.abstol ?? 1e-12, kclAbs = o.kclAbs ?? 1e-9, maxHalv = o.maxHalvings ?? 6;
+  const reltol = o.reltol ?? 1e-4, vntol = o.vntol ?? 1e-6, abstol = o.abstol ?? 1e-12, kclAbs = o.kclAbs ?? 1e-9, maxHalv = o.maxHalvings ?? 6, noiseFloor = o.noiseFloor ?? 0;
   const asm = { gmin: o.gmin ?? 1e-12, lambda: o.lambda ?? 1, time: o.time ?? 0, mode: o.mode ?? 'dc', method: o.method ?? 'BE', h: o.h ?? 0 } as const;
   const x = new Float64Array(dim), xp = new Float64Array(dim), d = new Float64Array(dim), xNew = ws.xNew, r = new Float64Array(dim);
   for (let i = 0; i < dim; i++) x[i] = x0[i] ?? 0;
@@ -157,8 +159,10 @@ export function solveNewton(ckt: Circuit, x0: ArrayLike<number>, o: NewtonOpts =
   for (let it = 1; it <= maxIter + 1; it++) {
     let norm = stamp();
     let damped = false;
-    if (it > 1 && norm > 2 * prevNorm) {
-      for (let h = 1; h <= maxHalv && norm > 2 * prevNorm; h++) {
+    // (a residual already at the rounding floor, ~1e-16, jitters by more than 2x between iterations: that is noise, not divergence, and must never block convergence)
+    const noisy = (n: number): boolean => n <= noiseFloor;
+    if (it > 1 && norm > 2 * prevNorm && !noisy(norm)) {
+      for (let h = 1; h <= maxHalv && norm > 2 * prevNorm && !noisy(norm); h++) {
         const a = 1 / (1 << h);
         for (let i = 0; i < dim; i++) x[i] = xp[i] + d[i] * a;
         norm = stamp(); damped = true;

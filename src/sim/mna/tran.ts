@@ -114,7 +114,10 @@ function equilibrate(c: StampCtx): void {
   }
 }
 
-function newton(ws: TranWork, gmin: number, tNew: number, lambda: number, method: TranMethod, h: number, xGuess: Float64Array, cacheable: boolean, equil = false): Solve {
+/** `rescue`: last resort at the smallest step: skip the "residual grew 2x" damping test for a residual at the rounding floor (~1e-16). A guess that already IS the answer
+ * can fail that test on noise alone and spin to maxIter (found on the 1-1 LED + 220 ohm build). Only ever tried after every halving failed, so no trajectory that
+ * converged before changes (the goldens stay bit-exact). */
+function newton(ws: TranWork, gmin: number, tNew: number, lambda: number, method: TranMethod, h: number, xGuess: Float64Array, cacheable: boolean, equil = false, rescue = false): Solve {
   const { ckt, ctx } = ws, x = ws.x, xNew = ws.xNew;
   x.set(xGuess);
   const asm = { gmin, lambda, time: tNew, mode: 'tran' as const, method, h };
@@ -135,11 +138,12 @@ function newton(ws: TranWork, gmin: number, tNew: number, lambda: number, method
     return { ok: true, iters: 1, failure: null };
   }
   // nonlinear: op.ts `solveNewton` (damped Newton, limit hooks, KCL residual test) at this time / method / h
-  const r = solveNewton(ckt, x, {
-    gmin, lambda, time: tNew, mode: 'tran', method, h, maxIter: 50, state: ctx.state,
+  const opts = {
+    gmin, lambda, time: tNew, mode: 'tran' as const, method, h, maxIter: 50, state: ctx.state,
     ws: { ctx, solver: ws.solver, xNew },
-    extra: equil ? (c) => equilibrate(c) : undefined,
-  });
+    extra: equil ? (c: StampCtx) => equilibrate(c) : undefined,
+  };
+  const r = solveNewton(ckt, x, rescue ? { ...opts, noiseFloor: 1e-12 } : opts);
   x.set(r.x);
   if (r.ok) return { ok: true, iters: r.iterations, failure: null };
   if (r.reason === 'singular') return { ok: false, iters: r.iterations, failure: explainSingular(ckt, ctx.A, r.badColumn) };
@@ -265,8 +269,12 @@ export function tranAdvance(ws: TranWork, st: TranState, k: number, cb?: (s: Ste
       const nb = Math.min(nextBreakpoint(ws, st.t), st.tStop);
       const land = nb - st.t <= st.h + BP_EPS * st.h0;
       const hs = land ? nb - st.t : st.h, tNew = land ? nb : st.t + hs;
-      const r = newton(ws, st.gmin, tNew, rampAt(st.ramp, tNew), method, hs, xs, true);
+      let r = newton(ws, st.gmin, tNew, rampAt(st.ramp, tNew), method, hs, xs, true);
       st.stats.newtonIters += r.iters;
+      if (!r.ok && r.failure!.code !== 'singular' && st.h * 0.5 < st.h0 / MIN_H_DIVISOR * (1 - 1e-12)) {   // out of halvings: the rescue pass before giving up
+        r = newton(ws, st.gmin, tNew, rampAt(st.ramp, tNew), method, hs, xs, true, false, true);
+        st.stats.newtonIters += r.iters;
+      }
       if (!r.ok) {
         st.stats.rejected++;
         if (r.failure!.code === 'singular' || st.h * 0.5 < st.h0 / MIN_H_DIVISOR * (1 - 1e-12)) return { steps: taken, failure: r.failure };

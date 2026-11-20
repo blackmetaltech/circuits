@@ -68,11 +68,13 @@ export function runBench(ckt: Circuit, specs: readonly BenchSpec[], o: BenchOpti
     const t: number[] = [0], series: Record<string, number[]> = {};
     rec.forEach((p, i) => { series[p] = [fns[i](Float64Array.from(st.x), st.state)]; });
     const settleSeries = (): number[] => series[settleProbe!];
+    /** The headline probe at the last step the solver did accept (a stuck solve is never shown to the player: the explainer talks about this value). */
+    const lastGood = (): Record<string, string | number> => { const pr = probes[0]; const sr = pr === undefined ? undefined : series[pr]; return pr !== undefined && sr !== undefined && sr.length > 0 ? { probe: pr, value: sr[sr.length - 1]! } : {}; };
     let m = 1, found = -1;   // m: next period index whose (m-1, m) difference is to be tested
     const maxP = o.maxPeriods ?? 50, tol = o.settleTol ?? 0.005;
     for (;;) {
       const r = tranAdvance(ws, st, CHUNK, (s) => { t.push(s.t); rec.forEach((p, i) => series[p].push(fns[i](s.x, s.state))); });
-      if (r.failure) return fail(r.failure.key, { ...r.failure.vars, cond });
+      if (r.failure) return fail(r.failure.key, { ...r.failure.vars, cond, ...lastGood() });
       const now = t[t.length - 1];
       if (periodic) {
         while (found < 0 && m <= maxP && now >= (m + 1) * T - 1e-12 * T) { if (periodDiff(t, settleSeries(), (m - 1) * T, T) < tol) found = m; else m++; }

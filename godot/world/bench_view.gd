@@ -88,8 +88,21 @@ func _ready() -> void:
 ## Stall mode: the view lives in a SubViewport the size of the board area and shows the model the backend hands it.
 func set_model(mm: Dictionary) -> void:
 	if mm.is_empty(): return
-	if not is_same(model, mm): model = mm; source = "fixture"; _parts_dirty = true; _relayout_if_needed()
+	if not is_same(model, mm):
+		model = mm; source = "fixture"; _parts_dirty = true; _relayout_if_needed()
+		_restyle_if_needed()
 func mark_dirty() -> void: _parts_dirty = true
+
+## The board art (mask, silkscreen, brass connectors) is drawn by this control's own _draw, which Godot only re-runs on queue_redraw: a new ticket
+## with the same board size but other connectors (1-4 -> 1-5) must repaint it, or the last ticket's rail stays on the bench.
+var _art_key := ""
+func art_signature(mm: Dictionary) -> String:
+	var cs: Array = []
+	for c in mm.get("connectors", []): cs.append("%s@%s,%s:%s" % [str(c.get("id", "")), str(c.pad.x), str(c.pad.y), str(c.get("role", ""))])
+	return "%sx%s|%s" % [str(mm.get("w", 0)), str(mm.get("h", 0)), ",".join(cs)]
+func _restyle_if_needed() -> void:
+	var k := art_signature(_m())
+	if k != _art_key: _art_key = k; queue_redraw()
 func _relayout_if_needed() -> void:
 	var m := _m()
 	var key := "%d,%d" % [m.w, m.h]
@@ -128,7 +141,7 @@ func refresh() -> void:
 		_power_sent = true; app.b.act("power", [true])
 
 func _set_model(mm: Dictionary, src: String) -> void:
-	model = mm; source = src; _parts_dirty = true
+	model = mm; source = src; _parts_dirty = true; _relayout_if_needed(); _restyle_if_needed()
 	if src == "fixture":
 		model.powered = _power_env
 	if _smoke_demo != "" and not _smoke_demo_done:

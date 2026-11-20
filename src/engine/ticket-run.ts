@@ -53,9 +53,9 @@ export function benchTicket(s: NodeState, def: LevelDef): { result: BenchResult;
   const pass = out.pass;
   let stars: 0 | 1 | 2 | 3 = !pass ? 0 : metrics[def.stars.head] <= def.stars.par[def.stars.head] ? 2 : 1;
   if (def.eb && pass) {
-    // exam bridge (DESIGN §2.5): a star for every prediction within 5 %, one for every prediction within 1 %, one for building it right on the first bench run
-    const g = out.predictions, first = (s.progress.tickets[tk.id]?.attempts ?? 0) === 0;
-    stars = Math.max(1, (g.length > 0 && g.every((p) => p.grade !== 'miss') ? 1 : 0) + (g.length > 0 && g.every((p) => p.grade === 'exact') ? 1 : 0) + (first ? 1 : 0)) as 1 | 2 | 3;
+    // exam bridge (DESIGN §2.5), graded on the predictions: 1 star for a correct build, 2 when every prediction is within 5 %, 3 when every one is within 1 %
+    const g = out.predictions;
+    stars = (g.length > 0 && g.every((p) => p.grade === 'exact') ? 3 : g.length > 0 && g.every((p) => p.grade !== 'miss') ? 2 : 1) as 1 | 2 | 3;
   }
   const result: BenchResult = {
     pass, metrics,

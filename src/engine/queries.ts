@@ -27,6 +27,7 @@ import { FAILURE_LOG_CAP, SCOPE_POINTS_CAP, UNDO_CAP, type NodeState, type Ticke
 import { levelDefOf } from './tickets';
 import { liveRig } from './ticket-run';
 import { say } from './text';
+import { buildDebrief, starsRule } from './debrief';
 import { makeUiQueries, scopeTarget, shoebox } from './ui';
 
 const regionString = (region: string, key: string): string => { const v = REGIONS.get(region).strings[key]; if (v === undefined) throw new Error(`Region '${region}' has no string '${key}'.`); return v; };
@@ -119,7 +120,7 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         targets: def.bench.specs.flatMap((x) => (x.kind === 'level' ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', lo: x.lo, hi: x.hi }] : [])),
         predictions: def.bench.specs.flatMap((x) => (x.kind === 'predict' ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', unit: x.of.probe.trim().toLowerCase().startsWith('i(') ? 'A' : 'V', entered: o.tk.predictions[x.id] ?? null }] : [])),
         gauge: def.gauge ?? null, supplies: def.supplies, chit: def.chit ?? null, ambientC: def.bench.ambientC, figure: def.figure ?? null,
-        payText: payText(def, REGIONS.get(s.region)),
+        payText: payText(def, REGIONS.get(s.region)), starRule: def.eb ? starsRule() : '',
       };
     },
     /** The board with part names, rotated pin pads and ratings, probes and meter. */
@@ -268,6 +269,10 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         pass: b.pass, stars: b.stars, metrics: b.metrics, costText: formatMinor(b.metrics.cost, pack), smoked: b.smoked, badSamples: b.badSamples,
         pay: b.pay ?? 0, payText: b.pay ? formatMinor(b.pay, pack) : '',
         predictions: b.predictions.map((p) => ({ ...p, name: o.def.bench.names[p.id] ? t(o.def.bench.names[p.id]!) : p.id, gradeText: t(PREDICT_GRADE[p.grade] ?? 'bench.predict.miss'), gap: p.truth === 0 ? 0 : sig(((p.entered - p.truth) / Math.abs(p.truth)) * 100, 3) })),
+        debrief: o.def.figure && b.predictions.length > 0 ? buildDebrief(o.def.figure, b.predictions.map((p) => ({
+          id: p.id, name: o.def.bench.names[p.id] ? t(o.def.bench.names[p.id]!) : p.id, unit: p.id === 'pie2' || o.def.bench.specs.some((x) => x.kind === 'predict' && x.id === p.id && x.of.probe.trim().toLowerCase().startsWith('i(')) ? 'A' : 'V',
+          entered: p.entered, truth: sig(p.truth, 5), gapPct: p.truth === 0 ? 0 : sig(((p.entered - p.truth) / Math.abs(p.truth)) * 100, 3), grade: p.grade, gradeText: t(PREDICT_GRADE[p.grade] ?? 'bench.predict.miss'),
+        })), b.stars, b.pass) : null,
         specs: b.specs.map((x) => ({ ...x, name: t(x.key) })),
         failures: b.failures.map((f) => ({ key: f.key, vars: f.vars, text: explainedText(f, o.tk, o.def, Math.max(0, (s.progress.tickets[o.tk.id]?.attempts ?? 1) - 1) + s.progress.failureLog.filter((x) => x.ticket === o.tk.id).length - b.smoked.length) })).filter((f, i, all) => all.findIndex((g) => g.text === f.text) === i),
       };
