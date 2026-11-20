@@ -19,7 +19,11 @@ export interface Debrief {
   rows: DebriefRow[];
   /** How the stars were earned: the rule and where the player landed. */
   starsText: string;
+  /** Fewer than 3 stars on a passed exam: the slip offers "try again for more stars" (predict again, bench again). */
+  retry: boolean;
+  retryText: string;
 }
+const retryOf = (built: boolean, stars: number): { retry: boolean; retryText: string } => ({ retry: built && stars < 3, retryText: built && stars < 3 ? say('debrief.retry') : '' });
 
 const num = (x: number): string => String(sig(x, 4));
 const abs = (x: number): number => Math.abs(x);
@@ -45,8 +49,8 @@ function buildPotDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: n
     say('debrief.pot.r', { sh: num(p.shunt), l1: num(p.l1Cm), l2: num(p.l2Cm), r: num(r) }),
   ];
   const full = rows.map((x) => ({ ...x, ok: x.grade !== 'miss' }));
-  const starsText = say(!built ? 'debrief.stars.fail' : stars >= 3 ? 'debrief.stars.3' : stars === 2 ? 'debrief.stars.2' : 'debrief.stars.1');
-  return { node: 'wire', equation: say('debrief.pot.equation'), working, answer: say('debrief.pot.answer', { r: num(r) }), currents: [{ name: 'cell', amps: sig(e, 4), charging: false, text: say('debrief.pot.robust') }], rows: full, starsText };
+  const starsText = say(!built ? 'debrief.stars.fail' : stars >= 3 ? 'debrief.stars.3' : stars === 2 ? 'debrief.stars.2' : 'debrief.stars.1.pot');
+  return { node: 'wire', equation: say('debrief.pot.equation'), working, answer: say('debrief.pot.answer', { r: num(r) }), currents: [{ name: 'cell', amps: sig(e, 4), charging: false, text: say('debrief.pot.robust') }], rows: full, starsText, ...retryOf(built, stars) };
 }
 
 export function buildDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: number, built: boolean): Debrief {
@@ -67,7 +71,7 @@ export function buildDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], star
   });
   const full = rows.map((r) => ({ ...r, ok: r.grade !== 'miss' }));
   const starsText = say(!built ? 'debrief.stars.fail' : stars >= 3 ? 'debrief.stars.3' : stars === 2 ? 'debrief.stars.2' : 'debrief.stars.1');
-  return { node: n, equation: eq, working, answer, currents, rows: full, starsText };
+  return { node: n, equation: eq, working, answer, currents, rows: full, starsText, ...retryOf(built, stars) };
 }
 
 function leastCommon(xs: number[]): number {

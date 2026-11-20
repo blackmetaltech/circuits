@@ -141,7 +141,7 @@ describe('locales', () => {
     expect([...new Set(used)].sort()).toEqual([...keys].sort());
   });
   it('every explain.* string has plain-words text and balanced placeholders; checkLocales is clean', () => {
-    expect(keys.length).toBe(24);
+    expect(keys.length).toBe(27);
     expect(checkLocales({ en: simEn, fr: { ...simEn } }, 'en')).toEqual({ missing: [], extra: [], badPlaceholders: [] });
     for (const k of keys) expect(simEn[k].match(/\{/g)?.length, k).toBe(simEn[k].match(/\}/g)?.length);
   });

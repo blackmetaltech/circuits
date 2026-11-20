@@ -72,6 +72,11 @@ function explainCtx(tk: TicketState | null, def: LevelDef | undefined, prior = 0
     const fixedLoad = tk.board.parts.find((p) => p.fixed && getDef(p.partId)?.kind === 'LOAD'), load = fixedLoad ? (getDef(fixedLoad.partId)!.model.R ?? 0) : 0;
     const r1 = between(nIn, nOut), r2 = between(nOut, nGnd);
     if (r1 > 0 && r2 > 0 && load > 0) ctx.divider = { r1, r2, rLoad: load, vin: vSupply };
+    else if (load > 0 && resistors.length > 0) {   // no resistor from OUT to GND: say which half is missing instead of "check each value"
+      const touches = (n: number): boolean => n >= 0 && resistors.some((p) => (rig.conn.pinNodes[p.uid] ?? []).includes(n));
+      if (r1 > 0 && r2 === 0 && !touches(nGnd)) ctx.dividerFault = { kind: resistors.length === 1 ? 'nobottom' : 'floating', r1, rLoad: load, vin: vSupply };
+      else if (r1 === 0 && r2 > 0 && !touches(nIn)) ctx.dividerFault = { kind: 'notop', r1: 0, rLoad: load, vin: vSupply };
+    }
   }
   for (const p of tk.board.parts) {
     const d = getDef(p.partId); if (!d) continue;
@@ -85,6 +90,12 @@ function explainCtx(tk: TicketState | null, def: LevelDef | undefined, prior = 0
     }
   }
   return ctx;
+}
+/** The customer's thank-you quoting what the bench measured (2-1: "Dead on: 3.358 volts."), to the precision of the band; '' when the ticket has none. */
+function thanksText(def: LevelDef, measured: Record<string, number> | undefined): string {
+  const th = def.thanks, v = th ? measured?.[th.spec] : undefined;
+  if (!th || v === undefined) return '';
+  return say(Math.abs(v - th.target) <= th.within * th.target ? th.exactKey : th.nearKey, { v: String(sig(v, 4)) });
 }
 export const explainedText = (f: { key: string; vars: Record<string, string | number> }, tk: TicketState | null, def: LevelDef | undefined, prior = 0): string => text(explainFailure(f, explainCtx(tk, def, prior)));
 
@@ -117,15 +128,22 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
       const { def } = o;
       const customer = regionString(s.region, `customer.${def.customer}`), mentor = regionString(s.region, 'mentor');
       const stall = regionString(s.region, 'stall'), lane = regionString(s.region, 'lane');
+      // an exam hides the numbers the student is about to predict until every prediction is locked in (the balance lengths, the test cell's EMF, the band)
+      const examHidden = def.eb === true && !def.bench.specs.filter((x) => x.kind === 'predict').every((x) => o.tk.predictions[x.id] !== undefined);
+      const sources = o.tk.board.parts.filter((p) => p.fixed && ['cell-2v', 'cell-test', 'ideal-vsource'].includes(p.partId)).map((p) => {
+        const d = getDef(p.partId)!, emf = p.partId === 'ideal-vsource' ? (p.value ?? 0) : (d.model.emf ?? 0);
+        return { uid: p.uid, partId: p.partId, name: t(d.nameKey), volts: p.partId === 'cell-test' && examHidden ? null : sig(emf, 4), hidden: p.partId === 'cell-test' && examHidden };
+      });
       return {
         id: def.id, chapter: def.chapter, title: t(def.titleKey), brief: t(def.briefKey, { customer, mentor, stall, lane }), customerId: def.customer, customer, mentor, stall, lane,
-        specs: def.bench.specs.filter((x) => def.bench.names[x.id]).map((x) => ({ id: x.id, name: t(def.bench.names[x.id]!) })),
+        examHidden, sources,
+        specs: def.bench.specs.filter((x) => def.bench.names[x.id] && !(examHidden && x.kind === 'level')).map((x) => ({ id: x.id, name: t(def.bench.names[x.id]!) })),
         bin: def.bin.map((b) => ({ partId: b.partId, values: allowedValues(getDef(b.partId)!, b), variants: allowedVariants(getDef(b.partId)!, b), max: b.max ?? null })),
         maxParts: def.constraints?.maxParts ?? 40, stars: def.stars, instruments: { supply: def.supplies.some((x) => x.kind === 'bench'), gen: def.supplies.some((x) => x.kind === 'gen'), scope: !!def.instruments.scope },
         hasHints: !!def.hints, hintRung: o.tk.hintRung,
         shoebox: shoebox(s, o.tk, def), eb: def.eb === true, fee: def.pay?.fee ?? 0, feeText: def.pay ? formatMinor(def.pay.fee, REGIONS.get(s.region)) : '',
         conditions: def.bench.conditions.map((c) => ({ id: c.id, set: c.set ?? [], ambientC: c.ambientC ?? def.bench.ambientC })),
-        targets: def.bench.specs.flatMap((x) => (x.kind === 'level' ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', lo: x.lo, hi: x.hi }] : [])),
+        targets: def.bench.specs.flatMap((x) => (x.kind === 'level' && !examHidden ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', lo: x.lo, hi: x.hi }] : [])),
         predictions: def.bench.specs.flatMap((x) => (x.kind === 'predict' ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', unit: x.unit ?? (x.of.probe.trim().toLowerCase().startsWith('i(') ? 'A' : 'V'), entered: o.tk.predictions[x.id] ?? null }] : [])),
         answers: (def.answers ?? []).map((a) => ({ id: a.id, name: def.bench.names[a.id] ? t(def.bench.names[a.id]!) : '', unit: a.unit, entered: o.tk.predictions[a.id] ?? null })),
         specShort: def.specShort ? t(def.specShort) : '', gauge: def.gauge ?? null, supplies: def.supplies, chit: def.chit ?? null, ambientC: def.bench.ambientC, figure: def.figure ?? null,
@@ -276,7 +294,9 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
       const b = o.tk.lastBench, pack = REGIONS.get(s.region);
       return {
         pass: b.pass, stars: b.stars, metrics: b.metrics, costText: formatMinor(b.metrics.cost, pack), smoked: b.smoked, badSamples: b.badSamples,
-        pay: b.pay ?? 0, payText: b.pay ? formatMinor(b.pay, pack) : '',
+        pay: b.pay ?? 0, payText: b.pay ? formatMinor(b.pay, pack) : '', measured: b.measured ?? {}, thanks: b.pass ? thanksText(o.def, b.measured) : '',
+        /** An exam stamped FIXED at fewer than 3 stars can be sat again: predict again, bench again (the `retryExam` action). */
+        retry: b.pass && o.def.eb === true && b.stars < 3,
         predictions: b.predictions.map((p) => ({ ...p, name: o.def.bench.names[p.id] ? t(o.def.bench.names[p.id]!) : p.id, gradeText: t(PREDICT_GRADE[p.grade] ?? 'bench.predict.miss'), gap: p.truth === 0 ? 0 : sig(((p.entered - p.truth) / Math.abs(p.truth)) * 100, 3) })),
         debrief: o.def.figure && b.predictions.length > 0 ? buildDebrief(o.def.figure, b.predictions.map((p) => ({
           id: p.id, name: o.def.bench.names[p.id] ? t(o.def.bench.names[p.id]!) : p.id, unit: ((sp) => (sp?.kind === 'predict' && sp.unit ? sp.unit : p.id === 'pie2' || (sp?.kind === 'predict' && sp.of.probe.trim().toLowerCase().startsWith('i(')) ? 'A' : 'V'))(o.def.bench.specs.find((x) => x.id === p.id)),

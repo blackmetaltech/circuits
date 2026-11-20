@@ -74,7 +74,7 @@ export const L2_3: LevelDef = {
   pay: { fee: 700, perStar: 200 },
   chit: { x: 0.28, y: 0.66 },
   coach: [
-    { id: 'power', key: 'coach.2-3.s0', anchor: { target: 'power' }, done: 'powered' },
+    { id: 'power', key: 'coach.2-3.s0', anchor: { target: 'power' }, done: 'powered|probed|benched' },
     { id: 'voc', key: 'coach.2-3.s1', anchor: { target: 'dmm' }, done: 'probed' },
     { id: 'isc', key: 'coach.2-3.s2', anchor: { target: 'dmm' }, done: 'shorted', optional: true },
     { id: 'supply', key: 'coach.2-3.s3', anchor: { target: 'supplyv' }, done: 'supplyset', when: 'probed' },

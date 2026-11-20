@@ -163,6 +163,13 @@ export function explainDivider(a: { r1: number; r2: number; rLoad: number; vin: 
     r1: si(a.r1, 'Ω'), r2: si(a.r2, 'Ω'), rLoad: si(a.rLoad, 'Ω'), vin: sig(a.vin), vUnloaded: sig((a.vin * a.r2) / (a.r1 + a.r2)), vLoaded: sig((a.vin * par) / (a.r1 + par)), rLower: si(par, 'Ω'), lo: sig(a.lo), hi: sig(a.hi),
   } };
 }
+/** 2-1: the divider is not a divider yet. `floating`: a bottom resistor is placed but nothing of it reaches GND; `nobottom`: only the top resistor is placed; `notop`: nothing runs from IN to OUT. */
+export interface DividerFault { kind: 'floating' | 'nobottom' | 'notop'; r1: number; rLoad: number; vin: number }
+export function explainDividerFault(a: DividerFault & { lo: number; hi: number }): Explained {
+  const vOut = a.kind === 'notop' ? 0 : (a.vin * a.rLoad) / (a.r1 + a.rLoad);
+  const key = a.kind === 'floating' ? 'explain.divider.floating' : a.kind === 'nobottom' ? 'explain.divider.nobottom' : 'explain.divider.notop';
+  return { key, vars: { r1: si(a.r1, 'Ω'), rLoad: si(a.rLoad, 'Ω'), vin: sig(a.vin), vOut: sig(vOut), lo: sig(a.lo), hi: sig(a.hi) } };
+}
 export function explainFloatingGate(a: { part: string; rPull?: number }): Explained {
   return { key: 'explain.floatingGate', vars: { ...pn(a.part), rPull: si(a.rPull ?? 100e3, 'Ω') } };
 }
@@ -239,6 +246,8 @@ export interface ExplainContext {
   led?: Readonly<Record<string, LedLoop>>;
   /** Ticket 2-1: the player's divider as the bench sees it (top resistor, bottom resistor, the fixed load across the bottom one, the supply). */
   divider?: { r1: number; r2: number; rLoad: number; vin: number };
+  /** Ticket 2-1: what is missing from the divider (checked before `divider`). */
+  dividerFault?: DividerFault;
   /** How many failures the player already had on this ticket (the first burn teaches the cause, a repeat gives the worked formula). */
   prior?: number;
 }
@@ -279,6 +288,7 @@ function explainRaw(f: BenchFailure, ctx: ExplainContext): Explained {
       break;
     }
     case 'bench.level.fail': case 'bench.metric.fail': {
+      if (ctx.dividerFault && /^v\(/.test(String(v.probe ?? ''))) return explainDividerFault({ ...ctx.dividerFault, lo: num('lo'), hi: num('hi') });
       if (ctx.divider && /^v\(/.test(String(v.probe ?? ''))) return explainDivider({ ...ctx.divider, lo: num('lo'), hi: num('hi') });
       const e = explainLevelMiss(f, ctx.miss); if (e) return e; break;
     }

@@ -36,6 +36,8 @@ export interface TicketBenchOut {
   causes: BenchFailure[];
   predictions: { id: string; entered: number; truth: number; grade: string }[];
   badSamples: Record<string, number[]>;
+  /** What the bench measured for each level / metric spec (the last condition that measured it). */
+  values: Record<string, number>;
 }
 
 const BIG = 1e30;
@@ -47,7 +49,7 @@ const nodesOf = (probe: string): string[] => {
 export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
   const { plan } = inp;
   const failures: BenchFailure[] = [], badSamples: Record<string, number[]> = {}, predictions: TicketBenchOut['predictions'] = [];
-  const marginOf = new Map<string, number>();
+  const marginOf = new Map<string, number>(), values: Record<string, number> = {};
   const failedIds = new Set<string>();
   const specIds: string[] = [...plan.specs.map((s) => s.id)];
   if (!specIds.includes('ratings')) specIds.push('ratings');
@@ -58,7 +60,7 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
   const burnt = refuseSmoked({ smoked: [...inp.smoked] }, inp.board.parts.map((p) => p.uid));
   if (burnt.length > 0) {
     for (const f of burnt) failures.push(f);
-    return { pass: false, failures, rows: specIds.map((id) => ({ id, pass: false, margin: -1 })), supplyPowerW: 0, smoked: burnt.map((b) => String(b.vars.part)), causes, predictions, badSamples };
+    return { pass: false, failures, rows: specIds.map((id) => ({ id, pass: false, margin: -1 })), supplyPowerW: 0, smoked: burnt.map((b) => String(b.vars.part)), causes, predictions, badSamples, values };
   }
 
   for (const cond of plan.conditions) {
@@ -119,6 +121,7 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
     if (r.failures.length > 0 && r.failures.every((f) => f.vars.id === undefined)) for (const id of specIds) failedIds.add(id);   // a whole-bench failure (cost gate, no convergence)
     for (const s of specs) {
       const v = r.metrics[s.id]; if (v === undefined) continue;
+      if ((s.kind === 'level' || s.kind === 'metric') && Number.isFinite(v)) values[s.id] = v;
       let m = 0;
       if (s.kind === 'level' || s.kind === 'metric') m = Number.isNaN(v) ? -1 : Math.min(v - s.lo, s.hi - v);
       else if (s.kind === 'band') m = -v;
@@ -134,5 +137,5 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
     powerSum += p;
   }
   const rows = specIds.map((id) => ({ id, pass: !failedIds.has(id), margin: marginOf.get(id) ?? (failedIds.has(id) ? -1 : 0) }));
-  return { pass: failures.length === 0, failures, rows, supplyPowerW: conds > 0 ? powerSum / conds : 0, smoked: smokedOut, causes, predictions, badSamples };
+  return { pass: failures.length === 0, failures, rows, supplyPowerW: conds > 0 ? powerSum / conds : 0, smoked: smokedOut, causes, predictions, badSamples, values };
 }

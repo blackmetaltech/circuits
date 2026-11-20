@@ -48,6 +48,7 @@ export const L2_1: LevelDef = {
     wires: [[[2, 2], [4, 2]], [[8, 2], [14, 2]], [[8, 4], [8, 2]], [[8, 8], [14, 8]]],
   },
   specShort: 'ticket.2-1.short',
+  thanks: { spec: 'vout', target: 3.3, within: 0.01, exactKey: 'ticket.2-1.thanks.exact', nearKey: 'ticket.2-1.thanks.near' },
   scope: 'must',
   after: ['1-4|1-5'],
   pay: { fee: 500, perStar: 150 },

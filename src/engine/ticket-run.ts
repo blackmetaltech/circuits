@@ -78,7 +78,7 @@ export function benchTicket(s: NodeState, def: LevelDef): { result: BenchResult;
     failures: failuresAll.map((f) => richer(f, out.causes)).slice(0, BENCH_FAILURE_CAP).map((f) => ({ key: f.key, vars: { ...f.vars } })),
     stars, smoked: out.smoked,
     predictions: out.predictions.map((p) => ({ id: p.id, entered: p.entered, truth: p.truth, grade: p.grade })),
-    badSamples: out.badSamples,
+    badSamples: out.badSamples, measured: out.values,
   };
   return { result, causes: out.causes };
 }

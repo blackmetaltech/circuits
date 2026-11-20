@@ -600,6 +600,13 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       tk.predictions[pid] = sig(num(value, 'value'), 6); touch(tk);
       return ok(say('predict.set', { id: pid }));
     },
+    /** Sit an exam again for more stars: forget the predictions and answers (the board stays), so the numbers are written and benched afresh. */
+    retryExam: (s) => {
+      const { tk, def } = open(s, defs);
+      if (def.eb !== true) refuseKey('err.retry.notExam', { id: def.id });
+      tk.predictions = {}; touch(tk);
+      return ok(say('retry.ready', { id: def.id }));
+    },
     replaceSmoked: (s, uid: unknown) => {
       const { tk } = open(s, defs), id = str(uid, 'uid');
       if (!tk.board.parts.some((p) => p.uid === id)) refuseKey('err.part.none', { uid: id, have: tk.board.parts.map((x) => x.uid).join(', ') || '-' });

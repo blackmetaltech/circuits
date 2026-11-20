@@ -154,7 +154,7 @@ func _run() -> void:
 	var fixed: Array = bk.parts.filter(func(p): return p.fixed)
 	ok(fixed.size() == 1 and str(fixed[0].kind) == "LOAD" and str(fixed[0].partId) == "adc-in", "the ADC is a fixed part on the board")
 	ok(sc.props.items.size() == 25 and str(sc.props.items[0].label).begins_with("1"), "the shoebox lists the 25 E12 values from 1 k to 100 k")
-	ok(str(bk.ticket.spec_full) == "OUT 3.30 V, 2 %, ADC attached" and bk.scope_q.target.lo == 3.234 and bk.scope_q.target.hi == 3.366, "the chit reads the engine's one-line spec and the band is 3.234 - 3.366 V")
+	ok(str(bk.ticket.spec_full) == "OUT 3.23-3.37 V, ADC attached" and bk.scope_q.target.lo == 3.234 and bk.scope_q.target.hi == 3.366, "the chit reads the engine's one-line spec and the band is 3.234 - 3.366 V")
 	# naive: the unloaded divider answer, 5.6 k over 3.3 k
 	_drag_part("res-cf", 5600, "0.25W", 4, 2, 0); _drag_part("res-cf", 3300, "0.25W", 8, 4, 1)
 	for w in [[[2, 2], [4, 2]], [[8, 2], [14, 2]], [[8, 4], [8, 2]], [[8, 8], [14, 8]]]: _drag_wire(w[0], w[w.size() - 1])

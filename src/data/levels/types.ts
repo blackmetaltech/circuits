@@ -183,6 +183,8 @@ export interface LevelDef {
   specShort?: string;
   /** Plain-words explainer for a missed level spec: 'divider' (2-1, the load on the bottom resistor). */
   explain?: 'divider' | 'bridge' | 'blackbox' | 'pot';
+  /** The customer's thank-you quotes what the bench measured: `spec` is a `level` spec; the exact line when within `within` (fraction) of `target`, the near line otherwise. */
+  thanks?: { spec: string; target: number; within: number; exactKey: string; nearKey: string };
   /** Where the ticket's chit hangs on the chapter-1 notebook page, in 0..1 page coordinates. */
   chit?: { x: number; y: number };
   /** Chapter-1 tickets of the vertical slice etc.; a ticket unlocks when every id here is passed (empty = open). */

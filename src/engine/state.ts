@@ -59,6 +59,8 @@ export interface BenchResult {
   predictions: { id: string; entered: number; truth: number; grade: string }[];
   /** Band failing sample times (s), at most 64 per spec, for the scope overlay. */
   badSamples: Record<string, number[]>;
+  /** What the bench measured for each level / metric spec (SI units): the numbers a customer's thank-you may quote. */
+  measured?: Record<string, number>;
   /** Minor units paid into the wallet by THIS pass (absent when nothing was paid). */
   pay?: number;
 }
