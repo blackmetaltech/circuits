@@ -309,6 +309,7 @@ func _connector(c: Dictionary, m: Dictionary) -> void:   # the brass edge connec
 	var sym := p * 0.5 if gnd else 0.0   # a ground symbol sits before the word
 	if left:
 		var tx := pos.x - p * 0.55 - tw
+		if gnd: tx = br.position.x + p * 0.1 + sym * 0.9   # a soldered wire may run along this bar: the name goes to its free left end
 		draw_string(f, Vector2(tx, gy), long, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, ink)
 		if gnd: _ground_symbol(self, Vector2(tx - sym * 0.85, pos.y), p * 0.3, ink)
 	else:
@@ -433,7 +434,7 @@ func _draw_parts(ci: Control) -> void:
 		PartArt.draw(ci, pt, _px(Vector2(pt.x, pt.y)), p, st)
 	for pr in m.probes: _probe(ci, pr)
 	# labels and rating bars
-	var fs := maxi(int(clampf(p * 0.34, 10.0, 22.0)), SS.min_font)
+	var fs := maxi(int(clampf(p * 0.42, 13.0, 24.0)), SS.min_font)
 	for pt in m.parts:
 		var b: Rect2 = bounds[pt.uid]
 		var s: String = pt.label

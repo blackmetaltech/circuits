@@ -32,7 +32,7 @@ func port(which: String) -> Vector2:
 	if kind == "bench": return Vector2(60, 18) if which == "red" else Vector2(120, 18)
 	return Vector2(52, 20) if which == "red" else Vector2(104, 20)
 
-func hit_rocker(p: Vector2) -> bool: return ROCKER.grow(8).has_point(p)
+func hit_rocker(p: Vector2) -> bool: return ROCKER.grow(8.0 if not S.handheld else 20.0).has_point(p)   # handheld: 44+ screen px each way
 
 ## The terminals a meter lead can be dropped on (the snap studs of the holder, the binding posts of the bench supply): "red" is the + side, "black" the ground side.
 var jack_glow := ""   ## which terminal a dragged lead is hovering near

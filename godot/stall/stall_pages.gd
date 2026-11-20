@@ -208,18 +208,19 @@ func _map(a: float) -> void:
 		while tsz > 18 and S.tw(f, str(tk.title), tsz) > q.size.x - 28.0: tsz -= 2
 		S.text(self, f, str(tk.title), q.position + Vector2(14, 84), tsz, S.INK if open else Color(S.INK, 0.5))
 		S.text(self, f, "for %s" % str(tk.customer), q.position + Vector2(14, 112), 20, Color(S.INK, 0.8 if open else 0.4))
-		S.text(self, f, str(tk.spec), q.position + Vector2(14, 130), 16, Color(S.INK, 0.9 if open else 0.4), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 26)
+		if not S.handheld: S.text(self, f, str(tk.spec), q.position + Vector2(14, 130), 16, Color(S.INK, 0.9 if open else 0.4), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 26)   # (handheld: the spec is on the ticket chit; here the text is big instead)
 		var pay := str(tk.get("pay_text", ""))
+		var hb := 46.0 if S.handheld else 38.0   # the 'best cost' / replay line sits this far above the bottom edge
 		if open and pay != "": S.text(self, f, pay, q.position + Vector2(14, q.size.y - 14), 14, Color(S.INK, 0.6))
 		var fee: String = str(tk.get("price_text", "")) if str(tk.get("price_text", "")) != "" else "%d coins" % int(tk.price)
 		S.text(self, f, fee, q.position + Vector2(q.size.x - 20 - S.tw(f, fee, 17), 48), 17, Color(S.INK, 0.7))
 		if int(tk.get("stars", 0)) > 0 or tk.done:
 			var smax := int(tk.get("stars_max", 2)); var got := int(tk.get("stars", 0))
 			S.text(self, f, "*".repeat(got) + ".".repeat(maxi(0, smax - got)), q.position + Vector2(118, 52), 30, S.INK_RED)
-		if tk.done and hv: S.text(self, f, "tap to replay: better stars, lower cost", q.position + Vector2(14, q.size.y - 38), 15, S.INK_RED)
-		elif tk.done and str(tk.get("best_text", "")) != "": S.text(self, f, str(tk.best_text), q.position + Vector2(14, q.size.y - 38), 15, Color(S.INK, 0.7))
+		if tk.done and hv: S.text(self, f, "tap to replay" if S.handheld else "tap to replay: better stars, lower cost", q.position + Vector2(14, q.size.y - hb), 15, S.INK_RED)
+		elif tk.done and str(tk.get("best_text", "")) != "": S.text(self, f, str(tk.best_text), q.position + Vector2(14, q.size.y - hb), 15, Color(S.INK, 0.7))
 		if tk.done:
-			draw_set_transform(cr.get_center() + Vector2(cr.size.x * 0.28, -cr.size.y * 0.17), deg_to_rad(-12), Vector2.ONE)
+			draw_set_transform(cr.get_center() + (Vector2(cr.size.x * 0.28, -cr.size.y * 0.17) if not S.handheld else Vector2(cr.size.x * 0.24, cr.size.y * 0.0)), deg_to_rad(-12), Vector2.ONE)
 			S.rr_line(self, Rect2(-52, -20, 104, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5); S.text(self, f, "FIXED", Vector2(-36, 10), 26, Color(0.1, 0.55, 0.2, 0.9))
 		elif not open:
 			S.text(self, f, "locked", q.position + Vector2(q.size.x - 20 - S.tw(f, "locked", 18), 112), 18, Color(S.INK, 0.45))

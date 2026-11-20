@@ -331,7 +331,7 @@ func _layout() -> void:
 	L.bubble = Rect2(1060, 815 + dy, 250, 118)
 	L.next = Rect2(1070, 945 + dy, 220, 50)
 	L.exam = Rect2(1062, 816 + dy, 196, 224)   # the exam problem card (exam tickets): it stays on the bench after "later"
-	L.chit = Rect2(sc_x + 404.0, 190.0 + dy * 0.05 + 258.0, 190, 190) if not handheld else Rect2(sc_x + 340.0, 190.0 + dy * 0.05 + 250.0, 270, 248)   # handheld: a bigger chit for 16 px text
+	L.chit = Rect2(sc_x + 404.0, 190.0 + dy * 0.05 + 258.0, 190, 190) if not handheld else Rect2(sc_x + 340.0, 190.0 + dy * 0.05 + 244.0, 270, 270)   # handheld: a bigger chit for 16 px text
 	L.slip = Rect2(318, 870 + dy, 420, 160)
 	L.probe_rest = {"red": Vector2(dmm_x - 52, 968 + dy * 0.8), "black": Vector2(dmm_x - 112, 998 + dy * 0.8), "ch1": Vector2(sc_x - 22.0, 700.0 + dy * 0.6)}
 	L.bench = Rect2(sup_x + 4.0, low + 160.0, 250.0, 60.0)
