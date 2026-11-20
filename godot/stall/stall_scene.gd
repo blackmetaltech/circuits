@@ -11,6 +11,7 @@ extends Control
 ## (a local GDScript stand-in solver) is a test double selected with CB_FIXTURE=1, and the fallback if the sidecar cannot start.
 
 const S = preload("res://stall/stall_style.gd")
+const EB = preload("res://stall/engine_bench.gd")
 const SAVE := "user://node_stall.cfg"
 const TOP_SCALE := 0.88            ## perspective: the far (top) edge of the board is this fraction as wide as the near edge
 const DEPTH := 0.94                ## vertical foreshortening of the board
@@ -81,7 +82,7 @@ func _ready() -> void:
 
 func _make_backend():
 	if OS.get_environment("CB_FIXTURE") != "": return FixtureBench.new()
-	var eb := EngineBench.new()
+	var eb = EB.new()
 	if eb.started:
 		add_child(eb.bridge)   # the sidecar lives and dies with the scene
 		if not _nosave() and eb.has_save(): eb.load_game()
@@ -251,7 +252,7 @@ func run_bench() -> void:
 func open_predict() -> void:
 	pages.pred_fields = []
 	for pr in backend.ticket.get("predictions", []):
-		pages.pred_fields.append({"id": str(pr.id), "name": str(pr.name), "unit": str(pr.unit), "text": "" if pr.get("entered", null) == null else EngineBench._g(float(pr.entered), 6), "done": pr.get("entered", null) != null})
+		pages.pred_fields.append({"id": str(pr.id), "name": str(pr.name), "unit": str(pr.unit), "text": "" if pr.get("entered", null) == null else EB._g(float(pr.entered), 6), "done": pr.get("entered", null) != null})
 	pages.pred_focus = 0; pages.show_page("predict")
 
 func set_prediction(id: String, value: float) -> Dictionary:   # also what typing then Enter does
