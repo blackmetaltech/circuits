@@ -19,7 +19,8 @@ function probesOf(specs: readonly BenchSpec[]): string[] {
   const out: string[] = [], add = (p: string): void => { if (!out.includes(p)) out.push(p); };
   for (const s of specs) {
     if (s.kind === 'level' || s.kind === 'band' || s.kind === 'metric') add(s.probe);
-    else if (s.kind === 'predict') add(s.of.probe);
+    else if (s.kind === 'predict') { if (s.truth === undefined) add(s.of.probe); }
+    else if (s.kind === 'match') { add(s.a); add(s.b); }
     else if (s.kind === 'rating') for (const p of s.probes ?? []) add(p);
   }
   return out;
@@ -131,8 +132,15 @@ export function runBench(ckt: Circuit, specs: readonly BenchSpec[], o: BenchOpti
         if (!r.ok) failures.push({ key: 'bench.safety.fail', vars: { id: s.id, rule: s.rule.rule, detail: r.detail, cond } });
         break;
       }
+      case 'match': {
+        const a = measure('mean', signal(s.a)), b = measure('mean', signal(s.b)), gap = Math.abs(a - b), allow = s.tol * Math.abs(b);
+        metrics[s.id] = allow - gap;
+        if (Number.isNaN(a) || Number.isNaN(b)) failures.push({ key: 'bench.metric.nan', vars: { id: s.id, probe: s.a, metric: 'mean', cond } });
+        else if (!(gap <= allow)) failures.push({ key: 'bench.match.fail', vars: { id: s.id, a: s.a, b: s.b, value: a, ref: b, tol: s.tol, cond } });
+        break;
+      }
       case 'predict': {
-        const truth = meas(s.of), err = Math.abs(s.entered - truth), rel = err / Math.max(Math.abs(truth), 1e-12);
+        const truth = s.truth !== undefined ? s.truth : meas(s.of), err = Math.abs(s.entered - truth), rel = err / Math.max(Math.abs(truth), 1e-12);
         const grade = rel <= (s.tol1 ?? 0.01) ? 'exact' : rel <= (s.tol5 ?? 0.05) ? 'close' : 'miss';
         metrics[s.id] = truth;
         predictions.push({ id: s.id, entered: s.entered, truth, relErr: rel, grade });

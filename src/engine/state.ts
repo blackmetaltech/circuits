@@ -36,6 +36,8 @@ export interface Metrics {
   power: number;
   /** Bounding box of parts and wires in pads², integer. */
   area: number;
+  /** Tickets that ask for a measured answer (2-2): the answer's error in parts per million, integer. Absent elsewhere. */
+  accuracy?: number;
 }
 
 /** One bench failure: an i18n key + vars (English comes from the locale; explainers upgrade it, see queries `benchResult`). */

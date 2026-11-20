@@ -6,6 +6,12 @@ import type { HiddenDef, LevelDef } from '../data/levels/types';
 import { sig } from '../sim/explain';
 import { newTicketState, type NodeState, type TicketState } from './state';
 
+/** A ticket's `after` list: every entry must be passed; an entry written `a|b` is met by passing either (chapter 2 opens after 1-4 OR the 1-5 exam). Returns the unmet entries (empty = unlocked). */
+export function unmetAfter(def: LevelDef, passed: (id: string) => boolean): string[] {
+  return (def.after ?? []).filter((a) => !a.split('|').some((id) => passed(id)));
+}
+export const isUnlocked = (def: LevelDef, passed: (id: string) => boolean): boolean => unmetAfter(def, passed).length === 0;
+
 export const levelDefOf = (defs: readonly LevelDef[], id: unknown): LevelDef | undefined => defs.find((d) => d.id === id);
 
 /** The board a ticket starts with: its connectors and fixed parts, nothing else. */
@@ -25,6 +31,7 @@ export function refBoard(def: LevelDef): Board {
   const b = startBoard(def);
   def.ref.parts.forEach((p, i) => b.parts.push({ ...p, uid: `p${i + 1}` } as PlacedPart));
   def.ref.wires.forEach((path, i) => b.wires.push({ wid: `w${i + 1}`, path: path.map((q) => [q[0], q[1]] as [number, number]) }));
+  for (const [uid, mm] of Object.entries(def.ref.jockeys ?? {})) { const p = b.parts.find((x) => x.uid === uid); if (p) p.pos = mm / 1000; }
   return b;
 }
 

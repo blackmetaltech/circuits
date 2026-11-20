@@ -36,6 +36,8 @@ export interface RigInput {
   instruments?: boolean;
   /** Node names that get a 10 Mohm probe load (the bench's spec probes). */
   probeLoads?: readonly string[];
+  /** Bench-only resistors between two nodes (level `bench.testLoads`); an override whose target is the load's id sets its `r`. */
+  testLoads?: readonly { id: string; a: string; b: string; r: number }[];
 }
 
 export interface Rig {
@@ -74,7 +76,10 @@ export function genWave(g: RigGen): Wave {
 }
 
 export function buildRig(inp: RigInput): Rig {
-  const { board, getDef } = inp;
+  const { getDef } = inp;
+  // `pos` overrides (a condition sets the jockey of a fixed slide wire, or a wiper) apply to the board before it is expanded
+  const posOv = (inp.overrides ?? []).filter((o) => o.key === 'pos');
+  const board: RigBoard = posOv.length === 0 ? inp.board : { ...inp.board, parts: inp.board.parts.map((p) => { const o = posOv.find((x) => x.target === p.uid); return o ? { ...p, pos: o.value } : p; }) };
   const base = boardToNetlist(board, getDef, undefined, { tempC: inp.ambientC ?? 25 });
   const errors: RigIssue[] = [];
   for (const e of base.errors) {
@@ -97,7 +102,7 @@ export function buildRig(inp: RigInput): Rig {
   let elements: Element[] = base.netlist.elements.map((e) => ({ ...e, p: { ...e.p } }));
 
   // overrides (hidden parameters, bench conditions), then smoked parts behave as failed parts
-  for (const o of inp.overrides ?? []) for (const e of elements) if (e.owner === o.target || e.id === o.target) e.p[o.key] = o.value;
+  for (const o of inp.overrides ?? []) if (o.key !== 'pos') for (const e of elements) if (e.owner === o.target || e.id === o.target) e.p[o.key] = o.value;
   let nl: Netlist = { nodeNames: names, elements, models: {}, modelTypes: {} };
   if (inp.smoked && inp.smoked.length > 0) nl = applyFailures(nl, inp.smoked, kinds);
   elements = nl.elements.slice();
@@ -140,6 +145,11 @@ export function buildRig(inp: RigInput): Rig {
         dmm = 'dmm';
       }
     }
+  }
+  for (const tl of inp.testLoads ?? []) {   // bench-only test loads: a condition overrides their r
+    const ov = (inp.overrides ?? []).find((o) => o.target === tl.id && o.key === 'r');
+    const ia = nodeNames.indexOf(tl.a.toLowerCase()), ib = tl.b === '0' || tl.b.toLowerCase() === 'gnd' ? 0 : nodeNames.indexOf(tl.b.toLowerCase());
+    if (ia >= 0 && ib >= 0 && ia !== ib) add({ id: tl.id, kind: 'R', owner: tl.id, nodes: [ia, ib], p: { r: ov ? ov.value : tl.r } });
   }
   for (const n of inp.probeLoads ?? []) { const k = nodeNames.indexOf(n.toLowerCase()); if (k > 0) add({ id: `load.${n.toLowerCase()}`, kind: 'R', owner: '', nodes: [k, 0], p: { r: PROBE_RIN } }); }
 

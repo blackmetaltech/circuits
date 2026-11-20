@@ -9,6 +9,8 @@ export type PartKind =
   | 'NPN' | 'PNP' | 'DARLINGTON' | 'NMOS'
   | 'OPAMP' | 'CMP' | '555' | 'REG'
   | 'POT' | 'XFMR' | 'RELAY' | 'FUSE' | 'NTC' | 'SLIDEWIRE'
+  /** A fixed resistive load fixture of a ticket (ADC input, cable loop): a resistor of model.R, drawn as the customer's thing, never a shop part. */
+  | 'LOAD'
   | 'SPEAKER' | 'MOTOR' | 'HEATER' | 'METER' | 'MISC';
 
 /**
@@ -22,6 +24,7 @@ export type FootprintId =
   | 'to220'    // 3 pins in a row, wider pitch, heatsink tab
   | 'dip8'     // 2×4 (op-amp duals, 555, LM393)
   | 'pot3'     // 3 pins (trimmer / pot)
+  | 'slide3'   // the metre slide wire: end A, jockey terminal J (two rows above the wire, midway), end B, 20 pads apart
   | 'xfmr4'    // 4 pins: primary 1/2, secondary 3/4
   | 'relay5'   // coil 1/2, common, NO, NC
   | 'block2';  // 2-terminal board fixture (heater element, speaker, fan, fuse, battery holder)

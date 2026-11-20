@@ -233,7 +233,7 @@ describe('queries on a live board', () => {
     expect(parts[0].variants[0]).toMatchObject({ id: '0.25W', price: 2, priceText: '$0.02' });
     expect((e.q('parts', [false]) as any[]).length).toBeGreaterThan(30);
     const r = e.q('ratings') as any; expect(r.parts.find((p: any) => p.uid === 'p1').ratio).toBeCloseTo(0.42, 1);
-    const tk = e.q('tickets') as any[]; expect(tk[0]).toEqual(expect.objectContaining({ id: '0-0', unlocked: true, passed: false })); expect(tk.map((x) => [x.id, x.unlocked])).toEqual([['0-0', true], ['1-1', true], ['1-2', false], ['1-3', false], ['1-4', false], ['1-5', false]]);
+    const tk = e.q('tickets') as any[]; expect(tk[0]).toEqual(expect.objectContaining({ id: '0-0', unlocked: true, passed: false })); expect(tk.map((x) => [x.id, x.unlocked])).toEqual([['0-0', true], ['1-1', true], ['1-2', false], ['1-3', false], ['1-4', false], ['1-5', false], ['2-1', false], ['2-2', false], ['2-3', false], ['2-4', false]]);
   });
   it('scope: attached probe captures the node, decimated into a ring of at most 512 points, trigger-aligned window', () => {
     const e = fresh(GAME2, 'learner', 'T-1');

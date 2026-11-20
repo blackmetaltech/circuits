@@ -30,6 +30,8 @@ export const PRICES_GLOBAL_CENTS: Record<string, number> = {
   // Misc (game values; no DESIGN price)
   'relay-12v:5A': 120, 'fuse:0.4A': 8, 'fuse:1A': 8, 'ntc-10k:B3950': 12, 'heater:12V': 100, 'speaker-8:8ohm': 80, 'piezo:buzzer': 60,
   'fan-dc:12V': 200, 'slidewire:100cm': 300, 'galvanometer:100ohm': 500,
+  // Chapter 2 fixtures and bench items (game values): the customer's fixed parts are priced only so the Sandbox never shows a free part; res-box plugs and the trimmer are bin items.
+  'adc-in:10k': 100, 'cable-loop:loop': 100, 'cell-2v:2V': 150, 'cell-test:1.5V': 100, 'blackbox:sealed': 500, 'slidewire-m:100cm': 300, 'res-box:plug': 12, 'trimmer:0.5W': 25,
   // Batteries (game values)
   'bat-pp3:fresh': 100, 'bat-pp3-tired:tired': 100, 'bat-aa:fresh': 40, 'bat-cr2032:fresh': 30,
   // Textbook ideal parts (bat ideal-*, res-exact) are free: no entry.

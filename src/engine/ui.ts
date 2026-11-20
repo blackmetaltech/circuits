@@ -17,7 +17,7 @@ import { formatMinor } from '../regions/data';
 import { allowedValues, allowedVariants, checkPartSpot, getDef, problem } from './board';
 import { partPrice } from './metrics';
 import type { NodeState, TicketState } from './state';
-import { levelDefOf } from './tickets';
+import { isUnlocked, levelDefOf } from './tickets';
 import { liveRig } from './ticket-run';
 import { say } from './text';
 import { danglingEnds, openPins, pinLabel } from './touch';
@@ -82,9 +82,26 @@ export function evalCond(expr: string | undefined, s: NodeState, tk: TicketState
     else if (atom === 'grounded') v = !(liveRig(tk, def).circuit?.issues ?? []).some((i) => i.code === 'island');   // nothing floats free of the GND pad
     else if (atom === 'measured') { const m = deps.Q.meter!(s) as { value: number | null } | null; v = !!m && m.value !== null; }
     else if (atom === 'predicted') v = def.bench.specs.filter((x) => x.kind === 'predict').every((x) => tk.predictions[x.id] !== undefined);
+    else if (atom.startsWith('link:')) { const [a, b] = atom.slice(5).split('~'), na = refNode(a ?? '', tk, def), nb = refNode(b ?? '', tk, def); v = na >= 0 && na === nb; }   // two pins / connectors are on one node
+    else if (atom.startsWith('shared:')) { const n = refNode(atom.slice(7), tk, def); v = n >= 0 && (liveRig(tk, def).conn.nodes[n]?.pins.length ?? 0) > 1; }   // another leg is on this pin's node
+    else if (atom === 'shorted') v = tk.board.meter.mode === 'dca' && tk.board.meter.pads.length === 2;
+    else if (atom === 'supplyset') v = def.instruments.supply !== undefined && tk.instruments.supply.v !== def.instruments.supply.v;
+    else if (atom === 'answered') v = (def.answers ?? []).every((a) => tk.predictions[a.id] !== undefined);
+    else if (atom === 'jockey') v = tk.board.parts.some((p) => p.pos !== undefined && p.fixed === true && getDef(p.partId)?.kind === 'SLIDEWIRE');   // the jockey has been moved at least once
     else v = false;
     return neg ? !v : v;
   }));
+}
+
+/** The node a coach reference names: `uid.pin` (a part's pin) or a connector id; -1 when it is not on the board. */
+function refNode(ref: string, tk: TicketState, def: LevelDef): number {
+  const conn = liveRig(tk, def).conn;
+  if (ref.includes('.')) {
+    const at = ref.indexOf('.'), uid = ref.slice(0, at), pin = ref.slice(at + 1), p = tk.board.parts.find((x) => x.uid === uid), d = p ? getDef(p.partId) : undefined, i = d ? d.pins.indexOf(pin) : -1;
+    return i >= 0 ? (conn.pinNodes[uid]?.[i] ?? -1) : -1;
+  }
+  const c = tk.board.connectors.find((x) => x.id === ref);
+  return c ? conn.nodeOfPad(c.pad) : -1;
 }
 
 function resolveAnchor(a: CoachAnchor, tk: TicketState, def: LevelDef): Record<string, unknown> {
@@ -114,8 +131,8 @@ function liveSpecs(sol: Sol, def: LevelDef): { id: string; value: number | null;
   return out;
 }
 
-const CHAPTER: Record<number, { title: string; blurb: string }> = { 1: { title: 'chapter.1.title', blurb: 'chapter.1.blurb' } };
-const GAUGE_UNIT: Record<string, { display: string; scale: number }> = { A: { display: 'mA', scale: 1000 }, V: { display: 'V', scale: 1 }, W: { display: 'W', scale: 1 } };
+const CHAPTER: Record<number, { title: string; blurb: string }> = { 1: { title: 'chapter.1.title', blurb: 'chapter.1.blurb' }, 2: { title: 'chapter.2.title', blurb: 'chapter.2.blurb' } };
+const GAUGE_UNIT: Record<string, { display: string; scale: number }> = { A: { display: 'mA', scale: 1000 }, uA: { display: 'µA', scale: 1e6 }, V: { display: 'V', scale: 1 }, W: { display: 'W', scale: 1 } };
 
 /** The scope's target band and lock for the open ticket (null when the ticket has no gauge). */
 export function scopeTarget(s: NodeState, tk: TicketState, def: LevelDef, sol: Sol | null): Record<string, unknown> {
@@ -129,9 +146,9 @@ export function scopeTarget(s: NodeState, tk: TicketState, def: LevelDef, sol: S
   const u = GAUGE_UNIT[g.unit]!, c = g.clip ? tk.board.connectors.find((x) => x.id === g.clip) : undefined;
   const lo = g.flip ? -spec.hi : spec.lo, hi = g.flip ? -spec.lo : spec.hi;
   const lo2 = Math.min(lo, hi), hi2 = Math.max(lo, hi);
-  const shown = (v: number): number => r4((g.flip ? -v : v) * u.scale);
+  const shown = (v: number): number => r4((g.abs ? Math.abs(v) : g.flip ? -v : v) * u.scale);
   const value = sp && sp.value !== null && live ? shown(sp.value) : null;
-  const band = { lo: r4(Math.max(0, lo2) * u.scale), hi: r4(Math.min(hi2, 1e6) * u.scale) };
+  const band = g.abs ? { lo: 0, hi: r4(Math.max(Math.abs(lo2), Math.abs(hi2)) * u.scale) } : { lo: r4(Math.max(0, lo2) * u.scale), hi: r4(Math.min(hi2, 1e6) * u.scale) };
   return {
     target: {
       spec: g.spec, name: def.bench.names[g.spec] ? t(def.bench.names[g.spec]!) : '', quantity: g.unit, unit: u.display, scale: u.scale, lo: band.lo, hi: band.hi,
@@ -195,6 +212,10 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
           ratio: r ? r4(r.ratio) : 0, rated: r?.rated ?? null, violations: r?.violations ?? [],
           pins: (c?.pins ?? []).map((q) => ({ name: q.name, pad: q.pad, i: sig(q.i, 5), speed: dotSpeed(q.i) })),
         };
+        if (d.kind === 'METER' && d.model.fs !== undefined) {   // the galvanometer: the needle is the signed current in units of full scale (+ pin in), clamped a little past the stops
+          const iSig = c?.pins[0]?.i ?? 0, fs = d.model.fs;
+          Object.assign(o2, { galvo: { i: sig(iSig, 5), uA: r4(iSig * 1e6), needle: r4(clamp(iSig / fs, -1.15, 1.15)), fs } });
+        }
         if (d.kind === 'LED') Object.assign(o2, { led: { i: sig(iPin, 5), mA: r4(iPin * 1000), bloom: smoked ? 0 : ledBloom(iPin), mood: ledMood(iPin, smoked) } });
         return o2;
       });
@@ -264,7 +285,7 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       const ch = typeof chapter === 'number' ? chapter : 1, pk = pack(s);
       const list = defs.filter((d) => d.chapter === ch);
       const tickets = list.map((d) => {
-        const p = s.progress.tickets[d.id], unlocked = (d.after ?? []).every((a) => s.progress.tickets[a]?.passed), passed = !!p?.passed;
+        const p = s.progress.tickets[d.id], unlocked = isUnlocked(d, (a) => !!s.progress.tickets[a]?.passed), passed = !!p?.passed;
         return {
           id: d.id, title: t(d.titleKey), customerId: d.customer, customer: regionString(s.region, `customer.${d.customer}`), eb: d.eb === true, teaches: d.teaches, scope: d.scope,
           unlocked, passed, stars: p?.stars ?? 0, attempts: p?.attempts ?? 0, state: !unlocked ? 'locked' : !passed ? 'open' : (p?.stars ?? 0) >= 2 ? 'done' : 'passed',

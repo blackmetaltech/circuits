@@ -74,9 +74,94 @@ export const slidewire: PartDef = {
 export const galvanometer: PartDef = {
   id: 'galvanometer', kind: 'METER', nameKey: 'part.galvanometer.name', footprint: 'block2', pins: ['+', '-'],
   variants: [variant('100ohm', {}, T(100, 100))],
-  model: { R: 100 },
+  // rin: the METER expander reads it as a resistor (a 100 ohm coil); fs: the needle's full-scale current (the UI draws the needle from the engine's `galvo.needle`)
+  model: { R: 100, rin: 100, fs: 50e-6 },
   source: { doc: 'game-defined moving-coil galvanometer, 100 ohm ammeter (DESIGN §3.7); needle dynamics are cosmetic', note: GEN('galvanometer') + 'The full-scale current is absent: DESIGN gives none. ' + TAU_R },
   verified: false, scope: 'sandbox', simplifications: ['part.simplify.galvo-cosmetic'],
 };
 
-export const MISC: PartDef[] = [relay, fuse, ntc, heater, speaker, piezo, fan, slidewire, galvanometer];
+const FIX = (what: string) => `UNVERIFIED, GAME-DEFINED level fixture: ${what} No datasheet exists by design; every number is a lesson value (DESIGN §2.8 chapter 2). `;
+const FIX_DOC = (what: string) => `GAME-DEFINED level fixture, not a datasheet part: ${what}`;
+const FIXED_T = { thetaJA: 40, tauS: 15, tMax: 150, tFail: 250 };
+
+/** Ticket 2-1: the weather station's ADC input pin. A fixed 10 kohm load between OUT and GND. */
+export const adcIn: PartDef = {
+  id: 'adc-in', kind: 'LOAD', nameKey: 'part.adc-in.name', footprint: 'block2', pins: ['1', '2'],
+  variants: [variant('10k', { P: 0.25 }, FIXED_T)],
+  model: { R: 10e3 },
+  source: { doc: FIX_DOC('the 10 kohm ADC input of the weather station (DESIGN §2.8 ticket 2-1)'), gameFixture: true, note: FIX('10 kohm input resistance of the ADC.') + TAU_R },
+  verified: false, scope: 'sandbox', simplifications: ['part.simplify.adc-fixture'],
+};
+
+/** Ticket 2-2: the buried cable's loop resistance X (hidden; Learner 7.5 ohm = 75 m at 0.1 ohm per metre, two conductors). */
+export const cableLoop: PartDef = {
+  id: 'cable-loop', kind: 'LOAD', nameKey: 'part.cable-loop.name', footprint: 'block2', pins: ['1', '2'],
+  variants: [variant('loop', { P: 2 }, FIXED_T)],
+  model: { R: 7.5 },
+  source: { doc: FIX_DOC('the loop resistance of the shorted telephone cable: 0.1 ohm per metre of cable, out and back (DESIGN §2.8 ticket 2-2)'), gameFixture: true, note: FIX('7.5 ohm is the Learner value; Engineer seeds 2 to 20 ohm.') + TAU_R },
+  verified: false, scope: 'sandbox', simplifications: ['part.simplify.cable-fixture'],
+};
+
+/** Ticket 2-2: a 2 V cell with its 1 ohm rheostat already in the loop (the rheostat keeps the wire from heating; it is part of the fixture). */
+export const cell2v: PartDef = {
+  id: 'cell-2v', kind: 'MISC', nameKey: 'part.cell-2v.name', footprint: 'block2', pins: ['+', '-'],
+  variants: [variant('2V', { emf: 2 }, FIXED_T)],
+  model: { emf: 2, r: 1 },
+  source: { doc: FIX_DOC('a 2 V lead-acid cell with a 1 ohm rheostat in series, the driver of the metre bridge (DESIGN §2.8 ticket 2-2)'), gameFixture: true, note: FIX('2.0 V and 1 ohm (cell plus rheostat) are the DESIGN numbers.') + TAU_R },
+  verified: false, scope: 'sandbox', simplifications: ['part.simplify.cell-fixture'],
+};
+
+/** Ticket 2-4: the cell under test, EMF 1.5 V, internal resistance 0.5 ohm (the answer the student works out from the balance lengths). */
+export const cellTest: PartDef = {
+  id: 'cell-test', kind: 'MISC', nameKey: 'part.cell-test.name', footprint: 'block2', pins: ['+', '-'],
+  variants: [variant('1.5V', { emf: 1.5 }, FIXED_T)],
+  model: { emf: 1.5, r: 0.5 },
+  source: { doc: FIX_DOC('the cell under test of the slide-wire potentiometer: EMF 1.5 V, r 0.5 ohm (DESIGN §2.8 ticket 2-4, oracle NC-08)'), gameFixture: true, note: FIX('1.5 V and 0.5 ohm come from the printed exam problem.') + TAU_R },
+  verified: false, scope: 'sandbox', simplifications: ['part.simplify.cell-fixture'],
+};
+
+/** Ticket 2-3: the sealed module. Inside it a Thevenin source (the hidden EMF and r); the player never sees the parts, only the OUT terminal. */
+export const blackbox: PartDef = {
+  id: 'blackbox', kind: 'MISC', nameKey: 'part.blackbox.name', footprint: 'block2', pins: ['OUT', 'GND'],
+  variants: [variant('sealed', {}, FIXED_T)],   // no ratings: the bench query shows ratings, and the box's EMF is the thing to measure
+  model: { emf: 8, r: 1136.67 },
+  source: { doc: FIX_DOC('the sealed sensor module of ticket 2-3: 12 V, 1 kohm series, 2 kohm shunt, 470 ohm out, which is exactly 8.000 V behind 1136.7 ohm (DESIGN §2.8)'), gameFixture: true, note: FIX('Vth 8.000 V and Rth 1136.7 ohm are the Learner values; the board holds the equivalent source (the network is exact).') + TAU_R },
+  verified: false, scope: 'sandbox', simplifications: ['part.simplify.blackbox-fixture'],
+};
+
+/** The metre slide wire of tickets 2-2 and 2-4: a fixed 100 cm wire, 10 ohm, with a jockey (position along the wire from end A set by `setJockey`). */
+export const slidewireM: PartDef = {
+  id: 'slidewire-m', kind: 'SLIDEWIRE', nameKey: 'part.slidewire-m.name', footprint: 'slide3', pins: ['A', 'J', 'B'],
+  variants: [variant('100cm', { lengthM: 1 }, T(60, 100))],
+  model: { Rtotal: 10, lengthM: 1, rmin: 1e-3 },
+  source: { doc: FIX_DOC('a 100 cm slide wire, 10 ohm total, with a sliding jockey (DESIGN §2.8 tickets 2-2 and 2-4)'), gameFixture: true, note: FIX('100 cm and 10 ohm are the DESIGN numbers.') + TAU_R },
+  verified: false, scope: 'sandbox', simplifications: ['part.simplify.cell-fixture'],
+};
+
+/** Ticket 2-2: resistance-box plugs 1, 2, 5, 10, 20 ohm (two boxes in series give the sums). */
+export const resBox: PartDef = {
+  id: 'res-box', kind: 'R', nameKey: 'part.res-box.name', footprint: 'axial2', pins: ['1', '2'],
+  variants: [variant('plug', { P: 3, Vmax: 100 }, { thetaJA: 85 / 3, tauS: 15, tMax: 155, tFail: 250 })],
+  model: {},
+  source: { doc: FIX_DOC('a laboratory resistance box with plugs 1, 2, 5, 10, 20 ohm (DESIGN §2.8 ticket 2-2)'), gameFixture: true, note: FIX('3 W and 100 V are estimates; the values are the DESIGN plugs.') + TAU_R },
+  verified: false, scope: 'sandbox', simplifications: ['part.simplify.cell-fixture'],
+};
+
+/** Ticket 2-3: the 1 kohm trimmer, set by value in steps of 100 ohm (the game replaces the screw with a value list). */
+export const trimmer: PartDef = {
+  id: 'trimmer', kind: 'R', nameKey: 'part.trimmer.name', footprint: 'axial2', pins: ['1', '2'],
+  variants: [variant('0.5W', { P: 0.5, Vmax: 300 }, { thetaJA: 170, tauS: 15, tMax: 125, tFail: 150 })],
+  model: {},
+  source: { doc: FIX_DOC('a 1 kohm trimmer, used as a variable resistor (DESIGN §2.8 ticket 2-3 bin); the ticket sets it by value'), gameFixture: true, note: FIX('Rated like the Bourns 3386 (0.5 W) but the wiper position is a value list here.') + TAU_R },
+  verified: false, scope: 'sandbox', simplifications: ['part.simplify.trimmer-steps', 'part.simplify.cell-fixture'],
+};
+
+/** Ticket 2-4 textbook bin: an exact rheostat (any listed value, no power limit). */
+export const rheostat: PartDef = {
+  id: 'rheostat', kind: 'R', nameKey: 'part.rheostat.name', footprint: 'axial2', pins: ['1', '2'],
+  variants: [variant('ideal', {}, { thetaJA: 1, tauS: 1, tMax: 1000, tFail: 2000 })], model: {}, tolerance: { R: 0 },
+  source: { doc: 'Textbook ideal element, defined by its constitutive equation (no datasheet, no physical data)', definition: true, note: 'Exact value, no power rating. Textbook bins only. [R] no thermal model.' },
+  verified: true, scope: 'campaign', simplifications: [],
+};
+
+export const MISC: PartDef[] = [relay, fuse, ntc, heater, speaker, piezo, fan, slidewire, galvanometer, adcIn, cableLoop, cell2v, cellTest, blackbox, slidewireM, resBox, trimmer, rheostat];

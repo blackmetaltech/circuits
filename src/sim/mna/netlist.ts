@@ -256,8 +256,8 @@ const fuse: Expander = (x) => [el(x, 'FUSE', [x.nodes[0], x.nodes[1]], fuseParam
 const ntc: Expander = (x) => { const m = modelOf(x); return [el(x, 'R', [x.nodes[0], x.nodes[1]], { r: ntcResistance(m.r25, m.b, x.env?.tempC ?? 25, m.t0 ?? 298.15) })]; };
 /** SLIDEWIRE: pins A J B, jockey at part.pos ∈ [0, 1] of the length from A (default 0.5): R(A–J) = Rtotal·pos, R(J–B) = Rtotal·(1 − pos), each floored at 1 µΩ so a jockey at an end stays solvable. */
 const slidewire: Expander = (x) => {
-  const m = modelOf(x), R = m.rtotal, a = Math.min(1, Math.max(0, x.part.pos ?? 0.5));
-  return [el(x, 'R', [x.nodes[0], x.nodes[1]], { r: Math.max(R * a, 1e-6) }, 'aj'), el(x, 'R', [x.nodes[1], x.nodes[2]], { r: Math.max(R * (1 - a), 1e-6) }, 'jb')];
+  const m = modelOf(x), R = m.rtotal, a = Math.min(1, Math.max(0, x.part.pos ?? 0.5)), floor = m.rmin ?? 1e-6;   // model.rmin: the metre wire never goes below 1 mohm (0.1 mm of wire), which keeps the solve well conditioned
+  return [el(x, 'R', [x.nodes[0], x.nodes[1]], { r: Math.max(R * a, floor) }, 'aj'), el(x, 'R', [x.nodes[1], x.nodes[2]], { r: Math.max(R * (1 - a), floor) }, 'jb')];
 };
 
 /** Per-PartKind expanders. EXTENSION POINT: add D / LED / Z / NPN / ... here. */
@@ -265,7 +265,7 @@ export const EXPANDERS: Readonly<Partial<Record<PartKind, Expander>>> = Object.f
   NPN: bjt(1), PNP: bjt(-1), DARLINGTON: darlington, NMOS: mosfet,
   OPAMP: opamp, CMP: comparator, '555': timer555, REG: regulator, RELAY: relay, FUSE: fuse, NTC: ntc, SLIDEWIRE: slidewire,
   XFMR: transformer, D: diode, LED: diode, Z: diode, SCHOTTKY: diode,
-  R: resistor, HEATER: resistor, SPEAKER: resistor, MOTOR: resistor,
+  R: resistor, HEATER: resistor, LOAD: resistor, SPEAKER: resistor, MOTOR: resistor,
   POT: (x) => {
     // wiper α ∈ [alphaMin, alphaMax] when the part model gives them (0.5 % end resistance: a 0 Ω exploit stops here, DESIGN §3.7)
     const R = resistance(x), m = modelOf(x), a = Math.min(m.alphamax ?? 1, Math.max(m.alphamin ?? 0, x.part.pos ?? 0.5));

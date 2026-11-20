@@ -19,7 +19,7 @@ import {
 } from './board';
 import { q, snap125 } from './quant';
 import { MAX_WIRES, newScope, newTicketProgress, pushFailure, pushUndo, type BoardSnapshot, type NodeState, type TicketState } from './state';
-import { levelDefOf, openTicketIn, refBoard } from './tickets';
+import { levelDefOf, openTicketIn, refBoard, unmetAfter } from './tickets';
 import { benchTicket, evalHint, liveCfg, liveRig, probeOn } from './ticket-run';
 import { refuse, refuseKey, say } from './text';
 import { danglingEnds, padWhat } from './touch';
@@ -250,8 +250,8 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       const def = levelDefOf(defs, id);
       if (!def) fail(t('ticket.unknown', { id: String(id), known: defs.map((x) => x.id).join(', ') }));
       need(!s.ticket, t('ticket.alreadyOpen', { id: s.ticket?.id ?? '' }));
-      const missing = (def!.after ?? []).filter((a) => !s.progress.tickets[a]?.passed);
-      if (missing.length > 0 && !sandbox(s)) refuseKey('ticket.locked', { id: def!.id, needs: missing.join(', ') });
+      const missing = unmetAfter(def!, (a) => !!s.progress.tickets[a]?.passed);
+      if (missing.length > 0 && !sandbox(s)) refuseKey('ticket.locked', { id: def!.id, needs: missing.map((m) => m.split('|').join(' or ')).join(', ') });
       openTicketIn(s, def!);
       return ok(t('ticket.opened', { id: def!.id, title: t(def!.titleKey) }));
     },
@@ -521,7 +521,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
     /** The formal test. `coached` = the player's own bench button: a ticket whose lesson is measuring (measureFirst) refuses until the meter or scope has been used. */
     runBench: (s, coached?: unknown) => {
       const { tk, def } = open(s, defs);
-      if (coached === true && def.measureFirst && !tk.probed) refuseKey('bench.measureFirst');
+      if (coached === true && def.measureFirst && !tk.probed) refuseKey(def.measureFirstKey ?? 'bench.measureFirst');
       // the player's own bench button with the power switch OFF: switch it on (the click and the toast say so) rather than testing a dark bench
       const autoPower = coached === true && !tk.live.powered;
       if (autoPower) { tk.live.powered = true; tk.instruments.supply.on = true; tk.instruments.gen.on = true; delete tk.live.paused; resetLive(tk.live); }
@@ -542,7 +542,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
         if (pay > 0) { s.progress.wallet += pay; result.pay = pay; s.log.push({ tick: s.tick, level: 'good', text: say('wallet.paid', { amount: formatMinor(pay, REGIONS.get(s.region)) }) }); }
         rec.passed = true; rec.stars = Math.max(rec.stars, result.stars) as 0 | 1 | 2 | 3;
         const head = def.stars.head;
-        if (rec.best === null || result.metrics[head] < rec.best[head]) rec.best = { ...result.metrics };
+        if (rec.best === null || (result.metrics[head] ?? 0) < (rec.best[head] ?? 0)) rec.best = { ...result.metrics };
         const pack = REGIONS.get(s.region);
         s.log.push({ tick: s.tick, level: 'good', text: say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }) });
         return ok((autoPower ? say('bench.autoPower') + ' ' : '') + say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }), { pass: true, stars: result.stars, metrics: result.metrics, pay: result.pay ?? 0, autoPowered: autoPower });
@@ -595,7 +595,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
     },
     predict: (s, id: unknown, value: unknown) => {
       const { tk, def } = open(s, defs), pid = str(id, 'id');
-      const known = def.bench.specs.filter((x) => x.kind === 'predict').map((x) => x.id);
+      const known = [...def.bench.specs.filter((x) => x.kind === 'predict').map((x) => x.id), ...(def.answers ?? []).map((a) => a.id)];
       if (!known.includes(pid)) refuseKey('err.predict.unknown', { id: pid, known: known.join(', ') || '-' });
       tk.predictions[pid] = sig(num(value, 'value'), 6); touch(tk);
       return ok(say('predict.set', { id: pid }));

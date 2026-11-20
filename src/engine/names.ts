@@ -25,6 +25,10 @@ function plainName(p: PlacedPart): string {
   if (p.partId === 'ideal-vsource') return say('name.source');
   if (p.partId.startsWith('bat-pp3')) return say('name.battery');
   if (d.kind === 'HEATER') return say('name.heater');
+  if (p.partId === 'res-box' && p.value !== null) return say('name.resbox', { value: si(p.value, 'Ω') });
+  if (p.partId === 'rheostat' && p.value !== null) return say('name.rheostat', { value: si(p.value, 'Ω') });
+  if (p.partId === 'trimmer' && p.value !== null) return say('name.trimmer', { value: si(p.value, 'Ω') });
+  if (p.partId === 'galvanometer') return say('name.galvo');
   if (d.kind === 'R' && p.value !== null) {
     const v = d.variants.find((x) => x.id === p.variant) ?? d.variants[0];
     const watts = p.variant !== 'ideal' && v?.ratings.P ? ` ${wattText(v.ratings.P)}` : '';

@@ -24,7 +24,7 @@ import { padKey } from '../sim/board/grid';
 import { allowedValues, allowedVariants, getDef } from './board';
 import { partPrice } from './metrics';
 import { FAILURE_LOG_CAP, SCOPE_POINTS_CAP, UNDO_CAP, type NodeState, type TicketState } from './state';
-import { levelDefOf } from './tickets';
+import { isUnlocked, levelDefOf } from './tickets';
 import { liveRig } from './ticket-run';
 import { say } from './text';
 import { buildDebrief, starsRule } from './debrief';
@@ -65,6 +65,14 @@ function explainCtx(tk: TicketState | null, def: LevelDef | undefined, prior = 0
   const rRes = resistors.reduce((a, p) => a + (p.value ?? 0), 0);
   const rWhat = resistors.length === 1 ? names[resistors[0]!.uid]! : `${resistors.length} resistors`;
   const nLeds = tk.board.parts.filter((p) => getDef(p.partId)?.kind === 'LED').length;
+  if (def.explain) ctx.miss!.mode = def.explain;
+  if (def.explain === 'divider') {   // 2-1: the player's top resistor (IN to OUT) and bottom resistor (OUT to GND), the fixed load, the supply
+    const cn = rig.conn.connectorNodes, nIn = cn.IN ?? -1, nOut = cn.OUT ?? -1, nGnd = cn.GND ?? -1;
+    const between = (a: number, b: number): number => { let sum = 0, any = false; for (const p of resistors) { const n = rig.conn.pinNodes[p.uid] ?? []; if ((n[0] === a && n[1] === b) || (n[0] === b && n[1] === a)) { sum += p.value ?? 0; any = true; } } return any ? sum : 0; };
+    const fixedLoad = tk.board.parts.find((p) => p.fixed && getDef(p.partId)?.kind === 'LOAD'), load = fixedLoad ? (getDef(fixedLoad.partId)!.model.R ?? 0) : 0;
+    const r1 = between(nIn, nOut), r2 = between(nOut, nGnd);
+    if (r1 > 0 && r2 > 0 && load > 0) ctx.divider = { r1, r2, rLoad: load, vin: vSupply };
+  }
   for (const p of tk.board.parts) {
     const d = getDef(p.partId); if (!d) continue;
     kinds[p.uid] = d.kind;
@@ -101,7 +109,7 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
     /** The campaign ticket list with lock state (the core `levels` query is the core-Level list and is reserved). */
     tickets: (s) => defs.map((d) => {
       const p = s.progress.tickets[d.id];
-      return { id: d.id, chapter: d.chapter, title: t(d.titleKey), customerId: d.customer, scope: d.scope, passed: !!p?.passed, stars: p?.stars ?? 0, attempts: p?.attempts ?? 0, unlocked: (d.after ?? []).every((a) => s.progress.tickets[a]?.passed) };
+      return { id: d.id, chapter: d.chapter, title: t(d.titleKey), customerId: d.customer, scope: d.scope, passed: !!p?.passed, stars: p?.stars ?? 0, attempts: p?.attempts ?? 0, unlocked: isUnlocked(d, (a) => !!s.progress.tickets[a]?.passed) };
     }),
     /** The open ticket as a card: title, brief, customer with the region's names, specs, bin, par. Null at the counter. */
     ticketCard: (s) => {
@@ -118,7 +126,8 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         shoebox: shoebox(s, o.tk, def), eb: def.eb === true, fee: def.pay?.fee ?? 0, feeText: def.pay ? formatMinor(def.pay.fee, REGIONS.get(s.region)) : '',
         conditions: def.bench.conditions.map((c) => ({ id: c.id, set: c.set ?? [], ambientC: c.ambientC ?? def.bench.ambientC })),
         targets: def.bench.specs.flatMap((x) => (x.kind === 'level' ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', lo: x.lo, hi: x.hi }] : [])),
-        predictions: def.bench.specs.flatMap((x) => (x.kind === 'predict' ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', unit: x.of.probe.trim().toLowerCase().startsWith('i(') ? 'A' : 'V', entered: o.tk.predictions[x.id] ?? null }] : [])),
+        predictions: def.bench.specs.flatMap((x) => (x.kind === 'predict' ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', unit: x.unit ?? (x.of.probe.trim().toLowerCase().startsWith('i(') ? 'A' : 'V'), entered: o.tk.predictions[x.id] ?? null }] : [])),
+        answers: (def.answers ?? []).map((a) => ({ id: a.id, name: def.bench.names[a.id] ? t(def.bench.names[a.id]!) : '', unit: a.unit, entered: o.tk.predictions[a.id] ?? null })),
         gauge: def.gauge ?? null, supplies: def.supplies, chit: def.chit ?? null, ambientC: def.bench.ambientC, figure: def.figure ?? null,
         payText: payText(def, REGIONS.get(s.region)), starRule: def.eb ? starsRule() : '',
       };
@@ -270,7 +279,7 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         pay: b.pay ?? 0, payText: b.pay ? formatMinor(b.pay, pack) : '',
         predictions: b.predictions.map((p) => ({ ...p, name: o.def.bench.names[p.id] ? t(o.def.bench.names[p.id]!) : p.id, gradeText: t(PREDICT_GRADE[p.grade] ?? 'bench.predict.miss'), gap: p.truth === 0 ? 0 : sig(((p.entered - p.truth) / Math.abs(p.truth)) * 100, 3) })),
         debrief: o.def.figure && b.predictions.length > 0 ? buildDebrief(o.def.figure, b.predictions.map((p) => ({
-          id: p.id, name: o.def.bench.names[p.id] ? t(o.def.bench.names[p.id]!) : p.id, unit: p.id === 'pie2' || o.def.bench.specs.some((x) => x.kind === 'predict' && x.id === p.id && x.of.probe.trim().toLowerCase().startsWith('i(')) ? 'A' : 'V',
+          id: p.id, name: o.def.bench.names[p.id] ? t(o.def.bench.names[p.id]!) : p.id, unit: ((sp) => (sp?.kind === 'predict' && sp.unit ? sp.unit : p.id === 'pie2' || (sp?.kind === 'predict' && sp.of.probe.trim().toLowerCase().startsWith('i(')) ? 'A' : 'V'))(o.def.bench.specs.find((x) => x.id === p.id)),
           entered: p.entered, truth: sig(p.truth, 5), gapPct: p.truth === 0 ? 0 : sig(((p.entered - p.truth) / Math.abs(p.truth)) * 100, 3), grade: p.grade, gradeText: t(PREDICT_GRADE[p.grade] ?? 'bench.predict.miss'),
         })), b.stars, b.pass) : null,
         specs: b.specs.map((x) => ({ ...x, name: t(x.key) })),

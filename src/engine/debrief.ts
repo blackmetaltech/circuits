@@ -34,7 +34,23 @@ export function solveFigure(f: ExamFigure): { a: number; into: number[] } {
 
 export const starsRule = (): string => say('debrief.rule');
 
+/** The 2-4 slip: the potentiometer worked out from the printed problem (gradient, EMF, internal resistance), with the player's predictions graded. */
+function buildPotDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: number, built: boolean): Debrief {
+  const p = f.pot!, i = p.driverV / (p.rheostat + p.wireOhm), k = (i * p.wireOhm) / p.wireCm, e = k * p.l1Cm, v2 = k * p.l2Cm, r = (p.shunt * (p.l1Cm - p.l2Cm)) / p.l2Cm;
+  const working = [
+    say('debrief.pot.i', { v: num(p.driverV), rh: num(p.rheostat), rw: num(p.wireOhm), i: num(i) }),
+    say('debrief.pot.k', { i: num(i), rw: num(p.wireOhm), l: num(p.wireCm), k: num(k) }),
+    say('debrief.pot.e', { k: num(k), l1: num(p.l1Cm), e: num(e) }),
+    say('debrief.pot.v', { sh: num(p.shunt), k: num(k), l2: num(p.l2Cm), v: num(v2) }),
+    say('debrief.pot.r', { sh: num(p.shunt), l1: num(p.l1Cm), l2: num(p.l2Cm), r: num(r) }),
+  ];
+  const full = rows.map((x) => ({ ...x, ok: x.grade !== 'miss' }));
+  const starsText = say(!built ? 'debrief.stars.fail' : stars >= 3 ? 'debrief.stars.3' : stars === 2 ? 'debrief.stars.2' : 'debrief.stars.1');
+  return { node: 'wire', equation: say('debrief.pot.equation'), working, answer: say('debrief.pot.answer', { r: num(r) }), currents: [{ name: 'cell', amps: sig(e, 4), charging: false, text: say('debrief.pot.robust') }], rows: full, starsText };
+}
+
 export function buildDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: number, built: boolean): Debrief {
+  if (f.kind === 'pot' && f.pot) return buildPotDebrief(f, rows, stars, built);
   const { a, into } = solveFigure(f), n = f.node;
   const eq = f.sources.map((s) => `(${num(s.volts)} − ${n})/${num(s.r.ohm)}`).join(' + ') + ` = ${n}/${num(f.load.ohm)}`;
   const mult = f.sources.every((s) => Number.isInteger(s.r.ohm)) && Number.isInteger(f.load.ohm) ? leastCommon([...f.sources.map((s) => s.r.ohm), f.load.ohm]) : 0;

@@ -13,6 +13,8 @@ export function refActions(def: LevelDef): Action[] {
     if (p.pos !== undefined && d?.kind === 'SLIDEWIRE') out.push({ name: 'setJockey', args: [uid, p.pos * (d.model.lengthM ?? 1) * 1000] });
   });
   for (const path of def.ref.wires) out.push({ name: 'addWire', args: [path] });
+  for (const [uid, mm] of Object.entries(def.ref.jockeys ?? {})) out.push({ name: 'setJockey', args: [uid, mm] });
+  if (def.ref.supply) out.push({ name: 'setSupply', args: [def.ref.supply.v, def.ref.supply.ilim] });
   for (const [id, v] of Object.entries(def.ref.predictions ?? {})) out.push({ name: 'predict', args: [id, v] });
   out.push({ name: 'power', args: [true] }, { name: 'advance', args: [4] }, { name: 'runBench' });
   return out;

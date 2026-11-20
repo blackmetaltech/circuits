@@ -28,7 +28,9 @@ export type BenchSpec =
   | { kind: 'rating'; id: string; probes?: string[] }
   | { kind: 'safety'; id: string; rule: SafetyRule }
   /** Exam-bridge prediction: scored against the solver's value, never pass/fail. */
-  | { kind: 'predict'; id: string; entered: number; of: Measure; tol1?: number; tol5?: number };
+  | { kind: 'predict'; id: string; entered: number; of: Measure; tol1?: number; tol5?: number; /** A textbook answer fixed by the printed problem (2-4): graded against this number instead of a probe. */ truth?: number; /** Display unit of the answer slip ('V/cm'); default V or A from the probe. */ unit?: string }
+  /** Two measured levels must agree: |a - b| <= tol x |b| (ticket 2-3: your replacement against the sealed box, under each test load). */
+  | { kind: 'match'; id: string; a: string; b: string; tol: number };
 
 export interface RatingViolation { part: string; what: string; value: number; limit: number }
 export interface RatingReport { violations: RatingViolation[]; smoked: string[] }

@@ -7,6 +7,10 @@ import { L1_2 } from './1-2';
 import { L1_3 } from './1-3';
 import { L1_4 } from './1-4';
 import { L1_5 } from './1-5';
+import { L2_1 } from './2-1';
+import { L2_2 } from './2-2';
+import { L2_3 } from './2-3';
+import { L2_4 } from './2-4';
 
 export type * from './types';
-export const LEVEL_DEFS: readonly LevelDef[] = [L0_0, L1_1, L1_2, L1_3, L1_4, L1_5];
+export const LEVEL_DEFS: readonly LevelDef[] = [L0_0, L1_1, L1_2, L1_3, L1_4, L1_5, L2_1, L2_2, L2_3, L2_4];

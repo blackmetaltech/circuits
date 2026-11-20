@@ -90,7 +90,7 @@ describe('region packs of NODE', () => {
     expect(play(GAME, { persona: 'idle', seed: 2, ticks: 20, region: id }).violations, id).toEqual([]);
     // every level (the sample ticket 0-0 and chapter 1) is solvable in every pack, idle does not pass, and nothing degenerate wins
     const reports = checkAllLevels(GAME, { seed: 1, region: id });
-    expect(reports.map((r) => r.level)).toEqual(['0-0', '1-1', '1-2', '1-3', '1-4', '1-5']);
+    expect(reports.map((r) => r.level)).toEqual(['0-0', '1-1', '1-2', '1-3', '1-4', '1-5', '2-1', '2-2', '2-3', '2-4']);
     for (const r of reports) expect(r.problems, r.level).toEqual([]);
   });
   it('mains differ by pack but physics-facing engine data does not', () => {

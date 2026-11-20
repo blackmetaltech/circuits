@@ -50,8 +50,23 @@ export function benchTicket(s: NodeState, def: LevelDef): { result: BenchResult;
     supply: tk.instruments.supply, gen: tk.instruments.gen, smoked: tk.live.smoked, predictions: tk.predictions,
   });
   const metrics = boardMetrics(tk.board, REGIONS.get(s.region), out.supplyPowerW * 1e6);
-  const pass = out.pass;
-  let stars: 0 | 1 | 2 | 3 = !pass ? 0 : metrics[def.stars.head] <= def.stars.par[def.stars.head] ? 2 : 1;
+  const failuresAll = [...out.failures], rowsAll = [...out.rows];
+  let pass = out.pass;
+  // numbers the player works out and enters (2-2: the distance to the fault), checked against the hidden truth; reported only once the circuit itself is right
+  for (const a of def.answers ?? []) {
+    const entered = tk.predictions[a.id], hv = tk.hidden[a.hidden] ?? def.hidden?.find((h) => h.id === a.hidden)?.learner ?? 0, truth = hv / a.per;
+    if (entered === undefined) { rowsAll.push({ id: a.id, pass: false, margin: -1 }); if (out.pass) { failuresAll.push({ key: 'bench.answer.missing', vars: { id: a.id, unit: a.unit } }); pass = false; } continue; }
+    const rel = Math.abs(entered - truth) / Math.max(Math.abs(truth), 1e-12), good = rel <= a.tol;
+    metrics.accuracy = Math.round(rel * 1e6);
+    rowsAll.push({ id: a.id, pass: good, margin: sig(a.tol - rel, 4) });
+    if (!good && out.pass) {
+      const rbox = tk.board.parts.filter((p) => p.partId === 'res-box' && p.value !== null).reduce((acc, p) => acc + (p.value ?? 0), 0);
+      const wire = tk.board.parts.find((p) => p.uid === a.wire), d = wire ? getDef(wire.partId) : undefined, lCm = (wire?.pos ?? 0.5) * (d?.model.lengthM ?? 1) * 100;
+      failuresAll.push({ key: 'bench.answer.fail', vars: { id: a.id, entered: sig(entered, 4), unit: a.unit, tol: sig(a.tol * 100, 3), R: sig(rbox, 4), l: sig(lCm, 4), ratio: lCm > 0 && lCm < 100 ? sig((100 - lCm) / lCm, 4) : 0 } });
+      pass = false;
+    }
+  }
+  let stars: 0 | 1 | 2 | 3 = !pass ? 0 : (metrics[def.stars.head] ?? Infinity) <= (def.stars.par[def.stars.head] ?? 0) ? 2 : 1;
   if (def.eb && pass) {
     // exam bridge (DESIGN §2.5), graded on the predictions: 1 star for a correct build, 2 when every prediction is within 5 %, 3 when every one is within 1 %
     const g = out.predictions;
@@ -59,8 +74,8 @@ export function benchTicket(s: NodeState, def: LevelDef): { result: BenchResult;
   }
   const result: BenchResult = {
     pass, metrics,
-    specs: out.rows.map((r) => ({ id: r.id, key: def.bench.names[r.id] ?? IMPLICIT_SPEC[r.id] ?? 'bench.spec.other', pass: r.pass, margin: Number.isFinite(r.margin) ? sig(r.margin, 4) : 0 })),
-    failures: out.failures.map((f) => richer(f, out.causes)).slice(0, BENCH_FAILURE_CAP).map((f) => ({ key: f.key, vars: { ...f.vars } })),
+    specs: rowsAll.map((r) => ({ id: r.id, key: def.bench.names[r.id] ?? IMPLICIT_SPEC[r.id] ?? 'bench.spec.other', pass: r.pass, margin: Number.isFinite(r.margin) ? sig(r.margin, 4) : 0 })),
+    failures: failuresAll.map((f) => richer(f, out.causes)).slice(0, BENCH_FAILURE_CAP).map((f) => ({ key: f.key, vars: { ...f.vars } })),
     stars, smoked: out.smoked,
     predictions: out.predictions.map((p) => ({ id: p.id, entered: p.entered, truth: p.truth, grade: p.grade })),
     badSamples: out.badSamples,

@@ -11,6 +11,7 @@ export const FOOTPRINTS: Readonly<Record<FootprintId, readonly Pad[]>> = {
   to220: [[0, 0], [2, 0], [4, 0]],
   // DIP: pins 1-4 down the left column, 5-8 up the right column (0.3" row spacing).
   dip8: [[0, 0], [0, 1], [0, 2], [0, 3], [3, 3], [3, 2], [3, 1], [3, 0]],
+  slide3: [[0, 0], [10, -2], [20, 0]],                         // wire end A, jockey terminal J, wire end B
   pot3: [[0, 0], [2, 0], [4, 0]],                              // end A, wiper W, end B
   xfmr4: [[0, 0], [0, 4], [4, 0], [4, 4]],                     // primary 1/2 left, secondary 3/4 right
   relay5: [[0, 0], [0, 4], [4, 0], [4, 2], [4, 4]],            // coil 1/2, common, NO, NC

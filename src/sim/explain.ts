@@ -156,6 +156,13 @@ export function explainBandMiss(a: { probe: string; level: number; tCross: numbe
     rProbe: si(a.rProbe, 'Ω'), rth: si(rth, 'Ω'), vFinal: sig((a.vSrc * a.rProbe) / (a.r + a.rProbe)),
   } };
 }
+/** 2-1: the divider formula is right on paper, but the ADC input is a resistor in parallel with the bottom resistor. */
+export function explainDivider(a: { r1: number; r2: number; rLoad: number; vin: number; lo: number; hi: number }): Explained {
+  const par = (a.r2 * a.rLoad) / (a.r2 + a.rLoad);
+  return { key: 'explain.divider', vars: {
+    r1: si(a.r1, 'Ω'), r2: si(a.r2, 'Ω'), rLoad: si(a.rLoad, 'Ω'), vin: sig(a.vin), vUnloaded: sig((a.vin * a.r2) / (a.r1 + a.r2)), vLoaded: sig((a.vin * par) / (a.r1 + par)), rLower: si(par, 'Ω'), lo: sig(a.lo), hi: sig(a.hi),
+  } };
+}
 export function explainFloatingGate(a: { part: string; rPull?: number }): Explained {
   return { key: 'explain.floatingGate', vars: { ...pn(a.part), rPull: si(a.rPull ?? 100e3, 'Ω') } };
 }
@@ -172,6 +179,8 @@ export function explainTopology(issues: readonly TopoIssue[]): Explained[] {
 // ---------------------------------------------------------------- from a bench or rating failure to its explainer
 /** The plain words for a level spec the bench measured outside its band: units, the part by name, what it needs, and the likeliest cause. */
 export interface MissCtx {
+  /** The ticket's explainer family ('divider' | 'bridge' | 'blackbox' | 'pot'), for the causes that depend on what the ticket teaches. */
+  mode?: string;
   /** Part uid -> what to call it ("the LED", "the 470 Ω resistor"). */
   names?: Readonly<Record<string, string>>;
   /** Part uid -> kind ('LED', 'R', ...). */
@@ -195,6 +204,8 @@ export function explainLevelMiss(f: BenchFailure, ctx: MissCtx = {}): Explained 
   const what = q === 'v' ? arg.split(',')[0]!.toUpperCase() : ctx.names?.[arg];
   if (what === undefined) return null;
   const kind = q === 'v' ? '' : (ctx.kinds?.[arg] ?? '');
+  // a null detector (a galvanometer that must read zero, within a few microamps either side)
+  if (q === 'i' && lo < 0 && hi > 0 && Math.max(-lo, hi) < 1e-3) return { key: ctx.mode === 'pot' ? 'bench.plain.null.fixed' : 'bench.plain.null', vars: { what, value: sig(Math.abs(value) * 1e6, 3), hi: sig(hi * 1e6, 3), cond: condText } };
   const open = b >= 1e3 ? 'atLeast' : a <= 0 ? 'atMost' : 'band';
   const vars: Vars = { what, value: sigm(val * k, a * k, Math.min(b, 1e5) * k), lo: sigm(a * k, a * k, Math.min(b, 1e5) * k), hi: sigm(Math.min(b, 1e5) * k, a * k, Math.min(b, 1e5) * k), unit, cond: condText };
   const dead = q === 'i' && Math.abs(val) < 1e-6;
@@ -226,6 +237,8 @@ export interface ExplainContext {
   electrolytic?: readonly string[];
   /** Supply, loop and LED figures for a burned LED. */
   led?: Readonly<Record<string, LedLoop>>;
+  /** Ticket 2-1: the player's divider as the bench sees it (top resistor, bottom resistor, the fixed load across the bottom one, the supply). */
+  divider?: { r1: number; r2: number; rLoad: number; vin: number };
   /** How many failures the player already had on this ticket (the first burn teaches the cause, a repeat gives the worked formula). */
   prior?: number;
 }
@@ -265,7 +278,14 @@ function explainRaw(f: BenchFailure, ctx: ExplainContext): Explained {
       if (l?.model && l.iRated) return explainLedOvercurrent({ part, i: ledCurrentFromPower(num('P'), l.model), iRated: l.iRated, loop: l, prior: ctx.prior });
       break;
     }
-    case 'bench.level.fail': case 'bench.metric.fail': { const e = explainLevelMiss(f, ctx.miss); if (e) return e; break; }
+    case 'bench.level.fail': case 'bench.metric.fail': {
+      if (ctx.divider && /^v\(/.test(String(v.probe ?? ''))) return explainDivider({ ...ctx.divider, lo: num('lo'), hi: num('hi') });
+      const e = explainLevelMiss(f, ctx.miss); if (e) return e; break;
+    }
+    case 'bench.match.fail': {
+      const value = num('value'), ref = num('ref'), cond = String(v.cond ?? ''), open = /open/.test(cond);
+      return { key: open ? 'explain.match.open' : value > ref ? 'explain.match.high' : 'explain.match.low', vars: { cond, value: sig(value, 3), ref: sig(ref, 3), tol: sig(num('tol') * 100, 2) } };
+    }
     case 'tran.noConverge': case 'solve.noConverge': { const e = explainStuck(f, ctx.miss); if (e) return e; return { key: 'bench.stuck', vars: { cond: String(v.cond ?? 'nominal') === 'nominal' ? '' : ` in the ${String(v.cond)} test` } }; }
     default: break;
   }

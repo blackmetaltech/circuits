@@ -64,11 +64,22 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
   for (const cond of plan.conditions) {
     const overrides: RigOverride[] = [...inp.hidden, ...(cond.set ?? [])];
     const ta = cond.ambientC ?? plan.ambientC;
-    const mk = (probeLoads: string[]) => buildRig({ board: inp.board, getDef: inp.getDef, supplies: inp.supplies, supply: inp.supply, gen: inp.gen, overrides, ambientC: ta, probeLoads });
+    const mk = (probeLoads: string[]) => buildRig({ board: inp.board, getDef: inp.getDef, supplies: inp.supplies, supply: inp.supply, gen: inp.gen, overrides, ambientC: ta, probeLoads, testLoads: plan.testLoads });
     const rig0 = mk([]);
     // resolve spec probes against the board; a spec whose part is not on the board fails with a teaching key
     const specs: BenchSpec[] = [], loads: string[] = [];
     for (const s of plan.specs) {
+      if (s.kind === 'match') {
+        const a = rig0.resolve(s.a), b = rig0.resolve(s.b);
+        if (a === null || b === null) { failures.push({ key: 'bench.part.missing', vars: { id: s.id, probe: a === null ? s.a : s.b, cond: cond.id } }); failedIds.add(s.id); continue; }
+        for (const n of [...nodesOf(a), ...nodesOf(b)]) if (!loads.includes(n)) loads.push(n);
+        specs.push({ ...s, a, b }); continue;
+      }
+      if (s.kind === 'predict' && s.truth !== undefined) {
+        const entered = inp.predictions[s.id];
+        if (entered === undefined) { failures.push({ key: 'bench.predict.missing', vars: { id: s.id, cond: cond.id } }); failedIds.add(s.id); continue; }
+        specs.push({ ...s, entered }); continue;
+      }
       if (s.kind === 'level' || s.kind === 'band' || s.kind === 'metric' || s.kind === 'predict') {
         const orig = s.kind === 'predict' ? s.of.probe : s.probe;
         const probe = rig0.resolve(orig);
@@ -111,6 +122,7 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
       let m = 0;
       if (s.kind === 'level' || s.kind === 'metric') m = Number.isNaN(v) ? -1 : Math.min(v - s.lo, s.hi - v);
       else if (s.kind === 'band') m = -v;
+      else if (s.kind === 'match') m = Number.isNaN(v) ? -1 : v;
       else if (s.kind === 'mask') m = v;
       else if (s.kind === 'safety') m = v >= 1 ? 0 : -1;
       const cur = marginOf.get(s.id); marginOf.set(s.id, cur === undefined ? m : Math.min(cur, m));
