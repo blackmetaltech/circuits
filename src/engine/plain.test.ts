@@ -63,11 +63,11 @@ describe('wires say what they touch, and flag the ones that touch nothing', () =
   it('a wire onto a leg names the leg; onto the connector names the connector; onto an empty hole warns', () => {
     const e = open('1-1'); place(e, 4, 5);
     const r = ok(e, 'wire', [2, 2], [4, 5]);
-    expect(r.landed.map((x: any) => x.kind)).toEqual(['pin', 'pin']);
-    expect(r.landed[1].text).toBe('the LED leg A +'); expect(r.dangling).toEqual([]);
+    expect((r.landed as any[]).map((x: any) => x.kind)).toEqual(['pin', 'pin']);
+    expect((r.landed as any[])[1].text).toBe('the LED leg A +'); expect(r.dangling).toEqual([]);
     const h = ok(e, 'wire', [8, 2], [7, 5]);   // one hole beside the K leg
     expect(h.dangling).toEqual([[7, 5]]); expect(h.message).toMatch(/isn't touching a part's leg/);
-    expect(h.landed[1]).toMatchObject({ kind: 'empty' });
+    expect((h.landed as any[])[1]).toMatchObject({ kind: 'empty' });
     const b = q(e, 'bench'); expect(b.dangling.map((d: any) => d.pad)).toEqual([[7, 5]]);
     expect(b.parts.find((p: any) => p.uid === 'p1').pins.map((p: any) => p.label)).toEqual(['A +', 'K -']);
     expect(b.openPins).toEqual([{ uid: 'p1', pin: 'K', pad: [6, 5] }]);
