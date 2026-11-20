@@ -6,8 +6,8 @@ extends Control
 const S = preload("res://stall/stall_style.gd")
 const DESIGN := Vector2(300, 430)
 const DIAL_C := Vector2(150, 262)
-const MODES := ["OFF", "V", "mA"]
-const MODE_ANG := {"OFF": -2.35, "V": -0.78, "mA": 0.78}
+const MODES := ["OFF", "V", "mA", "Ω"]
+const MODE_ANG := {"OFF": -2.35, "V": -0.78, "mA": 0.78, "Ω": 2.35}
 
 var mode := "V"
 var reading := {"text": "", "unit": "", "mode": "OFF"}
@@ -59,13 +59,13 @@ func _draw() -> void:
 		S.text(self, S.mono(), "88.88", lcd.position + Vector2(24, 82), 76, Color(0.15, 0.2, 0.1, 0.07))   # ghost segments
 		var ink := Color(0.07, 0.09, 0.05, 0.92)
 		S.text(self, S.mono(), txt, Vector2(lcd.end.x - 22 - S.tw(S.mono(), txt, 70), lcd.position.y + 82), 70, ink)
-		S.text(self, S.mono(), "DC" if mode == "V" else "DC", lcd.position + Vector2(10, 22), 14, ink)
+		S.text(self, S.mono(), "DC" if mode != "Ω" else "OHM", lcd.position + Vector2(10, 22), 14, ink)
 		S.text(self, S.mono(), str(reading.get("unit", "")), lcd.position + Vector2(lcd.size.x - 44, 22), 18, ink)
 		if txt.begins_with("-"): S.text(self, S.mono(), "", lcd.position, 10, ink)
 	else:
 		S.text(self, S.mono(), "88.88", lcd.position + Vector2(24, 82), 76, Color(0.15, 0.2, 0.1, 0.045))
 	# dial: a fat knurled knob with labelled positions around it
-	var labs := {"OFF": "OFF", "V": "V", "mA": "mA"}
+	var labs := {"OFF": "OFF", "V": "V", "mA": "mA", "Ω": "Ω"}
 	for m in MODES:
 		var a: float = MODE_ANG[m]; var d := Vector2(cos(a - 1.57), sin(a - 1.57)) * Vector2(1, 1)
 		var pos := DIAL_C + Vector2(sin(a), -cos(a)) * 106.0

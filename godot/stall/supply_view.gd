@@ -10,6 +10,7 @@ const ROCKER := Rect2(300, 40, 70, 100)
 var kind := "pp3"
 var label := "9 V PP3"
 var tired := false
+var conditions: Array = []         ## the ticket's bench conditions (engine): [{id, set:[{target,key,value}], ambientC}], drawn as a tag when there are several
 var on := false
 var hover := false
 var volts := 9.0
@@ -52,11 +53,26 @@ func _holder(rr: Rect2) -> void:
 	if tired:   # a hand-written sticker on a tired cell
 		S.paper(self, Rect2(cell.position.x + 150, cell.position.y + 20, 86, 44), -6.0)
 		S.text(self, S.hand(), "tired!", Vector2(cell.position.x + 166, cell.position.y + 50), 20, S.INK_RED)
+	if conditions.size() > 1: _cond_tag()
 	for i in 2:   # snap studs on top
 		var c := Vector2(52 + i * 52, 30)
 		var col := Color("#b2261c") if i == 0 else Color("#1a1a1c")
 		draw_circle(c, 17, Color("#0a0a0c")); draw_circle(c, 14, Color("#8d9097")); draw_circle(c, 9, col.lightened(0.1)); draw_circle(c + Vector2(-3, -3), 3, Color(1, 1, 1, 0.5))
 	S.text(self, S.hand(), "+", Vector2(40, 54), 18, Color("#d98a80")); S.text(self, S.hand(), "-", Vector2(98, 54), 22, Color("#9aa0a8"))
+
+## The bench tests every condition (docs/API-CH1.md: ticketCard.conditions): a paper tag lists them with the engine's own numbers.
+func _cond_tag() -> void:
+	var rows: Array = []
+	for c in conditions:
+		var emf := -1.0; var r := -1.0
+		for e in c.get("set", []):
+			if str(e.key) == "emf": emf = float(e.value)
+			elif str(e.key) == "r": r = float(e.value)
+		rows.append("%s %s V / %s \u03a9" % [str(c.id), "%.4g" % emf, "%.4g" % r] if emf >= 0.0 else str(c.id))
+	var tag := Rect2(150, 12, 140, 18 + rows.size() * 17)
+	S.paper(self, tag, 1.5, S.PAPER)
+	S.text(self, S.hand(), "bench tests:", tag.position + Vector2(8, 15), 13, S.INK_RED)
+	for i in rows.size(): S.text(self, S.hand(), rows[i], tag.position + Vector2(8, 31 + i * 16), 13, S.INK)
 
 func _bench(rr: Rect2) -> void:
 	S.rr(self, rr, 14, Color("#3b3e44")); S.rr(self, rr.grow(-3), 12, Color("#585c64"))

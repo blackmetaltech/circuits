@@ -98,7 +98,8 @@ func _chit() -> void:
 	S.text(self, S.hand(), "for %s" % str(ticket.customer), q.position + Vector2(14, 98), 18, Color(S.INK, 0.8))
 	draw_line(q.position + Vector2(12, 108), q.position + Vector2(r.size.x - 12, 108), Color(S.INK, 0.25), 1.5)
 	S.text(self, S.hand(), str(ticket.spec), q.position + Vector2(14, 132), 17, S.INK, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 28)
-	S.text(self, S.hand(), "%d coins" % int(ticket.price), q.position + Vector2(r.size.x - 92, 98), 15, Color(S.INK, 0.75))
+	var fee: String = str(ticket.get("price_text", "")) if str(ticket.get("price_text", "")) != "" else "%d coins" % int(ticket.price)
+	S.text(self, S.hand(), fee, q.position + Vector2(r.size.x - 14 - S.tw(S.hand(), fee, 15), 98), 15, Color(S.INK, 0.75))
 	if locked:   # a rubber stamp
 		draw_set_transform(c + Vector2(28, 62), deg_to_rad(-12.0), Vector2.ONE)
 		S.rr_line(self, Rect2(-56, -20, 112, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5)
@@ -147,9 +148,10 @@ func _tag() -> void:
 
 func _toast() -> void:
 	var a := clampf(minf(toast_age * 4.0, (3.5 - toast_age) * 2.0), 0.0, 1.0)
-	var r := Rect2(size.x * 0.5 - 330, 196, 660, 46)
+	var th := S.wrapped_h(S.hand(), toast, 22, 620.0)
+	var r := Rect2(size.x * 0.5 - 330, 196, 660, maxf(46.0, th + 24.0))
 	S.paper(self, r, -0.6, Color(0.97, 0.93, 0.8, a))
-	S.text(self, S.hand(), toast, r.position + Vector2(20, 31), 22, Color(S.INK, a))
+	S.text(self, S.hand(), toast, r.position + Vector2(20, 31), 22, Color(S.INK, a), HORIZONTAL_ALIGNMENT_LEFT, 620.0)
 
 ## The folded scope drawer on phones: a peek strip with a mini trace, the amber/green band and the LOCK lamp, always in view.
 func _peek() -> void:

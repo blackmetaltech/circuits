@@ -192,6 +192,9 @@ func _advance(id: String, amps: float, m: Dictionary, dt: float, ac_key := "") -
 	var a := absf(amps)
 	if a < 1e-9: return
 	var speed := clampf(log(a / 1e-6) / log(10.0), 0.2, 6.0)   # pads/s, DESIGN §5.2
+	var es: Dictionary = m.get("wire_speed", {}) if not id.begins_with("p:") else m.get("part_speed", {})
+	var ek: String = id if not id.begins_with("p:") else ac_key
+	if es.has(ek): speed = maxf(absf(float(es[ek])), 0.0)   # the engine's own dot speed (liveFrame speed) replaces the local formula
 	var dir := signf(amps) * (-1.0 if electron_flow else 1.0)
 	if m.ac.has(id if ac_key == "" else ac_key): dir *= _ac_wave()
 	_phase[id] = float(_phase.get(id, 0.0)) + speed * dir * dt
@@ -230,7 +233,10 @@ func _node_v(pad: Vector2, m: Dictionary) -> float:
 	if m.ac_amp.has(k): v += float(m.ac_amp[k]) * _ac_wave()
 	return v
 
-func _node_color(pad: Vector2, m: Dictionary) -> Color: return volt_color(_node_v(pad, m), m.vlo, m.vhi)
+func _node_color(pad: Vector2, m: Dictionary) -> Color:
+	var nm: Dictionary = m.get("norm", {})
+	if not nm.is_empty() and m.vlo >= 0.0 and nm.has(NodeApi.key(pad)): return SLATE.lerp(AMBER, clampf(float(nm[NodeApi.key(pad)]), 0.0, 1.0))   # the engine's tint scalar
+	return volt_color(_node_v(pad, m), m.vlo, m.vhi)
 
 func _txt(ci: CanvasItem, s: String, pos: Vector2, size_px: int, col: Color, align := HORIZONTAL_ALIGNMENT_LEFT, outline := true) -> void:
 	var f := ThemeDB.fallback_font
@@ -346,8 +352,8 @@ func _draw_parts(ci: Control) -> void:
 	# parts
 	for pt in m.parts:
 		var i: float = absf(float(m.part_i.get(pt.uid, 0.0))) if live else 0.0
-		var st := {"lit": _led_k(i) if pt.kind == "LED" else 0.0, "smoked": m.smoked.has(pt.uid),
-			"hot": clampf((float(m.temps.get(pt.uid, m.ambient)) - 45.0) / 110.0, 0.0, 1.0) if live else 0.0}
+		var st := {"lit": _led_lit(pt.uid, i, m) if pt.kind == "LED" else 0.0, "smoked": m.smoked.has(pt.uid),
+			"hot": _heat_k(pt.uid, m) if live else 0.0}
 		PartArt.draw(ci, pt, _px(Vector2(pt.x, pt.y)), p, st)
 	for pr in m.probes: _probe(ci, pr)
 	# labels and rating bars
@@ -409,12 +415,11 @@ func _draw_glow(ci: Control) -> void:
 		var pin_px: Array = pt.pins.map(func(v): return _px(v))
 		var b := PartArt.screen_bounds(pt, pin_px, p); var c := b.get_center()
 		var smoked: bool = m.smoked.has(pt.uid)
-		var temp: float = m.temps.get(pt.uid, m.ambient)
-		var hk := clampf((temp - 45.0) / 110.0, 0.0, 1.0)
+		var hk := _heat_k(pt.uid, m)
 		if hk > 0.02 and not smoked:   # heat glow: blackbody ramp over the body
 			_blob(ci, c, maxf(b.size.x, b.size.y) * (0.75 + 0.45 * hk), Color(heat_color(hk), minf(1.0, hk * 0.95)))
 		if pt.kind == "LED" and not smoked:   # bloom proportional to current (log)
-			var k := _led_k(absf(float(m.part_i.get(pt.uid, 0.0))))
+			var k := _led_lit(pt.uid, absf(float(m.part_i.get(pt.uid, 0.0))), m)
 			if k > 0.0:
 				var lc := _led_color(pt); var lp: Vector2 = _px(Vector2(pt.x, pt.y) + NodeApi._rot_off(Vector2(1, 0), pt.rot, pt.flip))
 				var flick := 1.0 + 0.02 * sin(t * 37.0)
@@ -499,7 +504,9 @@ func _draw_cute(ci: Control) -> void:
 		if pt.kind != "LED": continue
 		var cen := _px(Vector2(pt.x, pt.y) + NodeApi._rot_off(Vector2(1, 0), pt.rot, pt.flip))
 		var ma := absf(float(m.part_i.get(pt.uid, 0.0))) * 1000.0 if m.powered else 0.0
-		_led_face(ci, cen, ma, m.smoked.has(pt.uid), pt.uid)
+		var lm: Dictionary = m.get("led", {}).get(pt.uid, {})
+		if not lm.is_empty(): ma = float(lm.mA)   # engine LED: mood and bloom come with the frame
+		_led_face(ci, cen, ma, m.smoked.has(pt.uid), pt.uid, str(lm.get("mood", "")))
 
 func _critter(ci: CanvasItem, c: Vector2, dir: Vector2, sc: float, ph: float) -> void:
 	var r := p * 0.27 * sc
@@ -517,7 +524,18 @@ func _critter(ci: CanvasItem, c: Vector2, dir: Vector2, sc: float, ph: float) ->
 		ci.draw_circle(e, r * 0.2, Color.WHITE); ci.draw_circle(e + dir * r * 0.06, r * 0.11, Color(0.04, 0.06, 0.12))
 	ci.draw_line(c2 - dir * r * 0.5 - Vector2(r * 0.22, 0), c2 - dir * r * 0.5 + Vector2(r * 0.22, 0), Color("#3b8aa3"), maxf(1.0, r * 0.16))   # the minus on its back: an electron
 
-func _led_face(ci: CanvasItem, cen: Vector2, ma: float, smoked: bool, uid: String) -> void:
+## Heat 0..1 for a part: the engine's own (liveFrame thermal state) when the model carries it, else the temperature ramp.
+func _heat_k(uid: String, m: Dictionary) -> float:
+	var h: Dictionary = m.get("heat", {})
+	if not h.is_empty(): return float(h.get(uid, 0.0))
+	return clampf((float(m.temps.get(uid, m.ambient)) - 45.0) / 110.0, 0.0, 1.0)
+
+## LED glow 0..1: the engine's bloom (log current, 10 uA..30 mA) when present.
+func _led_lit(uid: String, amps: float, m: Dictionary) -> float:
+	var lm: Dictionary = m.get("led", {}).get(uid, {})
+	return float(lm.bloom) if not lm.is_empty() else _led_k(amps)
+
+func _led_face(ci: CanvasItem, cen: Vector2, ma: float, smoked: bool, uid: String, mood := "") -> void:
 	var r := p * 0.82
 	var ink := Color(0.09, 0.015, 0.02, 0.95) if ma > 3.0 else Color(0.95, 0.72, 0.72, 0.9)
 	var w := maxf(1.5, p * 0.075)
@@ -529,13 +547,14 @@ func _led_face(ci: CanvasItem, cen: Vector2, ma: float, smoked: bool, uid: Strin
 			ci.draw_line(e + Vector2(-r * 0.13, -r * 0.13), e + Vector2(r * 0.13, r * 0.13), ink, w); ci.draw_line(e + Vector2(-r * 0.13, r * 0.13), e + Vector2(r * 0.13, -r * 0.13), ink, w)
 		ci.draw_polyline(PackedVector2Array([cen + Vector2(-r * 0.3, r * 0.42), cen + Vector2(-r * 0.1, r * 0.34), cen + Vector2(r * 0.1, r * 0.44), cen + Vector2(r * 0.3, r * 0.36)]), ink, w)
 		return
-	if ma < 2.0:   # sleepy: closed eyes, tiny mouth, drifting z
+	if mood == "": mood = "sleepy" if ma < 2.0 else ("happy" if ma <= 20.0 else "sweating")
+	if mood == "sleepy":   # sleepy: closed eyes, tiny mouth, drifting z
 		for sgn in [-1.0, 1.0]: ci.draw_arc(Vector2(cen.x + ex * sgn, ey), r * 0.14, 0.15, PI - 0.15, 8, ink, w)
 		ci.draw_circle(cen + Vector2(0, r * 0.4), r * 0.05, ink)
 		if not reduced_motion:
 			var zt := fposmod(t * 0.5 + float(uid.hash() % 7) * 0.13, 1.0)
 			_txt(ci, "z", cen + Vector2(r * 0.7 + zt * r * 0.4, -r * 0.7 - zt * r * 0.8), int(clampf(p * 0.5, 10.0, 26.0)), Color(0.85, 0.9, 1.0, 1.0 - zt), HORIZONTAL_ALIGNMENT_LEFT, false)
-	elif ma <= 20.0:   # happy: bright eyes and a smile that grows with the in-spec current
+	elif mood == "happy":   # happy: bright eyes and a smile that grows with the in-spec current
 		var big := clampf((ma - 2.0) / 10.0, 0.0, 1.0)
 		for sgn in [-1.0, 1.0]:
 			var e := Vector2(cen.x + ex * sgn, ey)

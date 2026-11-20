@@ -13,6 +13,10 @@ var hot := 0.0                  ## 0..1 hottest part
 var smoked := false
 var cat_look := Vector2(1, 0)   ## unit vector from Rezzy toward the hot thing
 var wallet := 0
+var wallet_text := ""           ## the wallet as the engine formats it ("$4.50"); empty = "%d coins"
+var bench_state := "idle"       ## idle | ready | passed (the BENCH push button)
+var bench_hover := false
+var show_bench := false
 var gadget := "torch"
 var mood := "idle"              ## idle | hopeful | joy | wow (customer)
 var customer := "Lio"
@@ -56,6 +60,7 @@ func _r(n: String) -> Rect2: return L.get(n, Rect2())
 func _draw() -> void:
 	if L.is_empty(): return
 	_mug(); _box(); _cat(); _notebook(); _tin()
+	if show_bench: _bench_button()
 	_customer()
 	for c in coins:
 		if c.age < 0.0: continue
@@ -177,6 +182,23 @@ func _ellipse(c: Vector2, rad: Vector2, col: Color) -> void:
 
 ## ------------------------------------------------------------------------------------------------------------------ coin tin
 
+## The BENCH push button: a black plate with a big green key. It pulses when the band is locked, and stays lit once the bench passed.
+func _bench_button() -> void:
+	var r := _r("bench")
+	if r.size == Vector2.ZERO: return
+	S.shadow(self, r, 10, Vector2(6, 9), 0.5)
+	S.rr(self, r, 10, Color("#14161a")); S.rr(self, r.grow(-3), 8, Color("#2a2d33"))
+	var key := Rect2(r.position.x + 8, r.position.y + 8, 78, r.size.y - 16)
+	var lit := bench_state != "idle"
+	var pulse := 0.6 + 0.4 * sin(t * 6.0) if bench_state == "ready" else 1.0
+	S.rr(self, key, 8, Color("#1c5a32").lerp(Color("#3fd47a"), (pulse if lit else 0.0) * 0.8))
+	S.rr(self, key.grow(-4), 6, Color("#2e8a50").lerp(Color("#7bf0a4"), (pulse if lit else 0.0) * 0.7))
+	if lit: S.glow(self, key.get_center(), 70.0, Color("#3fd47a", 0.3 * pulse))
+	S.text(self, S.hand(), "GO", Vector2(key.position.x + 20, key.position.y + key.size.y * 0.66), 26, Color("#082612"))
+	S.text(self, S.hand(), "BENCH TEST", Vector2(r.position.x + 96, r.position.y + 28), 22, Color("#e8e0c8"))
+	S.text(self, S.hand(), "checks every condition" if bench_state != "passed" else "passed - paid", Vector2(r.position.x + 96, r.position.y + 49), 15, Color("#e8e0c8", 0.6))
+	if bench_hover: S.rr_line(self, r.grow(2), 10, Color("#ffd98a", 0.85), 3.0)
+
 func _coin(c: Vector2, r: float, squash := 1.0) -> void:
 	_ellipse(c + Vector2(2, 2), Vector2(r, r * squash), Color(0, 0, 0, 0.35))
 	_ellipse(c, Vector2(r, r * squash), Color("#a27a24")); _ellipse(c, Vector2(r * 0.86, r * 0.86 * squash), Color("#e5b94a"))
@@ -198,7 +220,7 @@ func _tin() -> void:
 	draw_arc(c, rad - 2, PI * 1.1, PI * 1.9, 20, Color("#d5d9dd"), 5.0)
 	var tape := Rect2(c.x - rad * 0.8, c.y + rad * 0.55, rad * 1.6, 36)
 	S.paper(self, tape, -3.0, Color("#e9dfae"))
-	var s := "%d coins" % wallet if wallet != 1 else "1 coin"
+	var s := wallet_text if wallet_text != "" else ("%d coins" % wallet if wallet != 1 else "1 coin")
 	S.text(self, S.hand(), s, Vector2(c.x - S.tw(S.hand(), s, 20) * 0.5, c.y + rad * 0.55 + 6), 20, S.INK)
 	if hover == "tin": draw_arc(c, rad + 3, 0, TAU, 40, Color("#ffd98a", 0.8), 3.0)
 
@@ -273,6 +295,9 @@ func _items(c: Vector2) -> void:
 		S.paper(self, tag, 0.0 if i % 2 == 0 else 0.8, Color("#efe5c8"))
 		var lab: String = it.label if it.tag == "" or it.kind == "BAT" else "%s  %s" % [it.label, it.tag]
 		S.text(self, S.hand(), lab, Vector2(tag.position.x + 8, tag.position.y + 20), 17, S.INK)
+		var pt: String = str(it.get("price_text", ""))
+		if int(it.get("left", -1)) >= 0: pt = ("%s  x%d" % [pt, int(it.left)]).strip_edges()
+		if pt != "": S.text(self, S.hand(), pt, Vector2(cell.end.x - 8 - S.tw(S.hand(), pt, 15), cell.position.y + 20), 15, Color("#e9dfc4", 0.75))
 	if sl.size() > 0 and bin_scroll > 0: S.text(self, S.hand(), "^", Vector2(inner.end.x - 12, inner.position.y + 10), 18, Color(1, 1, 1, 0.5))
 
 ## ------------------------------------------------------------------------------------------------------------------ customer

@@ -20,6 +20,9 @@ var volume := 0.8
 var has_save := false
 var done: Dictionary = {}                 ## ticket id -> true
 var wallet := 0
+var wallet_text := ""                     ## the engine's formatted wallet ("$4.50"); empty = "%d coins"
+var pred_fields: Array = []               ## exam slip: [{id, name, unit, text, done}]
+var pred_focus := 0
 var tickets: Array = []                   ## [{id,title,customer,spec,price,open,done}]
 var coach_ticket: Dictionary = {}
 var coach_steps: Array = []
@@ -72,6 +75,7 @@ func _draw() -> void:
 		"map": _map(a)
 		"notebook": _notebook(a)
 		"settings": _settings(a)
+		"predict": _predict(a)
 
 ## ------------------------------------------------------------------------------------------------------------------ title
 
@@ -171,7 +175,7 @@ func _map(a: float) -> void:
 	draw_arc(dc, 40, PI, TAU, 16, Color(S.INK, 0.8), 3.0); draw_line(dc + Vector2(-40, 0), dc + Vector2(40, 0), Color(S.INK, 0.8), 3.0)
 	draw_line(dc + Vector2(-14, 0), dc + Vector2(-14, 56), Color(S.INK, 0.8), 3.0); draw_line(dc + Vector2(14, 0), dc + Vector2(14, 44), Color(S.INK, 0.8), 3.0)
 	for i in 5: var ang := PI * (1.15 + 0.175 * i); draw_line(dc + Vector2(cos(ang), sin(ang)) * 56, dc + Vector2(cos(ang), sin(ang)) * 80, Color(S.AMBER.darkened(0.1)), 4.0)
-	S.text(self, f, "coins in the tin:  %d" % wallet, r.position + Vector2(56, r.size.y - 60), 28, S.INK)
+	S.text(self, f, ("in the tin:  %s" % wallet_text) if wallet_text != "" else ("coins in the tin:  %d" % wallet), r.position + Vector2(56, r.size.y - 60), 28, S.INK)
 	# the chits, pinned on the right page
 	var rp := Rect2(r.position.x + half + 30, r.position.y + 40, half - 60, r.size.y - 80)
 	S.text(self, f, "tickets on the spike", rp.position + Vector2(10, 30), 26, Color(S.INK, 0.7))
@@ -194,7 +198,9 @@ func _map(a: float) -> void:
 		S.text(self, f, str(tk.title), q.position + Vector2(14, 84), 32, S.INK if open else Color(S.INK, 0.5))
 		S.text(self, f, "for %s" % str(tk.customer), q.position + Vector2(14, 112), 20, Color(S.INK, 0.8 if open else 0.4))
 		S.text(self, f, str(tk.spec), q.position + Vector2(14, 144), 18, Color(S.INK, 0.9 if open else 0.4), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 26)
-		S.text(self, f, "%d coins" % int(tk.price), q.position + Vector2(q.size.x - 104, 48), 17, Color(S.INK, 0.7))
+		var fee: String = str(tk.get("price_text", "")) if str(tk.get("price_text", "")) != "" else "%d coins" % int(tk.price)
+		S.text(self, f, fee, q.position + Vector2(q.size.x - 20 - S.tw(f, fee, 17), 48), 17, Color(S.INK, 0.7))
+		if int(tk.get("stars", 0)) > 0: S.text(self, f, "*".repeat(int(tk.stars)), q.position + Vector2(q.size.x - 20 - S.tw(f, "*".repeat(int(tk.stars)), 26), 76), 26, S.INK_RED)
 		if tk.done:
 			draw_set_transform(cr.get_center() + Vector2(cr.size.x * 0.28, -cr.size.y * 0.12), deg_to_rad(-12), Vector2.ONE)
 			S.rr_line(self, Rect2(-52, -20, 104, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5); S.text(self, f, "FIXED", Vector2(-36, 10), 26, Color(0.1, 0.55, 0.2, 0.9))
@@ -262,6 +268,41 @@ func _notebook(a: float) -> void:
 		S.rr(self, br, 20, Color(S.INK, 0.14 if hv else 0.06)); S.rr_line(self, br, 20, Color(S.INK, 0.7 if hv else 0.35), 2.0)
 		S.text(self, f, it[1], br.position + Vector2(18, 29), 24, S.INK)
 		x += wd + 16.0
+
+## ------------------------------------------------------------------------------------------------------------------ exam slip (predict before building)
+
+func _predict(a: float) -> void:
+	var w := size.x; var h := size.y; var f := S.hand()
+	draw_rect(Rect2(0, 0, w, h), Color(0.02, 0.01, 0.02, 0.45 * a), true)
+	var r := Rect2(w * 0.5 - 360, h * 0.5 - 260 + (1.0 - a) * 24, 720, 520)
+	S.paper(self, r, -0.8, S.PAPER)
+	draw_set_transform(r.get_center(), deg_to_rad(-0.8), Vector2.ONE)
+	var q := Rect2(-r.size * 0.5, r.size)
+	S.pin(self, q.position + Vector2(q.size.x * 0.5, 16))
+	S.text(self, f, "Predict first", q.position + Vector2(36, 76), 52, S.INK)
+	S.text(self, f, "Work it out on paper, write the numbers here, then build it. The bench checks you against the real thing.", q.position + Vector2(36, 112), 20, Color(S.INK, 0.75), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 72)
+	var y := q.position.y + 200.0
+	for i in pred_fields.size():
+		var pf: Dictionary = pred_fields[i]
+		S.text(self, f, str(pf.name), Vector2(q.position.x + 36, y), 20, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 72)
+		var box := Rect2(q.position.x + 36, y + 14, 380, 54)
+		var hv := _btn(Rect2(r.get_center() + box.position, box.size), "pred_focus", str(i))
+		var cur := i == pred_focus
+		S.rr(self, box, 8, Color(S.INK, 0.08)); S.rr_line(self, box, 8, Color(S.INK, 0.85 if cur else (0.5 if hv else 0.3)), 3.0 if cur else 2.0)
+		var txt := str(pf.text)
+		S.text(self, S.mono(), txt, box.position + Vector2(14, 38), 32, S.INK)
+		if cur and fmod(t, 1.0) < 0.6: draw_rect(Rect2(box.position.x + 16 + S.tw(S.mono(), txt, 32), box.position.y + 10, 3, 34), S.INK, true)
+		S.text(self, f, str(pf.unit), box.position + Vector2(box.size.x + 14, 38), 30, S.INK)
+		if pf.get("done", false): S.text(self, f, "recorded", box.position + Vector2(box.size.x + 70, 38), 22, S.INK_RED)
+		y += 120.0
+	var ok_r := Rect2(q.position.x + 36, q.end.y - 84, 220, 52)
+	var oh := _btn(Rect2(r.get_center() + ok_r.position, ok_r.size), "pred_submit")
+	S.rr(self, ok_r, 26, S.INK if oh else Color(S.INK, 0.85)); S.text(self, f, "lock in", ok_r.position + Vector2(52, 38), 32, S.PAPER)
+	var cl := Rect2(q.position.x + 290, q.end.y - 84, 160, 52)
+	var ch := _btn(Rect2(r.get_center() + cl.position, cl.size), "pred_close")
+	S.rr_line(self, cl, 26, Color(S.INK, 0.7 if ch else 0.4), 2.0); S.text(self, f, "later", cl.position + Vector2(48, 38), 28, S.INK)
+	S.text(self, f, "type digits, Tab switches line, Enter locks in", q.position + Vector2(q.size.x - 36 - S.tw(f, "type digits, Tab switches line, Enter locks in", 16), q.end.y - 24), 16, Color(S.INK, 0.5))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 ## ------------------------------------------------------------------------------------------------------------------ settings
 

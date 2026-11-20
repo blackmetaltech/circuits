@@ -17,6 +17,9 @@ var live := false                             ## circuit powered (trace running)
 var locked := false
 var hold := 0.0                               ## 0..1 progress of the lock hold
 var smoked := false
+var attached := true                          ## CH1 is on the pad the band is measured at (engine: scope().target.clipped); false draws a flat baseline
+var clip_name := ""                           ## the connector the amber arrow wants the clip on ("OUT", "A")
+var reading := ""                             ## the engine's own gauge text for the VFD ("14.9551 mA"); empty = format `value`
 var hover_knob := -1
 var t := 0.0
 var _vals := PackedFloat32Array()
@@ -49,7 +52,7 @@ func _process(dt: float) -> void:
 	var step := SWEEP / float(COLS)
 	while _acc >= step:
 		_acc -= step
-		_vals[_head] = value if live else 0.0
+		_vals[_head] = value if (live and attached) else 0.0
 		_stamp[_head] = t
 		_head = (_head + 1) % COLS
 	queue_redraw(); _glow.queue_redraw(); _glass.queue_redraw()
@@ -124,9 +127,11 @@ func _panel() -> void:
 	draw_circle(lamp, 9, Color(0.05, 0.12, 0.1)); draw_circle(lamp, 6.5, Color(vc, 0.15 if not locked else 1.0))
 	var txt := sc.get("label", "") as String
 	var unit := sc.get("unit", "") as String
-	var rd := "%s %s" % [_fmt(value if live else 0.0), unit] if live else "--"
+	var rd := "--"
+	if live and attached: rd = ("%s %s" % [_fmt(value), unit]) if reading == "" else reading
+	elif live and clip_name != "": rd = "CLIP " + clip_name
 	S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14, Color(vc, 0.55))
-	S.text(self, S.mono(), rd, Vector2(px + 10, 242), 20, Color(vc, 0.9 if live else 0.3))
+	S.text(self, S.mono(), rd, Vector2(px + 10, 242), 20 if rd.length() < 11 else 15, Color(vc, 0.9 if (live and attached) else 0.3))
 	S.text(self, S.mono(), "%s/DIV" % _fmt(float(sc.get("vdiv", 4.0))), Vector2(px + 98, 206), 12, Color(vc, 0.4))
 	# knobs
 	var kc := knob_centres(); var names := ["VOLTS", "TIME", "LEVEL", "FOCUS"]
@@ -153,9 +158,7 @@ func _panel() -> void:
 	S.text(self, S.hand(), "made for Stall 14", plate.position + Vector2(120, 41), 10, Color("#4a4639"))
 	for i in 7: draw_line(Vector2(40, 336 + i * 3), Vector2(36 + 340, 336 + i * 3), Color(0, 0, 0, 0.32), 1.2)   # vent slots under the tube
 
-func _fmt(v: float) -> String:
-	var r := snappedf(v, 0.01)
-	return ("%.1f" % v) if absf(v) >= 10.0 else ("%.2f" % v)
+func _fmt(v: float) -> String: return "%.4g" % v
 
 ## ---- additive layer: phosphor trace with persistence, bloom and the band's glow
 func _draw_glow(ci: Control) -> void:

@@ -5,12 +5,14 @@ extends RefCounted
 ## view a model in exactly the NodeApi shape the engine will produce. When the engine's board actions land, EngineBench (same method set) replaces it;
 ## nothing in the view reads anything but the methods below. All numbers here are FIXTURE numbers: the engine owns the real ones.
 ##
+## TEST DOUBLE ONLY since EngineBench landed (CB_FIXTURE=1 selects it): the scene runs on the real engine by default.
 ## Interface used by StallScene (duck-typed, shared with EngineBench):
 ##   ticket, parts, wires, powered, locked, smoked (uid->true), model (NodeApi view model, refreshed on change), t
 ##   open_ticket(id), place(item, x, y, rot) -> {ok,msg,uid}, move_part(uid,x,y,rot), delete_part(uid), add_wire(a,b), delete_wire(wid),
 ##   set_power(on), set_probe(which, pad|null), set_dial(mode), step(dt), cond(id) -> bool, scope_value() -> float, dmm() -> {text, unit, mode}
 signal event(name: String, data: Dictionary)
 
+const ENGINE := false
 const AMBIENT := 25.0
 const LOCK_HOLD := 1.2
 const THERMAL_SPEED := 4.0
@@ -41,12 +43,12 @@ const TICKETS := {
 		"id": "1-3", "title": "Hot Resistor", "customer": "Mr. Brook", "age": "aquarium", "gadget": "heater", "price": 24,
 		"brief": "Mr. Brook's 12 V aquarium heater (50 ohm, fixed on the board) wants 8 V, and no part may exceed its rating.",
 		"ask": "The heater runs too hot for the fish.", "thanks": "The fish are comfortable again.",
-		"spec": "load 8.0 V  +/- 0.35 V, nothing over rating", "supply": {"label": "12 V supply", "emf": 12.0, "r": 0.2, "kind": "bench"},
+		"spec": "load 7.85 - 8.40 V, nothing over rating", "ambient": 50.0, "supply": {"label": "12 V supply", "emf": 12.0, "r": 0.2, "kind": "bench"},
 		"board": {"w": 20, "h": 11, "connectors": [{"id": "IN", "pad": [19, 2], "role": "supply"}, {"id": "GND", "pad": [19, 8], "role": "ground"}],
 			"fixed": [{"uid": "load", "partId": "load-heater", "value": 50.0, "x": 9, "y": 2, "label": "50 Ω heater", "fixed": true, "pins": [[9, 2], [9, 8]], "kind": "LOAD"}]},
 		"bin": [["res-cf", 22.0, "¼ W", ""], ["res-mf5", 22.0, "½ W", ""], ["res-1w", 22.0, "1 W", ""], ["res-cf", 27.0, "¼ W", ""], ["res-mf5", 47.0, "½ W", ""],
 			["res-mf5", 47.0, "½ W", ""], ["res-1w", 47.0, "1 W", ""], ["res-cf", 51.0, "¼ W", ""], ["res-1w", 100.0, "1 W", ""]],
-		"scope": {"q": "vLoad", "unit": "V", "lo": 7.65, "hi": 8.35, "vdiv": 2.0, "scale": 1.0, "label": "V LOAD"},
+		"scope": {"q": "vLoad", "unit": "V", "lo": 7.85, "hi": 8.40, "vdiv": 2.0, "scale": 1.0, "label": "V LOAD"},
 	},
 	"1-4": {
 		"id": "1-4", "title": "Tired Battery", "customer": "Bo", "age": "toy car", "gadget": "car", "price": 30,
@@ -78,8 +80,12 @@ var probes := {"red": null, "black": null}
 var dial := "V"             ## OFF | V | mA
 var powered := false
 var locked := false
+var passed := false
+var wallet_text := ""
+var scope_view: Dictionary = {}
 var smoked := {}
 var temps := {}
+var ambient := AMBIENT
 var t := 0.0
 var power_time := 0.0
 var hold := 0.0
@@ -103,13 +109,13 @@ func _init() -> void:
 
 func open_ticket(id: String) -> bool:
 	if not TICKETS.has(id): return false
-	ticket = (TICKETS[id] as Dictionary).duplicate(true)
+	ticket = (TICKETS[id] as Dictionary).duplicate(true); ambient = float(ticket.get("ambient", AMBIENT))
 	parts.clear(); wires.clear(); smoked.clear(); temps.clear(); _v.clear(); _ipart.clear(); _iwire.clear()
-	powered = false; locked = false; hold = 0.0; t = 0.0; power_time = 0.0; probes = {"red": null, "black": null}; dial = "V"
+	powered = false; locked = false; passed = false; hold = 0.0; t = 0.0; power_time = 0.0; probes = {"red": null, "black": null}; dial = "V"
 	dmm_used = false; dmm_loaded = false; supply_i = 0.0
 	for fp in ticket.board.fixed:
 		var d: Dictionary = (fp as Dictionary).duplicate(true); d["rot"] = 0; d["flip"] = false
-		parts.append(d); temps[d.uid] = AMBIENT
+		parts.append(d); temps[d.uid] = ambient
 	_dirty = true; _refresh(); return true
 
 func bin() -> Array:
@@ -119,13 +125,15 @@ func bin() -> Array:
 		var pid: String = e[0]; var val = e[1]
 		var kind := "LED" if pid.begins_with("led") else ("BAT" if pid.begins_with("bat") else "R")
 		var label: String = e[3] if e[3] != "" else NodeApi.format_value(float(val), "R")
-		out.append({"i": i, "partId": pid, "value": val, "tag": e[2], "label": label, "kind": kind})
+		out.append({"i": i, "partId": pid, "value": val, "variant": e[2], "tag": e[2], "label": label, "kind": kind, "footprint": "radial2" if kind == "LED" else ("block2" if kind == "BAT" else "axial2"), "price": 0, "price_text": "", "left": -1})
 		i += 1
 	return out
 
 ## ------------------------------------------------------------------------------------------------------------------ board edits
 
-static func pins_of(item: Dictionary, x: int, y: int, rot: int) -> Array:
+func pins_of(item: Dictionary, x: int, y: int, rot: int) -> Array: return FixtureBench.pins_of_static(item, x, y, rot)
+
+static func pins_of_static(item: Dictionary, x: int, y: int, rot: int) -> Array:
 	var pid: String = item.partId
 	var fp: Array = [[0, 0], [2, 0]]
 	if pid.begins_with("res-"): fp = [[0, 0], [4, 0]]
@@ -147,7 +155,7 @@ func _occupied(skip_uid := "") -> Dictionary:
 	return occ
 
 func can_place(item: Dictionary, x: int, y: int, rot: int, skip_uid := "") -> String:
-	var pins := pins_of(item, x, y, rot)
+	var pins := pins_of_static(item, x, y, rot)
 	var occ := _occupied(skip_uid)
 	for q in pins:
 		if q.x < 0 or q.y < 0 or q.x > ticket.board.w - 1 or q.y > ticket.board.h - 1: return "That would hang off the board."
@@ -164,8 +172,8 @@ func place(item: Dictionary, x: int, y: int, rot := 0) -> Dictionary:
 	var pid: String = item.partId
 	var d := {"uid": uid, "partId": pid, "value": item.value, "label": item.label, "tag": item.get("tag", ""), "x": x, "y": y, "rot": rot, "flip": false, "fixed": false, "variant": item.get("tag", "")}
 	d["kind"] = item.kind
-	d["pins"] = pins_of(item, x, y, rot).map(func(v): return [int(v.x), int(v.y)])
-	parts.append(d); temps[uid] = AMBIENT
+	d["pins"] = pins_of_static(item, x, y, rot).map(func(v): return [int(v.x), int(v.y)])
+	parts.append(d); temps[uid] = ambient
 	_dirty = true; _refresh()
 	event.emit("placed", {"uid": uid, "kind": item.kind})
 	return {"ok": true, "msg": "", "uid": uid}
@@ -180,7 +188,7 @@ func move_part(uid: String, x: int, y: int, rot: int) -> Dictionary:
 	var why := can_place(p, x, y, rot, uid)
 	if why != "": return {"ok": false, "msg": why}
 	var old: Array = p.pins.duplicate()
-	var np: Array = pins_of(p, x, y, rot).map(func(v): return [int(v.x), int(v.y)])
+	var np: Array = pins_of_static(p, x, y, rot).map(func(v): return [int(v.x), int(v.y)])
 	p.x = x; p.y = y; p.rot = rot; p.pins = np
 	for w in wires:   # wires follow their pins
 		for i in old.size():
@@ -221,10 +229,11 @@ func set_power(on: bool) -> void:
 	powered = on; power_time = 0.0; hold = 0.0
 	_dirty = true; _refresh(); event.emit("power", {"on": on})
 
-func set_probe(which: String, pad) -> void:
+func set_probe(which: String, pad) -> Dictionary:
+	if which == "ch1": return {"ok": true, "msg": ""}   # the fixture scope reads its quantity directly
 	probes[which] = pad; dmm_used = dmm_used or pad != null
 	if probes.red != null and probes.black != null and dial == "V" and powered and supply_i > 0.0: dmm_loaded = true
-	_refresh()
+	_refresh(); return {"ok": true, "msg": ""}
 
 func set_dial(mode: String) -> void: dial = mode; _refresh()
 
@@ -411,11 +420,11 @@ func step(dt: float) -> void:
 	var changed := false
 	for p in parts:
 		if p.kind != "R" and p.kind != "LED": continue
-		if smoked.has(p.uid): temps[p.uid] = lerpf(temps.get(p.uid, AMBIENT), AMBIENT, 1.0 - exp(-dt * 0.5)); continue
+		if smoked.has(p.uid): temps[p.uid] = lerpf(temps.get(p.uid, ambient), ambient, 1.0 - exp(-dt * 0.5)); continue
 		var theta := 85.0 / rating_w(p) if p.kind == "R" else 1200.0
 		var tau := 8.0 if (p.kind == "R" and rating_w(p) <= 0.25) else (40.0 if rating_w(p) >= 5.0 else (10.0 if p.kind == "LED" else 15.0))
-		var tinf := AMBIENT + (_power(p) * theta if powered else 0.0)
-		var T: float = temps.get(p.uid, AMBIENT)
+		var tinf := ambient + (_power(p) * theta if powered else 0.0)
+		var T: float = temps.get(p.uid, ambient)
 		T += (tinf - T) * (1.0 - exp(-dt * thermal_speed / tau))
 		temps[p.uid] = T
 		var inst: bool = p.kind == "LED" and absf(_ipart.get(p.uid, 0.0)) > LED_INSTANT and powered
@@ -425,12 +434,12 @@ func step(dt: float) -> void:
 			event.emit("smoked", {"uid": p.uid, "kind": p.kind, "amps": _ipart.get(p.uid, 0.0), "watts": _power(p)})
 	if changed: _dirty = true; _refresh()
 	for p in parts:
-		if model.has("temps"): model.temps[p.uid] = temps.get(p.uid, AMBIENT)
+		if model.has("temps"): model.temps[p.uid] = temps.get(p.uid, ambient)
 	# band lock
 	if powered and not locked and in_band() and power_time > 0.4:
 		hold += dt
 		if hold >= LOCK_HOLD:
-			locked = true; event.emit("lock", {"price": int(ticket.price)})
+			locked = true; passed = true; event.emit("lock", {"price": int(ticket.price)}); event.emit("paid", {"pay": int(ticket.price), "pay_text": "%d coins" % int(ticket.price), "stars": 2})
 	elif not in_band(): hold = 0.0
 
 func ratings_ok() -> bool:
@@ -466,7 +475,7 @@ func in_band() -> bool:
 
 func hot_k() -> float:
 	var k := 0.0
-	for p in parts: k = maxf(k, clampf((float(temps.get(p.uid, AMBIENT)) - 45.0) / 110.0, 0.0, 1.0))
+	for p in parts: k = maxf(k, clampf((float(temps.get(p.uid, ambient)) - 45.0) / 110.0, 0.0, 1.0))
 	return 1.0 if not smoked.is_empty() else k
 
 func led_current(uid: String) -> float: return absf(_ipart.get(uid, 0.0))
@@ -475,6 +484,7 @@ func led_current(uid: String) -> float: return absf(_ipart.get(uid, 0.0))
 
 func dmm() -> Dictionary:
 	if dial == "OFF": return {"text": "", "unit": "", "mode": "OFF"}
+	if dial == "Ω": return {"text": "----", "unit": "Ω", "mode": dial}
 	var r = probes.red; var b = probes.black
 	if r == null or b == null: return {"text": "----", "unit": "V" if dial == "V" else "mA", "mode": dial}
 	if dial == "V":
@@ -531,9 +541,25 @@ func _refresh() -> void:
 	var hi := float(ticket.supply.emf)
 	var raw := {"board": bd, "nodes": {"sets": sets.values(), "range": [-maxf(hi, 1.0), maxf(hi, 1.0)]},
 		"currents": {"wires": _iwire.duplicate(), "parts": _ipart.duplicate()},
-		"thermal": {"ambient": AMBIENT, "temps": temps.duplicate(), "smoked": smoked.keys()},
+		"thermal": {"ambient": ambient, "temps": temps.duplicate(), "smoked": smoked.keys()},
 		"ratings": {}, "liveStatus": {"powered": powered, "status": "ok", "t": t}}
 	for p in parts:
 		if p.kind == "R": raw.ratings[p.uid] = {"p": _power(p) / rating_w(p)}
 		elif p.kind == "LED": raw.ratings[p.uid] = {"i": absf(_ipart.get(p.uid, 0.0)) / LED_IMAX}
 	model = NodeApi.normalise(raw)
+
+## ------------------------------------------------------------------------------------------------------------------ seam shared with EngineBench
+
+func run_bench() -> Dictionary: return {"ok": true}
+func predict(_id: String, _value: float) -> Dictionary: return {"ok": true, "msg": ""}
+func predictions_done() -> bool: return true
+func part_power(uid: String) -> float: return _power(part_by(uid))
+func part_current(uid: String) -> float: return absf(_ipart.get(uid, 0.0))
+func volt_at(pad: Array) -> float: return float(_v.get(_key(pad), 0.0))
+func close_ticket() -> void: ticket = {}
+
+func coach_view() -> Dictionary:
+	var out: Array = []
+	for s in CoachData.steps(str(ticket.id)):
+		out.append({"text": str(s.text), "target": str(s.target), "done": cond(str(s.get("done", "never"))), "shown": not s.has("when") or cond(str(s.when))})
+	return {"steps": out, "cur": CoachData.current(str(ticket.id), self)}
