@@ -65,7 +65,7 @@ describe('ticket 0-0: open, build, bench, stars', () => {
     expect(smoked).toBe(true); expect(st(e).ticket!.live.frame).toBeGreaterThan(8);   // not on the first call
     const e2 = fresh(); build(e2, 1000); ok(e2, 'runBench');
     const b = e2.q('benchResult') as any; expect(b.pass).toBe(false); expect(b.failures[0].key).toBe('bench.level.fail');
-    expect(b.failures[0].text).toMatch(/measured/);
+    expect(b.failures[0].text).toMatch(/Too little current through the LED: 7\.\d+ mA, but it needs 10 to 20 mA/);
   });
   it('idle (empty board) fails the bench with teaching failures for the missing LED; an empty board is not a win', () => {
     const e = fresh(); ok(e, 'runBench'); const b = e.q('benchResult') as any;

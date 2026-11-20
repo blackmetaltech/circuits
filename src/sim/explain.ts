@@ -61,7 +61,7 @@ export function explainResistorPower(a: { part: string; v: number; r: number; p:
 export function explainLedOvercurrent(a: { part: string; i: number; iRated: number; vSupply: number; vForward: number; rSource: number; rLed: number }): Explained {
   const iWant = a.iRated / 2;
   return { key: 'explain.led.overcurrent', vars: {
-    part: a.part, i: sig(a.i), iRated: sig(a.iRated), rSource: sig(a.rSource, 2), rLed: sig(a.rLed, 2),
+    part: a.part, i: sig(a.i), iRated: sig(a.iRated), iMA: sig(a.i * 1000), iRatedMA: sig(a.iRated * 1000), iWantMA: sig(iWant * 1000), rSource: sig(a.rSource, 2), rLed: sig(a.rLed, 2),
     vSupply: sig(a.vSupply), vForward: sig(a.vForward), iWant: sig(iWant), rSeries: si(nearestE12((a.vSupply - a.vForward) / iWant), 'Ω'),
   } };
 }
@@ -141,7 +141,42 @@ export function explainTopology(issues: readonly TopoIssue[]): Explained[] {
 }
 
 // ---------------------------------------------------------------- from a bench or rating failure to its explainer
+/** The plain words for a level spec the bench measured outside its band: units, the part by name, what it needs, and the likeliest cause. */
+export interface MissCtx {
+  /** Part uid -> what to call it ("the LED", "the 470 Ω resistor"). */
+  names?: Readonly<Record<string, string>>;
+  /** Part uid -> kind ('LED', 'R', ...). */
+  kinds?: Readonly<Record<string, string>>;
+}
+const sigm = (x: number, lo: number, hi: number): number => {
+  const span = Math.abs(hi - lo), mid = Math.max(Math.abs(hi), Math.abs(lo), 1e-12);
+  return sig(x, span / mid < 0.01 ? 5 : 3);
+};
+export function explainLevelMiss(f: BenchFailure, ctx: MissCtx = {}): Explained | null {
+  const v = f.vars, value = Number(v.value), lo = Number(v.lo), hi = Number(v.hi), probe = String(v.probe ?? '');
+  if (!Number.isFinite(value) || !Number.isFinite(lo) || !Number.isFinite(hi)) return null;
+  const m = /^([ivp])\((.*)\)$/.exec(probe);
+  if (!m) return null;
+  const q = m[1]!, arg = m[2]!;
+  // the sign the player never meant: a current into the battery or a power drawn from it is negative in the solver; show it the way it reads
+  const flip = hi <= 0 && lo < 0;
+  const val = flip ? -value : value, a = flip ? -hi : lo, b = flip ? -lo : hi;
+  const cond = String(v.cond ?? 'nominal'), condText = cond === 'nominal' ? '' : `, in the ${cond} test`;
+  const unit = q === 'i' ? 'mA' : q === 'v' ? 'V' : 'W', k = q === 'i' ? 1000 : 1;
+  const what = q === 'v' ? arg.split(',')[0]!.toUpperCase() : ctx.names?.[arg];
+  if (what === undefined) return null;
+  const kind = q === 'v' ? '' : (ctx.kinds?.[arg] ?? '');
+  const open = b >= 1e3 ? 'atLeast' : a <= 0 ? 'atMost' : 'band';
+  const vars: Vars = { what, value: sigm(val * k, a * k, Math.min(b, 1e5) * k), lo: sigm(a * k, a * k, Math.min(b, 1e5) * k), hi: sigm(Math.min(b, 1e5) * k, a * k, Math.min(b, 1e5) * k), unit, cond: condText };
+  const dead = q === 'i' && Math.abs(val) < 1e-6;
+  if (dead) { vars.value = 0; return { key: kind === 'LED' ? 'bench.plain.i.zero.led' : 'bench.plain.i.zero', vars }; }
+  const low = val < a;
+  return { key: `bench.plain.${q}.${low ? 'low' : 'high'}.${open}`, vars };
+}
+
 export interface ExplainContext {
+  /** Part names and kinds for the plain-words bench failures (explainLevelMiss). */
+  miss?: MissCtx;
   /** Resistance of each part id, ohms (to turn a power finding into V = sqrt(P R)). */
   resistance?: Readonly<Record<string, number>>;
   /** Part ids that are electrolytic capacitors. */
@@ -165,9 +200,10 @@ export function explainFailure(f: BenchFailure, ctx: ExplainContext = {}): Expla
     case 'rating.cap.reverse': case 'smoke.cap.reverse': return explainElecReversed({ part, v: num('v') });
     case 'rating.led.current': case 'smoke.led.die': {
       const l = ctx.led?.[part];
-      if (l) return explainLedOvercurrent({ part, i: num('value' in v ? 'value' : 'i'), iRated: num('limit' in v ? 'limit' : 'iF'), ...l });
+      if (l) return explainLedOvercurrent({ part, i: num(f.key === 'rating.led.current' ? 'value' : 'i'), iRated: num(f.key === 'rating.led.current' ? 'limit' : 'iF'), ...l });
       break;
     }
+    case 'bench.level.fail': case 'bench.metric.fail': { const e = explainLevelMiss(f, ctx.miss); if (e) return e; break; }
     default: break;
   }
   return { key: f.key, vars: f.vars };

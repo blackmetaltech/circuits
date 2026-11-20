@@ -20,6 +20,7 @@ import type { NodeState, TicketState } from './state';
 import { levelDefOf } from './tickets';
 import { liveRig } from './ticket-run';
 import { say } from './text';
+import { danglingEnds, openPins, pinLabel } from './touch';
 
 export interface Sol { rig: Rig; ckt: Circuit; x: Float64Array; state: number[] }
 export interface UiDeps {
@@ -27,6 +28,8 @@ export interface UiDeps {
   Q: Record<string, QueryFn<NodeState>>;
   mine: (tk: TicketState, def: LevelDef) => Sol | null;
   regionString: (region: string, key: string) => string;
+  /** Failure -> English with the player's own numbers (queries.ts explainedText). */
+  explained?: (f: { key: string; vars: Record<string, string | number> }, tk: TicketState | null, def: LevelDef | undefined) => string;
 }
 
 const unitOf = (d: PartDef): string => (d.kind === 'C' || d.kind === 'CE' ? 'F' : d.kind === 'L' ? 'H' : ['R', 'POT', 'HEATER', 'SPEAKER', 'MOTOR', 'SLIDEWIRE'].includes(d.kind) ? 'Ω' : d.id.startsWith('ideal-vsource') ? 'V' : '');
@@ -150,7 +153,7 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
           const d = getDef(p.partId)!, pads = pinPads(p, d), v = d.variants.find((x) => x.id === p.variant) ?? d.variants[0]!;
           return {
             uid: p.uid, partId: p.partId, name: t(d.nameKey), kind: d.kind, x: p.x, y: p.y, rot: p.rot, flip: p.flip, fixed: p.fixed === true, value: p.value, valueText: p.value === null ? '' : si(p.value, unitOf(d)),
-            variant: p.variant, pos: p.pos ?? null, ratings: v.ratings, smoked: tk.live.smoked.includes(p.uid), pins: d.pins.map((name, i) => ({ name, pad: pads[i]! })),
+            variant: p.variant, pos: p.pos ?? null, ratings: v.ratings, smoked: tk.live.smoked.includes(p.uid), pins: d.pins.map((name, i) => ({ name, label: pinLabel(p.partId, name), pad: pads[i]! })),
           };
         }),
         wires: b.wires.map((w) => ({ wid: w.wid, path: w.path })),
@@ -162,6 +165,8 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
           dmm: { mode: b.meter.mode, label: modeLabel(b.meter.mode), red: b.meter.red ?? b.meter.pads[0] ?? null, black: b.meter.black ?? b.meter.pads[1] ?? null },
         },
         status: tk.live.status, issues: tk.live.issues.map((i) => ({ key: i.key, text: text(i) })), boardErrors: rig.errors.map((e) => ({ key: e.key, text: text(e) })),
+        dangling: danglingEnds(b).map((e) => ({ wid: e.wid, pad: e.pad, text: say('wire.dangling', { pad: `${e.pad[0]},${e.pad[1]}` }) })),
+        openPins: openPins(b).map((e) => ({ uid: e.uid, pin: e.pin, pad: e.pad })),
         undoDepth: tk.undo.length, redoDepth: tk.redo.length, benched: tk.lastBench ? { pass: tk.lastBench.pass, stars: tk.lastBench.stars } : null,
       };
     },
@@ -188,7 +193,7 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       const events = tk.live.smoked.map((uid) => {
         const f = [...log].reverse().find((x) => x.ticket === tk.id && x.vars.part === uid), pd = tk.board.parts.find((p) => p.uid === uid), d = pd ? getDef(pd.partId) : undefined;
         const kind = !d ? 'smoke' : ['LED', 'D', 'Z', 'SCHOTTKY', 'NPN', 'PNP', 'DARLINGTON', 'NMOS'].includes(d.kind) ? 'crack' : d.kind === 'CE' ? 'vent' : 'smoke';
-        return { part: uid, kind, failureId: f?.id ?? null, key: f?.kind ?? 'smoke.thermal', text: f ? say(f.kind, f.vars) : '' };
+        return { part: uid, kind, failureId: f?.id ?? null, key: f?.kind ?? 'smoke.thermal', text: f ? (deps.explained ? deps.explained({ key: f.kind, vars: f.vars }, tk, o.def) : say(f.kind, f.vars)) : '' };
       });
       return {
         valid: !!sol, powered: tk.live.powered, paused: tk.live.paused === true, frame: tk.live.frame, t: tk.live.t, status: tk.live.status,
@@ -206,7 +211,7 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       const rows = steps.map((st) => ({ id: st.id, text: t(st.key, vars), done: evalCond(st.done, s, tk, def, deps), shown: evalCond(st.when, s, tk, def, deps), anchor: resolveAnchor(st.anchor, tk, def), active: false }));
       const act = rows.find((r) => r.shown && !r.done);
       if (act) act.active = true;
-      return { ticket: def.id, steps: rows, active: act ? act.id : null, text: act ? act.text : '', anchor: act ? act.anchor : null, done: rows.filter((r) => r.done && r.shown).length, total: rows.length };
+      return { ticket: def.id, steps: rows, active: act ? act.id : null, text: act ? act.text : '', anchor: act ? act.anchor : null, done: rows.filter((r) => r.done && r.shown).length, total: rows.length, stepNo: act ? rows.indexOf(act) + 1 : rows.length, stepTotal: rows.length };
     },
 
     /** The DMM: dial position, lead pads, the reading in SI and as the display shows it. */

@@ -45,7 +45,7 @@ describe('templates filled from a solved state', () => {
     const e = X.explainLedOvercurrent({ part: 'D1', i, iRated: 0.03, vSupply: 9, vForward: 2, rSource: 1.7, rLed: 10 });
     expect(i).toBeGreaterThan(0.1); expect(vf).toBeGreaterThan(1.5);
     expect(e.vars).toMatchObject({ iRated: 0.03, iWant: 0.015, rSeries: '470 Ω', rSource: 1.7 });
-    expect(text(e)).toContain(`took ${X.sig(i)} A; it is rated 0.03 A`); expect(text(e)).toContain('R = (9 - 2) V / 0.015 A = about 470 Ω');
+    expect(text(e)).toContain(`Burned: too much current, ${X.sig(i * 1000)} mA vs 30 mA max`); expect(text(e)).toContain('R = (9 - 2) V / 15 mA = about 470 Ω');
   });
   it('electrolytic overvoltage and reversed', () => {
     const e = X.explainElecOvervoltage({ part: 'C1', v: 17.1, vRated: 16 });

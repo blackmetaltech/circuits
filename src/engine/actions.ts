@@ -5,6 +5,7 @@ import { INSTRUMENTS, nearMatches } from '../data/parts';
 import type { LevelDef } from '../data/levels/types';
 import type { Pad, PlacedPart, Wire } from '../sim/board/types';
 import { buildConnectivity } from '../sim/board/connectivity';
+import { pinPads } from '../sim/board/footprints';
 import { advanceLive } from '../sim/live';
 import { sig } from '../sim/explain';
 import { t } from '../i18n';
@@ -19,6 +20,7 @@ import { MAX_WIRES, newScope, newTicketProgress, pushFailure, pushUndo, type Boa
 import { levelDefOf, openTicketIn, refBoard } from './tickets';
 import { benchTicket, evalHint, liveCfg, liveRig, probeOn } from './ticket-run';
 import { refuse, refuseKey, say } from './text';
+import { danglingEnds, padWhat } from './touch';
 
 type Defs = readonly LevelDef[];
 const SANDBOX_PARTS = 80, CAMPAIGN_PARTS = 40;
@@ -152,6 +154,15 @@ function newWire(tk: TicketState, path: unknown, wid?: string): Wire {
   return { wid: wid ?? nextId('w', tk.board.wires.map((w) => w.wid)), path: pts };
 }
 
+/** The answer to a new wire: which pin / connector each end landed on, and a warning for an end that touches nothing. */
+function wireAdded(tk: TicketState, w: Wire): [string, Record<string, unknown>] {
+  const ends = [w.path[0]!, w.path[w.path.length - 1]!] as Pad[], what = ends.map((e) => padWhat(tk.board, e, w.wid));
+  const hang = danglingEnds(tk.board).filter((e) => e.wid === w.wid);
+  let msg = say('wire.added', { wid: w.wid });
+  for (const h of hang) msg += ' ' + say('wire.dangling', { pad: `${h.pad[0]},${h.pad[1]}` });
+  return [msg, { wid: w.wid, landed: ends.map((e, i) => ({ pad: e, kind: what[i]!.kind, text: what[i]!.text })), dangling: hang.map((h) => h.pad) }];
+}
+
 // ---------------------------------------------------------------- pad-to-pad routing (the `wire` action)
 /** Candidate orthogonal routes from a to b, simplest first: straight, the two L shapes, then Z shapes through nearby columns and rows. */
 function routes(a: Pad, b: Pad, w: number, h: number): Pad[][] {
@@ -200,7 +211,8 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       const spot = checkPartSpot(tk.board, getDef(p.partId)!, { x: nx, y: ny, rot: p.rot, flip: p.flip }, p.uid);
       if (spot) refuse(spot);
       p.x = nx; p.y = ny; commit(tk, 'movePart', before);
-      return ok(say('part.moved', { uid: p.uid, x: nx, y: ny }));
+      const hang = danglingEnds(tk.board).length;
+      return ok(say('part.moved', { uid: p.uid, x: nx, y: ny }) + (hang > 0 ? ' ' + say('part.moved.hanging', { n: hang }) : ''));
     },
     rotatePart: (s, uid: unknown, flip?: unknown) => {
       const { tk } = open(s, defs), p = partOf(tk, uid, true), before = copyBoard(tk);
@@ -212,10 +224,15 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
     },
     deletePart: (s, uid: unknown) => {
       const { tk } = open(s, defs), p = partOf(tk, uid, true), before = copyBoard(tk);
+      const legs = new Set(before.parts.filter((x) => x.uid === p.uid).flatMap((x) => { const d = getDef(x.partId); return d ? pinPads(x, d).map((q) => `${q[0]},${q[1]}`) : []; }));
       tk.board.parts = tk.board.parts.filter((x) => x.uid !== p.uid);
+      // a wire whose end was held only by this part's leg now hangs in the air: take it off too (undo puts it back)
+      const hanging = danglingEnds(tk.board).filter((e) => legs.has(`${e.pad[0]},${e.pad[1]}`)).map((e) => e.wid);
+      const gone = [...new Set(hanging)];
+      tk.board.wires = tk.board.wires.filter((w) => !gone.includes(w.wid));
       tk.live.smoked = tk.live.smoked.filter((u) => u !== p.uid); delete tk.live.temps[p.uid];
       commit(tk, 'deletePart', before);
-      return ok(say('part.deleted', { uid: p.uid }));
+      return ok(say(gone.length > 0 ? 'part.deleted.wires' : 'part.deleted', { uid: p.uid, n: gone.length }), { removedWires: gone });
     },
     setValue: (s, uid: unknown, value: unknown) => {
       const { tk, def } = open(s, defs), p = partOf(tk, uid, true), before = copyBoard(tk);
@@ -236,7 +253,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       const { tk } = open(s, defs), before = copyBoard(tk);
       const w = newWire(tk, path);
       tk.board.wires.push(w); sortWires(tk.board); commit(tk, 'addWire', before);
-      return ok(say('wire.added', { wid: w.wid }), { wid: w.wid });
+      return ok(...wireAdded(tk, w));
     },
     /** Pad-to-pad wire: the engine picks a clean orthogonal route (the click-drag of the UI). */
     wire: (s, a: unknown, b: unknown) => {
@@ -251,7 +268,8 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       if (!found) refuseKey('err.wire.noRoute', { a: `${pa[0]},${pa[1]}`, b: `${pb[0]},${pb[1]}` });
       const w = newWire(tk, found);
       tk.board.wires.push(w); sortWires(tk.board); commit(tk, 'wire', before);
-      return ok(say('wire.added', { wid: w.wid }), { wid: w.wid, path: w.path });
+      const [msg, extra] = wireAdded(tk, w);
+      return ok(msg, { ...extra, path: w.path });
     },
     /** Remove a wire by id, or every wire that ends on a pad. */
     unwire: (s, target: unknown) => {

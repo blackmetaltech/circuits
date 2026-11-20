@@ -47,7 +47,8 @@ const text = (f: { key: string; vars: Record<string, string | number> }): string
 
 /** Context the explainers need to put the player's own numbers in (resistances, electrolytics, supply and LED figures). */
 function explainCtx(tk: TicketState | null, def: LevelDef | undefined): ExplainContext {
-  const ctx: ExplainContext = { resistance: {}, electrolytic: [], led: {} };
+  const names: Record<string, string> = {}, kinds: Record<string, string> = {};
+  const ctx: ExplainContext = { resistance: {}, electrolytic: [], led: {}, miss: { names, kinds } };
   if (!tk || !def) return ctx;
   const rig = liveRig(tk, def);
   let vSupply = 0, rSource = 0;
@@ -57,6 +58,10 @@ function explainCtx(tk: TicketState | null, def: LevelDef | undefined): ExplainC
   }
   for (const p of tk.board.parts) {
     const d = getDef(p.partId); if (!d) continue;
+    kinds[p.uid] = d.kind;
+    const same = tk.board.parts.filter((x) => getDef(x.partId)?.kind === d.kind).length > 1;
+    names[p.uid] = d.kind === 'LED' ? say(same ? 'name.led.n' : 'name.led', { uid: p.uid }) : d.kind === 'BAT' ? say('name.battery') : d.kind === 'HEATER' ? say('name.heater')
+      : d.kind === 'R' && p.value !== null ? say('name.resistor', { value: si(p.value, 'Ω') }) : say('name.part', { name: t(d.nameKey), uid: p.uid });
     if (d.kind === 'R' || d.kind === 'HEATER') (ctx.resistance as Record<string, number>)[p.uid] = p.value ?? d.model.R ?? 0;
     if (d.kind === 'CE') (ctx.electrolytic as string[]).push(p.uid);
     if (d.kind === 'LED') {
@@ -284,7 +289,7 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
     legalActions: (s, full?: unknown) => candidateActions(s, defs, full === true),
     caps: () => ({ undo: UNDO_CAP, failureLog: FAILURE_LOG_CAP, scopePoints: SCOPE_POINTS_CAP }),
   };
-  Object.assign(Q, makeUiQueries({ defs, Q, mine: mineSolution, regionString }));
+  Object.assign(Q, makeUiQueries({ defs, Q, mine: mineSolution, regionString, explained: explainedText }));
   return Q;
 }
 
