@@ -277,6 +277,13 @@ func delete_wire(wid: String) -> void:
 
 ## Take back the last edit (Ctrl+Z). The engine keeps the history (bench().undoDepth); returns its sentence.
 func undo() -> Dictionary:
+	if not smoked.is_empty():   # a burnt part blocks the bench: the first undo after a burn swaps in a fresh one (the history stays)
+		var n := 0
+		for uid in smoked.keys(): if _act("replaceSmoked", [str(uid)]).get("ok", false): n += 1
+		if n > 0:
+			smoked.clear(); _smoke_seen.clear(); _after_edit()
+			last_note = "Fresh part in place of the burnt one. Ctrl+Z again takes edits back."
+			return {"ok": true, "msg": last_note}
 	var r := _act("undo")
 	if r.get("ok", false):
 		smoked.clear(); _smoke_seen.clear(); _after_edit()

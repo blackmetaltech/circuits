@@ -151,6 +151,7 @@ func _run() -> void:
 	# a wire that ends on an empty hole far from any leg is flagged
 	ok(_drag_wire([8, 2], [14, 10]), "a second wire is dragged to an empty hole")
 	ok(bk.dangling.size() == 1 and bk.dangling[0].pad == [14, 10], "the engine reports that end as dangling")
+	await _frames(2)
 	ok(sc.top.toast.contains("not touching any part leg") and sc.bench.model.dangling.size() == 1, "a dangling end marker is shown and the toast says so: %s" % sc.top.toast)
 	_ctrl_z()
 	ok(bk.wires.size() == 1 and bk.dangling.is_empty(), "Ctrl+Z takes the dangling wire back")
@@ -169,6 +170,8 @@ func _run() -> void:
 	ok(str(bk.frame.events[0].text).begins_with("Burned: too much current,") and str(bk.frame.events[0].text).contains("mA vs 30 mA max"), "engine note: %s" % str(bk.frame.events[0].text).left(70))
 	ok(sc.top.toast.begins_with("Burned: too much current"), "the toast shows the engine's burned note")
 	ok(bk.model.led["p1"].mood == "cracked", "the cute-mode LED face is cracked")
+	_ctrl_z()
+	ok(bk.smoked.is_empty() and sc.top.toast.contains("Fresh part"), "Ctrl+Z after a burn swaps in a fresh LED (%s)" % sc.top.toast)
 	await _start("1-1")
 	_drag_part("led-red-5mm", null, "5mm", 8, 5, 0)
 	sc.run_bench()

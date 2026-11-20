@@ -430,14 +430,19 @@ func _draw_parts(ci: Control) -> void:
 
 ## "A +" on the long (anode) leg and "K -" on the flat (cathode) side, written beside each leg on the board.
 func _led_pin_tags(ci: Control, pt: Dictionary) -> void:
-	var fs := int(clampf(p * 0.4, 11.0, 17.0))
+	var fs := int(clampf(p * 0.5, 13.0, 20.0))
+	var f := ThemeDB.fallback_font
 	var mid := (_px(pt.pins[0]) + _px(pt.pins[1])) * 0.5
 	for i in 2:
 		var pp := _px(pt.pins[i]); var dir := (pp - mid).normalized()
 		var raw := str(pt.pin_labels[i]).replace("-", "\u2212")
-		var tw := ThemeDB.fallback_font.get_string_size(raw, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
-		var at := pp + dir * (p * 0.42) + Vector2((tw * -0.5 if absf(dir.x) < 0.5 else (-tw if dir.x < 0 else 0.0)), (fs * 0.35 if absf(dir.x) > 0.5 else (-p * 0.18 if dir.y < 0 else fs + p * 0.12)))
-		_txt(ci, raw, at, fs, Color("#ff9d8c") if i == 0 else Color("#8fbfff"))
+		var tw := f.get_string_size(raw, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
+		var box := Vector2(tw + 10.0, fs + 6.0)
+		var c := pp + dir * (p * 0.62 + (box.x * 0.5 if absf(dir.x) > 0.5 else box.y * 0.5))   # beside the leg, away from the dome
+		var r := Rect2(c - box * 0.5, box)
+		var col := Color("#ff9d8c") if i == 0 else Color("#8fbfff")
+		PartArt.rrect(ci, r, 6.0, Color(0.04, 0.05, 0.07, 0.88))
+		ci.draw_string(f, r.position + Vector2(5.0, fs + 1.0), raw, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, col)
 
 func _probe(ci: Control, pr: Dictionary) -> void:
 	var tip := _px(pr.pad); var col := Color("#7CFF6B") if pr.ch == 1 else Color("#FFB547")

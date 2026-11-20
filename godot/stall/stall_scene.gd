@@ -390,13 +390,13 @@ func pad_at(sp: Vector2, reach := 0.55) -> Vector2:
 
 ## What is under a screen point, for wiring: the nearest part leg or board connector within `pin_reach` pads, else the nearest empty pad within `pad_reach`.
 ## {kind: "pin" | "connector" | "pad" | "none", pad: Vector2, label: String}. Legs win over holes, so a wire dropped a pad off a leg still lands on the leg.
-const WIRE_DROP_REACH := 1.1
+const WIRE_DROP_REACH := 1.35   # a wire dropped one pad off a leg (even with the board's perspective) still lands on the leg; a diagonal neighbour (1.41) does not
 func snap(sp: Vector2, pin_reach := WIRE_DROP_REACH, pad_reach := 0.7) -> Dictionary:
 	var g := (screen_to_vp(sp) - bench.org) / bench.p
 	var best := {"kind": "none", "pad": Vector2(-1, -1), "label": ""}
 	var bd := pin_reach
 	for c in _pin_index():
-		var dd := g.distance_to(c.pad as Vector2)
+		var dd := g.distance_to(c.get("at", c.pad) as Vector2)   # a connector is also reached through its alligator clip (`at`)
 		if dd <= bd: bd = dd; best = c
 	if best.kind != "none": return best
 	var pa := pad_at(sp, pad_reach)
@@ -416,6 +416,7 @@ func _pin_index() -> Array:
 		var dup := false
 		for o in out: if (o.pad as Vector2) == q2: dup = true
 		if not dup: out.append({"kind": "connector", "pad": q2, "label": str(CONN_NAME.get(str(c.id), str(c.id)))})
+		if str(c.get("role", "")) in ["supply", "ground"]: out.append({"kind": "connector", "pad": q2, "at": q2 + Vector2(1.2, 0), "label": str(CONN_NAME.get(str(c.id), str(c.id)))})   # the clip sits 1.2 pads right of the pad
 	return out
 
 static func _leg_name(pt: Dictionary, i: int, lab: String) -> String:
@@ -776,6 +777,7 @@ func _near_pin(pd: Dictionary, pa: Vector2) -> bool:
 	return false
 
 func _release(sp: Vector2) -> void:
+	if drag.get("kind", "") in ["part", "move"]: _mouse = sp; _board_overlay()   # drop where the pointer is NOW, not where the last drawn frame saw it
 	var d := drag; drag = {}
 	if d.is_empty(): return
 	match d.kind:
