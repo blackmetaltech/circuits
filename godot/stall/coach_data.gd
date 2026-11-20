@@ -50,6 +50,7 @@ const CODEX := [
 	{"title": "An LED needs a limit", "eq": "R = (V - Vf) / I", "body": "A red LED drops about 2 V whatever the current, and is rated 30 mA. The battery's 9 V minus that 2 V must fall across something that limits the current to 10 to 20 mA. With nothing there, only the battery's own tiny resistance limits it and the die cracks. That is the smoke."},
 	{"title": "Every resistor is a promise about heat", "eq": "P = I x I x R", "body": "A quarter-watt resistor that dissipates half a watt glows, then smokes. Choose the watts before you power on."},
 	{"title": "Tired batteries", "eq": "V = E - I x r", "body": "A battery is a perfect source with a small resistor inside. The tired ones have a bigger r, so the voltage sags under load. Most power goes into a load equal to r."},
+	{"title": "The critters", "eq": "speed ~ log(I)", "body": "The critters' speed shows how much current flows: faster means more amps (each 10x of current is one notch faster), and they are always spaced the same."},
 	{"title": "Kirchhoff, two sentences", "eq": "sum of I at a node = 0", "body": "Whatever flows into a node flows out. Around any loop the voltages add to zero. Two batteries meeting at a node: one may be charging the other."},
 ]
 

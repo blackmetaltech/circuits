@@ -38,6 +38,10 @@ var jack_glow := ""   ## which terminal a dragged lead is hovering near
 func jack_pos(which: String) -> Vector2:
 	if kind == "bench": return Vector2(60, 28) if which == "red" else Vector2(120, 28)
 	return Vector2(52, 30) if which == "red" else Vector2(104, 30)
+## Where the battery's own lettering sits (the big "9V" and the small label under it) and where the bench-test tag hangs: they must never overlap.
+const CELL := Rect2(24, 54, 250, 92)
+static func battery_text_rects() -> Array: return [Rect2(CELL.position + Vector2(22, 12), Vector2(72, 56)), Rect2(CELL.position + Vector2(22, 68), Vector2(84, 20))]
+static func cond_tag_rect(rows: int) -> Rect2: return Rect2(134, 52, 152, 32 + rows * 24)
 func has_jacks() -> bool: return kind != "sources"
 ## A generous target: 30 design pixels around the terminal ("" when none).
 func jack_at(p: Vector2) -> String:
@@ -88,11 +92,11 @@ func _cond_tag() -> void:
 			elif str(e.key) == "r": r = float(e.value)
 		rows.append("%s %s V / %s \u03a9" % [str(c.id), EngineBench._g(emf), EngineBench._g(r)] if emf >= 0.0 else str(c.id))
 	# a tag tied to the cell, big enough to read at the supply's 0.8 scale (it hangs over the battery's blank half)
-	var tag := Rect2(110, 54, 180, 36 + rows.size() * 29)
+	var tag := cond_tag_rect(rows.size())   # clear of the battery's own "9V" and label on its left
 	draw_line(Vector2(tag.position.x + 12, tag.position.y), Vector2(104, 34), Color("#c9b78a"), 2.5)   # its string, up to the minus stud
 	S.paper(self, tag, 1.5, S.PAPER)
-	S.text(self, S.hand(), "bench tests:", tag.position + Vector2(10, 23), 18, S.INK_RED)
-	for i in rows.size(): S.text(self, S.hand(), rows[i], tag.position + Vector2(8, 51 + i * 29), 20, S.INK)
+	S.text(self, S.hand(), "bench tests:", tag.position + Vector2(10, 21), 16, S.INK_RED)
+	for i in rows.size(): S.text(self, S.hand(), rows[i], tag.position + Vector2(8, 44 + i * 24), 16, S.INK)
 
 ## The exam bench: two fixed ideal sources, named and with their volts. There is no knob and no one voltage, so no 0.0 V display.
 func _sources(rr: Rect2) -> void:

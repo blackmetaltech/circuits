@@ -264,8 +264,8 @@ static func max_scroll(inner: Rect2, n: int) -> int: return maxi(0, (n + 1) / 2 
 ## The two scroll arrows (small tabs on the box's right edge); each is a Rect2 with zero size when there is nowhere to scroll that way.
 static func arrows(inner: Rect2, n: int, scroll: int) -> Dictionary:
 	var mx := max_scroll(inner, n)
-	var up := Rect2(inner.end.x - 34, inner.position.y + 4, 30, 26) if scroll > 0 else Rect2()
-	var dn := Rect2(inner.end.x - 34, inner.end.y - 30, 30, 26) if scroll < mx else Rect2()
+	var up := Rect2(inner.end.x - 104, inner.position.y + 4, 100, 26) if scroll > 0 else Rect2()
+	var dn := Rect2(inner.end.x - 104, inner.end.y - 30, 100, 26) if scroll < mx else Rect2()
 	return {"up": up, "down": dn}
 
 func _box() -> void:
@@ -343,7 +343,10 @@ func _scroll_cues(inner: Rect2, n: int) -> void:
 		var hv: bool = hover == "box_" + k
 		S.rr(self, rr, 6, Color("#ffd98a", 0.95) if hv else Color("#e9dfc4", 0.85))
 		var c := rr.get_center(); var d := -1.0 if k == "up" else 1.0
-		draw_colored_polygon(PackedVector2Array([c + Vector2(-8, -4 * d), c + Vector2(8, -4 * d), c + Vector2(0, 5 * d)]), Color("#3a2a1a"))
+		var word := "more" if k == "down" else "back"   # a paper tab on the fold: more parts below / back up
+		var wx := S.tw(S.hand(), word, 18)
+		S.text(self, S.hand(), word, Vector2(c.x - wx * 0.5 - 12.0, c.y + 6.0), 18, Color("#3a2a1a"))
+		draw_colored_polygon(PackedVector2Array([c + Vector2(wx * 0.5 + 2.0, -4 * d), c + Vector2(wx * 0.5 + 18.0, -4 * d), c + Vector2(wx * 0.5 + 10.0, 5 * d)]), Color("#3a2a1a"))
 	var tr := Rect2(inner.end.x - 5, inner.position.y + 36, 3, inner.size.y - 72)   # the track and the thumb
 	draw_rect(tr, Color(1, 1, 1, 0.12), true)
 	var th := maxf(18.0, tr.size.y * float(rows_visible(inner)) / float((n + 1) / 2))

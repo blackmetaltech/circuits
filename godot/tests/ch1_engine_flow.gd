@@ -164,7 +164,7 @@ func _run() -> void:
 	ok(_drag_wire([8, 2], [14, 10]), "a second wire is dragged to an empty hole")
 	ok(bk.dangling.size() == 1 and bk.dangling[0].pad == [14, 10], "the engine reports that end as dangling")
 	await _frames(2)
-	ok(sc.top.toast.contains("not touching any part leg") and sc.bench.model.dangling.size() == 1, "a dangling end marker is shown and the toast says so: %s" % sc.top.toast)
+	ok(sc.top.toast.contains("isn't touching a part's leg") and not sc.top.toast.contains("14,10") and sc.bench.model.dangling.size() == 1, "a dangling end marker is shown and the toast says so: %s" % sc.top.toast)
 	_ctrl_z()
 	ok(bk.wires.size() == 1 and bk.dangling.is_empty(), "Ctrl+Z takes the dangling wire back")
 	# the other leg, one pad off as well
@@ -173,7 +173,7 @@ func _run() -> void:
 	# deleting the LED takes the wires its legs held (and Ctrl+Z puts everything back)
 	sc._right(sc.pad_screen(Vector2(9, 5)))
 	ok(bk.part_by("p1").is_empty() and bk.wires.is_empty(), "right-click on the LED removes it and the two wires only its legs held")
-	ok(sc.top.toast.contains("2 wire(s)"), "the toast says so: %s" % sc.top.toast)
+	ok(sc.top.toast.contains("2 wires") and not sc.top.toast.contains("(s)"), "the toast says so: %s" % sc.top.toast)
 	_ctrl_z()
 	ok(not bk.part_by("p1").is_empty() and bk.wires.size() == 2, "Ctrl+Z brings the LED and both wires back")
 	# the naive build: the LED straight across the battery cracks at once, with the numbers in mA
@@ -245,6 +245,10 @@ func _run() -> void:
 	var conds: Array = bk.ticket.conditions
 	ok(conds.size() == 2 and str(conds[0].id) == "fresh" and str(conds[1].id) == "tired", "the ticket carries both battery conditions: fresh and tired")
 	ok(sc.supply.conditions.size() == 2, "the battery holder shows the bench-test tag")
+	var tagr: Rect2 = SupplyView.cond_tag_rect(2)
+	var overlap := false
+	for tr in SupplyView.battery_text_rects(): if (tr as Rect2).intersects(tagr): overlap = true
+	ok(not overlap, "1-2: the bench-test note does not sit on the battery's label or its 9V")
 	_drag_part("led-red-5mm", null, "5mm", 8, 5, 0); _drag_wire([2, 2], [8, 5]); _drag_wire([10, 5], [8, 2])
 	_rocker(); _clock(0.5)
 	var cv2: Dictionary = bk.coach_view()
@@ -296,6 +300,7 @@ func _run() -> void:
 	var inner: Rect2 = sc.props.box_inner(); var nitems: int = sc.props.items.size(); var mx: int = StallProps.max_scroll(inner, nitems)
 	print("   (desk %s, box %s, inner %s)" % [str(sc.size), str(sc.L.box), str(inner)])
 	ok(mx > 0 and StallProps.arrows(inner, nitems, 0).down.size != Vector2.ZERO and StallProps.arrows(inner, nitems, 0).up.size == Vector2.ZERO, "1-3 shoebox: %d parts, %d rows hidden: a down arrow at the top, no up arrow" % [nitems, mx])
+	ok(StallProps.arrows(inner, nitems, 0).down.size.x >= 80.0, "the fold carries a 'more' tab (not a bare arrow) while parts hide below")
 	var bc: Vector2 = (sc.L.box as Rect2).get_center()
 	sc._wheel(bc, -1); sc._wheel(bc, -1)
 	ok(sc.props.bin_scroll == 2, "two wheel notches scroll two rows (%d)" % sc.props.bin_scroll)
@@ -396,6 +401,68 @@ func _run() -> void:
 	_click_rect(sc.L.exam)
 	ok(sc.pages.mode == "predict", "the exam slip on the bench reopens it after 'later'")
 	_key(KEY_ESCAPE)
+
+	print("== N3: battery jacks, lead tips, power word, LCD digits, the customer's face, the student's 1-5")
+	await _start("1-4")
+	ok(DmmView.lcd_text(9.0, "") == "9.000" and DmmView.lcd_text(5.32, "") == "5.320" and DmmView.lcd_text(14.96, "") == "14.96" and DmmView.lcd_text(4.7, "") == "4.700" and DmmView.lcd_text(-0.5, "") == "-0.500", "the LCD lays 9.000 / 5.320 / 14.96 / 4.700 / -0.500 on four digit cells")
+	ok(DmmView.lcd_text(null, "----") == "----", "no reading shows dashes")
+	var tip0: Vector2 = sc._probe_tip("red")
+	ok(sc._tip_hit(tip0 + Vector2(-30, 20)) == "red" and sc._tip_hit(tip0) == "red", "a lead is grabbed by a generous disc around its tip, not only by its body")
+	_rocker()
+	await _frames(2)
+	ok(bk.powered and sc.supply.on, "the rocker switches the pack on")
+	_rocker()
+	ok(not bk.powered and sc.top.toast.contains("Power off"), "switching off shows a short 'Power off' toast (%s)" % sc.top.toast)
+	var jr: Vector2 = sc.supply.position + sc.supply.jack_pos("red") * sc.supply.scale.x
+	var jb: Vector2 = sc.supply.position + sc.supply.jack_pos("black") * sc.supply.scale.x
+	for pair in [["red", jr], ["black", jb]]:
+		var tp: Vector2 = sc._probe_tip(str(pair[0])); sc._motion(tp); sc._press(tp)
+		sc._motion(pair[1]); sc._board_overlay(); sc._release(pair[1])
+	ok(bk.probes.red == [2, 2] and bk.probes.black == [8, 2], "the red lead on the battery's + jack reads the supply net, the black one on the - jack reads GND (%s %s)" % [str(bk.probes.red), str(bk.probes.black)])
+	ok(sc._probe_tip("red").distance_to(jr) < 1.0 and sc._probe_tip("black").distance_to(jb) < 1.0, "and the lead tips rest on the jacks")
+	_rocker(); _clock(0.3)
+	var ocv: Dictionary = bk.dmm()
+	ok(ocv.unit == "V" and float(ocv.text) > 8.9 and float(ocv.text) < 9.1 and DmmView.lcd_text(ocv.get("value", null), str(ocv.text)) == "9.000", "open-circuit volts through the jacks: %s V, LCD %s" % [ocv.text, DmmView.lcd_text(ocv.get("value", null), "")])
+	var cv14: Dictionary = bk.coach_view()
+	ok(not str(cv14.steps[0].text).contains("terminals") or str(cv14.steps[0].text).contains("metal tips"), "the 1-4 coach words match what the jacks accept")
+	# the customer: no smile and no moving car until the bench has passed
+	await _start("1-4")
+	ok(_build("1-4"), "1-4: the reference load is built")
+	_rocker(); _clock(8.0, func(): return evlog.has("bench_failed"))
+	ok(bk.locked and not bk.passed and evlog.has("bench_failed"), "the live band locks, the bench says 'Measure it first' and does not pass")
+	sc._smoke_mood_until = -1.0
+	await _frames(4)
+	ok(sc.props.mood != "joy" and sc.props.mood == "hopeful", "before the bench passes the customer wears the neutral 'let's see' face, not the smile (%s)" % sc.props.mood)
+	for pair in [["red", jr], ["black", jb]]:
+		var tp2: Vector2 = sc._probe_tip(str(pair[0])); sc._motion(tp2); sc._press(tp2)
+		sc._motion(pair[1]); sc._board_overlay(); sc._release(pair[1])
+	_clock(8.0, func(): return bk.passed)
+	ok(bk.passed, "after measuring at the jacks the bench passes")
+	await create_timer(0.9).timeout
+	await _frames(3)
+	ok(sc.props.mood == "joy", "the smile (and the car moving) arrive with the pass")
+	# the student's 1-5: right circuit, but the return net never reaches the GND pad
+	await _start("1-5")
+	_type("6.6667"); _key(KEY_TAB); _type("0.5556"); _key(KEY_ENTER)
+	var R5: Dictionary = EngineBench.REFS["1-5"]
+	for p5 in R5.parts: _drag_part(str(p5[0]), p5[1], str(p5[2]), int(p5[3]), int(p5[4]), int(p5[5]))
+	for w5 in R5.wires:
+		var path5: Array = w5
+		var last5: Array = path5[path5.size() - 1]
+		if last5 == [8, 12]: last5 = [11, 13]   # the novice's return net: a few holes from the GND pad (a drop within reach of the GND clip would snap to it)
+		ok(_drag_wire(path5[0], last5), "1-5 wire %s to %s" % [str(path5[0]), str(last5)])
+	_rocker()
+	_drag_probe("red", [8, 6]); _drag_probe("black", [11, 13]); _clock(0.4)
+	ok(bk.dmm().text.begins_with("6.6"), "the DMM across A and the return net reads %s V (a floating circuit reads between its leads)" % bk.dmm().text)
+	var c15: Dictionary = bk.coach_view()
+	ok(str(c15.steps[c15.cur].id) == "ground" or str(c15.steps[c15.cur].text).contains("GND"), "the coach says the circuit is not tied to GND (%s)" % str(c15.steps[c15.cur].text).left(50))
+	_bench_key()
+	var b5: String = str(bk.last_result.failures[0].text) if bk.last_result.failures.size() > 0 else ""
+	ok(not bk.passed and b5.contains("tied to the GND pad") and not b5.contains("0.0000"), "the bench explains the missing GND tie instead of '0.00005 V': %s" % b5.left(80))
+	var tied := _drag_wire([14, 8], [8, 12])   # (the black lead rests on the return pad, so wire from the battery's minus leg instead)
+	_bench_key()
+	ok(tied, "the E2 minus leg is wired to the GND pad by pointer")
+	ok(bk.passed, "tied to GND, the same build passes, and the meter and the bench agree on A")
 
 	print("== the chapter map")
 	sc.go_map(); await _frames(3)

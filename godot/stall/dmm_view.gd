@@ -42,7 +42,7 @@ static func lcd_text(value: Variant, fallback: String) -> String:
 	var x := absf(float(value))
 	var e := int(floor(log(x) / log(10.0))) if x >= 1.0 else 0
 	var dec := clampi(3 - e, 0, 3)
-	var s := String.num(x, dec)
+	var s := ("%." + str(dec) + "f") % x   # String.num would trim 9.000 to 9.0
 	return ("-" if float(value) < 0.0 and float(s) != 0.0 else "") + s
 
 func _lcd(lcd: Rect2, on: bool) -> void:
