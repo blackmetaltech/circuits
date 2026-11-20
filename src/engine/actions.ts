@@ -305,7 +305,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       const p = validPad(tk, pad, 'pad');
       if (!nodeAt(tk, p)) refuseKey('err.probe.nothing', { pad: `${p[0]},${p[1]}` });
       tk.board.probes = tk.board.probes.filter((x) => x.ch !== c); tk.board.probes.push({ ch: c as 1 | 2, pad: p }); tk.board.probes.sort((a, b) => a.ch - b.ch);
-      tk.live.scope = { ch1: [], ch2: [], t0: 0, dt: 0 };
+      tk.live.scope = { ch1: [], ch2: [], t0: 0, dt: 0 }; tk.probed = true;
       return ok(say('probe.attached', { ch: c, pad: `${p[0]},${p[1]}` }));
     },
     detachProbe: (s, ch: unknown) => {
@@ -337,6 +337,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       if (pad === null || pad === undefined) m[key] = null;
       else { const p = validPad(tk, pad, 'pad'); if (!nodeAt(tk, p)) refuseKey('err.probe.nothing', { pad: `${p[0]},${p[1]}` }); m[key] = p; }
       m.pads = m.red && m.black ? [m.red, m.black] : [];
+      if (m.pads.length === 2) tk.probed = true;
       if (m.mode === 'off' && (m.red || m.black)) m.mode = 'dcv';
       return ok(say(m[key] ? 'meter.lead.set' : 'meter.lead.off', { lead: key, pad: m[key] ? `${m[key]![0]},${m[key]![1]}` : '-' }));
     },
@@ -445,8 +446,10 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       if (out.events.length > 0) return ok(say('live.smoked', { part: out.events.map((e) => partName(tk.board, e.part)).join(', '), text: say(out.events[0]!.key, nameVars(tk.board, out.events[0]!.vars)) }), { frames: out.frames, smoked: out.events.map((e) => e.part), status: live.status });
       return ok(say('live.advanced', { n: out.frames, t: sig(live.t, 3) }), { frames: out.frames, smoked: [], status: live.status });
     },
-    runBench: (s) => {
+    /** The formal test. `coached` = the player's own bench button: a ticket whose lesson is measuring (measureFirst) refuses until the meter or scope has been used. */
+    runBench: (s, coached?: unknown) => {
       const { tk, def } = open(s, defs);
+      if (coached === true && def.measureFirst && !tk.probed) refuseKey('bench.measureFirst');
       const { result, causes } = benchTicket(s, def);
       tk.lastBench = result;
       const rec = (s.progress.tickets[tk.id] ??= newTicketProgress());

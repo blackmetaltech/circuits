@@ -61,7 +61,7 @@ export const L1_2: LevelDef = {
   coach: [
     { id: 'three-leds', key: 'coach.1-2.s1', anchor: { target: 'bin', partId: 'led-red-5mm' }, done: 'part:led-red-5mm' },
     { id: 'share', key: 'coach.1-2.s2', anchor: { target: 'part', partId: 'led-red-5mm', pin: 'K' }, done: 'wired' },
-    { id: 'probe', key: 'coach.1-2.s3', anchor: { target: 'dmm' }, done: 'probing', when: 'part:res-cf&wired' },
+    { id: 'probe', key: 'coach.1-2.s3', anchor: { target: 'dmm' }, done: 'probing', when: 'part:res-cf&wired', optional: true },
     { id: 'run-bench', key: 'coach.1-2.s4', anchor: { target: 'bench' }, done: 'benched', when: 'part:res-cf&wired' },
     { id: 'tired', key: 'coach.1-2.s5', anchor: { target: 'part', partId: 'res-cf' }, done: '!failed', when: 'failed' },
     { id: 'done', key: 'coach.1-2.s6', anchor: { target: 'chit' }, done: '!passed', when: 'passed' },

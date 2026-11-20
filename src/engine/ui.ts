@@ -21,7 +21,7 @@ import { levelDefOf } from './tickets';
 import { liveRig } from './ticket-run';
 import { say } from './text';
 import { danglingEnds, openPins, pinLabel } from './touch';
-import { nameVars } from './names';
+import { capFirst, nameVars, partNames } from './names';
 
 export interface Sol { rig: Rig; ckt: Circuit; x: Float64Array; state: number[] }
 export interface UiDeps {
@@ -74,6 +74,7 @@ export function evalCond(expr: string | undefined, s: NodeState, tk: TicketState
     else if (atom === 'passed') v = !!tk.lastBench?.pass;
     else if (atom === 'failed') v = !!tk.lastBench && !tk.lastBench.pass;
     else if (atom === 'probing') v = tk.board.probes.length > 0 || (tk.board.meter.mode !== 'off' && tk.board.meter.pads.length === 2);
+    else if (atom === 'probed') v = tk.probed === true;
     else if (atom === 'measured') { const m = deps.Q.meter!(s) as { value: number | null } | null; v = !!m && m.value !== null; }
     else if (atom === 'predicted') v = def.bench.specs.filter((x) => x.kind === 'predict').every((x) => tk.predictions[x.id] !== undefined);
     else v = false;
@@ -209,10 +210,23 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       const o = defOf(s); if (!o) return null;
       const { tk, def } = o, steps = def.coach ?? [];
       const vars = { customer: regionString(s.region, `customer.${def.customer}`), mentor: regionString(s.region, 'mentor') };
-      const rows = steps.map((st) => ({ id: st.id, text: t(st.key, vars), done: evalCond(st.done, s, tk, def, deps), shown: evalCond(st.when, s, tk, def, deps), anchor: resolveAnchor(st.anchor, tk, def), active: false }));
-      const act = rows.find((r) => r.shown && !r.done);
-      if (act) act.active = true;
-      return { ticket: def.id, steps: rows, active: act ? act.id : null, text: act ? act.text : '', anchor: act ? act.anchor : null, done: rows.filter((r) => r.done && r.shown).length, total: rows.length, stepNo: act ? rows.indexOf(act) + 1 : rows.length, stepTotal: rows.length };
+      const rows = steps.map((st) => ({ id: st.id, text: t(st.key, vars), done: evalCond(st.done, s, tk, def, deps), shown: evalCond(st.when, s, tk, def, deps), anchor: resolveAnchor(st.anchor, tk, def), active: false, optional: st.optional === true }));
+      // an optional measuring step never holds the coach back: the next required step is active, and the optional one rides along as "Optional: ..."
+      const act = rows.find((r) => r.shown && !r.done && !r.optional) ?? rows.find((r) => r.shown && !r.done);
+      const opts = rows.filter((r) => r.optional && r.shown && !r.done && r !== act && (act ? rows.indexOf(r) < rows.indexOf(act) : true));
+      if (act) { act.active = true; if (opts.length > 0 && !act.optional) act.text = `${act.text} ${t('coach.optional', { text: opts[0]!.text })}`; }
+      const base = { ticket: def.id, steps: rows as Record<string, unknown>[], active: act ? act.id : null, text: act ? act.text : '', anchor: act ? act.anchor : null, done: rows.filter((r) => r.done && r.shown).length, total: rows.length, stepNo: act ? rows.indexOf(act) + 1 : rows.length, stepTotal: rows.length };
+      // a part has burned: say so, whatever step the ticket is on (never carry on to "clip the meter")
+      const ownBurnStep = act !== undefined && (steps.find((st) => st.id === act.id)?.when ?? '').split(/[&|]/).includes('smoked');
+      if (tk.live.smoked.length > 0 && !tk.lastBench?.pass && !ownBurnStep) {
+        const names = partNames(tk.board), burnt = tk.live.smoked.map((u) => names[u] ?? t('name.part.some')).join(' and ');
+        const pd = tk.board.parts.find((p) => p.uid === tk.live.smoked[0]), d = pd ? getDef(pd.partId) : undefined;
+        const text = t('coach.burned', { part: burnt, Part: capFirst(burnt) });
+        const anchor = pd && d ? { target: 'part', partId: pd.partId, uid: pd.uid, pin: d.pins[0], pad: pinPads(pd, d)[0], name: t(d.nameKey) } : { target: 'bench' };
+        if (act) act.active = false;
+        return { ...base, steps: [{ id: 'burned', text, done: false, shown: true, anchor, active: true, optional: false }, ...rows], active: 'burned', text, anchor };
+      }
+      return base;
     },
 
     /** The DMM: dial position, lead pads, the reading in SI and as the display shows it. */

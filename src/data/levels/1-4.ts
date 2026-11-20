@@ -51,9 +51,10 @@ export const L1_4: LevelDef = {
   pay: { fee: 600, perStar: 200 },
   gauge: { spec: 'power', unit: 'W', flip: true },
   chit: { x: 0.3, y: 0.62 },
+  measureFirst: true,
   coach: [
     { id: 'switch-on', key: 'coach.1-4.s0', anchor: { target: 'power' }, done: 'powered' },
-    { id: 'open-circuit', key: 'coach.1-4.s1', anchor: { target: 'dmm' }, done: 'measured' },
+    { id: 'open-circuit', key: 'coach.1-4.s1', anchor: { target: 'dmm' }, done: 'probed' },
     { id: 'load', key: 'coach.1-4.s2', anchor: { target: 'bin', partId: 'res-ww5' }, done: 'part:res-ww5|part:res-cf' },
     { id: 'wire', key: 'coach.1-4.s3', anchor: { target: 'connector', connector: 'VP' }, done: 'wired' },
     { id: 'smoke', key: 'coach.1-4.s5', anchor: { target: 'bin', partId: 'res-ww5' }, done: '!smoked', when: 'smoked' },

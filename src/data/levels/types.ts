@@ -77,9 +77,13 @@ export type CoachAnchor =
  * One coach step (DESIGN §7.1). Steps advance on ENGINE conditions, never timers. A step is the active one when `when` holds (default: always) and
  * `done` does not, scanning in order. Conditions are `&`-joined atoms, `!` negates: `always`, `part:<partId>` (one is on the board), `wired` (every placed
  * part has every pin on a node shared with another pin or a connector), `powered`, `flowing` (powered and solved), `smoked`, `benched` (a bench run is on record),
- * `passed` (the last bench passed), `failed`, `probing` (a scope probe or the DMM is attached), `measured` (the DMM shows a reading), `predicted` (every prediction is entered).
+ * `passed` (the last bench passed), `failed`, `probing` (a scope probe or the DMM is attached), `measured` (the DMM shows a reading), `probed` (the meter leads or scope clip have been on the board at least once), `predicted` (every prediction is entered).
  */
-export interface CoachStep { id: string; key: string; anchor: CoachAnchor; done: string; when?: string }
+export interface CoachStep {
+  id: string; key: string; anchor: CoachAnchor; done: string; when?: string;
+  /** A measuring step that is not needed to pass: it never holds the coach back; Wren offers it as "Optional: ..." next to the active step. */
+  optional?: boolean;
+}
 
 /** The one quantity the scope's amber band is drawn for (DESIGN §5.3): a bench spec of kind `level`, shown in `unit` (V, A or W). */
 export interface GaugeDef {
@@ -125,6 +129,8 @@ export interface LevelDef {
   /** Payment in the pack currency's minor units: `fee` on the first pass plus `perStar` for every star earned for the first time (estimates: game values). */
   pay?: { fee: number; perStar: number };
   coach?: CoachStep[];
+  /** The player's own bench button refuses until the meter or scope has been used at least once (measuring is the lesson: 1-4). */
+  measureFirst?: boolean;
   gauge?: GaugeDef;
   /** Exam-bridge ticket (printed exam card, predict then probe). */
   eb?: boolean;

@@ -153,6 +153,8 @@ export interface TicketState {
   hintRung: number;
   predictions: Record<string, number>;
   lastBench: BenchResult | null;
+  /** The player has put the meter leads on the board (both) or clipped the scope at least once on this ticket. */
+  probed?: boolean;
   tolerance: { done: number; total: number; failures: number } | null;
 }
 

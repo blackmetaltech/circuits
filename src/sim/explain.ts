@@ -225,7 +225,7 @@ const pn = (part: string): { part: string; Part: string } => ({ part, Part: capF
 function named(e: Explained, ctx: ExplainContext): Explained {
   const uid = e.vars.part;
   if (typeof uid !== 'string' || !ctx.miss?.names) return e;
-  const nameOf = ctx.miss.names[uid] ?? 'the part';
+  const nameOf = ctx.miss.names[uid] ?? uid;
   return { key: e.key, vars: { ...e.vars, part: nameOf, Part: capFirst(nameOf) } };
 }
 function explainRaw(f: BenchFailure, ctx: ExplainContext): Explained {
