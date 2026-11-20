@@ -128,7 +128,7 @@ func _sources(rr: Rect2) -> void:
 		var row := Rect2(26, 52 + i * 52, 250, 44)
 		S.rr(self, row, 6, Color("#150604"))
 		S.text(self, S.mono(), "%s" % str(s.name), row.position + Vector2(12, 33), 30, Color(1.0, 0.45, 0.3, 1.0 if on else 0.55))
-		var vt := "%s V" % EngineBench._g(float(s.volts))
+		var vt := "? V" if s.get("volts", null) == null else "%s V" % EngineBench._g(float(s.volts))   # the engine hides an exam's unknown cell until the predictions are locked
 		S.text(self, S.mono(), vt, row.position + Vector2(row.size.x - 14 - S.tw(S.mono(), vt, 30), 33), 30, Color(1.0, 0.28, 0.15, 1.0 if on else 0.55))
 		if on: S.glow(self, row.get_center(), 90.0, Color(1, 0.2, 0.1, 0.08))
 	S.text(self, S.hand(), sources_note, Vector2(26, 158), 14, Color("#b8b4a4"))

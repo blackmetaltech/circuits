@@ -19,6 +19,7 @@ var hold := 0.0                               ## 0..1 progress of the lock hold
 var smoked := false
 var attached := true                          ## CH1 is on the pad the band is measured at (engine: scope().target.clipped); false draws a flat baseline
 var clip_name := ""                           ## the connector the amber arrow wants the clip on ("OUT", "A")
+var slide := ""                               ## a null detector's side of balance: "left" / "right" (which way to slide the jockey) / "on"; drawn as an arrow with the signed reading
 var reading := ""                             ## the engine's own gauge text for the VFD ("14.9551 mA"); empty = format `value`
 var hover_knob := -1
 var t := 0.0
@@ -131,7 +132,10 @@ func _panel() -> void:
 	var rd := "--"
 	if live and attached: rd = ("%s %s" % [_fmt(value), unit]) if reading == "" else reading
 	elif live and clip_name != "": rd = "CLIP " + clip_name
-	S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14, Color(vc, 0.55))
+	if live and attached and slide != "":
+		txt = "<< slide left" if slide == "left" else (("slide right >>") if slide == "right" else "on balance")
+		S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14, Color(vc, 0.95 if slide != "on" else 0.6))
+	else: S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14, Color(vc, 0.55))
 	S.text(self, S.mono(), rd, Vector2(px + 10, 242), 20 if rd.length() < 11 else 15, Color(vc, 0.9 if (live and attached) else 0.3))
 	S.text(self, S.mono(), "%s/DIV" % _fmt(float(sc.get("vdiv", 4.0))), Vector2(px + 98, 206), 12, Color(vc, 0.4))
 	# knobs

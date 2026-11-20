@@ -24,6 +24,7 @@ var toast := ""
 var toast_age := 9.0
 var toast_dur := 3.5
 var toast_quick := false         ## a transient confirmation ("Wire joined"), drawn as a small dark tag so it is never mistaken for Wren's slip
+var toast_bench := false         ## the toast is a bench verdict ("Too high: OUT reads 7.63 V"): it describes the board as it was, so the next edit takes it down
 var hint_box_drop := false
 var peek: Dictionary = {}
 var _arrow_k := 0.0
@@ -39,7 +40,15 @@ func _process(dt: float) -> void:
 	_arrow_k = minf(1.0, _arrow_k + dt * 1.6)
 	queue_redraw()
 
-func say(s: String) -> void: toast = s; toast_quick = false; toast_age = 0.0; toast_dur = clampf(3.5 + float(s.length()) * 0.045, 3.5, 11.0)   # a long sentence stays long enough to read
+func say(s: String) -> void: toast = s; toast_bench = false; toast_quick = false; toast_age = 0.0; toast_dur = clampf(3.5 + float(s.length()) * 0.045, 3.5, 11.0)   # a long sentence stays long enough to read
+
+## The bench's verdict on the board: shown like any note, but any edit of the board takes it down (it would be stale).
+func say_bench(s: String) -> void:
+	say(s); toast_bench = true; toast_dur = clampf(toast_dur, 6.0, 16.0)
+
+## Any edit of the board: a bench verdict is about the board as it was, so it goes.
+func edited() -> void:
+	if toast_bench: toast_age = 99.0; toast_bench = false
 
 ## A short confirmation that fades fast and looks like the hover readout, not like a note from Wren.
 func say_quick(s: String) -> void: toast = s; toast_quick = true; toast_age = 0.0; toast_dur = 2.0

@@ -62,7 +62,7 @@ export function benchTicket(s: NodeState, def: LevelDef): { result: BenchResult;
     if (!good && out.pass) {
       const rbox = tk.board.parts.filter((p) => p.partId === 'res-box' && p.value !== null).reduce((acc, p) => acc + (p.value ?? 0), 0);
       const wire = tk.board.parts.find((p) => p.uid === a.wire), d = wire ? getDef(wire.partId) : undefined, lCm = (wire?.pos ?? 0.5) * (d?.model.lengthM ?? 1) * 100;
-      failuresAll.push({ key: 'bench.answer.fail', vars: { id: a.id, entered: sig(entered, 4), unit: a.unit, tol: sig(a.tol * 100, 3), R: sig(rbox, 4), l: sig(lCm, 4), ratio: lCm > 0 && lCm < 100 ? sig((100 - lCm) / lCm, 4) : 0 } });
+      failuresAll.push({ key: 'bench.answer.fail', vars: { id: a.id, entered: String(sig(entered, 6)), unit: a.unit, tol: sig(a.tol * 100, 3), R: sig(rbox, 4), l: sig(lCm, 4), ratio: lCm > 0 && lCm < 100 ? sig((100 - lCm) / lCm, 4) : 0 } });
       pass = false;
     }
   }

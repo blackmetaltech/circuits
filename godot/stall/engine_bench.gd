@@ -20,7 +20,7 @@ const FLAVOUR := {
 	"1-3": {"gadget": "heater", "ask": "The heater runs too hot for the fish.", "thanks": "The fish are comfortable again."},
 	"1-4": {"gadget": "car", "ask": "My car got slow.", "thanks": "Vroom! Fast again!"},
 	"1-5": {"gadget": "exam", "ask": "Predict first, then probe.", "thanks": "The numbers agree!"},
-	"2-1": {"gadget": "station", "ask": "My weather station reads nonsense.", "thanks": "Dead on: 3.3 volts."},
+	"2-1": {"gadget": "station", "ask": "My weather station reads nonsense.", "thanks": "My station reads true."},
 	"2-2": {"gadget": "cable", "ask": "Where do we dig?", "thanks": "Found it, right at your mark!"},
 	"2-3": {"gadget": "module", "ask": "Nobody makes this box any more.", "thanks": "Drop-in. It behaves just like the old one."},
 	"2-4": {"gadget": "exam", "ask": "Predict first, then probe.", "thanks": "The numbers agree!"},
@@ -163,13 +163,17 @@ func _supply_info() -> Dictionary:
 		if str(p.partId).begins_with("bat-pp3"):
 			var tired: bool = str(p.partId).ends_with("tired") or str(p.get("variant", "")) == "tired"
 			return {"kind": "pp3", "label": "tired 9 V pack" if tired else "9 V PP3", "volts": 9.0, "tired": tired}
-	var srcs: Array = []   # an exam ticket: ideal textbook sources fixed on the board (not a battery, not the bench supply); chapter 2 adds its lab cells
+	var srcs: Array = []   # an exam ticket: ideal textbook sources fixed on the board (not a battery, not the bench supply); chapter 2 adds its lab cells. The engine (ticketCard().sources) owns the volts and hides the unknown cell.
 	var lab := false
-	for p in _all_parts:
-		var pid := str(p.partId)
-		if pid.begins_with("ideal-vsource"): srcs.append({"name": "driver" if str(card.get("id", "")) == "2-4" else "E%d" % (srcs.size() + 1), "volts": float(p.get("value", 0.0))})
-		elif pid == "cell-2v": srcs.append({"name": "cell", "volts": 2.0}); lab = true
-		elif pid == "cell-test": srcs.append({"name": "test", "volts": 1.5}); lab = true
+	var n_ideal := 0
+	for sc in card.get("sources", []):
+		var pid := str(sc.partId)
+		var v = sc.get("volts", null)
+		if pid == "ideal-vsource":
+			n_ideal += 1
+			srcs.append({"name": "driver" if str(card.get("id", "")) == "2-4" else "E%d" % n_ideal, "volts": v})
+		elif pid == "cell-2v": srcs.append({"name": "cell", "volts": v}); lab = true
+		elif pid == "cell-test": srcs.append({"name": "test", "volts": v}); lab = true
 	if not srcs.is_empty():
 		var cid := str(card.get("id", ""))
 		return {"kind": "sources", "label": "lab cells" if lab else "textbook sources", "volts": 0.0, "tired": false, "sources": srcs,
@@ -299,6 +303,18 @@ func add_wire(a: Array, b: Array) -> Dictionary:
 	event.emit("wired", {"wid": str(r.get("wid", "")), "landed": landed, "dangling": dang, "note": last_note})
 	return {"ok": true, "msg": "", "wid": str(r.get("wid", "")), "landed": landed, "dangling": dang, "note": last_note}
 
+## Stray stubs left by failed drags: a wire shorter than a pad and a half with an end that touches no leg. Returns how many were taken away.
+func clean_stray() -> int:
+	var n := 0
+	for d in dangling.duplicate():
+		for w in wires:
+			if str(w.wid) != str(d.wid) or bool(w.get("fixed", false)): continue
+			var l := 0.0
+			for i in (w.path as Array).size() - 1: l += Vector2((w.path[i][0] as int), (w.path[i][1] as int)).distance_to(Vector2((w.path[i + 1][0] as int), (w.path[i + 1][1] as int)))
+			if l <= 1.5: delete_wire(str(w.wid)); n += 1
+			break
+	return n
+
 func delete_wire(wid: String) -> Dictionary:
 	var r := _act("unwire", [wid]); _after_edit()
 	return {"ok": bool(r.get("ok", false)), "msg": str(r.get("message", ""))}
@@ -354,9 +370,20 @@ func set_dial(mode: String) -> void:
 func predict(id: String, value: float) -> Dictionary:
 	var r := _act("predict", [id, value])
 	card = _q("ticketCard"); ticket["predictions"] = card.get("predictions", []); ticket["answers"] = card.get("answers", [])
+	ticket["supply"] = _supply_info()   # the test cell's volts appear once the predictions are locked
 	_bench_key = ""   # a new answer is a new reason to bench (the auto bench waits for it)
 	_exam_hide()
 	return {"ok": bool(r.get("ok", false)), "msg": str(r.get("message", ""))}
+
+## Sit the exam again for more stars: the predictions and answers are forgotten (the engine keeps the board), the ticket is no longer stamped FIXED.
+func retry_exam() -> bool:
+	var r := _act("retryExam")
+	if not r.get("ok", false): return false
+	passed = false; hold = 0.0; last_result = {}; _bench_key = ""
+	card = _q("ticketCard"); ticket["predictions"] = card.get("predictions", []); ticket["answers"] = card.get("answers", [])
+	ticket["supply"] = _supply_info(); ticket["stars"] = 0
+	_exam_hide(); _refresh_board(); _refresh_live(); _rebuild_model()
+	return true
 
 ## Exam bridge: predict first. The target band (chit and scope) stays hidden until every prediction is locked in, or it gives the answer away.
 func _exam_hide() -> void:
@@ -499,14 +526,16 @@ func _scope_update() -> void:
 		var cl = tg.get("clip", null)
 		sv["clipped"] = bool(tg.get("clipped", false))
 		sv["clip_pad"] = cl.pad if cl is Dictionary else null
-	var val := 0.0; var attached := true; var txt := ""
+	var val := 0.0; var attached := true; var txt := ""; var slide := ""
 	if str(sv.get("mode", "")) == "gauge":
-		if gauge is Dictionary and gauge.get("value", null) != null and powered: val = float(gauge.value); txt = str(gauge.get("text", ""))
+		if gauge is Dictionary and gauge.get("value", null) != null and powered:
+			val = float(gauge.value); txt = str(gauge.get("text", ""))
+			if str(gauge.get("signedText", "")) != "": txt = str(gauge.signedText); slide = str(gauge.get("slide", ""))   # a null detector: signed, and which way to slide
 	else:
 		attached = bool(sv.get("clipped", false)) and bool(scope_q.get("attached", false))
 		var v: Array = scope_q.get("v", [])
 		if attached and powered and not v.is_empty(): val = float(v[v.size() - 1]) * _n(sv.get("scale", 1.0))
-	sv["value"] = val; sv["attached"] = attached; sv["text"] = txt
+	sv["value"] = val; sv["attached"] = attached; sv["text"] = txt; sv["slide"] = slide
 	scope_view = sv
 	if not ticket.is_empty(): ticket["scope"] = sv
 
@@ -696,7 +725,7 @@ func _rebuild_model() -> void:
 	var norm := {}
 	for n in frame.get("nodes", []):
 		for q in n.pads: norm["%d,%d" % [int(q[0]), int(q[1])]] = float(n.norm)
-	m["dangling"] = dangling; m["norm"] = norm; m["wire_speed"] = spd_w; m["part_speed"] = spd_p; m["heat"] = heat; m["led"] = led; m["galvo"] = galvo
+	m["marks"] = bench_q.get("marks", []); m["slots"] = bench_q.get("slots", []); m["dangling"] = dangling; m["norm"] = norm; m["wire_speed"] = spd_w; m["part_speed"] = spd_p; m["heat"] = heat; m["led"] = led; m["galvo"] = galvo
 	model = m
 
 ## ------------------------------------------------------------------------------------------------------------------ test helpers

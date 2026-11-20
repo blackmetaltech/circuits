@@ -60,6 +60,7 @@ export const L2_4: LevelDef = {
     jockeys: { f3: 750 },
     predictions: { pgrad: 0.02, pemf: 1.5, pr: 0.5 },
   },
+  slots: [{ id: 'rheo', partId: 'rheostat', a: [6, 2], b: [10, 2], textKey: 'slot.rheostat' }, { id: 'galvo', partId: 'galvanometer', a: [12, 7], b: [18, 7], textKey: 'slot.galvo' }],
   specShort: 'ticket.2-4.short',
   scope: 'must',
   after: ['2-1', '2-2|2-3'],

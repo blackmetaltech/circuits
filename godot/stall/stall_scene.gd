@@ -204,11 +204,12 @@ func _on_page(id: String, arg: String) -> void:
 			done.clear(); wallet = 0
 			if backend.ENGINE: backend.new_game(); if not _nosave(): backend.save_game()
 			_save(); go_map()
-		"pred_focus": pages.pred_focus = int(arg)
+		"pred_focus": pages.pred_focus = int(arg); pages.pred_sel = true
 		"pred_submit": _submit_predictions()
 		"pred_close": pages.show_page("")
 		"pred_sign": _toggle_sign(int(arg))
 		"debrief_close": pages.show_page("")
+		"debrief_retry": retry_exam()
 		"settings": pages.show_page("settings")
 		"cute", "toggle:cute": cute = not cute; _apply_prefs(); _save(); _refresh_pages()
 		"toggle:reduced": reduced = not reduced; _apply_prefs(); _save(); _refresh_pages()
@@ -248,15 +249,15 @@ func _save() -> void:
 func _on_event(name: String, data: Dictionary) -> void:
 	_flow_log.append(name)
 	match name:
-		"placed": sfx.play("thunk"); props.mood = "hopeful" if props.mood == "idle" else props.mood
-		"wired": sfx.play("zip")
+		"placed": top.edited(); sfx.play("thunk"); props.mood = "hopeful" if props.mood == "idle" else props.mood
+		"wired": top.edited(); sfx.play("zip")
 		"power":
 			sfx.play("click" if data.on else "clack")
 			if bool(data.get("auto", false)):
 				if bool(data.on): top.say_quick("The power was off: I switched it on for the bench test.")
 			elif not bool(data.on): top.say_quick("Power off.")   # a short word, so the rocker's state is never a guess
 		"deleted":
-			sfx.play("page", 0.5)
+			top.edited(); sfx.play("page", 0.5)
 			if str(data.get("note", "")) != "": top.say(str(data.note))   # e.g. "p1 removed, and 2 wire(s) that were only held by its legs."
 		"smoked":
 			sfx.play("crack" if data.kind == "LED" else "pop"); sfx.play("meow", 0.5)
@@ -268,11 +269,12 @@ func _on_event(name: String, data: Dictionary) -> void:
 		"paid": _lock_seq = 0.0                          # the formal bench passed: the customer pays
 		"bench_failed":
 			sfx.play("pop", 0.5); props.mood = "wow"; _smoke_mood_until = t + 3.0
-			top.say(str(data.get("text", "The bench check failed.")))
+			top.say_bench(str(data.get("text", "The bench check failed.")))
 
 func _finish_lock() -> void:
 	locked_at = t
 	props.mood = "joy"; top.bubble = str(backend.ticket.thanks); bubble_until = t + 14.0
+	if backend.ENGINE and str(backend.last_result.get("thanks", "")) != "": top.bubble = str(backend.last_result.thanks)   # the customer quotes the value the engine measured
 	var price := int(backend.ticket.get("price", 0))
 	if backend.ENGINE:
 		wallet = backend.wallet_minor; done[str(backend.ticket.id)] = true; _refresh_pages()
@@ -296,7 +298,15 @@ func run_bench() -> void:
 	if backend.parts.filter(func(p): return not p.fixed).is_empty(): top.say("Build something first."); return
 	if not bool(backend.ticket.get("eb", false)) and not backend.answers_done() and not backend.ticket.get("answers", []).is_empty():
 		top.say("Write your answer on the slip first, then bench it."); open_predict(); return
+	var cleaned: int = backend.clean_stray()
+	if cleaned > 0: top.say_quick("Took away %d stray wire end%s." % [cleaned, "" if cleaned == 1 else "s"])
 	sfx.play("click", 0.8); backend.run_bench()
+
+## "Try again for more stars": the exam forgets its predictions (the board stays), the FIXED stamp comes off and the predict slip opens.
+func retry_exam() -> void:
+	if not backend.ENGINE or not backend.retry_exam(): return
+	pages.show_page(""); sfx.play("page", 0.7); props.mood = "idle"; open_predict()
+	top.say("Write your predictions again, then bench it again.")
 
 func open_predict() -> void:
 	pages.pred_fields = []
@@ -304,7 +314,7 @@ func open_predict() -> void:
 		pages.pred_fields.append({"id": str(pr.id), "name": str(pr.name), "unit": str(pr.unit), "text": "" if pr.get("entered", null) == null else EB._g(float(pr.entered), 6), "done": pr.get("entered", null) != null})
 	pages.pred_head = ("%s  \u00b7  predict first" % str(backend.ticket.get("title", "Exam"))) if bool(backend.ticket.get("eb", false)) else ("%s  \u00b7  the crew's slip" % str(backend.ticket.get("title", "Slip")))
 	pages.star_rule = str(backend.ticket.get("star_rule", ""))
-	pages.pred_focus = 0; pages.show_page("predict")
+	pages.pred_focus = 0; pages.pred_sel = true; pages.show_page("predict")
 
 func set_prediction(id: String, value: float) -> Dictionary:   # also what typing then Enter does
 	var r: Dictionary = backend.predict(id, value)
@@ -315,7 +325,7 @@ func _toggle_sign(i: int) -> void:   # the on-screen +/- key of the predict slip
 	if i < 0 or i >= pages.pred_fields.size(): return
 	var f: Dictionary = pages.pred_fields[i]
 	var tx := str(f.text); f.text = tx.substr(1) if tx.begins_with("-") else "-" + tx; f.done = false
-	pages.pred_focus = i
+	pages.pred_focus = i; pages.pred_sel = false
 
 func _submit_predictions() -> void:
 	for f in pages.pred_fields:
@@ -331,14 +341,19 @@ func _predict_key(e: InputEventKey) -> void:
 	var f: Dictionary = pages.pred_fields[pages.pred_focus] if pages.pred_focus < pages.pred_fields.size() else {}
 	match e.keycode:
 		KEY_ESCAPE: pages.show_page("")
-		KEY_TAB, KEY_DOWN: pages.pred_focus = (pages.pred_focus + 1) % maxi(1, pages.pred_fields.size())
-		KEY_UP: pages.pred_focus = (pages.pred_focus + pages.pred_fields.size() - 1) % maxi(1, pages.pred_fields.size())
+		KEY_TAB, KEY_DOWN: pages.pred_focus = (pages.pred_focus + 1) % maxi(1, pages.pred_fields.size()); pages.pred_sel = true
+		KEY_UP: pages.pred_focus = (pages.pred_focus + pages.pred_fields.size() - 1) % maxi(1, pages.pred_fields.size()); pages.pred_sel = true
 		KEY_ENTER, KEY_KP_ENTER: _submit_predictions()
-		KEY_BACKSPACE: if not f.is_empty(): f.text = str(f.text).substr(0, str(f.text).length() - 1)
+		KEY_BACKSPACE:
+			if not f.is_empty():
+				f.text = "" if pages.pred_sel else str(f.text).substr(0, str(f.text).length() - 1); f.done = false
+				pages.pred_sel = false
 		_:
 			if not f.is_empty() and e.unicode > 0:
 				var ch := char(e.unicode)
-				if ch in "0123456789.-+eE": f.text = str(f.text) + ch
+				if ch in "0123456789.-+eE":
+					f.text = (ch if pages.pred_sel else str(f.text) + ch); f.done = false   # a selected field is replaced by the first key
+					pages.pred_sel = false
 
 ## ------------------------------------------------------------------------------------------------------------------ chapter 2 controls
 
@@ -368,6 +383,7 @@ func _slide_hit(sp: Vector2) -> String:
 	if dx >= -0.3 and dx <= (g.b.x - g.a.x) + 0.3 and dy >= -1.0 and dy < NUDGE_Y[0]: return "wire"
 	return ""
 
+const END_REACH := 1.3                           ## pads from a slide-wire end A / B where a press belongs to the terminal (a wire), not to the jockey
 func _jockey_to(sp: Vector2) -> void:
 	var g := _slide_geom()
 	if g.is_empty(): return
@@ -453,7 +469,7 @@ func _draw() -> void:   # the bench itself: static, redrawn on resize only
 		var k := float(gj) / 12.0
 		draw_line(mp[0].lerp(mp[3], k), mp[1].lerp(mp[2], k), Color(1, 1, 1, 0.07), 1.5)
 	S.text(self, S.hand(), "STALL 14  ·  LANTERN LANE", Vector2(board_rect.position.x + 12, board_rect.position.y - 16), 18, Color(1, 1, 1, 0.22))
-	S.text(self, S.hand(), "drag a part in  ·  drag leg to leg to wire  ·  right-click removes  ·  Ctrl+Z undoes  ·  R turns", Vector2(board_rect.position.x + 12, board_rect.end.y + 40), 17, Color(1, 1, 1, 0.34))
+	S.keyline(self, _hint_text(), Vector2(board_rect.position.x + 12, board_rect.end.y + 40), 17, Color(1, 1, 1, 0.34))
 	# solder stains and flux marks, a burn ring, a screw
 	var rng := RandomNumberGenerator.new(); rng.seed = 31
 	for i in 22:
@@ -468,6 +484,12 @@ func _draw() -> void:   # the bench itself: static, redrawn on resize only
 	draw_rect(Rect2(0, H - 6, W, 6), Color("#1d130d"), true)
 	# the corner vignette
 	S.vgrad(self, Rect2(0, H * 0.55, W, H * 0.45), Color(0, 0, 0, 0.0), Color(0, 0, 0, 0.22), 10)
+
+## The line under the board; keys are in [brackets] and drawn as key caps. Tickets with a slide wire add what the wire's parts do.
+func _hint_text() -> String:
+	var base := "drag a part in  ·  drag leg to leg to wire  ·  right-click removes  ·  [Ctrl+Z] undoes  ·  [R] turns"
+	if backend != null and backend.ENGINE and not backend.slide_part().is_empty(): return "drag A, B or J to wire  ·  drag the jockey, or click along the wire, to slide  ·  [Ctrl+Z] undoes"
+	return base
 
 ## ------------------------------------------------------------------------------------------------------------------ geometry
 
@@ -537,7 +559,7 @@ func pad_label(pad: Vector2) -> String:
 
 func _undo() -> void:
 	if phase != "bench" or pages.mode != "" or not backend.ENGINE: return
-	drag.clear()
+	drag.clear(); top.edited()
 	var r: Dictionary = backend.undo()
 	if r.ok: sfx.play("page", 0.6); top.say(str(r.msg))
 	else: top.say("Nothing to undo.")
@@ -630,7 +652,7 @@ func _sync_views(dt: float) -> void:
 	# scope / supply / dmm
 	scope.value = backend.scope_value(); scope.live = backend.powered; scope.locked = backend.locked
 	scope.hold = clampf(backend.hold / backend.LOCK_HOLD, 0.0, 1.0); scope.smoked = not backend.smoked.is_empty()
-	scope.attached = bool(backend.scope_view.get("attached", true)); scope.clip_name = str(backend.scope_view.get("clip_name", "")); scope.reading = str(backend.scope_view.get("text", ""))
+	scope.attached = bool(backend.scope_view.get("attached", true)); scope.clip_name = str(backend.scope_view.get("clip_name", "")); scope.reading = str(backend.scope_view.get("text", "")); scope.slide = str(backend.scope_view.get("slide", ""))
 	supply.on = backend.powered; supply.hover = hover == "rocker"
 	if supply.adjustable: supply.volts = backend.supply_volts()
 	if drag.get("kind", "") != "probe": supply.jack_glow = ""
@@ -641,6 +663,7 @@ func _sync_views(dt: float) -> void:
 	props.set_items(backend.bin()); props.hide_item = int(drag.item) if drag.get("kind", "") == "part" else -1; props.hover_item = _slot_hover
 	props.hover = hover if hover in ["notebook", "tin", "box", "cat", "customer", "exam"] else ""
 	props.exam_open = backend.ENGINE and not backend.predictions_done()
+	props.exam_retry = backend.ENGINE and backend.passed and bool(backend.last_result.get("retry", false))
 	if not props.crew.is_empty(): props.crew = {"answers": backend.ticket.get("answers", [])}
 	# joy (the smile, the working gadget) belongs to a PASSED bench only; a held live band is just "let's see"
 	if props.mood == "wow" and t > _smoke_mood_until: props.mood = "joy" if backend.passed else ("hopeful" if backend.locked else "idle")
@@ -896,6 +919,7 @@ func _motion(sp: Vector2) -> void:
 	# hover readouts (the Learner tooltip): node voltage and part current, only while it means something
 	top.tag = {}
 	if hover_wire != "": top.tag = {"text": "soldered in place" if _wire_fixed(hover_wire) else "right-click to remove", "pos": sp}
+	elif drag.is_empty() and hover == "board" and _slide_hit(sp) == "wire" and snap(sp, 0.6, 0.0).kind == "none": top.tag = {"text": "click along the wire or drag the jockey; drag from A, B or J to wire", "pos": sp}
 	elif drag.is_empty() and hover == "board" and backend.powered:
 		var pd := part_at(sp)
 		if not pd.is_empty() and (pd.kind == "LED" or pd.kind == "R"):
@@ -942,7 +966,11 @@ func _press(sp: Vector2) -> void:
 		if sn.kind == "pin" or sn.kind == "connector": drag = {"kind": "wire", "pad": sn.pad}; return
 		var jk := _slide_hit(sp)
 		if (pd.is_empty() or pd.fixed) and jk != "":   # the slide wire: its jockey keys, or the wire itself (drag the jockey to the pointer)
-			if jk == "wire": drag = {"kind": "jockey"}; _jockey_to(sp)
+			if jk == "wire":
+				var g := _slide_geom(); var v: Vector2 = (screen_to_vp(sp) - bench.org) / bench.p
+				if v.x - g.a.x < END_REACH or g.b.x - v.x < END_REACH:   # a press at a wire end is the terminal: it makes a wire, never moves the jockey
+					drag = {"kind": "wire", "pad": g.a if (v.x - g.a.x) < (g.b.x - v.x) else g.b}; return
+				drag = {"kind": "jockey"}; _jockey_to(sp)   # a click along the wire puts the jockey there; a drag from the jockey (or the wire) slides it
 			else: _jockey_key(jk)
 			return
 		if pa.x >= 0 and (pd.is_empty() or pd.fixed or _near_pin(pd, pa)): drag = {"kind": "wire", "pad": pa}; return
@@ -1016,6 +1044,7 @@ func _release(sp: Vector2) -> void:
 		"wire":
 			var tgt := snap(sp, drop_reach(), 0.7)   # the end snaps to the nearest leg or connector within reach, else to the hole
 			var tp: Vector2 = tgt.pad
+			if tgt.kind == "pad" and tp.distance_to(d.pad) < 1.5: tgt = {"kind": "none", "pad": tp}   # a failed drag that went nowhere leaves no stray end behind
 			if tgt.kind != "none" and tp != d.pad:
 				var r3: Dictionary = backend.add_wire([int(d.pad.x), int(d.pad.y)], [int(tp.x), int(tp.y)])
 				if not r3.ok and str(r3.msg) != "": top.say(str(r3.msg))

@@ -608,8 +608,34 @@ func _draw_labels(ci: Control) -> void:
 		PartArt.rrect(ci, Rect2(pos + Vector2(-4.0, -fs - 1.0), Vector2(wtx + 8.0, fs + 7.0)), 5.0, Color(0.03, 0.035, 0.05, 0.72))
 		_txt(ci, s, pos, fs, Color(0.96, 0.95, 0.88))
 
+## The engine's engraved board marks: the bridge terminals (A, B, J on the slide wire, C at the junction) as small brass tags, and the clear slots a part goes in (dashed outline, until filled).
+func _draw_marks(ci: Control) -> void:
+	var m := _m()
+	var fs := maxi(int(clampf(p * 0.5, 14.0, 22.0)), SS.min_font)
+	for sl in m.get("slots", []):
+		if bool(sl.get("filled", false)): continue
+		var a := _px(_pad_of(sl.a)); var b := _px(_pad_of(sl.b))
+		var r := Rect2(Vector2(minf(a.x, b.x) - p * 0.7, minf(a.y, b.y) - p * 1.0), Vector2(absf(b.x - a.x) + p * 1.4, absf(b.y - a.y) + p * 2.0))
+		var col := Color(1.0, 0.8, 0.35, 0.55)
+		var pts := PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y), r.position])
+		for i in 4:
+			var d := (pts[i + 1] - pts[i]); var n := int(d.length() / (p * 0.5))
+			for k in range(0, n, 2): ci.draw_line(pts[i] + d * (float(k) / float(maxi(n, 1))), pts[i] + d * (float(k + 1) / float(maxi(n, 1))), col, maxf(1.5, p * 0.06))
+		var tx := str(sl.get("text", "")); var w := ThemeDB.fallback_font.get_string_size(tx, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
+		_txt(ci, tx, Vector2(r.get_center().x - w * 0.5, r.end.y - p * 0.15), fs, Color(1.0, 0.85, 0.5, 0.8))
+	for mk in m.get("marks", []):
+		var c := _px(_pad_of(mk.pad)); var tx := str(mk.get("text", ""))
+		var w := ThemeDB.fallback_font.get_string_size(tx, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
+		var chip := Rect2(c + Vector2(-w * 0.5 - 7.0, -p * 1.45), Vector2(w + 14.0, fs + 8.0))
+		if tx == "J": chip.position = c + Vector2(p * 0.5, -p * 0.2 - float(fs))
+		PartArt.rrect(ci, chip, 6.0, Color("#b8893a")); PartArt.rrect(ci, chip.grow(-2.0), 5.0, Color("#e3c070"))
+		ci.draw_string(ThemeDB.fallback_font, chip.position + Vector2(7.0, fs + 1.0), tx, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, Color(0.16, 0.1, 0.03, 0.97))
+
+static func _pad_of(a) -> Vector2: return Vector2(float(a[0]), float(a[1]))
+
 func _draw_fx(ci: Control) -> void:
 	if cute: _draw_cute(ci)
+	_draw_marks(ci)
 	_draw_labels(ci)
 	_draw_dangling(ci, _m())
 	if not overlay.is_empty(): _draw_overlay(ci)

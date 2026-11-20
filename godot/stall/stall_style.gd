@@ -46,6 +46,26 @@ static func text(ci: CanvasItem, f: Font, s: String, pos: Vector2, size: int, co
 	if w > 0.0: ci.draw_multiline_string(f, pos, s, align, w, size, -1, col)
 	else: ci.draw_string(f, pos, s, align, -1.0, size, col)
 
+## A line of hand-written text with keyboard keys in it: anything in [square brackets] is a key cap drawn in the mono font ("Ctrl+Z" in Kalam reads as "Ctrl+2").
+## Returns the x where the line ends. `col` is the text colour; the caps use the same colour for the legend and a faint plate behind it.
+static func keyline(ci: CanvasItem, s: String, pos: Vector2, size: int, col: Color) -> float:
+	var x := pos.x; var f := hand(); var m := mono()
+	var ksize := maxi(size - 3, min_font)
+	var parts := s.split("[")
+	for i in parts.size():
+		var seg: String = parts[i]
+		if i > 0 and seg.contains("]"):
+			var cut := seg.find("]")
+			var key := seg.substr(0, cut); seg = seg.substr(cut + 1)
+			var kw := m.get_string_size(key, HORIZONTAL_ALIGNMENT_LEFT, -1.0, ksize).x + 12.0
+			var plate := Rect2(x + 1.0, pos.y - float(ksize) - 3.0, kw, float(ksize) + 9.0)
+			rr(ci, plate, 4, Color(col.r, col.g, col.b, col.a * 0.35)); rr_line(ci, plate, 4, Color(col.r, col.g, col.b, minf(1.0, col.a * 1.4)), 1.2)
+			text(ci, m, key, Vector2(x + 7.0, pos.y), ksize, Color(col.r, col.g, col.b, minf(1.0, col.a * 1.9)))
+			x += kw + 4.0
+		if seg != "":
+			text(ci, f, seg, Vector2(x, pos.y), size, col); x += tw(f, seg, size)
+	return x
+
 static func tw(f: Font, s: String, size: int) -> float: return f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1.0, maxi(size, min_font)).x
 
 static func wrapped_h(f: Font, s: String, size: int, w: float) -> float:

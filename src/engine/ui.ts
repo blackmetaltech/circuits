@@ -197,6 +197,12 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
           };
         }),
         wires: b.wires.map((w) => ({ wid: w.wid, path: w.path, fixed: w.fixed === true })),
+        // engraved on the board: the bridge's terminals (the slide wire's A, J, B and the junction C where the plug meets the cable) and the clear slots the parts go in
+        marks: b.parts.flatMap((p) => {
+          const d = getDef(p.partId)!, pads = pinPads(p, d);
+          return d.kind === 'SLIDEWIRE' ? d.pins.map((name, i) => ({ pad: pads[i]!, text: name })) : p.partId === 'cable-loop' && def.id === '2-2' ? [{ pad: pads[0]!, text: 'C' }] : [];
+        }),
+        slots: (def.slots ?? []).map((sl) => ({ id: sl.id, partId: sl.partId, a: sl.a, b: sl.b, text: t(sl.textKey), filled: b.parts.some((p) => !p.fixed && p.partId === sl.partId) })),
         instruments: {
           powered: tk.live.powered, paused: tk.live.paused === true,
           supply: def.supplies.some((x) => x.kind === 'bench') ? { on: ins.supply.on, v: ins.supply.v, ilim: ins.supply.ilim } : null,

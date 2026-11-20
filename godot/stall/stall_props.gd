@@ -25,6 +25,7 @@ var bin_scroll := 0.0             ## shoebox scroll, in rows (fractional while d
 var bin_drag := false             ## the tray is being dragged / flung: show the track
 var exam_fig: Dictionary = {}          ## exam ticket: the engine's figure, drawn small on the problem card that stays on the bench
 var exam_open := true                  ## false once the predictions are in (the card then reads "your predictions are in")
+var exam_retry := false               ## the exam is stamped FIXED at under 3 stars: the slip says it can be sat again
 var crew: Dictionary = {}              ## a ticket that asks for a worked-out number (2-2): {answers:[{id, name, unit, entered}]}, shown as the crew's slip on the bench
 var all_items: Array = []       ## the whole shoebox (items is what the rating filter lets through)
 var rating_filter := ""         ## "" = all, else a watt tag ("¼ W"): the shelf shows only parts with that rating
@@ -78,7 +79,7 @@ func _exam_card() -> void:
 	S.pin(self, q.position + Vector2(q.size.x * 0.5, 11), Color("#3a6fb0"))
 	S.text(self, S.hand(), "EXAM SLIP", q.position + Vector2(12, 36), 16, S.INK_RED)
 	ExamFigure.draw(self, Rect2(q.position + Vector2(6, 42), Vector2(q.size.x - 12, q.size.y - 82)), exam_fig, S.INK, [], true)
-	S.text(self, S.hand(), "tap: open the slip" if not exam_open else "tap to predict", q.position + Vector2(12, q.size.y - 12), 15, Color(S.INK, 0.8))
+	S.text(self, S.hand(), "tap: marks, try again" if exam_retry else ("tap: open the slip" if not exam_open else "tap to predict"), q.position + Vector2(12, q.size.y - 12), 15, Color(S.INK_RED if exam_retry else S.INK, 0.8))
 	if hv: S.rr_line(self, q.grow(3), 5, Color("#ffd98a", 0.9), 3.0)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
@@ -97,7 +98,7 @@ func _crew_slip(r: Rect2) -> void:
 	var entered = a.get("entered", null)
 	var line := Rect2(q.position.x + 12, q.position.y + 96, q.size.x - 24, 44)
 	S.rr(self, line, 6, Color(S.INK, 0.07)); S.rr_line(self, line, 6, Color(S.INK, 0.5 if entered != null else 0.3), 2.0)
-	var txt: String = "%s m" % EngineBench._g(float(entered), 5) if entered != null else "___ m"
+	var txt: String = "%s m" % EngineBench._g(float(entered), 6) if entered != null else "___ m"
 	S.text(self, S.mono(), txt, line.position + Vector2(10, 32), 26, S.INK)
 	S.text(self, S.hand(), "X = R (100 - l) / l,", q.position + Vector2(12, 166), 16, Color(S.INK, 0.8))
 	S.text(self, S.hand(), "then 0.1 ohm per metre", q.position + Vector2(12, 186), 16, Color(S.INK, 0.8))

@@ -31,7 +31,19 @@ func set_mode(m: String) -> void:
 
 func socket_pos(which: String) -> Vector2: return Vector2(112, 398) if which == "black" else Vector2(188, 398)
 
-func hit_dial(p: Vector2) -> bool: return p.distance_to(DIAL_C) < 82.0
+func hit_dial(p: Vector2) -> bool: return p.distance_to(DIAL_C) < 82.0 or label_at(p) != ""
+
+## Where a dial position is engraved (design space): the labels are click targets of their own, so a student can go straight to mA without turning past V.
+static func label_pos(m: String) -> Vector2:
+	var a: float = MODE_ANG[m]
+	return DIAL_C + Vector2(sin(a), -cos(a)) * 106.0
+
+const LABEL_HIT := 28.0
+## The dial position whose engraved label is under p ("" when none).
+func label_at(p: Vector2) -> String:
+	for m in MODES:
+		if p.distance_to(label_pos(m) + Vector2(0, 0)) < LABEL_HIT: return m
+	return ""
 
 ## Four digits and a decimal point on a fixed pitch, so 9.000 V, 5.320 V, 14.96 mA and 4.700 Ω all fit inside the glass; the ghost segments sit under exactly the same cells.
 const LCD_PITCH := 40.0
@@ -77,6 +89,8 @@ func _lcd(lcd: Rect2, on: bool) -> void:
 
 ## Click on the dial: the half of the dial you hit picks the next / previous position.
 func dial_click(p: Vector2) -> String:
+	var lab := label_at(p)
+	if lab != "" and p.distance_to(DIAL_C) >= 82.0: return lab   # on an engraved label (outside the knob): go straight there
 	var i := MODES.find(mode)
 	var d := p.x - DIAL_C.x
 	i = clampi(i + (1 if d >= 0.0 else -1), 0, MODES.size() - 1)
@@ -104,6 +118,8 @@ func _draw() -> void:
 		var a: float = MODE_ANG[m]; var d := Vector2(cos(a - 1.57), sin(a - 1.57)) * Vector2(1, 1)
 		var pos := DIAL_C + Vector2(sin(a), -cos(a)) * 106.0
 		var col := Color("#26211a") if m != mode else Color("#7a1810")
+		S.rr(self, Rect2(pos - Vector2(25, 15), Vector2(50, 30)), 8, Color("#fff3c4", 0.9 if m == mode else 0.5))   # a chip: the label is a button
+		S.rr_line(self, Rect2(pos - Vector2(25, 15), Vector2(50, 30)), 8, Color("#8a6a14", 0.7), 1.5)
 		S.text(self, S.hand(), labs[m], pos + Vector2(-S.tw(S.hand(), labs[m], 18) * 0.5, 6), 18, col)
 		draw_line(DIAL_C + Vector2(sin(a), -cos(a)) * 86.0, DIAL_C + Vector2(sin(a), -cos(a)) * 94.0, col, 3.0)
 	S.glow(self, DIAL_C, 100.0, Color(1, 1, 1, 0.12 if hover_dial else 0.0))

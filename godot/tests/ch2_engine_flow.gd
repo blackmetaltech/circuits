@@ -173,7 +173,9 @@ func _run() -> void:
 	_clock(4.0, func(): return bk.passed)
 	ok(bk.passed and evlog.has("paid"), "holding LOCK runs the bench and pays")
 	await create_timer(0.9).timeout
-	ok(sc.props.mood == "joy" and str(bk.ticket.thanks).contains("3.3") and sc.done.get("2-1", false), "Kaya is happy; 2-1 is fixed")
+	ok(sc.props.mood == "joy" and sc.done.get("2-1", false), "Kaya is happy; 2-1 is fixed")
+	var vm := float(bk.last_result.measured.vout)
+	ok(str(sc.top.bubble) == str(bk.last_result.thanks) and str(sc.top.bubble).ends_with("%s volts." % EngineBench._g(vm, 4)) and absf(vm - 3.355) < 0.003, "her thank-you quotes the engine's measured value (%s)" % str(sc.top.bubble))
 	ok(bk.last_result.stars == 2 and bk.last_result.metrics.power < 3400, "two stars: the low-power divider (%d uW)" % int(bk.last_result.metrics.power))
 
 	print("== 2-2 Cable Fault")

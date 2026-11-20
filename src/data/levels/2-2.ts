@@ -65,6 +65,7 @@ export const L2_2: LevelDef = {
     jockeys: { f3: 400 },
     predictions: { dist: 75 },
   },
+  slots: [{ id: 'plug', partId: 'res-box', a: [3, 5], b: [7, 5], textKey: 'slot.plug' }, { id: 'galvo', partId: 'galvanometer', a: [13, 8], b: [19, 8], textKey: 'slot.galvo' }],
   specShort: 'ticket.2-2.short',
   scope: 'must',
   after: ['2-1'],

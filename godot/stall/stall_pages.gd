@@ -23,6 +23,7 @@ var wallet := 0
 var wallet_text := ""                     ## the engine's formatted wallet ("$4.50"); empty = "%d coins"
 var pred_fields: Array = []               ## exam slip: [{id, name, unit, text, done}]
 var pred_focus := 0
+var pred_sel := true                       ## the focused field's text is all selected: the next key replaces it (a fresh focus, a click, Tab)
 var star_rule := ""                        ## the exam's grading rule, printed on the slip before lock-in
 var debrief: Dictionary = {}              ## the exam debrief after the bench (the engine's: predictions vs measured, the KCL working, charging / discharging, stars)
 var tickets: Array = []                   ## [{id,title,customer,spec,price,open,done}]
@@ -384,11 +385,12 @@ func _predict(a: float) -> void:
 		var cur := i == pred_focus
 		S.rr(self, box, 8, Color(S.INK, 0.08)); S.rr_line(self, box, 8, Color(S.INK, 0.85 if cur else (0.5 if hv else 0.3)), 3.0 if cur else 2.0)
 		var txt := str(pf.text)
+		if cur and pred_sel and txt != "": S.rr(self, Rect2(box.position + Vector2(10, 8), Vector2(S.tw(S.mono(), txt, 30) + 8.0, 36)), 4, Color("#7aa7e8", 0.55))   # selected: typing replaces it
 		S.text(self, S.mono(), txt, box.position + Vector2(14, 36), 30, S.INK)
 		var sg := Rect2(box.end.x - 52, box.position.y + 5, 44, 40)   # an on-screen +/- key: a finger on a handheld has no minus key
 		var sh := _btn(Rect2(r.get_center() + sg.position, sg.size), "pred_sign", str(i))
 		S.rr(self, sg, 8, Color(S.INK, 0.3 if sh else 0.14)); S.text(self, f, "+/-", sg.position + Vector2(5, 30), 22, S.INK)
-		if cur and fmod(t, 1.0) < 0.6: draw_rect(Rect2(box.position.x + 16 + S.tw(S.mono(), txt, 30), box.position.y + 10, 3, 30), S.INK, true)
+		if cur and not pred_sel and fmod(t, 1.0) < 0.6: draw_rect(Rect2(box.position.x + 16 + S.tw(S.mono(), txt, 30), box.position.y + 10, 3, 30), S.INK, true)
 		S.text(self, f, str(pf.unit), box.position + Vector2(box.size.x + 12, 36), 28, S.INK)
 		if pf.get("done", false): S.text(self, f, "recorded", box.position + Vector2(box.size.x + 52, 36), 18, S.INK_RED)
 		y += (lh + 78.0) * gap_k
@@ -444,9 +446,14 @@ func _debrief(a: float) -> void:
 	S.text(self, S.mono(), str(d.get("answer", "")), Vector2(rx, ry + 8), 26, Color("#1d7a3a")); ry += 50.0
 	for c in d.get("currents", []):
 		S.text(self, f, str(c.text), Vector2(rx, ry), 18, S.INK, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += S.wrapped_h(f, str(c.text), 18, rw) + 8.0
-	var ok_r := Rect2(-80, q.end.y - 74, 160, 50)
+	var retry := bool(d.get("retry", false))
+	var ok_r := Rect2((q.end.x - 200.0) if retry else -80.0, q.end.y - 74, 160, 50)
 	var oh := _btn(Rect2(r.get_center() + ok_r.position, ok_r.size), "debrief_close")
 	S.rr(self, ok_r, 25, S.INK if oh else Color(S.INK, 0.85)); S.text(self, f, "got it", ok_r.position + Vector2(40, 36), 30, S.PAPER)
+	if retry:   # a pass under 3 stars: sit the exam again (predict again, bench again)
+		var rt_r := Rect2(q.position.x + 36.0, q.end.y - 74, minf(520.0, q.size.x - 280.0), 50)
+		var rh := _btn(Rect2(r.get_center() + rt_r.position, rt_r.size), "debrief_retry")
+		S.rr_line(self, rt_r, 25, Color(S.INK_RED, 1.0 if rh else 0.8), 3.0); S.text(self, f, "try again for more stars", rt_r.position + Vector2(28, 36), 28, S.INK_RED)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 ## ------------------------------------------------------------------------------------------------------------------ settings
