@@ -79,6 +79,7 @@ export function evalCond(expr: string | undefined, s: NodeState, tk: TicketState
       const c = tk.board.connectors.find((x) => x.id === atom.slice(7)), conn = liveRig(tk, def).conn, n = c ? conn.nodeOfPad(c.pad) : -1;
       v = n >= 0 && (conn.nodes[n]?.pins.length ?? 0) > 0;
     }
+    else if (atom === 'grounded') v = !(liveRig(tk, def).circuit?.issues ?? []).some((i) => i.code === 'island');   // nothing floats free of the GND pad
     else if (atom === 'measured') { const m = deps.Q.meter!(s) as { value: number | null } | null; v = !!m && m.value !== null; }
     else if (atom === 'predicted') v = def.bench.specs.filter((x) => x.kind === 'predict').every((x) => tk.predictions[x.id] !== undefined);
     else v = false;
@@ -237,12 +238,13 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
     /** The DMM: dial position, lead pads, the reading in SI and as the display shows it. */
     dmm: (s) => {
       const o = defOf(s); if (!o) return null;
-      const m = Q.meter!(s) as { mode: string; pads: Pad[]; value: number | null; unit: string; valid: boolean; text: string };
+      const m = Q.meter!(s) as { mode: string; pads: Pad[]; value: number | null; unit: string; valid: boolean; floating?: boolean; text: string };
       const b = o.tk.board.meter, mA = m.mode === 'dca' && m.value !== null;
       const wrongWay = m.value !== null && m.value < 0;
       let note = '';
       if (m.mode !== 'off' && m.pads.length < 2) note = t('meter.leads');
       else if (m.pads.length === 2 && m.mode !== 'off' && !m.valid && o.tk.live.powered) note = m.mode === 'ohm' ? '' : t('meter.sameNode');
+      else if (m.floating && m.valid && m.mode === 'dcv') note = t('meter.floating');
       return {
         mode: m.mode, label: modeLabel(m.mode), red: b.red ?? b.pads[0] ?? null, black: b.black ?? b.pads[1] ?? null, valid: m.valid, value: m.value === null ? null : sig(m.value, 6), unit: m.unit,
         display: { value: m.value === null ? null : r4(mA ? m.value! * 1000 : m.value), unit: mA ? 'mA' : m.unit, text: m.text }, negative: wrongWay, note,

@@ -243,12 +243,14 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
       const m = o.tk.board.meter;
       if (m.mode === 'off') return { mode: 'off', pads: [], value: null, unit: '', text: '', valid: false };
       const unit = m.mode === 'dca' ? 'A' : m.mode === 'ohm' ? 'Ω' : 'V';
-      const done = (value: number | null, key = ''): unknown => ({ mode: m.mode, pads: m.pads, value, unit, valid: value !== null, text: value === null ? (key ? t(key) : '') : si(value, unit) });
+      let floating = false;   // a lead sits on an island with no tie to the GND pad: the reading is real but only relative (the bench measures from GND)
+      const done = (value: number | null, key = ''): unknown => ({ mode: m.mode, pads: m.pads, value, unit, valid: value !== null, floating, text: value === null ? (key ? t(key) : '') : si(value, unit) });
       if (m.mode === 'acv') return done(null, 'meter.acvNotYet');
       if (m.mode === 'ohm') return done(measureOhms(o.tk, o.def));
       const sol = solution(o.tk, o.def); if (!sol || !sol.rig.dmm) return done(null);
       const na = sol.rig.padNode(m.pads[0]!), nb = m.pads[1] ? sol.rig.padNode(m.pads[1]) : '0';
       if (m.mode !== 'dca' && (na === null || nb === null)) return done(null);
+      if (na !== null && nb !== null) { const isl = new Set<string>(); for (const i of sol.ckt.issues) if (i.code === 'island') for (const n of i.nodes) isl.add(n); floating = isl.has(na) || isl.has(nb); }
       return done(m.mode === 'dca' ? makeProbe(sol.ckt, 'i(dmm)')(sol.x, sol.state) : makeProbe(sol.ckt, `v(${na},${nb})`)(sol.x, sol.state));
     },
     liveStatus: (s) => {

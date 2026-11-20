@@ -12,6 +12,7 @@ export const simEn: Record<string, string> = {
   'solve.badValue': 'A part value is not usable: {detail}.',
   'tran.noConverge': 'The simulation could not advance past t = {t} s even with the smallest step; the circuit changes too violently near {where}.',
   'solve.noConverge': "The solver couldn't settle this circuit; it was still moving at {node} (parts there: {elements}). Usually: a loop of diodes with no resistance, or a latch with two stable states and nothing to pick one. Try adding a resistor here.",
+  'bench.floating': "Your circuit isn't tied to the GND pad, so the bench has no 0 V to measure from. Wire the return side of the circuit (where the batteries' minus ends meet) to the GND pad.",
   'bench.level.fail': '{probe} measured {value} in the {cond} test, outside the allowed {lo} to {hi}.',
   'bench.metric.fail': '{metric} of {probe} measured {value} in the {cond} test, outside the allowed {lo} to {hi}.',
   'bench.metric.nan': '{metric} of {probe} could not be measured in the {cond} test (the signal never did what it needs to).',

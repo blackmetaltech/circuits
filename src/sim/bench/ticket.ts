@@ -53,6 +53,7 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
   if (!specIds.includes('ratings')) specIds.push('ratings');
   const smokedOut: string[] = [], causes: BenchFailure[] = [];
   let powerSum = 0, conds = 0;
+  const floatAll = new Set<string>();   // specs whose probe sits on a circuit with no tie to the GND pad: no number is shown for them
 
   const burnt = refuseSmoked({ smoked: [...inp.smoked] }, inp.board.parts.map((p) => p.uid));
   if (burnt.length > 0) {
@@ -95,6 +96,14 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
       ic: plan.ic, ratings: (w) => { const rr = checkRatings(rig, rig.rated, w, { ta }); for (const c of rr.failures) causes.push({ key: c.key, vars: { ...c.vars, cond: cond.id } }); return { violations: rr.violations, smoked: rr.smoked }; }, maxFlops: inp.flopLimit ?? BENCH_FLOP_LIMIT, condition: cond.id,
     });
     conds++;
+    // A voltage probe on an island that never reaches the GND connector can only read leakage (a few microvolts): say the real problem instead of a meaningless number.
+    const islandNodes = new Set<string>(); for (const i of rig0.circuit?.issues ?? []) if (i.code === 'island') for (const n of i.nodes) islandNodes.add(n.toLowerCase());
+    const floatIds = new Set<string>(specs.filter((s) => (s.kind === 'level' || s.kind === 'metric' || s.kind === 'band' || s.kind === 'predict') && nodesOf(s.kind === 'predict' ? s.of.probe : s.probe).some((n) => islandNodes.has(n))).map((s) => s.id));
+    if (floatIds.size > 0) {
+      r.failures = r.failures.filter((f) => !(typeof f.vars.id === 'string' && floatIds.has(f.vars.id) && /^bench\.(level|metric|band)\./.test(f.key)));
+      if (!failures.some((f) => f.key === 'bench.floating')) failures.push({ key: 'bench.floating', vars: { id: [...floatIds][0]!, cond: cond.id } });
+      for (const id of floatIds) { failedIds.add(id); floatAll.add(id); }
+    }
     for (const f of r.failures) { failures.push(f); if (typeof f.vars.id === 'string') failedIds.add(f.vars.id); if (f.key === 'bench.rating.smoked' && !smokedOut.includes(String(f.vars.part))) smokedOut.push(String(f.vars.part)); }
     if (r.failures.length > 0 && r.failures.every((f) => f.vars.id === undefined)) for (const id of specIds) failedIds.add(id);   // a whole-bench failure (cost gate, no convergence)
     for (const s of specs) {
@@ -108,7 +117,7 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
     }
     const rv = r.metrics.ratings; if (rv !== undefined) { const cur = marginOf.get('ratings'); marginOf.set('ratings', cur === undefined ? -rv : Math.min(cur, -rv)); }
     for (const [id, t] of Object.entries(r.badSamples)) { const a = badSamples[id] ?? (badSamples[id] = []); for (const x of t) if (a.length < 64) a.push(x); }
-    for (const p of r.predictions) if (!predictions.some((q) => q.id === p.id)) predictions.push({ id: p.id, entered: p.entered, truth: p.truth, grade: p.grade });
+    for (const p of r.predictions) if (!floatAll.has(p.id) && !predictions.some((q) => q.id === p.id)) predictions.push({ id: p.id, entered: p.entered, truth: p.truth, grade: p.grade });
     let p = 0; for (const id of psIds) p -= r.metrics[`__ps:${id}`] ?? 0;
     powerSum += p;
   }
