@@ -52,7 +52,7 @@ export const en: Record<string, string> = {
   'coach.1-2.s5': "A tired battery pushes less voltage, so the same resistor passes less current. Estimate the current twice, once with the fresh battery's voltage and once with the tired one's, using I = (V - 3 LED drops) / R, and compare each with the 14 to 20 mA window. Which resistor lands both inside?",
   'coach.1-2.s6': '{customer} will ride tonight. Nice.',
   'ticket.1-3.title': 'Hot Resistor',
-  'ticket.1-3.brief': "{customer}'s aquarium heater is a fixed 50 ohm element (soldered on the board, between the OUT and GND pads) and the supply gives 12 V. The heater needs 7.85 V to 8.4 V measured across it, OUT to GND. Put a resistor in series, from IN to OUT, to drop the rest, and mind how hot that resistor gets. {mentor}: watts are heat.",
+  'ticket.1-3.brief': "{customer}'s aquarium heater is a fixed 50 ohm element (soldered on the board, between the OUT and GND pads) and the supply gives 12 V. The heater needs a voltage between 7.85 V and 8.4 V, measured across it (OUT to GND). Put a resistor in series, from IN to OUT, to drop the rest, and mind how hot that resistor gets. {mentor}: watts are heat.",
   'ticket.1-3.spec.vout': 'Heater voltage between 7.85 V and 8.40 V, no part over its rating',
   'ticket.1-3.hint.nudge': 'The resistor and the heater share the 12 V: the bigger share is across the bigger resistance. Then check the resistor\'s power rating.',
   'ticket.1-3.hint.equation': 'The heater ({rLoad} ohm) must get {vWant} V of {vIn} V, so the series resistor is about {r} ohm. Its power is I squared times R: check the rating.',

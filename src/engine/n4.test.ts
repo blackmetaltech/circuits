@@ -116,7 +116,7 @@ describe('N4: undo and redo in plain words', () => {
 describe('N4: 1-3 and 1-2 teaching', () => {
   it('1-3: the ticket says the heater is a fixed 50 ohm element needing 7.85 to 8.4 V, and a coach step has the player measure it with the DMM', () => {
     const e = open('1-3');
-    expect(q(e, 'ticketCard').brief).toMatch(/fixed 50 ohm/); expect(q(e, 'ticketCard').brief).toMatch(/7\.85 V and 8\.4 V/);
+    expect(q(e, "ticketCard").brief).toMatch(/fixed 50 ohm/); expect(q(e, "ticketCard").brief).toMatch(/across it/); expect(q(e, 'ticketCard').brief).toMatch(/7\.85 V and 8\.4 V/);
     ok(e, 'placePart', 'res-cf', 22, '1W', 4, 2, 0, false); ok(e, 'wire', [2, 2], [4, 2]); ok(e, 'wire', [8, 2], [14, 2]); ok(e, 'power', true);
     const c = q(e, 'coach'); expect(c.active).toBe('measure'); expect(c.text).toMatch(/DMM/); expect(c.text).toMatch(/50 ohm/); expect(c.anchor.target).toBe('dmm');
     ok(e, 'dmmLead', 'red', [14, 2]); ok(e, 'dmmLead', 'black', [14, 8]); ok(e, 'advance', 2);

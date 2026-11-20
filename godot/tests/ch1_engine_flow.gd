@@ -310,7 +310,7 @@ func _run() -> void:
 	ok(StallProps.arrows(inner, nitems, 0.0).down.size == Vector2.ZERO, "there are no paging tabs: the box scrolls itself")
 	var bc: Vector2 = (sc.L.box as Rect2).get_center()
 	sc._motion(bc); sc._wheel(bc, -1); sc._wheel(bc, -1)
-	ok(is_equal_approx(sc.props.bin_scroll, 2.0), "two wheel notches scroll two rows (%s)" % str(sc.props.bin_scroll))
+	ok(is_equal_approx(sc.props.bin_scroll, 2.0 * StallScene.WHEEL_ROWS), "two wheel notches scroll %s rows (%s)" % [str(2.0 * StallScene.WHEEL_ROWS), str(sc.props.bin_scroll)])
 	for k in 30: sc._wheel(bc, -1)
 	ok(is_equal_approx(sc.props.bin_scroll, mx), "it stops at the last row (%s)" % str(sc.props.bin_scroll))
 	for k in 30: sc._wheel(bc, 1)
