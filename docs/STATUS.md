@@ -39,3 +39,13 @@ Engine finished for the Godot rebuild: board/probe/DMM/run actions, `bench` `liv
 (`src/engine/ch1.test.ts`), payment on pass, exam-bridge stars. Contract and examples: docs/API-CH1.md (incl. the deviations from DESIGN §2.8 that need director sign-off).
 Not done: NiMH reality check for 1-5, tolerance star (runTolerance), M2-3 verify/board-code, Pixel profiling of the live frame.
 - 1-3 prices fixed 11-20: 1 W resistor 7c, so Ref B (2× 47 Ω ½ W, 6c) is cheaper than Ref A (22 Ω 1 W, 7c); 1-3 cost par 6c.
+
+## 2026-11-20 front end on the real engine (EngineBench)
+`godot/stall/engine_bench.gd` drives the engine through the sidecar and is the default backend of the stall; `fixture_bench.gd` is a test double (`CB_FIXTURE=1`) and the fallback when the sidecar
+cannot start. Every number on screen is an engine query result: LED current / scope trace / amber band / LOCK (`scope`), DMM LCD in V / mA / ohm (`dmm`), temperatures, heat glow, smoke events with the
+engine's own explanation text, LED mood and bloom, dot and critter speed, node tint (`liveFrame`), shoebox prices and ratings (`ticketCard`), Wren's steps and arrow anchors (`coach`), wallet, stars and
+the chapter map (`wallet`, `benchResult`, `chapterMap`). The widened fixture 1-3 band is gone (7.85-8.40 V, 50 C ambient).
+New in the UI: DMM ohm mode, the scope's CH1 clip as a real lead to drag onto the pad (probe tickets 1-3 and 1-5 need it), the BENCH push key (the formal check; it also runs by itself when LOCK has
+been held 1.2 s, except on the exam ticket), the 1-5 exam slip (type V(A) and I(E2), the engine grades them), the fresh / tired battery tag on 1-2 (the bench tests both), supply cables routed around the board.
+Tests: `godot/tests/stall_flow.gd` (engine; `CB_FIXTURE=1` for the double), `godot/tests/ch1_engine_flow.gd` (all five tickets to LOCK with the reference designs, plus the naive 1-1 and 1-3 smokes and the 1-2 tired-battery bench fail).
+Open: the 1-2 tired battery is shown and benched but cannot be switched live (the engine has no live condition switch); 1-5 NiMH swap and phone (2424x1080) shots not redone.
