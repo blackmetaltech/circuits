@@ -392,7 +392,7 @@ func _debrief(a: float) -> void:
 		var line := "you said %s %s   measured %s %s" % [EngineBench._g(float(row.entered), 4), str(row.unit), EngineBench._g(float(row.truth), 4), str(row.unit)]
 		S.text(self, S.mono(), line, Vector2(lx, y + 4), 20, S.INK); y += 32.0
 		var gp := float(row.gapPct)
-		S.text(self, f, "%s%.1f %% off: %s" % ["+" if gp > 0.0 else "", gp, str(row.gradeText)] + ("   (tick)" if okr else "   (not yet)"), Vector2(lx, y), 22, col); y += 40.0
+		S.text(self, f, "%s%.1f %% off: %s" % ["+" if gp > 0.0 else "", gp, str(row.gradeText)] + ("   - spot on" if okr else "   - not yet"), Vector2(lx, y), 22, col); y += 40.0
 	y += 4.0
 	S.text(self, f, str(d.get("starsText", "")), Vector2(lx, y), 19, S.INK, HORIZONTAL_ALIGNMENT_LEFT, lw); y += S.wrapped_h(f, str(d.get("starsText", "")), 19, lw) + 12.0
 	S.text(self, f, str(coach_ticket.get("star_rule", "")), Vector2(lx, y), 16, Color(S.INK, 0.6), HORIZONTAL_ALIGNMENT_LEFT, lw)

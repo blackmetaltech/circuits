@@ -40,7 +40,7 @@ export function buildDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], star
   const mult = f.sources.every((s) => Number.isInteger(s.r.ohm)) && Number.isInteger(f.load.ohm) ? leastCommon([...f.sources.map((s) => s.r.ohm), f.load.ohm]) : 0;
   const working: string[] = [];
   if (mult > 0) {
-    working.push(say('debrief.mult', { m: num(mult), terms: f.sources.map((s) => `${num(mult / s.r.ohm)}(${num(s.volts)} − ${n})`).join(' + '), rhs: `${num(mult / f.load.ohm)}${n}` }));
+    working.push(say('debrief.mult', { m: num(mult), terms: f.sources.map((s) => `${num(mult / s.r.ohm)}(${num(s.volts)} − ${n})`).join(' + '), rhs: (mult / f.load.ohm === 1 ? '' : num(mult / f.load.ohm)) + n }));
     const left = f.sources.reduce((acc, s) => acc + (mult / s.r.ohm) * s.volts, 0), coef = f.sources.reduce((acc, s) => acc + mult / s.r.ohm, 0) + mult / f.load.ohm;
     working.push(say('debrief.collect', { n, lhs: num(left), rhs: `${num(coef)}${n}` }));
   } else working.push(say('debrief.collect', { n, lhs: f.sources.map((s) => `${num(s.volts)}/${num(s.r.ohm)}`).join(' + '), rhs: `${n}(${[...f.sources.map((s) => `1/${num(s.r.ohm)}`), `1/${num(f.load.ohm)}`].join(' + ')})` }));
