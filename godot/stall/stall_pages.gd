@@ -186,7 +186,7 @@ func _map(a: float) -> void:
 	# the chits, pinned on the right page
 	var rp := Rect2(r.position.x + half + 30, r.position.y + 40, half - 60, r.size.y - 80)
 	S.text(self, f, "tickets on the spike", rp.position + Vector2(10, 30), 26, Color(S.INK, 0.7))
-	var cw := rp.size.x * 0.46; var ch := 208.0
+	var cw := rp.size.x * 0.46; var ch := 226.0
 	for i in tickets.size():
 		var tk: Dictionary = tickets[i]
 		var col := i % 2; var row := i / 2
@@ -206,18 +206,18 @@ func _map(a: float) -> void:
 		while tsz > 18 and S.tw(f, str(tk.title), tsz) > q.size.x - 28.0: tsz -= 2
 		S.text(self, f, str(tk.title), q.position + Vector2(14, 84), tsz, S.INK if open else Color(S.INK, 0.5))
 		S.text(self, f, "for %s" % str(tk.customer), q.position + Vector2(14, 112), 20, Color(S.INK, 0.8 if open else 0.4))
-		S.text(self, f, str(tk.spec), q.position + Vector2(14, 136), 17, Color(S.INK, 0.9 if open else 0.4), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 26)
+		S.text(self, f, str(tk.spec), q.position + Vector2(14, 130), 16, Color(S.INK, 0.9 if open else 0.4), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 26)
 		var pay := str(tk.get("pay_text", ""))
-		if open and pay != "": S.text(self, f, pay, q.position + Vector2(14, q.size.y - 12), 14, Color(S.INK, 0.6))
+		if open and pay != "": S.text(self, f, pay, q.position + Vector2(14, q.size.y - 14), 14, Color(S.INK, 0.6))
 		var fee: String = str(tk.get("price_text", "")) if str(tk.get("price_text", "")) != "" else "%d coins" % int(tk.price)
 		S.text(self, f, fee, q.position + Vector2(q.size.x - 20 - S.tw(f, fee, 17), 48), 17, Color(S.INK, 0.7))
 		if int(tk.get("stars", 0)) > 0 or tk.done:
 			var smax := int(tk.get("stars_max", 2)); var got := int(tk.get("stars", 0))
 			S.text(self, f, "*".repeat(got) + ".".repeat(maxi(0, smax - got)), q.position + Vector2(118, 52), 30, S.INK_RED)
-		if tk.done and hv: S.text(self, f, "tap to replay: better stars, lower cost", q.position + Vector2(14, q.size.y - 32), 15, S.INK_RED)
-		elif tk.done and str(tk.get("best_text", "")) != "": S.text(self, f, str(tk.best_text), q.position + Vector2(14, q.size.y - 32), 15, Color(S.INK, 0.7))
+		if tk.done and hv: S.text(self, f, "tap to replay: better stars, lower cost", q.position + Vector2(14, q.size.y - 38), 15, S.INK_RED)
+		elif tk.done and str(tk.get("best_text", "")) != "": S.text(self, f, str(tk.best_text), q.position + Vector2(14, q.size.y - 38), 15, Color(S.INK, 0.7))
 		if tk.done:
-			draw_set_transform(cr.get_center() + Vector2(cr.size.x * 0.27, cr.size.y * 0.02), deg_to_rad(-12), Vector2.ONE)
+			draw_set_transform(cr.get_center() + Vector2(cr.size.x * 0.28, -cr.size.y * 0.17), deg_to_rad(-12), Vector2.ONE)
 			S.rr_line(self, Rect2(-52, -20, 104, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5); S.text(self, f, "FIXED", Vector2(-36, 10), 26, Color(0.1, 0.55, 0.2, 0.9))
 		elif not open:
 			S.text(self, f, "locked", q.position + Vector2(q.size.x - 20 - S.tw(f, "locked", 18), 112), 18, Color(S.INK, 0.45))
@@ -240,9 +240,12 @@ func _notebook(a: float) -> void:
 	var lp := r.position + Vector2(60, 66)
 	var tk := coach_ticket
 	S.text(self, f, "TICKET %s" % str(tk.get("id", "")), lp + Vector2(0, -6), 20, S.INK_RED)
-	S.text(self, f, "%s,  for %s" % [str(tk.get("title", "")), str(tk.get("customer", ""))], lp + Vector2(0, 40), 44, S.INK)
+	var head := "%s,  for %s" % [str(tk.get("title", "")), str(tk.get("customer", ""))]
+	var hsz := 44   # a long title shrinks to the page instead of running over the spine
+	while hsz > 24 and S.tw(f, head, hsz) > half - 120.0: hsz -= 2
+	S.text(self, f, head, lp + Vector2(0, 40), hsz, S.INK)
 	S.text(self, f, str(tk.get("brief", "")), lp + Vector2(0, 80), 22, Color(S.INK, 0.8), HORIZONTAL_ALIGNMENT_LEFT, half - 120)
-	var y := lp.y + 190.0
+	var y := lp.y + 80.0 + S.wrapped_h(f, str(tk.get("brief", "")), 22, half - 120.0) + 46.0   # the steps start under however long the brief is
 	for i in coach_steps.size():
 		var st: Dictionary = coach_steps[i]
 		if st.get("target", "") == "none" or (i < coach_vis.size() and not coach_vis[i]): continue

@@ -72,11 +72,11 @@ func _cond_tag() -> void:
 			elif str(e.key) == "r": r = float(e.value)
 		rows.append("%s %s V / %s \u03a9" % [str(c.id), EngineBench._g(emf), EngineBench._g(r)] if emf >= 0.0 else str(c.id))
 	# a tag tied to the cell, big enough to read at the supply's 0.8 scale (it hangs over the battery's blank half)
-	var tag := Rect2(130, 52, 146, 34 + rows.size() * 27)
-	draw_line(Vector2(tag.position.x + 12, tag.position.y), Vector2(104, 30), Color("#c9b78a"), 2.5)   # its string, up to the minus stud
+	var tag := Rect2(110, 54, 180, 36 + rows.size() * 29)
+	draw_line(Vector2(tag.position.x + 12, tag.position.y), Vector2(104, 34), Color("#c9b78a"), 2.5)   # its string, up to the minus stud
 	S.paper(self, tag, 1.5, S.PAPER)
-	S.text(self, S.hand(), "bench tests:", tag.position + Vector2(10, 22), 19, S.INK_RED)
-	for i in rows.size(): S.text(self, S.hand(), rows[i], tag.position + Vector2(10, 49 + i * 27), 20, S.INK)
+	S.text(self, S.hand(), "bench tests:", tag.position + Vector2(10, 23), 18, S.INK_RED)
+	for i in rows.size(): S.text(self, S.hand(), rows[i], tag.position + Vector2(8, 51 + i * 29), 20, S.INK)
 
 ## The exam bench: two fixed ideal sources, named and with their volts. There is no knob and no one voltage, so no 0.0 V display.
 func _sources(rr: Rect2) -> void:

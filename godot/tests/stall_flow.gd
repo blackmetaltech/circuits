@@ -9,9 +9,11 @@ var sc: StallScene
 var fails := 0
 var checks := 0
 var eng := false
+var trap := ErrorTrap.new()
 
 func _initialize() -> void:
 	OS.set_environment("CB_NOSAVE", "1")
+	OS.add_logger(trap)
 	_run()
 
 func ok(cond: bool, what: String) -> void:
@@ -122,6 +124,7 @@ func _run() -> void:
 	sc.go_map(); await _frames(3); ok(sc.pages.mode == "map" and sc.pages.tickets.size() == 5, "chapter map pins 5 ticket chits")
 	if eng: sc.backend.unlock_through("1-3")
 	sc.start_ticket("1-3"); sc.pages.show_page("notebook"); await _frames(3); ok(sc.pages.mode == "notebook", "the notebook opens over the bench")
+	ok(trap.count == 0, "zero script errors (%d: %s)" % [trap.count, str(trap.lines.slice(0, 3))])
 	print("\n%d checks, %d failed" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
