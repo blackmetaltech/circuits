@@ -338,7 +338,7 @@ export function candidateActions(s: Readonly<NodeState>, defs: readonly LevelDef
     const d = getDef(p.partId);
     if (d) { const vals = allowedValues(d, def.bin.find((b) => b.partId === p.partId) ?? null); if (vals && vals.length > 1) { out.push({ name: 'setValue', args: [p.uid, vals[0]] }, { name: 'setValue', args: [p.uid, vals[vals.length - 1]] }); } }
   }
-  for (const w of tk.board.wires.slice(0, full ? 40 : 6)) out.push({ name: 'deleteWire', args: [w.wid] });
+  for (const w of tk.board.wires.filter((x) => !x.fixed).slice(0, full ? 40 : 6)) out.push({ name: 'deleteWire', args: [w.wid] });
   for (const b of def.bin) {
     const d = getDef(b.partId); if (!d) continue;
     const vals = allowedValues(d, b), pick = vals ? [vals[0]!, vals[Math.floor(vals.length / 2)]!, vals[vals.length - 1]!].filter((v, i, a) => a.indexOf(v) === i) : [null];

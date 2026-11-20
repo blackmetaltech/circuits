@@ -20,6 +20,8 @@ export interface PlacedPart {
 
 export interface Wire {
   wid: string;          // 'w1', 'w2'…
+  /** Part of the ticket's own wiring (pre-wired by the level): the player cannot remove it. */
+  fixed?: boolean;
   path: Pad[];          // ≥ 2 pads; consecutive pads share x or y (orthogonal); only path[0] and path[last] connect
 }
 

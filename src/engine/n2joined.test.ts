@@ -21,7 +21,7 @@ describe('N2: 1-5 junction away from the A pad', () => {
     const e = open('1-5');
     ok(e, 'placePart', 'res-exact', 2, 'ideal', 4, 2, 0, false); ok(e, 'placePart', 'res-exact', 3, 'ideal', 10, 4, 0, false); ok(e, 'placePart', 'res-exact', 6, 'ideal', 8, 7, 1, false);
     ok(e, 'predict', 'pva', 6.6667); ok(e, 'predict', 'pie2', 0.5556);
-    for (const w of [[[2, 2], [4, 2]], [[8, 2], [7, 2], [7, 7], [8, 7]], [[14, 2], [14, 4]], [[10, 4], [10, 7], [8, 7]], [[8, 11], [8, 12]], [[2, 8], [2, 12], [8, 12]], [[14, 8], [14, 12], [8, 12]]]) ok(e, 'addWire', w);
+    for (const w of [[[2, 2], [4, 2]], [[8, 2], [7, 2], [7, 7], [8, 7]], [[14, 2], [14, 4]], [[10, 4], [10, 7], [8, 7]], [[8, 11], [8, 12]]]) ok(e, 'addWire', w);
     const step = () => q(e, 'coach').steps.find((s: any) => s.id === 'wire');
     expect(step().done).toBe(false);      // every leg is joined to something, but not to A
     ok(e, 'addWire', [[8, 6], [8, 7]]);

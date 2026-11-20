@@ -129,6 +129,8 @@ export interface LiveState {
   hist: number[];
   temps: Record<PartUid, number>;
   smoked: PartUid[];
+  /** The burn explanation of each smoked part, frozen at the instant it burned (so it never mixes old numbers with a board edited afterwards). */
+  notes?: Record<PartUid, string>;
   /** ok; float = a node without a DC path (warn); noconv = the solver could not settle; loop = a blocking topology error (source loop, short, current with nowhere to go); big = over the live caps. */
   status: 'ok' | 'float' | 'noconv' | 'loop' | 'big';
   /** Current transient step (s) and the number of backward-Euler restart steps owed: the stepper resumes bit-identically after a save. */

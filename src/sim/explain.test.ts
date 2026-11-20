@@ -35,7 +35,7 @@ describe('templates filled from a solved state', () => {
     expect(e.key).toBe('explain.resistor.power');
     expect(e.vars).toMatchObject({ part: 'R2', p: 0.612, rated: 0.25, v: 3.67, r: '22 Ω', ratio: 2.4, rNext: 1, rEach: '44 Ω', pEach: 0.306 });
     expect(text(e)).toContain('R2 dissipated 0.612 W but is rated 0.25 W');
-    expect(text(e)).toContain('(3.67 V)²/22 Ω');
+    expect(text(e)).toContain('P = I²R = (0.167 A)² × 22 Ω');
     expect(text(e)).toContain('two 44 Ω resistors in parallel share it (0.306 W each)');
   });
   it('LED overcurrent: LED straight across a 9 V battery with 1.7 ohm', () => {

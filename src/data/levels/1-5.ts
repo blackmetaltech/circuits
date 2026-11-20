@@ -15,6 +15,8 @@ export const L1_5: LevelDef = {
     { uid: 'f1', partId: 'ideal-vsource', value: 10, variant: 'ideal', x: 2, y: 2, rot: 1, flip: false, fixed: true },
     { uid: 'f2', partId: 'ideal-vsource', value: 5, variant: 'ideal', x: 14, y: 2, rot: 1, flip: false, fixed: true },
   ],
+  // the exam sets E1 and E2 up for you: both minus ends are already soldered to the GND pad (the lesson is the prediction, not the wiring)
+  fixedWires: [[[2, 8], [2, 12], [8, 12]], [[14, 8], [14, 12], [8, 12]]],
   supplies: [],
   instruments: { scope: { timePerDiv: 1e-3, voltsPerDiv: [2, 1] } },
   bin: [{ partId: 'res-exact', values: [2, 3, 6], variants: ['ideal'], max: 3 }],
@@ -44,7 +46,7 @@ export const L1_5: LevelDef = {
     ],
     wires: [
       [[2, 2], [4, 2]], [[8, 2], [8, 6]], [[14, 2], [14, 4]], [[10, 4], [10, 6], [8, 6]],
-      [[8, 6], [8, 7]], [[8, 11], [8, 12]], [[2, 8], [2, 12], [8, 12]], [[14, 8], [14, 12], [8, 12]],
+      [[8, 6], [8, 7]], [[8, 11], [8, 12]],
     ],
     predictions: { pva: 6.6667, pie2: 0.5556 },
   },

@@ -17,14 +17,13 @@ const ok = (e: Engine<NodeState>, name: string, ...args: unknown[]) => { const r
 const q = (e: Engine<NodeState>, name: string, ...args: unknown[]) => e.q(name, args) as any;
 
 type W = [number, number][];
-/** 1-5 with the return net on `r` (the GND pad is (8,12)); `r` other than GND reproduces the novice's floating build. */
+/** 1-5 with R3's return end on `r` (the GND pad is (8,12)); `r` other than GND leaves R3's bottom hanging off the GND net. */
 function build15(e: Engine<NodeState>, r: [number, number], vals = [2, 3, 6]): void {
   ok(e, 'placePart', 'res-exact', vals[0], 'ideal', 4, 2, 0, false); ok(e, 'placePart', 'res-exact', vals[1], 'ideal', 10, 4, 0, false); ok(e, 'placePart', 'res-exact', vals[2], 'ideal', 8, 7, 1, false);
   const wires: W[] = [[[2, 2], [4, 2]], [[8, 2], [8, 6]], [[14, 2], [14, 4]], [[10, 4], [10, 6], [8, 6]], [[8, 6], [8, 7]]];
   const gnd = r[0] === 8 && r[1] === 12;
   wires.push(gnd ? [[8, 11], [8, 12]] : [[8, 11], [r[0], 11], [r[0], r[1]]]);
-  wires.push(gnd ? [[2, 8], [2, 12], [8, 12]] : [[2, 8], [2, r[1]], r]);
-  wires.push(gnd ? [[14, 8], [14, 12], [8, 12]] : [[14, 8], [14, r[1]], r]);
+  // both batteries' minus ends are pre-wired to the GND pad by the ticket (fixed wires fw1, fw2)
   for (const w of wires) ok(e, 'addWire', w);
   ok(e, 'predict', 'pva', 6.6667); ok(e, 'predict', 'pie2', 0.5556);
 }
@@ -42,13 +41,17 @@ describe('N3: 1-5 bench and DMM read the same node A', () => {
       expect(Math.abs(q(e, 'meter').value - bench) / Math.abs(bench)).toBeLessThan(1e-6);
     });
   }
-  it('the novice build (return net not on the GND pad): the DMM reads 6.67 V between its leads, the bench says the circuit is not tied to GND instead of "0.00005 V"', () => {
+  it('the novice build (R3 not on the GND pad): the coach asks for the GND pad and the bench says so in words, not "0.00005 V"', () => {
     const e = open('1-5'); build15(e, [9, 13]);
-    expect(q(e, 'coach').active).toBe('ground'); expect(q(e, 'coach').text).toMatch(/GND/);
-    ok(e, 'power', true); ok(e, 'setMeter', 'dcv', [[8, 6], [9, 13]]); ok(e, 'advance', 4);
-    const m = q(e, 'meter'); expect(m.value).toBeCloseTo(6.6667, 3); expect(m.floating).toBe(true); expect(q(e, 'dmm').note).toMatch(/GND/);
+    expect(['wire', 'ground']).toContain(q(e, 'coach').active); expect(q(e, 'coach').text).toMatch(/GND/);
+    ok(e, 'power', true); ok(e, 'advance', 4);
     ok(e, 'runBench'); const b = q(e, 'benchResult');
-    expect(b.pass).toBe(false); expect(b.failures.map((f: any) => f.key)).toEqual(['bench.floating']);
-    expect(b.failures[0].text).toMatch(/tied to the GND pad/); expect(JSON.stringify(b)).not.toMatch(/0\.0000/);
+    expect(b.pass).toBe(false); expect(JSON.stringify(b)).not.toMatch(/0\.0000/);
+  });
+  it('the batteries come pre-wired to the GND pad: fixed wires the player cannot remove, and a bare board already has a ground net', () => {
+    const e = open('1-5'); const bench = q(e, 'bench');
+    expect(bench.wires.filter((w: any) => w.fixed).length).toBe(2); expect(bench.wires.every((w: any) => w.fixed)).toBe(true);
+    expect(e.act('deleteWire', ['fw1']).ok).toBe(false); expect(e.act('unwire', [[8, 12]]).ok).toBe(false);
+    expect(e.act('unwire', ['fw2']).ok).toBe(false); expect(q(e, 'bench').wires.length).toBe(2);
   });
 });

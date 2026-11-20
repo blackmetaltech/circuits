@@ -5,6 +5,8 @@ import { INSTRUMENTS, nearMatches } from '../data/parts';
 import type { LevelDef } from '../data/levels/types';
 import type { Pad, PlacedPart, Wire } from '../sim/board/types';
 import { buildConnectivity } from '../sim/board/connectivity';
+import { padKey } from '../sim/board/grid';
+import { explainedText } from './queries';
 import { pinPads } from '../sim/board/footprints';
 import { advanceLive } from '../sim/live';
 import { sig } from '../sim/explain';
@@ -12,7 +14,7 @@ import { t } from '../i18n';
 import { REGIONS } from '../regions';
 import { formatMinor } from '../regions/data';
 import {
-  allowedValues, allowedVariants, checkPartSpot, checkWire, getDef, isProblem, nextId, normalisePath, problem, snapValue, sortParts, sortWires,
+  allowedValues, allowedVariants, checkPartSpot, checkWire, getDef, isProblem, nextId, normalisePath, occupancy, problem, snapValue, sortParts, sortWires,
   type Problem,
 } from './board';
 import { q, snap125 } from './quant';
@@ -91,8 +93,36 @@ function applyEntry(tk: TicketState, e: BoardSnapshot): BoardSnapshot {
   const live = new Set(b.parts.map((p) => p.uid));
   tk.live.smoked = tk.live.smoked.filter((u) => live.has(u));
   for (const u of Object.keys(tk.live.temps)) if (!live.has(u)) delete tk.live.temps[u];
+  for (const u of Object.keys(tk.live.notes ?? {})) if (!tk.live.smoked.includes(u)) delete tk.live.notes![u];
   tk.lastBench = null;
   return inv;
+}
+
+/** The plain-words name of an edit for the undo / redo toast: "placed the 470 Ω resistor", "drew a wire". Part names are read from the board the edit touched (before it is applied). */
+function describeEdit(tk: TicketState, e: BoardSnapshot): string {
+  const present = new Set(tk.board.parts.map((p) => p.uid));
+  const board = { parts: [...tk.board.parts, ...Object.values(e.parts).filter((p): p is PlacedPart => !!p && !present.has(p.uid))] };
+  const uid = Object.keys(e.parts)[0], what = uid ? partName(board, uid) : say('name.part.some');
+  const wires = Object.keys(e.wires).length;
+  switch (e.key) {
+    case 'placePart': return say('edit.placed', { what });
+    case 'movePart': return say('edit.moved', { what });
+    case 'rotatePart': return say('edit.rotated', { what });
+    case 'deletePart': return say('edit.deleted', { what });
+    case 'setValue': return say('edit.value', { what });
+    case 'swapVariant': return say('edit.rating', { what });
+    case 'wire': case 'addWire': return say('edit.wire');
+    case 'unwire': case 'deleteWire': return say(wires > 1 ? 'edit.unwired.many' : 'edit.unwired');
+    case 'loadBoard': return say('edit.loaded');
+    default: return say('edit.other');
+  }
+}
+/** Undo / redo while a part is burnt: the burnt part comes back fresh and the power is OFF, so nothing re-burns until the player switches it on again. */
+function freshenAfterBurn(tk: TicketState): boolean {
+  if (tk.live.smoked.length === 0) return false;
+  tk.live.smoked = []; tk.live.temps = {}; delete tk.live.notes;
+  tk.live.powered = false; tk.instruments.supply.on = false; tk.instruments.gen.on = false; delete tk.live.paused; resetLive(tk.live);
+  return true;
 }
 
 const placedCount = (tk: TicketState): number => tk.board.parts.filter((p) => !p.fixed).length;
@@ -177,6 +207,38 @@ function routes(a: Pad, b: Pad, w: number, h: number): Pad[][] {
   for (const x of [mx, ...near(mx, Math.max(w, h))]) if (x >= 0 && x < w) out.push([a, [x, a[1]], [x, b[1]], b]);
   for (const y of [my, ...near(my, Math.max(w, h))]) if (y >= 0 && y < h) out.push([a, [a[0], y], [b[0], y], b]);
   return out;
+}
+
+/** Fallback router: cheapest orthogonal path over the whole board (Dijkstra on pad + heading). It may cross other wires (drawn as hop-overs) but never runs over a leg,
+ * a connector or another wire's end; turns and running along another wire cost extra, so the route stays tidy. Deterministic (ties broken by index order). */
+function autoRoute(b: { w: number; h: number; parts: PlacedPart[]; wires: Wire[]; connectors: { id: string; pad: Pad }[] }, a: Pad, z: Pad): Pad[] | null {
+  const occ = occupancy(b as never);
+  const ak = padKey(a), zk = padKey(z), W = b.w, H = b.h, N = W * H;
+  const blocked = (x: number, y: number): boolean => { const k = padKey([x, y]); return k !== ak && k !== zk && (occ.pins.has(k) || occ.connectors.has(k) || occ.ends.has(k)); };
+  const DX = [1, 0, -1, 0], DY = [0, 1, 0, -1];
+  const dist = new Float64Array(N * 4).fill(Infinity), prev = new Int32Array(N * 4).fill(-1), done = new Uint8Array(N * 4);
+  const open: number[] = [];
+  for (let d = 0; d < 4; d++) { const s = (a[1] * W + a[0]) * 4 + d; dist[s] = 0; open.push(s); }
+  let goal = -1;
+  while (open.length > 0) {
+    let bi = 0; for (let i = 1; i < open.length; i++) if (dist[open[i]!]! < dist[open[bi]!]! || (dist[open[i]!] === dist[open[bi]!] && open[i]! < open[bi]!)) bi = i;
+    const cur = open.splice(bi, 1)[0]!; if (done[cur]) continue; done[cur] = 1;
+    const cell = Math.floor(cur / 4), dir = cur % 4, cx = cell % W, cy = Math.floor(cell / W);
+    if (cx === z[0] && cy === z[1]) { goal = cur; break; }
+    for (let nd = 0; nd < 4; nd++) {
+      const nx = cx + DX[nd]!, ny = cy + DY[nd]!;
+      if (nx < 0 || ny < 0 || nx >= W || ny >= H || blocked(nx, ny)) continue;
+      const nk = padKey([nx, ny]);
+      const cost = dist[cur]! + 1 + (nd === dir || (cx === a[0] && cy === a[1]) ? 0 : 3) + (occ.interior.has(nk) ? 2 : 0);
+      const ns = (ny * W + nx) * 4 + nd;
+      if (cost < dist[ns]!) { dist[ns] = cost; prev[ns] = cur; open.push(ns); }
+    }
+  }
+  if (goal < 0) return null;
+  const cells: Pad[] = [];
+  for (let s = goal; s >= 0; s = prev[s]!) { const cell = Math.floor(s / 4); cells.push([cell % W, Math.floor(cell / W)]); }
+  cells.reverse();
+  return normalisePath(cells.filter((p, i) => i === 0 || p[0] !== cells[i - 1]![0] || p[1] !== cells[i - 1]![1]));
 }
 
 // ---------------------------------------------------------------- the action table
@@ -269,6 +331,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
         const pts = normalisePath(r.map((p) => [p[0], p[1]] as Pad));
         if (!checkWire(tk.board, pts)) { found = pts; break; }
       }
+      if (!found) { const r = autoRoute(tk.board, pa, pb); if (r && !checkWire(tk.board, r)) found = r; }
       if (!found) refuseKey('err.wire.noRoute', { a: `${pa[0]},${pa[1]}`, b: `${pb[0]},${pb[1]}` });
       const w = newWire(tk, found);
       tk.board.wires.push(w); sortWires(tk.board); commit(tk, 'wire', before);
@@ -280,11 +343,12 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       const { tk } = open(s, defs), before = copyBoard(tk);
       if (typeof target === 'string') {
         if (!tk.board.wires.some((w) => w.wid === target)) refuseKey('err.wire.none', { wid: target, have: tk.board.wires.map((w) => w.wid).join(', ') || '-' });
+        if (tk.board.wires.find((w) => w.wid === target)!.fixed) refuseKey('err.wire.fixed');
         tk.board.wires = tk.board.wires.filter((w) => w.wid !== target); commit(tk, 'unwire', before);
         return ok(say('wire.deleted', { wid: target }), { removed: [target] });
       }
       const p = validPad(tk, target, 'pad');
-      const hit = tk.board.wires.filter((w) => { const f = w.path[0]!, l = w.path[w.path.length - 1]!; return (f[0] === p[0] && f[1] === p[1]) || (l[0] === p[0] && l[1] === p[1]); });
+      const hit = tk.board.wires.filter((w) => !w.fixed && ((w) => { const f = w.path[0]!, l = w.path[w.path.length - 1]!; return (f[0] === p[0] && f[1] === p[1]) || (l[0] === p[0] && l[1] === p[1]); })(w));
       if (hit.length === 0) refuseKey('err.unwire.none', { pad: `${p[0]},${p[1]}` });
       const ids = hit.map((w) => w.wid);
       tk.board.wires = tk.board.wires.filter((w) => !ids.includes(w.wid)); commit(tk, 'unwire', before);
@@ -293,6 +357,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
     deleteWire: (s, wid: unknown) => {
       const { tk } = open(s, defs), id = str(wid, 'wid'), before = copyBoard(tk);
       if (!tk.board.wires.some((w) => w.wid === id)) refuseKey('err.wire.none', { wid: id, have: tk.board.wires.map((w) => w.wid).join(', ') || '-' });
+      if (tk.board.wires.find((w) => w.wid === id)!.fixed) refuseKey('err.wire.fixed');
       tk.board.wires = tk.board.wires.filter((w) => w.wid !== id); commit(tk, 'deleteWire', before);
       return ok(say('wire.deleted', { wid: id }));
     },
@@ -439,6 +504,9 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       const rec = (s.progress.tickets[tk.id] ??= newTicketProgress());
       for (const ev of out.events) {
         const id = (s.progress.failureLog[s.progress.failureLog.length - 1]?.id ?? 0) + 1;
+        // freeze the explanation now: it names the numbers and the loop as they were when the part burned, whatever the player edits afterwards
+        const uid = typeof ev.vars.part === 'string' ? ev.vars.part : '';
+        if (uid) (live.notes ??= {})[uid] = explainedText({ key: ev.key, vars: ev.vars }, tk, def, s.progress.failureLog.filter((x) => x.ticket === tk.id).length + rec.attempts);
         pushFailure(s.progress, { id, ticket: tk.id, tick: s.tick, kind: ev.key, vars: ev.vars });
         rec.smokes += 1;
         s.log.push({ tick: s.tick, level: 'bad', text: say(ev.key, nameVars(tk.board, ev.vars)) });
@@ -450,11 +518,15 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
     runBench: (s, coached?: unknown) => {
       const { tk, def } = open(s, defs);
       if (coached === true && def.measureFirst && !tk.probed) refuseKey('bench.measureFirst');
+      // the player's own bench button with the power switch OFF: switch it on (the click and the toast say so) rather than testing a dark bench
+      const autoPower = coached === true && !tk.live.powered;
+      if (autoPower) { tk.live.powered = true; tk.instruments.supply.on = true; tk.instruments.gen.on = true; delete tk.live.paused; resetLive(tk.live); }
       const { result, causes } = benchTicket(s, def);
       tk.lastBench = result;
       const rec = (s.progress.tickets[tk.id] ??= newTicketProgress());
       rec.attempts += 1;
       for (const uid of result.smoked) if (!tk.live.smoked.includes(uid)) { tk.live.smoked.push(uid); delete tk.live.temps[uid]; rec.smokes += 1; }
+      for (const c of causes) if (c.key.startsWith('smoke.') && typeof c.vars.part === 'string' && !tk.live.notes?.[c.vars.part]) (tk.live.notes ??= {})[c.vars.part] = explainedText({ key: c.key, vars: c.vars as Record<string, string | number> }, tk, def, s.progress.failureLog.filter((x) => x.ticket === tk.id).length + rec.attempts - 1);
       for (const c of causes) if (c.key.startsWith('smoke.')) {
         const id = (s.progress.failureLog[s.progress.failureLog.length - 1]?.id ?? 0) + 1;
         const vars: Record<string, string | number> = {}; for (const [k, v] of Object.entries(c.vars)) vars[k] = typeof v === 'number' ? sig(v, 3) : v;
@@ -469,23 +541,25 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
         if (rec.best === null || result.metrics[head] < rec.best[head]) rec.best = { ...result.metrics };
         const pack = REGIONS.get(s.region);
         s.log.push({ tick: s.tick, level: 'good', text: say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }) });
-        return ok(say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }), { pass: true, stars: result.stars, metrics: result.metrics, pay: result.pay ?? 0 });
+        return ok((autoPower ? say('bench.autoPower') + ' ' : '') + say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }), { pass: true, stars: result.stars, metrics: result.metrics, pay: result.pay ?? 0, autoPowered: autoPower });
       }
-      return ok(say('bench.fail', { id: tk.id, n: result.failures.length }), { pass: false, stars: 0, metrics: result.metrics });
+      return ok((autoPower ? say('bench.autoPower') + ' ' : '') + say('bench.fail', { id: tk.id, n: result.failures.length }), { pass: false, stars: 0, metrics: result.metrics, autoPowered: autoPower });
     },
 
     // ---- history
     undo: (s) => {
       const { tk } = open(s, defs);
       const e = tk.undo.pop(); if (!e) refuseKey('err.undo.none');
-      const inv = applyEntry(tk, e!); pushUndo(tk.redo, inv);
-      return ok(say('undo.done', { what: e!.key }));
+      const what = describeEdit(tk, e!), inv = applyEntry(tk, e!); pushUndo(tk.redo, inv);
+      const fresh = freshenAfterBurn(tk);
+      return ok(say('undo.done', { what }) + (fresh ? ' ' + say('undo.fresh') : ''), { fresh });
     },
     redo: (s) => {
       const { tk } = open(s, defs);
       const e = tk.redo.pop(); if (!e) refuseKey('err.redo.none');
-      const inv = applyEntry(tk, e!); pushUndo(tk.undo, inv);
-      return ok(say('redo.done', { what: e!.key }));
+      const what = describeEdit(tk, e!), inv = applyEntry(tk, e!); pushUndo(tk.undo, inv);
+      const fresh = freshenAfterBurn(tk);
+      return ok(say('redo.done', { what }) + (fresh ? ' ' + say('undo.fresh') : ''), { fresh });
     },
 
     // ---- teaching
@@ -526,7 +600,9 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       const { tk } = open(s, defs), id = str(uid, 'uid');
       if (!tk.board.parts.some((p) => p.uid === id)) refuseKey('err.part.none', { uid: id, have: tk.board.parts.map((x) => x.uid).join(', ') || '-' });
       if (!tk.live.smoked.includes(id)) refuseKey('err.smoked.none', nm(tk, id));
-      tk.live.smoked = tk.live.smoked.filter((u) => u !== id); delete tk.live.temps[id]; resetLive(tk.live); tk.lastBench = null;
+      tk.live.smoked = tk.live.smoked.filter((u) => u !== id); delete tk.live.temps[id]; if (tk.live.notes) delete tk.live.notes[id]; resetLive(tk.live); tk.lastBench = null;
+      // the fresh part starts cold and the power goes OFF: it must not burn again until the player switches the power on
+      tk.live.powered = false; tk.instruments.supply.on = false; tk.instruments.gen.on = false; delete tk.live.paused;
       return ok(say('part.replaced', nm(tk, id)));
     },
 
@@ -536,7 +612,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       if (typeof payload !== 'object' || payload === null) refuseKey('err.board.payload');
       const pl = payload as { parts?: unknown; wires?: unknown };
       if (!Array.isArray(pl.parts) || !Array.isArray(pl.wires)) refuseKey('err.board.payload');
-      tk.board.parts = tk.board.parts.filter((p) => p.fixed); tk.board.wires = [];
+      tk.board.parts = tk.board.parts.filter((p) => p.fixed); tk.board.wires = tk.board.wires.filter((w) => w.fixed);
       let n = 0;
       for (const raw of pl.parts as Record<string, unknown>[]) {
         const uid = typeof raw.uid === 'string' && /^p\d+$/.test(raw.uid) && !tk.board.parts.some((p) => p.uid === raw.uid) ? raw.uid : undefined;

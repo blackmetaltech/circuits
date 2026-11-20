@@ -19,7 +19,7 @@ const q = (e: Engine<NodeState>, name: string, ...args: unknown[]) => e.q(name, 
 /** The reference build of 1-5 (levels/1-5.ts ref). */
 function build(e: Engine<NodeState>): void {
   ok(e, 'placePart', 'res-exact', 2, 'ideal', 4, 2, 0, false); ok(e, 'placePart', 'res-exact', 3, 'ideal', 10, 4, 0, false); ok(e, 'placePart', 'res-exact', 6, 'ideal', 8, 7, 1, false);
-  for (const w of [[[2, 2], [4, 2]], [[8, 2], [8, 6]], [[14, 2], [14, 4]], [[10, 4], [10, 6], [8, 6]], [[8, 6], [8, 7]], [[8, 11], [8, 12]], [[2, 8], [2, 12], [8, 12]], [[14, 8], [14, 12], [8, 12]]]) ok(e, 'addWire', w);
+  for (const w of [[[2, 2], [4, 2]], [[8, 2], [8, 6]], [[14, 2], [14, 4]], [[10, 4], [10, 6], [8, 6]], [[8, 6], [8, 7]], [[8, 11], [8, 12]]]) ok(e, 'addWire', w);
 }
 
 describe('N2: 1-5 probing node A', () => {

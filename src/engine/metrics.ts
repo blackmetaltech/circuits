@@ -26,7 +26,7 @@ export function boardMetrics(board: Board, pack: Pick<RegionPack<NodeRegionData>
     parts++; cost += partPrice(pack, p.partId, p.variant, p.value);
     const d = getDef(p.partId); if (d) for (const q of pinPads(p, d)) cover(q[0], q[1]);
   }
-  for (const w of board.wires) for (const q of w.path) cover(q[0], q[1]);
+  for (const w of board.wires) if (!w.fixed) for (const q of w.path) cover(q[0], q[1]);
   const area = x1 >= x0 ? (x1 - x0 + 1) * (y1 - y0 + 1) : 0;
   return { cost, parts, power: Math.round(powerUw), area };
 }

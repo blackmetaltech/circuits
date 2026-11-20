@@ -54,7 +54,7 @@ const firstAtLeast = (table: readonly number[], x: number): number => table.find
 // ---------------------------------------------------------------- §7.3 templates
 export function explainResistorPower(a: { part: string; v: number; r: number; p: number; rated: number }): Explained {
   return { key: 'explain.resistor.power', vars: {
-    ...pn(a.part), p: sig(a.p), rated: sig(a.rated), v: sig(a.v), r: si(a.r, 'Ω'), ratio: sig(a.p / a.rated, 2),
+    ...pn(a.part), p: sig(a.p), rated: sig(a.rated), v: sig(a.v), i: sig(Math.sqrt(a.p / a.r)), r: si(a.r, 'Ω'), ratio: sig(a.p / a.rated, 2),
     rNext: firstAtLeast(POWER_RATINGS, a.p * POWER_MARGIN), rEach: si(2 * a.r, 'Ω'), pEach: sig(a.p / 2),
   } };
 }
@@ -200,6 +200,7 @@ export function explainLevelMiss(f: BenchFailure, ctx: MissCtx = {}): Explained 
   const dead = q === 'i' && Math.abs(val) < 1e-6;
   if (dead) { vars.value = 0; return { key: kind === 'LED' ? 'bench.plain.i.zero.led' : 'bench.plain.i.zero', vars }; }
   const low = val < a;
+  if (cond === 'tired' && q === 'i' && low && open === 'band') return { key: 'bench.plain.i.low.band.tired', vars };
   return { key: `bench.plain.${q}.${low ? 'low' : 'high'}.${open}`, vars };
 }
 

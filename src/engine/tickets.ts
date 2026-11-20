@@ -10,7 +10,7 @@ export const levelDefOf = (defs: readonly LevelDef[], id: unknown): LevelDef | u
 
 /** The board a ticket starts with: its connectors and fixed parts, nothing else. */
 export function startBoard(def: LevelDef): Board {
-  return { w: def.board.w, h: def.board.h, connectors: structuredClone(def.board.connectors), parts: structuredClone(def.fixed) as PlacedPart[], wires: [] };
+  return { w: def.board.w, h: def.board.h, connectors: structuredClone(def.board.connectors), parts: structuredClone(def.fixed) as PlacedPart[], wires: (def.fixedWires ?? []).map((path, i) => ({ wid: `fw${i + 1}`, path: path.map((q) => [q[0], q[1]] as [number, number]), fixed: true })) };
 }
 
 /** Hidden parameters: Learner uses the fixed value, every other mode draws from the save's rng (3 significant figures, so codes stay short). */

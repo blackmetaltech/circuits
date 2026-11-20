@@ -164,7 +164,7 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
             variant: p.variant, pos: p.pos ?? null, ratings: v.ratings, smoked: tk.live.smoked.includes(p.uid), pins: d.pins.map((name, i) => ({ name, label: pinLabel(p.partId, name), pad: pads[i]! })),
           };
         }),
-        wires: b.wires.map((w) => ({ wid: w.wid, path: w.path })),
+        wires: b.wires.map((w) => ({ wid: w.wid, path: w.path, fixed: w.fixed === true })),
         instruments: {
           powered: tk.live.powered, paused: tk.live.paused === true,
           supply: def.supplies.some((x) => x.kind === 'bench') ? { on: ins.supply.on, v: ins.supply.v, ilim: ins.supply.ilim } : null,
@@ -201,7 +201,7 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       const events = tk.live.smoked.map((uid) => {
         const f = [...log].reverse().find((x) => x.ticket === tk.id && x.vars.part === uid), pd = tk.board.parts.find((p) => p.uid === uid), d = pd ? getDef(pd.partId) : undefined;
         const kind = !d ? 'smoke' : ['LED', 'D', 'Z', 'SCHOTTKY', 'NPN', 'PNP', 'DARLINGTON', 'NMOS'].includes(d.kind) ? 'crack' : d.kind === 'CE' ? 'vent' : 'smoke';
-        return { part: uid, kind, failureId: f?.id ?? null, key: f?.kind ?? 'smoke.thermal', text: f ? (deps.explained ? deps.explained({ key: f.kind, vars: f.vars }, tk, o.def, log.filter((x) => x.ticket === tk.id && x.id < f.id).length + (s.progress.tickets[tk.id]?.attempts ?? 0)) : say(f.kind, nameVars(tk.board, f.vars))) : '' };
+        return { part: uid, kind, failureId: f?.id ?? null, key: f?.kind ?? 'smoke.thermal', text: tk.live.notes?.[uid] ?? (f ? (deps.explained ? deps.explained({ key: f.kind, vars: f.vars }, tk, o.def, log.filter((x) => x.ticket === tk.id && x.id < f.id).length + (s.progress.tickets[tk.id]?.attempts ?? 0)) : say(f.kind, nameVars(tk.board, f.vars))) : '') };
       });
       return {
         valid: !!sol, powered: tk.live.powered, paused: tk.live.paused === true, frame: tk.live.frame, t: tk.live.t, status: tk.live.status,

@@ -115,6 +115,8 @@ export interface LevelDef {
   board: { w: number; h: number; connectors: Connector[] };
   /** Pre-placed, non-removable parts (battery, load, transformer). Their uids are fixed by the level ('f1', 'f2'...) and must have `fixed: true`. */
   fixed: PlacedPart[];
+  /** Pre-wired, non-removable wires (paths of pads), uids fw1, fw2...: e.g. the exam's source minus ends tied to the GND pad. */
+  fixedWires?: Pad[][];
   /** Bench-provided sources (bench supply, function generator). Batteries are fixed parts instead. */
   supplies: SupplyDef[];
   /** Initial instrument settings. A bench supply / generator / scope the ticket does not mention stays unusable. */
