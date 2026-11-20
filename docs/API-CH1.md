@@ -184,6 +184,14 @@ Other queries unchanged from M2-1: `progress`, `tickets`, `board`, `nodes`, `cur
 - `wire(a, b)` falls back to a Dijkstra router (crossing other wires, never over a leg / connector / wire end), so a route is found whenever both ends are free; `err.wire.duplicate` and `err.wire.tJunction` are raised up front.
 - `liveFrame().events[].text` is the explanation frozen when the part burned (`live.notes`). `undo` / `redo` / `replaceSmoked` while a part is burnt restore it fresh and switch the power off (`undo` result has `fresh: true`); messages read "Undid: placed the 470 Ω resistor."
 
+## N5 additions (fresh Class-11 tester round)
+- **Exam grading (1-5)**: stars are `1` built right, `2` every prediction within 5 %, `3` every prediction within 1 % (`ticketCard().starRule` prints the rule before lock-in).
+  `benchResult().debrief` = `{node, equation, working[], answer, currents[{name, amps, charging, text}], rows[{id, name, unit, entered, truth, gapPct, grade, gradeText, ok}], starsText}`:
+  predicted vs measured with the % error, the KCL nodal equation worked out from the figure (`(10 − A)/2 + (5 − A)/3 = A/6`, `A = 6.667 V`), and charging / discharging per source.
+- **Solver stalls are never shown**: a transient that stops converging gets one rescue pass at the smallest step (the residual-growth damping test is skipped at the rounding floor, which is
+  what stalled 1-1 with an LED + 220 ohm resistor on the ground side), and any remaining stall reads as plain words with the last good reading (`bench.stuck.last`).
+- `coach().stepNo` / `stepTotal` count the main line only (smoke branches and optional steps take no number); `steps[].optional` is exposed.
+
 ## The five tickets (data in `src/data/levels/1-*.ts`)
 
 | id | customer | spec (bench) | board | designed fail (tested) | ref |

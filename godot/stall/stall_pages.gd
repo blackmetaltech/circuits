@@ -231,7 +231,11 @@ func _map(a: float) -> void:
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		if hv: S.rr_line(self, Rect2(cr.position + Vector2(-3, lift - 3), cr.size + Vector2(6, 6)), 4, Color("#ffd98a", 0.85), 3.0)
 	# what the stars on a chit mean
-	S.text(self, f, "* = met the spec    ** = and under the cost par    *** (exam 1-5) = every prediction within 1 %", Vector2(r.position.x + 40, r.end.y - 30), 17, Color(S.INK, 0.75))
+	var lx0 := r.position.x + 70.0; var ly0 := r.end.y - 300.0   # the star key sits on the left page, above the tin
+	S.text(self, f, "stars on a chit", Vector2(lx0, ly0), 18, S.INK_RED)
+	S.text(self, f, "*  met the spec", Vector2(lx0, ly0 + 26), 18, Color(S.INK, 0.8))
+	S.text(self, f, "**  and under the cost par", Vector2(lx0, ly0 + 50), 18, Color(S.INK, 0.8))
+	S.text(self, f, "***  exam 1-5: every prediction within 1 %", Vector2(lx0, ly0 + 74), 18, Color(S.INK, 0.8))
 	# back to the title
 	var br := Rect2(r.end.x - 230, r.end.y - 62, 190, 44)
 	var bh := _btn(br, "goto:title")
@@ -313,7 +317,7 @@ func _predict(a: float) -> void:
 	draw_rect(Rect2(0, 0, w, h), Color(0.02, 0.01, 0.02, 0.45 * a), true)
 	var fig: Dictionary = coach_ticket.get("figure", {}) if coach_ticket.get("figure", null) is Dictionary else {}
 	var wide := not fig.is_empty()
-	var sz := Vector2(1000, 640) if wide else Vector2(720, 520)
+	var sz := Vector2(1120, 820) if wide else Vector2(720, 520)
 	sz = Vector2(minf(sz.x, w - 24.0), minf(sz.y, h - 24.0))
 	var r := Rect2(w * 0.5 - sz.x * 0.5, h * 0.5 - sz.y * 0.5 + (1.0 - a) * 24, sz.x, sz.y)
 	S.paper(self, r, -0.8, S.PAPER)
@@ -325,7 +329,7 @@ func _predict(a: float) -> void:
 	# the problem, as printed on the exam card: its words, and (right) its figure
 	S.text(self, f, str(coach_ticket.get("brief", "")), q.position + Vector2(36, 106), 19, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, col_w)
 	if wide:
-		var fr := Rect2(q.position.x + q.size.x * 0.52, q.position.y + 96, q.size.x * 0.44, q.size.y - 200.0)
+		var fr := Rect2(q.position.x + q.size.x * 0.52, q.position.y + 96, q.size.x * 0.44, q.size.y - 262.0)
 		S.rr_line(self, fr, 6, Color(S.INK, 0.35), 2.0)
 		S.text(self, f, "Fig. 1", fr.position + Vector2(10, 22), 16, Color(S.INK, 0.6))
 		ExamFigure.draw(self, fr.grow(-10), fig, S.INK, ["V(%s)" % str(fig.get("node", "A")), "I(E2)"])
@@ -356,7 +360,7 @@ func _predict(a: float) -> void:
 	var cl := Rect2(q.position.x + 262, q.end.y - 78, 150, 50)
 	var ch := _btn(Rect2(r.get_center() + cl.position, cl.size), "pred_close")
 	S.rr_line(self, cl, 25, Color(S.INK, 0.7 if ch else 0.4), 2.0); S.text(self, f, "later", cl.position + Vector2(44, 36), 26, S.INK)
-	var hint := "type digits, Tab switches line, Enter locks in.  \"later\" keeps this slip on the bench: tap it to reopen."
+	var hint := "type digits (+/- flips the sign), Tab switches line, Enter locks in.  \"later\" keeps the slip on the bench."
 	S.text(self, f, hint, Vector2(q.position.x + 36, q.end.y - 12), 14, Color(S.INK, 0.55))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
@@ -367,7 +371,7 @@ func _stars_text(n: int, mx := 3) -> String: return "*".repeat(n) + ".".repeat(m
 func _debrief(a: float) -> void:
 	var w := size.x; var h := size.y; var f := S.hand()
 	draw_rect(Rect2(0, 0, w, h), Color(0.02, 0.01, 0.02, 0.5 * a), true)
-	var sz := Vector2(minf(1100.0, w - 24.0), minf(700.0, h - 24.0))
+	var sz := Vector2(minf(1160.0, w - 24.0), minf(800.0, h - 24.0))
 	var r := Rect2(w * 0.5 - sz.x * 0.5, h * 0.5 - sz.y * 0.5 + (1.0 - a) * 24, sz.x, sz.y)
 	S.paper(self, r, -0.6, S.PAPER)
 	draw_set_transform(r.get_center(), deg_to_rad(-0.6), Vector2.ONE)
