@@ -81,11 +81,17 @@ func _bench_key() -> void:
 	var p: Vector2 = (sc.L.bench as Rect2).get_center()
 	sc._motion(p); sc._press(p)
 
-func _dial_to(mode: String) -> void:   # click the right half of the dial until the knob points at `mode`
-	for i in 4:
+func _dial_to(mode: String) -> void:   # click the right half of the dial until the knob points at `mode` (a frame between clicks: the dial redraws from the backend)
+	for i in 5:
 		if bk.dial == mode: return
 		var p: Vector2 = sc.dmm.position + (DmmView.DIAL_C + Vector2(40, 0)) * sc.dmm.scale.x
 		sc._motion(p); sc._press(p)
+		await process_frame
+
+func _drop_probe(which: String) -> void:   # pick a lead up and let go off the board: it comes off its pad
+	var tip: Vector2 = sc._probe_tip(which)
+	sc._motion(tip); sc._press(tip)
+	sc._motion(Vector2(40, 40)); sc._release(Vector2(40, 40))
 
 func _key(code: Key, uni := 0) -> void:
 	var e := InputEventKey.new(); e.pressed = true; e.keycode = code; e.unicode = uni
@@ -198,7 +204,7 @@ func _run() -> void:
 		if bk.hot_k() > 0.3 and bk.smoked.is_empty(): seen.hot = true
 		return not bk.smoked.is_empty())
 	ok(seen.hot, "the 1/4 W resistor glows (warm / hot state from the engine) before it goes")
-	ok(bk.smoked.size() == 1 and evlog.has("smoked"), "NAIVE: 22 ohm 1/4 W smokes after thermal time (0.61 W in 0.25 W)")
+	ok(bk.smoked.size() == 1 and evlog.has("smoked"), "NAIVE: 22 ohm 1/4 W smokes after thermal time (0.61 W in 0.25 W) %s %s" % [str(bk.smoked.keys()), str(evlog)])
 	ok(str(bk.frame.events[0].kind) == "smoke" and str(bk.frame.events[0].text).contains("rated"), "the smoke explanation names the rating")
 	await _frames(3)
 	ok(sc.props.hot > 0.5 or sc.props.smoked, "Rezzy is awake")
@@ -207,11 +213,11 @@ func _run() -> void:
 	ok(_build("1-3"), "the reference (22 ohm 1 W) is built by pointer")
 	_drag_probe("red", [14, 2]); _drag_probe("black", [14, 8])
 	ok(bk.dial == "V" and bk.probes.red == [14, 2], "placing the first lead turns the DMM dial to V")
-	_dial_to("Ω")
+	await _dial_to("Ω")
 	_clock(0.3)
 	var ohm: Dictionary = bk.dmm()
 	ok(bk.dial == "Ω" and ohm.unit == "Ω" and float(ohm.text) > 14.0 and float(ohm.text) < 16.5, "DMM in ohm mode reads the engine's resistance across the heater: %s %s" % [ohm.text, ohm.unit])
-	_dial_to("V")
+	await _dial_to("V")
 	_rocker()
 	_drag_probe("ch1", [14, 2])
 	_clock(0.4)
@@ -219,6 +225,12 @@ func _run() -> void:
 	_clock(6.0, func(): return bk.passed)
 	ok(bk.passed, "22 ohm 1 W locks 8.33 V and passes the bench")
 	ok(bk.last_result.stars == 1 and bk.last_result.metrics.cost == 7, "Ref A earns 1 star at 7 c: the cheaper Ref B has the cost par")
+	# the ammeter: the DMM between its leads across the series resistor reads the heater current (0.1 ohm burden)
+	_drag_probe("red", [4, 2]); _drag_probe("black", [8, 2])
+	await _dial_to("mA")
+	_clock(0.3)
+	var am: Dictionary = bk.dmm()
+	ok(am.unit == "mA" and am.text.is_valid_float() and float(am.text) > 230.0 and float(am.text) < 245.0, "DMM in mA mode across the resistor reads the engine's current: %s mA" % am.text)
 	await create_timer(0.7).timeout
 
 	print("== 1-4 Tired Battery")
@@ -230,18 +242,16 @@ func _run() -> void:
 	var oc: Dictionary = bk.dmm()
 	ok(oc.unit == "V" and float(oc.text) > 8.9 and float(oc.text) < 9.1, "open-circuit voltage on the DMM: %s V" % oc.text)
 	_rocker()
+	_drop_probe("red"); _drop_probe("black")
+	ok(bk.probes.red == null and bk.probes.black == null, "dropping a lead off the board takes it off its pad")
 	ok(_build("1-4"), "the reference load (4.7 ohm 5 W) is built by pointer")
 	_rocker()
+	_drag_probe("red", [2, 2]); _drag_probe("black", [8, 2])
 	_clock(0.3)
 	var lv: Dictionary = bk.dmm()
 	ok(float(lv.text) > 4.4 and float(lv.text) < 4.6, "loaded terminal voltage sags to %s V" % lv.text)
 	_clock(6.0, func(): return bk.passed)
 	ok(bk.passed and bk.scope_value() >= 4.2, "LOCK at %.2f W (at least 4.2) and a bench pass" % bk.scope_value())
-	_dial_to("mA")
-	_drag_probe("red", [2, 2]); _drag_probe("black", [2, 5])
-	_clock(0.3)
-	var am: Dictionary = bk.dmm()
-	ok(am.unit == "mA" and float(am.text) > 900.0 and float(am.text) < 1000.0, "DMM in mA mode reads the load current: %s mA" % am.text)
 	await create_timer(0.7).timeout
 
 	print("== 1-5 EB Two Batteries (predict first)")

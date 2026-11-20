@@ -56,6 +56,7 @@ var _accum := 0.0
 var _bench_key := ""
 var _was_lock := false
 var _all_parts: Array = []
+var _smoke_seen := {}
 
 func _init(b = null) -> void:
 	bridge = b if b != null else CbBridge.new()
@@ -71,13 +72,17 @@ func _q(name: String, args: Array = []): return bridge.q(name, args)
 ## ------------------------------------------------------------------------------------------------------------------ tickets and progress
 
 func open_ticket(id: String) -> bool:
+	var prev := str(ticket.get("id", ""))
 	if not ticket.is_empty(): _act("closeTicket")
 	var r := _act("openTicket", [id])
-	if not r.get("ok", false):
-		ticket = {}; push_warning("openTicket %s: %s" % [id, r.get("message", "")]); return false
+	if not r.get("ok", false):   # e.g. locked: keep the ticket that was open
+		push_warning("openTicket %s: %s" % [id, r.get("message", "")])
+		if prev != "" and _act("openTicket", [prev]).get("ok", false): _load_ticket()
+		else: ticket = {}
+		return false
 	powered = false; locked = false; passed = false; smoked.clear(); temps.clear(); hold = 0.0; t = 0.0; _accum = 0.0; _was_lock = false
 	probes = {"red": null, "black": null, "ch1": null}; dial = "OFF"; dmm_used = false; dmm_loaded = false
-	frame = {}; last_result = {}; _bench_key = ""
+	frame = {}; last_result = {}; _bench_key = ""; _smoke_seen.clear()
 	_load_ticket()
 	return true
 
@@ -389,6 +394,9 @@ func _refresh_live() -> void:
 		temps[str(p.uid)] = _n(p.get("temp", 25.0))
 		if bool(p.get("smoked", false)): smoked[str(p.uid)] = true
 	for e in frame.get("events", []): smoked[str(e.part)] = true
+	for u in smoked.keys():   # the first time a part shows as smoked, fire the pop (whether the live run or a bench check killed it)
+		if not _smoke_seen.has(u): _smoke_seen[u] = true; _emit_smoke(str(u))
+	for u in _smoke_seen.keys(): if not smoked.has(u): _smoke_seen.erase(u)
 	var lk := bool(scope_q.get("lock", false)) and powered
 	if lk and not _was_lock: event.emit("lock", {})
 	_was_lock = lk; locked = lk
@@ -432,20 +440,20 @@ func step(dt: float) -> void:
 	var n := int(_accum / FRAME_DT)
 	if n < 1: return
 	_accum = fposmod(_accum, FRAME_DT)
-	var r := _act("advance", [mini(n, 8)])
+	_act("advance", [mini(n, 8)])
 	_refresh_live(); _rebuild_model()
-	for u in r.get("smoked", []):
-		var ev := {}
-		for e in frame.get("events", []): if str(e.part) == str(u): ev = e
-		var pp := _frame_part(str(u))
-		var kind := str(part_by(str(u)).get("kind", "R"))
-		var amps := 0.0
-		if pp.has("pins") and (pp.pins as Array).size() > 0: amps = float(pp.pins[0].i)
-		event.emit("smoked", {"uid": str(u), "kind": kind, "amps": amps, "watts": _n(pp.get("power", 0.0)), "text": str(ev.get("text", "")), "fx": str(ev.get("kind", "smoke"))})
 	if locked and not passed:
 		hold += dt
 		if hold >= LOCK_HOLD and not bool(ticket.get("eb", false)) and _bench_key != _board_key(): run_bench()
 	elif not locked: hold = 0.0
+
+func _emit_smoke(uid: String) -> void:
+	var ev := {}
+	for e in frame.get("events", []): if str(e.part) == uid: ev = e
+	var pp := _frame_part(uid)
+	var amps := 0.0
+	if pp.has("pins") and (pp.pins as Array).size() > 0: amps = absf(_n(pp.pins[0].get("i", 0.0)))
+	event.emit("smoked", {"uid": uid, "kind": str(part_by(uid).get("kind", "R")), "amps": amps, "watts": _n(pp.get("power", 0.0)), "text": str(ev.get("text", "")), "fx": str(ev.get("kind", "smoke"))})
 
 func _frame_part(uid: String) -> Dictionary:
 	for p in frame.get("parts", []): if str(p.uid) == uid: return p

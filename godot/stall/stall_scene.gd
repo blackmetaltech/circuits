@@ -101,7 +101,7 @@ func _screen_env() -> void:   # CB_SCREEN=title|map|bench ; CB_TICKET=1-3 (QA ho
 	var tk := OS.get_environment("CB_TICKET")
 	if OS.get_environment("CB_UNLOCK") == "1":
 		for id in _ticket_ids: done[id] = done.get(id, false)
-		if backend.ENGINE: backend.unlock_through(tk if tk != "" and scr in ["bench", "level", "notebook"] else "1-5")   # play the earlier tickets with their reference designs
+		if backend.ENGINE and OS.get_environment("CB_SHOTS") == "": backend.unlock_through(tk if tk != "" and scr in ["bench", "level", "notebook"] else "1-5")   # play the earlier tickets with their reference designs
 	match scr:
 		"bench", "level": start_ticket(tk if tk != "" else "1-1")
 		"map": go_map()

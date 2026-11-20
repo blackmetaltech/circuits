@@ -7,7 +7,7 @@
 // AMBIENT (reviewed): the design says smoke arrives at about 2.6x rated power at Ta 25 C (T_fail 250 C, theta 340 C/W for 1/4 W), but 0.61 W is only 2.44x, which settles at
 // 233 C and never smokes. The controller sits in the aquarium hood, a warm 50 C: steady state 258 C > 250 C, so the naive part smokes (live after ~4 s, and on the bench).
 // Every good design stays far under: 22 ohm 1 W settles at 102 C, 2 x 47 ohm 1/2 W at 103 C.
-// PRICES: a 1 W resistor is 5 c and 2 x 1/2 W is 6 c in the price table, so Ref B (two 47 ohm 1/2 W) is NOT cheaper here; cost par = 5 c (Ref A).
+// PRICES: a 1 W resistor is 7 c and 2 x 1/2 W is 6 c in the price table, so Ref B (two 47 ohm 1/2 W) is cheaper than Ref A (22 ohm 1 W, DESIGN §2.8); cost par = 6 c.
 import type { LevelDef } from './types';
 
 export const L1_3: LevelDef = {

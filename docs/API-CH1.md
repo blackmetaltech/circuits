@@ -45,7 +45,7 @@ A refused action returns `ok:false` with a teaching `message`. Queries never mut
 ```json
 {"chapter":1,"title":"First Light","blurb":"Wren's first page: five tickets at Stall 14, Lantern Lane. ...",
  "tickets":[{"id":"1-1","title":"Torch","customerId":"kid_torch","customer":"Lio","eb":false,"teaches":["ohm","kvl","led","current-limit"],
-   "scope":"must","unlocked":true,"passed":false,"stars":0,"attempts":0,"state":"open","fee":300,"feeText":"$3.00","after":[],
+   "scope":"must","unlocked":true,"passed":false,"stars":0,"attempts":0,"state":"open","fee":300,"feeText":"$3.00","spec":"LED current between 10 mA and 20 mA","after":[],
    "chit":{"x":0.2,"y":0.3},"best":null}, ...],
  "starsEarned":0,"starsTotal":11,"complete":false,"open":null}
 ```
@@ -61,7 +61,7 @@ Customer, brief, spec names, `targets` (`level` bands as numbers), `conditions` 
  "conditions":[{"id":"nominal","set":[{"target":"psu","key":"v","value":12}],"ambientC":50}],
  "shoebox":[{"partId":"res-cf","name":"Carbon-film resistor 5 %","kind":"R","footprint":"axial2","pins":["1","2"],"values":[22,27,47,51,100],"unit":"Ω","max":null,"placed":0,
    "variants":[{"id":"0.25W","ratings":{"P":0.25,"Vmax":250,"Tamb":70},"price":2,"priceText":"$0.02"},
-               {"id":"0.5W","ratings":{"P":0.5},"price":3,"priceText":"$0.03"},{"id":"1W","ratings":{"P":1},"price":5,"priceText":"$0.05"}]}],
+               {"id":"0.5W","ratings":{"P":0.5},"price":3,"priceText":"$0.03"},{"id":"1W","ratings":{"P":1},"price":7,"priceText":"$0.07"}]}],
  "eb":false,"fee":500,"feeText":"$5.00","instruments":{"supply":true,"gen":false,"scope":true},"gauge":{"spec":"vout","unit":"V","clip":"OUT"},"chit":{"x":0.7,"y":0.3},"ambientC":50}
 ```
 `price` is integer minor units (cents); `priceText` is formatted for the region. Drag a shoebox item with `placePart(partId, value, variant, x, y, rot, flip)`.
@@ -181,7 +181,7 @@ Other queries unchanged from M2-1: `progress`, `tickets`, `board`, `nodes`, `cur
 ## Deviations from DESIGN §2.8 (each needs the director's sign-off; reasons are in the level file headers)
 1. **1-3 band 7.85-8.40 V** (not 8.0 +-0.3): the text says Ref A (8.33 V) passes and 27 ohm (7.79 V) fails; no centred band does both.
 2. **1-3 ambient 50 C**: 0.61 W in a 1/4 W part is 2.44x, which settles at 233 C (< T_fail 250 C) at 25 C ambient; the design's "smokes at about 2.6x" does not reach it. A warm aquarium hood makes it smoke (258 C).
-3. **1-3 Ref B is 6c, Ref A 5c**: the price table makes 2 x 1/2 W dearer than one 1 W. Cost par is 5c.
+3. **1-3 prices (resolved 11-20)**: a 1 W resistor is now 7c (1/4 W 2c, 1/2 W 3c), so Ref B (2 x 47 ohm 1/2 W, 6c) is cheaper than Ref A (22 ohm 1 W, 7c) as DESIGN §2.8 says; cost par is 6c (Ref B earns the star, Ref A passes with one). The game-estimate price table is only ordered, not real.
 4. **1-4 seeded r 3.3-4.7 ohm** (not 3.3-8.2): E^2 / (4r) < 4.20 W for r > 4.82 ohm, so larger r makes the ticket unsolvable. At r near 3.3 a load near r exceeds the 5 W rating, so the player must pick R = 10 ohm-ish.
 5. **1-5 bench checks I(E2) not I(R3)** (the player places all three resistors, so no fixed id to probe); the reality-check swap to a NiMH cell is not built (needs a NiMH part).
 6. **Fees** and the 1-4 EMF-as-hidden-parameter wiring are game estimates / implementation choices.
