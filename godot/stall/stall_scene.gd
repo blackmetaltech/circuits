@@ -486,8 +486,8 @@ func _sync_views(dt: float) -> void:
 	top.visible = true
 	# cables, probe leads, the scope's clip lead
 	top.cables = []
-	var cn: Array = bt.board.connectors
-	if str(bt.supply.kind) != "none":
+	var cn: Array = bt.board.connectors if bt.has("board") else []
+	if bt.has("supply") and str(bt.supply.kind) != "none":
 		for c in cn:
 			if c.role in ["supply", "ground"]:
 				var pad := Vector2(c.pad[0], c.pad[1]); var clip := pad_screen(pad) + Vector2(36, 0)
