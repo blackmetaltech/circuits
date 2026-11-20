@@ -43,6 +43,8 @@ const MINE = new WeakSet<object>();
 const given = (pre: unknown): Solution | null => (typeof pre === 'object' && pre !== null && MINE.has(pre) ? (pre as Solution) : null);
 const mineSolution = (tk: TicketState, def: LevelDef): Solution | null => { const s = solution(tk, def); if (s) MINE.add(s); return s; };
 
+/** How the chit explains the payout: "fee $3.00 + $1.00 per new star". */
+const payText = (def: LevelDef, pack: ReturnType<typeof REGIONS.get>): string => (def.pay ? t('pay.explain', { fee: formatMinor(def.pay.fee, pack), perStar: formatMinor(def.pay.perStar, pack) }) : '');
 const PREDICT_GRADE: Record<string, string> = { exact: 'bench.predict.exact', close: 'bench.predict.close', miss: 'bench.predict.miss' };
 const text = (f: { key: string; vars: Record<string, string | number> }): string => say(f.key, f.vars);
 
@@ -116,7 +118,8 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         conditions: def.bench.conditions.map((c) => ({ id: c.id, set: c.set ?? [], ambientC: c.ambientC ?? def.bench.ambientC })),
         targets: def.bench.specs.flatMap((x) => (x.kind === 'level' ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', lo: x.lo, hi: x.hi }] : [])),
         predictions: def.bench.specs.flatMap((x) => (x.kind === 'predict' ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', unit: x.of.probe.trim().toLowerCase().startsWith('i(') ? 'A' : 'V', entered: o.tk.predictions[x.id] ?? null }] : [])),
-        gauge: def.gauge ?? null, supplies: def.supplies, chit: def.chit ?? null, ambientC: def.bench.ambientC,
+        gauge: def.gauge ?? null, supplies: def.supplies, chit: def.chit ?? null, ambientC: def.bench.ambientC, figure: def.figure ?? null,
+        payText: payText(def, REGIONS.get(s.region)),
       };
     },
     /** The board with part names, rotated pin pads and ratings, probes and meter. */

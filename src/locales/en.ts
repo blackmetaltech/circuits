@@ -124,6 +124,7 @@ export const en: Record<string, string> = {
   'bench.fail': 'Bench failed for ticket {id}: {n} problem(s). Open the bench report to see what to fix.',
   'bench.part.missing': 'The test "{id}" looks at {probe}, but that part is not on the board yet ({cond} test).',
   'bench.predict.missing': 'You have not entered a prediction for "{id}" yet ({cond} test).',
+  'pay.explain': 'fee {fee} + {perStar} per new star',
   'bench.measureFirst': "Measure it first: put the meter leads on the battery before you bench it. Read the open-circuit volts, then the volts with the load on. How far the voltage sags under load is the battery's own resistance, and finding that is the lesson here.",
   'coach.optional': 'Optional: {text}',
   'coach.burned': '{Part} burned: undo it (Ctrl+Z) or swap it for a fresh part, then think about what let too much current through.',

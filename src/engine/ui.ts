@@ -131,7 +131,8 @@ export function scopeTarget(s: NodeState, tk: TicketState, def: LevelDef, sol: S
     target: {
       spec: g.spec, name: def.bench.names[g.spec] ? t(def.bench.names[g.spec]!) : '', quantity: g.unit, unit: u.display, scale: u.scale, lo: band.lo, hi: band.hi,
       mode: g.clip ? 'probe' : 'gauge', clip: c ? { connector: c.id, pad: c.pad } : null,
-      clipped: !!c && tk.board.probes.some((p) => p.ch === 1 && p.pad[0] === c.pad[0] && p.pad[1] === c.pad[1]),
+      // on the connector's pad OR on any other pad of the same node (a clip on R3's top leg is on A as much as a clip on the brass pad)
+      clipped: !!c && (() => { const conn = liveRig(tk, def).conn, want = conn.nodeOfPad(c.pad); return tk.board.probes.some((p) => p.ch === 1 && ((p.pad[0] === c.pad[0] && p.pad[1] === c.pad[1]) || (want >= 0 && conn.nodeOfPad(p.pad) === want))); })(),
     },
     gauge: { value, unit: u.display, text: value === null ? '' : `${value} ${u.display}`, inBand: value !== null && value >= band.lo && value <= band.hi, v: value === null ? [] : Array.from({ length: 256 }, () => value) },
     lock, lockSpecs,
@@ -258,7 +259,7 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
         return {
           id: d.id, title: t(d.titleKey), customerId: d.customer, customer: regionString(s.region, `customer.${d.customer}`), eb: d.eb === true, teaches: d.teaches, scope: d.scope,
           unlocked, passed, stars: p?.stars ?? 0, attempts: p?.attempts ?? 0, state: !unlocked ? 'locked' : !passed ? 'open' : (p?.stars ?? 0) >= 2 ? 'done' : 'passed',
-          fee: d.pay?.fee ?? 0, feeText: d.pay ? formatMinor(d.pay.fee, pk) : '', spec: ((x) => (x && d.bench.names[x.id] ? t(d.bench.names[x.id]!) : ''))(d.bench.specs.find((x) => x.kind === 'level')), after: d.after ?? [], chit: d.chit ?? { x: 0.5, y: 0.5 },
+          fee: d.pay?.fee ?? 0, feeText: d.pay ? formatMinor(d.pay.fee, pk) : '', perStar: d.pay?.perStar ?? 0, payText: d.pay ? t('pay.explain', { fee: formatMinor(d.pay.fee, pk), perStar: formatMinor(d.pay.perStar, pk) }) : '', starsMax: d.eb ? 3 : 2, spec: ((x) => (x && d.bench.names[x.id] ? t(d.bench.names[x.id]!) : ''))(d.bench.specs.find((x) => x.kind === 'level')), after: d.after ?? [], chit: d.chit ?? { x: 0.5, y: 0.5 },
           best: p?.best ? { ...p.best, costText: formatMinor(p.best.cost, pk) } : null,
         };
       });

@@ -96,6 +96,14 @@ export interface GaugeDef {
   flip?: boolean;
 }
 
+/** The printed exam figure of an exam-bridge ticket (DESIGN §2.5: the one place a schematic is allowed): sources, each through its own resistor, meet at a named node; a load resistor runs to ground. */
+export interface ExamFigure {
+  /** Name of the common node (printed on the figure). */
+  node: string;
+  sources: { name: string; volts: number; r: { name: string; ohm: number } }[];
+  load: { name: string; ohm: number };
+}
+
 export interface LevelDef {
   id: string;
   chapter: number;
@@ -134,6 +142,8 @@ export interface LevelDef {
   gauge?: GaugeDef;
   /** Exam-bridge ticket (printed exam card, predict then probe). */
   eb?: boolean;
+  /** The exam figure drawn on the problem slip (exam-bridge tickets). */
+  figure?: ExamFigure;
   /** Where the ticket's chit hangs on the chapter-1 notebook page, in 0..1 page coordinates. */
   chit?: { x: number; y: number };
   /** Chapter-1 tickets of the vertical slice etc.; a ticket unlocks when every id here is passed (empty = open). */

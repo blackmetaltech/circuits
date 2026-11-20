@@ -34,6 +34,7 @@ export const L1_5: LevelDef = {
   live: { frameSim: 0.02, h: 2e-3, thermalSpeed: 1 },
   stars: { head: 'parts', par: { cost: 0, parts: 3, power: 0, area: 143 } },
   eb: true,
+  figure: { node: 'A', sources: [{ name: 'E1', volts: 10, r: { name: 'R1', ohm: 2 } }, { name: 'E2', volts: 5, r: { name: 'R2', ohm: 3 } }], load: { name: 'R3', ohm: 6 } },
   hints: { nudge: 'ticket.1-5.hint.nudge' },
   ref: {
     parts: [
