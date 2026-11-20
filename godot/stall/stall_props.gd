@@ -265,7 +265,7 @@ static func max_scroll(inner: Rect2, n: int) -> int: return maxi(0, (n + 1) / 2 
 static func arrows(inner: Rect2, n: int, scroll: int) -> Dictionary:
 	var mx := max_scroll(inner, n)
 	var up := Rect2(inner.end.x - 104, inner.position.y + 4, 100, 26) if scroll > 0 else Rect2()
-	var dn := Rect2(inner.end.x - 104, inner.end.y - 30, 100, 26) if scroll < mx else Rect2()
+	var dn := Rect2(inner.end.x - 104, inner.end.y - 58, 100, 26) if scroll < mx else Rect2()   # above the front lip
 	return {"up": up, "down": dn}
 
 func _box() -> void:
