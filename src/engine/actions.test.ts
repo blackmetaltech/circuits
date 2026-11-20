@@ -297,7 +297,7 @@ describe('the test ticket T-1: conditions, hidden parameters, hints, predictions
     expect(bad(e, 'loadBoard', { parts: [{ partId: 'res-cf', value: 33, variant: '1W', x: 4, y: 2, rot: 0, flip: false }], wires: [] })).toMatch(/not a value this bin has/);
     expect(st(e).ticket!.board.parts).toHaveLength(2);   // atomic
     ok(e, 'predict', 'vguess', 8.3); ok(e, 'runBench'); const x = ok(e, 'exportSolution');
-    expect(x.ticket).toBe('T-1'); expect((x.board as any).parts).toHaveLength(1); expect(x.code).toBeNull(); expect((x.metrics as any).cost).toBe(5);
+    expect(x.ticket).toBe('T-1'); expect((x.board as any).parts).toHaveLength(1); expect(x.code).toBeNull(); expect((x.metrics as any).cost).toBe(7);
     ok(e, 'undo'); expect(st(e).ticket!.board.parts).toHaveLength(1);
     expect(bad(e, 'loadBoard', 5)).toMatch(/object with a list of parts/);
   });

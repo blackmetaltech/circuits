@@ -9,8 +9,8 @@
 export const PRICE_SOURCE_GLOBAL = 'game-estimate-2026';
 
 export const PRICES_GLOBAL_CENTS: Record<string, number> = {
-  // Resistors (per rating; DESIGN §4.1 "priced per rating"). Game values, ordered 1/6 < 1/4 < 1/2 < 1 < 2 < 5 W wirewound.
-  'res-cf:0.167W': 1, 'res-cf:0.25W': 2, 'res-cf:0.5W': 3, 'res-cf:1W': 5, 'res-cf:2W': 8,
+  // Resistors (per rating; DESIGN §4.1 "priced per rating"). 1 W (7) is dearer than two 1/2 W (2 x 3 = 6), so ticket 1-3's Ref B (2 x 47 ohm 1/2 W) is the cheaper design (DESIGN §2.8). Game values, ordered 1/6 < 1/4 < 1/2 < 1 < 2 < 5 W wirewound.
+  'res-cf:0.167W': 1, 'res-cf:0.25W': 2, 'res-cf:0.5W': 3, 'res-cf:1W': 7, 'res-cf:2W': 10,
   'res-ww5:5W': 40, 'res-mf:0.25W': 3, 'pot-trim:0.5W': 30, 'pot-panel:0.25W': 15,
   // Capacitors. cap-el: the voltage base only; the value surcharge is added by priceCents.
   'cap-cer:50V': 3, 'cap-x2:275VAC': 15, 'cap-var:365pF': 150,

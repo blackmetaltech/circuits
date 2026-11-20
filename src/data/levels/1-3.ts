@@ -33,7 +33,7 @@ export const L1_3: LevelDef = {
     names: { vout: 'ticket.1-3.spec.vout' },
   },
   live: { frameSim: 0.02, h: 2e-3, thermalSpeed: 6 },
-  stars: { head: 'cost', par: { cost: 5, parts: 1, power: 2000100, area: 13 } },
+  stars: { head: 'cost', par: { cost: 6, parts: 2, power: 2000100, area: 13 } },
   hints: {
     nudge: 'ticket.1-3.hint.nudge',
     equation: { key: 'ticket.1-3.hint.equation', vars: { vWant: 8.0, vIn: 12, rLoad: 50, r: { op: 'sub', a: { op: 'div', a: { op: 'mul', a: 12, b: 50 }, b: 8 }, b: 50 } } },

@@ -108,11 +108,11 @@ describe('1-2 Tail-light', () => {
 // ---------------------------------------------------------------- 1-3
 describe('1-3 Hot Resistor', () => {
   const build = (v: number, rating: string) => { const e = open('1-3'); ok(e, 'placePart', 'res-cf', v, rating, 4, 2, 0, false); ok(e, 'addWire', [[2, 2], [4, 2]]); ok(e, 'addWire', [[8, 2], [14, 2]]); return e; };
-  it('Ref A (22 ohm 1 W: 8.33 V) passes with 2 stars; Ref B (two 47 ohm 1/2 W in parallel: 8.16 V) passes too', () => {
-    const a = open('1-3'); runRef(a, '1-3'); const ba = bench(a); expect(ba.pass).toBe(true); expect(ba.stars).toBe(2); expect(ba.metrics.cost).toBe(5);
+  it('Ref A (22 ohm 1 W: 8.33 V, 7c) passes with 1 star; Ref B (two 47 ohm 1/2 W in parallel: 8.16 V, 6c) is cheaper and earns the cost-par star', () => {
+    const a = open('1-3'); runRef(a, '1-3'); const ba = bench(a); expect(ba.pass).toBe(true); expect(ba.stars).toBe(1); expect(ba.metrics.cost).toBe(7);
     const e = open('1-3'); ok(e, 'placePart', 'res-cf', 47, '0.5W', 4, 2, 0, false); ok(e, 'placePart', 'res-cf', 47, '0.5W', 4, 4, 0, false);
     for (const w of [[[2, 2], [4, 2]], [[2, 2], [2, 4], [4, 4]], [[8, 2], [14, 2]], [[8, 4], [8, 3], [8, 2]]]) ok(e, 'addWire', w);
-    const b = bench(e); expect(b.pass).toBe(true); expect(b.stars).toBe(1); expect(b.metrics.cost).toBe(6);
+    const b = bench(e); expect(b.pass).toBe(true); expect(b.stars).toBe(2); expect(b.metrics.cost).toBe(6);
     powerUp(e); const f = q(e, 'liveFrame'); expect(f.parts.filter((p: any) => p.power > 0.3 && p.power < 0.32)).toHaveLength(2);
   });
   it('one 22 ohm 1/4 W gives the right voltage but 0.61 W in a 0.25 W part: it glows, then smokes', () => {
@@ -205,7 +205,7 @@ describe('UI queries and board actions', () => {
     const c = q(open('1-3'), 'ticketCard');
     expect(c).toMatchObject({ id: '1-3', customer: 'Mr. Brook', fee: 500, feeText: '$5.00', eb: false });
     expect(c.shoebox[0]).toMatchObject({ partId: 'res-cf', values: [22, 27, 47, 51, 100], unit: 'Ω' });
-    expect(c.shoebox[0].variants.map((v: any) => [v.id, v.price, v.priceText, v.ratings.P])).toEqual([['0.25W', 2, '$0.02', 0.25], ['0.5W', 3, '$0.03', 0.5], ['1W', 5, '$0.05', 1]]);
+    expect(c.shoebox[0].variants.map((v: any) => [v.id, v.price, v.priceText, v.ratings.P])).toEqual([['0.25W', 2, '$0.02', 0.25], ['0.5W', 3, '$0.03', 0.5], ['1W', 7, '$0.07', 1]]);
     expect(c.targets).toEqual([{ id: 'vout', name: 'Heater voltage between 7.85 V and 8.40 V, no part over its rating', lo: 7.85, hi: 8.4 }]);
     expect(c.brief).toContain('Mr. Brook');
   });
