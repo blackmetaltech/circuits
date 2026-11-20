@@ -444,8 +444,13 @@ func step(dt: float) -> void:
 	_refresh_live(); _rebuild_model()
 	if locked and not passed:
 		hold += dt
-		if hold >= LOCK_HOLD and not bool(ticket.get("eb", false)) and _bench_key != _board_key(): run_bench()
+		# the formal check runs by itself once LOCK has held and every part is still cool: a part that is warming is left to play out (glow, then smoke) in real time
+		if hold >= LOCK_HOLD and not bool(ticket.get("eb", false)) and _bench_key != _board_key() and not _any_heating(): run_bench()
 	elif not locked: hold = 0.0
+
+func _any_heating() -> bool:
+	for p in frame.get("parts", []): if str(p.get("state", "normal")) != "normal": return true
+	return false
 
 func _emit_smoke(uid: String) -> void:
 	var ev := {}
