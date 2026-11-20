@@ -62,7 +62,7 @@ static func _body(ci: CanvasItem, part: Dictionary, p: float, st: Dictionary, sh
 	var lp: Array = part.local_pins
 	var smoked: bool = st.get("smoked", false)
 	match str(part.kind):
-		"R", "POT": _resistor(ci, part, p, sh, smoked)
+		"R", "POT": _resistor(ci, part, p, sh, smoked, float(st.get("hot", 0.0)))
 		"LED": _led(ci, p, sh, float(st.get("lit", 0.0)), smoked)
 		"CE": _electrolytic(ci, p, sh, smoked)
 		"C": _ceramic(ci, part, p, sh, smoked)
@@ -72,13 +72,15 @@ static func _body(ci: CanvasItem, part: Dictionary, p: float, st: Dictionary, sh
 		"BAT": _battery(ci, lp, p, sh)
 		"BRIDGE": _bridge(ci, part, p, sh, smoked)
 		"SW": _switch(ci, lp, p, sh, bool(part.on))
+		"LOAD": _load(ci, lp, p, sh, float(st.get("hot", 0.0)))
 		_: _generic(ci, lp, p, sh)
 
-static func _resistor(ci: CanvasItem, part: Dictionary, p: float, sh: bool, smoked: bool) -> void:
+static func _resistor(ci: CanvasItem, part: Dictionary, p: float, sh: bool, smoked: bool, hot := 0.0) -> void:
 	var big: bool = str(part.partId).begins_with("res-ww")
 	_leads(ci, [Vector2(0, 0), Vector2(4, 0)], p, [Vector2(1.0, 0), Vector2(3.0, 0)] if not big else [Vector2(0.6, 0), Vector2(3.4, 0)])
 	var x0 := (0.9 if not big else 0.6) * p; var x1 := (3.1 if not big else 3.4) * p; var hh := (0.42 if not big else 0.62) * p
 	var body := Color(0.84, 0.74, 0.5) if not big else Color(0.93, 0.9, 0.82)
+	if hot > 0.05: body = body.lerp(Color(1.0, 0.45, 0.18).lerp(Color(1.0, 0.92, 0.7), maxf(0.0, hot - 0.6)), minf(1.0, hot * 1.1))
 	if smoked: body = Color(0.07, 0.06, 0.06)
 	rrect(ci, Rect2(x0, -hh, x1 - x0, hh * 2.0), p * 0.22, _c(body, sh))
 	if sh: return
@@ -204,6 +206,21 @@ static func _switch(ci: CanvasItem, lp: Array, p: float, sh: bool, on: bool) -> 
 	if sh: return
 	ci.draw_circle(a, p * 0.2, SILVER); ci.draw_circle(b, p * 0.2, SILVER)
 	ci.draw_line(a, a.lerp(b, 0.97 if on else 0.7) + Vector2(0, 0 if on else -p * 0.6), Color(0.9, 0.35, 0.2), p * 0.22)
+
+## The customer's fixed load (1-3 heater element): a ceramic block with a visible nichrome coil that glows with heat.
+static func _load(ci: CanvasItem, lp: Array, p: float, sh: bool, hot: float) -> void:
+	var mn := Vector2(1e9, 1e9); var mx := Vector2(-1e9, -1e9)
+	for v in lp: mn = mn.min(v); mx = mx.max(v)
+	_leads(ci, lp, p, [mn + Vector2(0, 0.5), mx - Vector2(0, 0.5)])
+	var r := Rect2(mn * p + Vector2(-p * 0.75, p * 0.5), (mx - mn) * p + Vector2(p * 1.5, -p * 1.0))
+	rrect(ci, r, p * 0.3, _c(Color(0.78, 0.74, 0.66), sh))
+	if sh: return
+	rrect(ci, r.grow(-p * 0.12), p * 0.22, Color(0.9, 0.87, 0.8))
+	var cx := r.get_center().x; var n := 9
+	for i in n:
+		var y := r.position.y + p * 0.45 + (r.size.y - p * 0.9) * float(i) / float(n - 1)
+		ci.draw_line(Vector2(cx - p * 0.5, y), Vector2(cx + p * 0.5, y + p * 0.12), Color(0.55, 0.2, 0.1).lerp(Color(1.0, 0.6, 0.2), hot), p * 0.09)
+	ci.draw_line(Vector2(r.position.x + p * 0.15, r.position.y + p * 0.3), Vector2(r.position.x + p * 0.15, r.end.y - p * 0.3), Color(1, 1, 1, 0.3), p * 0.06)
 
 static func _generic(ci: CanvasItem, lp: Array, p: float, sh: bool) -> void:
 	if lp.is_empty(): return

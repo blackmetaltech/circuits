@@ -24,6 +24,7 @@ const AMBER := Color("#FFB547")
 const CYAN := Color("#38D6FF")
 const MAGENTA := Color("#FF4FA3")
 const SMOKE_GREY := Color("#8C96A3")
+var _spacing := 0.65
 const DOT_SPACING := 0.65   # pads between current dots (density is fixed; speed carries the magnitude)
 const FIXTURE_DEFAULT := "res://world/fixtures/led_9v.json"
 
@@ -39,6 +40,9 @@ var title_mode := false
 var zoom := 1.0
 var electron_flow := false
 var show_ratings := true
+var embedded := false           ## true inside the stall: no walnut or captions, no margins; StallScene owns the bench around it
+var reduced_motion := false
+var cute := false               ## Cute mode: electron critters for the current dots, LED faces; charm encodes physics
 
 var model: Dictionary = {}
 var source := "none"            ## "none" | "engine" | "fixture"
@@ -46,6 +50,7 @@ var t := 0.0
 var p := 40.0                   ## pixels per pad (pitch)
 var org := Vector2.ZERO         ## screen position of pad (0, 0)
 var board_rect := Rect2()
+var _dsign: Dictionary = {}
 var _phase: Dictionary = {}     ## id -> dot phase (pad units), accumulated so a speed change never jumps the dots
 var _smoke: Array = []          ## particles {pos, vel, age, life, r, seed}
 var _emit: Dictionary = {}      ## uid -> emit accumulator
@@ -68,6 +73,7 @@ func _ready() -> void:
 	_parts_layer = Layer.new(_draw_parts); add_child(_parts_layer)
 	_glow_layer = Layer.new(_draw_glow, true); add_child(_glow_layer)
 	_fx_layer = Layer.new(_draw_fx); add_child(_fx_layer)
+	if embedded: mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_power_env = OS.get_environment("CB_POWER") == "1"
 	_smoke_demo = OS.get_environment("CB_SMOKEDEMO").to_lower()
 	var bp := OS.get_environment("CB_BOARD")
@@ -77,6 +83,17 @@ func _ready() -> void:
 		if mm.is_empty(): push_warning("CB_BOARD: could not read %s" % bp)
 		else: _set_model(mm, "fixture")
 	set_process(true)
+
+## Stall mode: the view lives in a SubViewport the size of the board area and shows the model the backend hands it.
+func set_model(mm: Dictionary) -> void:
+	if mm.is_empty(): return
+	if not is_same(model, mm): model = mm; source = "fixture"; _parts_dirty = true; _relayout_if_needed()
+func mark_dirty() -> void: _parts_dirty = true
+func _relayout_if_needed() -> void:
+	var m := _m()
+	var key := "%d,%d" % [m.w, m.h]
+	if key != _model_dim: _model_dim = key; _relayout()
+var _model_dim := ""
 
 func set_cover(px: float) -> void: cover = px
 func set_blocked(b: bool) -> void: blocked = b
@@ -128,6 +145,7 @@ func _m() -> Dictionary: return model if not model.is_empty() else _empty
 ## -------------------------------------------------------------------------------------------------------------- layout
 
 func _margins() -> Vector4:   # left, top, right, bottom of the free area (app bar, dock / phone rail, drawer cover)
+	if embedded: return Vector4(4.0, -6.0, 4.0, 2.0)
 	var bar := 66.0; var dock := 84.0; var left := 14.0; var bottom := 8.0
 	if app != null:
 		var bv = app.get("_bar_h"); var dv = app.get("_dock_h")
@@ -140,7 +158,7 @@ func _margins() -> Vector4:   # left, top, right, bottom of the free area (app b
 
 func _relayout() -> void:
 	var mg := _margins(); var m := _m()
-	var top := mg.y + (30.0 if (stall != "" or not card.is_empty()) else 0.0)
+	var top := mg.y + (30.0 if ((stall != "" or not card.is_empty()) and not embedded) else 0.0)
 	var area := Rect2(mg.x, top, size.x - mg.x - mg.z, size.y - top - mg.w)
 	var gw := float(m.w - 1) + 2.0 * 1.3 + 0.8; var gh := float(m.h - 1) + 2.0 * 1.3 + 0.8
 	p = clampf(minf(area.size.x / gw, area.size.y / gh), 6.0, 56.0) * zoom
@@ -177,6 +195,7 @@ func _advance(id: String, amps: float, m: Dictionary, dt: float, ac_key := "") -
 	var dir := signf(amps) * (-1.0 if electron_flow else 1.0)
 	if m.ac.has(id if ac_key == "" else ac_key): dir *= _ac_wave()
 	_phase[id] = float(_phase.get(id, 0.0)) + speed * dir * dt
+	_dsign[id] = 1.0 if dir >= 0.0 else -1.0
 
 ## -------------------------------------------------------------------------------------------------------------- colours
 
@@ -227,18 +246,18 @@ func _label_key(id: String) -> String:
 
 func _draw() -> void:
 	var m := _m()
-	draw_rect(Rect2(Vector2.ZERO, size), WALNUT, true)
+	if not embedded: draw_rect(Rect2(Vector2.ZERO, size), WALNUT, true)
 	var rng := RandomNumberGenerator.new(); rng.seed = 7
 	var plank := 150.0
-	for i in int(size.y / plank) + 2:   # planks with grain lines
+	for i in (0 if embedded else int(size.y / plank) + 2):   # planks with grain lines
 		var y := float(i) * plank
 		draw_rect(Rect2(0, y, size.x, plank - 2.0), WALNUT.lerp(Color("#4a3427"), rng.randf() * 0.55), true)
 		draw_line(Vector2(0, y), Vector2(size.x, y), Color(0.05, 0.03, 0.02, 0.8), 2.0)
 		for k in 9: 
 			var gy := y + rng.randf_range(8.0, plank - 12.0); var gx := rng.randf_range(-100.0, size.x * 0.6)
 			draw_line(Vector2(gx, gy), Vector2(gx + rng.randf_range(160.0, 520.0), gy + rng.randf_range(-3.0, 3.0)), Color(0.12, 0.07, 0.04, 0.35), 1.5)
-	if stall != "": draw_string(ThemeDB.fallback_font, Vector2(_margins().x + 6.0, _margins().y + 20.0), stall, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 20, Color(0.95, 0.88, 0.75, 0.85))
-	if not card.is_empty():
+	if stall != "" and not embedded: draw_string(ThemeDB.fallback_font, Vector2(_margins().x + 6.0, _margins().y + 20.0), stall, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 20, Color(0.95, 0.88, 0.75, 0.85))
+	if not card.is_empty() and not embedded:
 		var tx := str(card.get("title", ""))
 		var sx := _margins().x + 6.0 + (ThemeDB.fallback_font.get_string_size(stall, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 20).x + 18.0 if stall != "" else 0.0)
 		draw_string(ThemeDB.fallback_font, Vector2(sx, _margins().y + 20.0), tx, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 17, CbKit.ACC)
@@ -327,7 +346,8 @@ func _draw_parts(ci: Control) -> void:
 	# parts
 	for pt in m.parts:
 		var i: float = absf(float(m.part_i.get(pt.uid, 0.0))) if live else 0.0
-		var st := {"lit": _led_k(i) if pt.kind == "LED" else 0.0, "smoked": m.smoked.has(pt.uid)}
+		var st := {"lit": _led_k(i) if pt.kind == "LED" else 0.0, "smoked": m.smoked.has(pt.uid),
+			"hot": clampf((float(m.temps.get(pt.uid, m.ambient)) - 45.0) / 110.0, 0.0, 1.0) if live else 0.0}
 		PartArt.draw(ci, pt, _px(Vector2(pt.x, pt.y)), p, st)
 	for pr in m.probes: _probe(ci, pr)
 	# labels and rating bars
@@ -374,6 +394,7 @@ func _led_color(part: Dictionary) -> Color:
 	return Color(1.0, 0.2, 0.12)
 
 func _draw_glow(ci: Control) -> void:
+	_critters.clear()
 	var m := _m()
 	if not m.powered: return
 	# node halos on the pads
@@ -391,7 +412,7 @@ func _draw_glow(ci: Control) -> void:
 		var temp: float = m.temps.get(pt.uid, m.ambient)
 		var hk := clampf((temp - 45.0) / 110.0, 0.0, 1.0)
 		if hk > 0.02 and not smoked:   # heat glow: blackbody ramp over the body
-			_blob(ci, c, maxf(b.size.x, b.size.y) * (0.5 + 0.25 * hk), Color(heat_color(hk), hk * 0.5))
+			_blob(ci, c, maxf(b.size.x, b.size.y) * (0.75 + 0.45 * hk), Color(heat_color(hk), minf(1.0, hk * 0.95)))
 		if pt.kind == "LED" and not smoked:   # bloom proportional to current (log)
 			var k := _led_k(absf(float(m.part_i.get(pt.uid, 0.0))))
 			if k > 0.0:
@@ -405,23 +426,26 @@ func _draw_glow(ci: Control) -> void:
 		var amps: float = m.wire_i.get(w.wid, 0.0)
 		if absf(amps) < 1e-9: continue
 		var pts: Array = w.path.map(func(v): return _px(v))
-		_dots(ci, pts, str(w.wid), _node_color(w.path[0], m), 1.0)
+		_dots(ci, pts, str(w.wid), _node_color(w.path[0], m), 1.0, not cute)
 	# ... and through parts
 	for pt in m.parts:
 		var amps2: float = m.part_i.get(pt.uid, 0.0)
 		if absf(amps2) < 1e-9 or pt.pins.size() != 2 or pt.kind == "BAT": continue
 		var pts2: Array = [_px(pt.pins[0]), _px(pt.pins[1])]
-		_dots(ci, pts2, "p:" + str(pt.uid), _node_color(pt.pins[0], m), 0.8)
+		_dots(ci, pts2, "p:" + str(pt.uid), _node_color(pt.pins[0], m), 0.8, not cute)
 
-func _dots(ci: CanvasItem, pts: Array, id: String, tint: Color, scale: float) -> void:
+func _dots(ci: CanvasItem, pts: Array, id: String, tint: Color, scale: float, body := true) -> void:
 	var total := _length(pts)
-	var sp := DOT_SPACING * p
+	var sp := (1.15 if cute else DOT_SPACING) * p
 	var s := fposmod(float(_phase.get(id, 0.0)) * p, sp)
 	var halo := Color(tint.lerp(Color.WHITE, 0.45), 0.5)
 	while s <= total:
 		var c := _along(pts, s)
-		_blob(ci, c, p * 0.3 * scale, halo)
-		ci.draw_circle(c, p * 0.095 * scale, Color(1.0, 0.97, 0.82, 0.95))
+		_blob(ci, c, p * (0.3 if not cute else 0.36) * scale, halo)
+		if body and not cute: ci.draw_circle(c, p * 0.095 * scale, Color(1.0, 0.97, 0.82, 0.95))
+		elif cute and not body:   # the critter itself is drawn in the opaque layer
+			var tan := (_along(pts, s + 3.0) - c).normalized() * float(_dsign.get(id, 1.0))
+			_critters.append([c, tan, scale, s])
 		s += sp
 
 ## -------------------------------------------------------------------------------------------------------------- smoke
@@ -450,9 +474,117 @@ func _spawn(c: Vector2, power: float) -> void:
 	_smoke.append({"pos": c + Vector2(cos(a), sin(a)) * p * 0.3 * randf(), "vel": Vector2(randf_range(-14.0, 14.0) * power, -randf_range(34.0, 70.0) * power) * sc,
 		"age": 0.0, "life": randf_range(1.8, 3.2), "r": p * randf_range(0.35, 0.6), "seed": randf() * TAU})
 
+var _critters: Array = []
+var overlay: Dictionary = {}   ## stall interaction overlay: {ghost:{part,ok,origin,pins}, wire:{from,to,target}, hover_pad}
+
 func _draw_fx(ci: Control) -> void:
+	if cute: _draw_cute(ci)
+	if not overlay.is_empty(): _draw_overlay(ci)
 	for q in _smoke:
 		var k: float = q.age / q.life
 		var a := 0.85 * pow(1.0 - k, 1.2) * minf(1.0, q.age * 6.0)
 		var r: float = q.r * (1.0 + 2.6 * k)
 		_blob(ci, q.pos, r, Color(0.55, 0.6, 0.67, a))
+
+
+## -------------------------------------------------------------------------------------------------------------- Cute mode (charm encodes physics)
+
+const CUTE_BODY := Color("#bff4ff")
+
+func _draw_cute(ci: Control) -> void:
+	var m := _m()
+	for c in _critters:   # electron critters: one per dot, pace = log I (same phase the dots use), facing the way they walk
+		_critter(ci, c[0], c[1], c[2], c[3])
+	for pt in m.parts:
+		if pt.kind != "LED": continue
+		var cen := _px(Vector2(pt.x, pt.y) + NodeApi._rot_off(Vector2(1, 0), pt.rot, pt.flip))
+		var ma := absf(float(m.part_i.get(pt.uid, 0.0))) * 1000.0 if m.powered else 0.0
+		_led_face(ci, cen, ma, m.smoked.has(pt.uid), pt.uid)
+
+func _critter(ci: CanvasItem, c: Vector2, dir: Vector2, sc: float, ph: float) -> void:
+	var r := p * 0.27 * sc
+	var bob := sin(ph * 0.35 + t * 9.0) * r * 0.14
+	var c2 := c + Vector2(0, bob)
+	ci.draw_circle(c2 + Vector2(r * 0.12, r * 0.45), r * 1.0, Color(0, 0, 0, 0.28))   # little shadow
+	var foot := sin(ph * 0.35 + t * 9.0)
+	ci.draw_circle(c2 + Vector2(-r * 0.45, r * 0.85 + foot * r * 0.18), r * 0.26, Color("#6ec5dc"))
+	ci.draw_circle(c2 + Vector2(r * 0.45, r * 0.85 - foot * r * 0.18), r * 0.26, Color("#6ec5dc"))
+	ci.draw_circle(c2, r, Color("#6ec5dc")); ci.draw_circle(c2 + Vector2(0, -r * 0.08), r * 0.88, CUTE_BODY)
+	var side := Vector2(-dir.y, dir.x)
+	var fc := c2 + dir * r * 0.38 + Vector2(0, -r * 0.05)
+	for sgn in [-1.0, 1.0]:
+		var e: Vector2 = fc + side * r * 0.3 * sgn
+		ci.draw_circle(e, r * 0.2, Color.WHITE); ci.draw_circle(e + dir * r * 0.06, r * 0.11, Color(0.04, 0.06, 0.12))
+	ci.draw_line(c2 - dir * r * 0.5 - Vector2(r * 0.22, 0), c2 - dir * r * 0.5 + Vector2(r * 0.22, 0), Color("#3b8aa3"), maxf(1.0, r * 0.16))   # the minus on its back: an electron
+
+func _led_face(ci: CanvasItem, cen: Vector2, ma: float, smoked: bool, uid: String) -> void:
+	var r := p * 0.82
+	var ink := Color(0.09, 0.015, 0.02, 0.95) if ma > 3.0 else Color(0.95, 0.72, 0.72, 0.9)
+	var w := maxf(1.5, p * 0.075)
+	var ey := cen.y - r * 0.1; var ex := r * 0.34
+	if smoked:   # cracked: X eyes, flat wobbly mouth
+		ink = Color(0.75, 0.75, 0.78, 0.95)
+		for sgn in [-1.0, 1.0]:
+			var e := Vector2(cen.x + ex * sgn, ey)
+			ci.draw_line(e + Vector2(-r * 0.13, -r * 0.13), e + Vector2(r * 0.13, r * 0.13), ink, w); ci.draw_line(e + Vector2(-r * 0.13, r * 0.13), e + Vector2(r * 0.13, -r * 0.13), ink, w)
+		ci.draw_polyline(PackedVector2Array([cen + Vector2(-r * 0.3, r * 0.42), cen + Vector2(-r * 0.1, r * 0.34), cen + Vector2(r * 0.1, r * 0.44), cen + Vector2(r * 0.3, r * 0.36)]), ink, w)
+		return
+	if ma < 2.0:   # sleepy: closed eyes, tiny mouth, drifting z
+		for sgn in [-1.0, 1.0]: ci.draw_arc(Vector2(cen.x + ex * sgn, ey), r * 0.14, 0.15, PI - 0.15, 8, ink, w)
+		ci.draw_circle(cen + Vector2(0, r * 0.4), r * 0.05, ink)
+		if not reduced_motion:
+			var zt := fposmod(t * 0.5 + float(uid.hash() % 7) * 0.13, 1.0)
+			_txt(ci, "z", cen + Vector2(r * 0.7 + zt * r * 0.4, -r * 0.7 - zt * r * 0.8), int(clampf(p * 0.5, 10.0, 26.0)), Color(0.85, 0.9, 1.0, 1.0 - zt), HORIZONTAL_ALIGNMENT_LEFT, false)
+	elif ma <= 20.0:   # happy: bright eyes and a smile that grows with the in-spec current
+		var big := clampf((ma - 2.0) / 10.0, 0.0, 1.0)
+		for sgn in [-1.0, 1.0]:
+			var e := Vector2(cen.x + ex * sgn, ey)
+			ci.draw_circle(e, r * 0.11, ink); ci.draw_circle(e + Vector2(-r * 0.03, -r * 0.04), r * 0.035, Color(1, 1, 1, 0.9))
+		ci.draw_arc(cen + Vector2(0, r * 0.12), r * (0.28 + 0.1 * big), 0.35, PI - 0.35, 12, ink, w)
+	else:   # sweating: worried brows, wobbly mouth, a sweat drop sliding down
+		var panic := clampf((ma - 20.0) / 15.0, 0.0, 1.0)
+		for sgn in [-1.0, 1.0]:
+			var e := Vector2(cen.x + ex * sgn, ey)
+			ci.draw_circle(e, r * (0.12 + 0.05 * panic), Color.WHITE); ci.draw_circle(e, r * 0.06, Color(0.05, 0.02, 0.02))
+			ci.draw_line(e + Vector2(-r * 0.16 * sgn, -r * 0.2 * 1.0 - r * 0.06), e + Vector2(r * 0.12 * sgn, -r * 0.3), ink, w)
+		var pts := PackedVector2Array()
+		for i in 9: pts.append(cen + Vector2(-r * 0.3 + r * 0.075 * i, r * 0.42 + sin(t * 18.0 + i * 1.3) * r * 0.035))
+		ci.draw_polyline(pts, ink, w)
+		var dp := fposmod(t * 1.3, 1.0)
+		var dc := cen + Vector2(r * 0.62, -r * 0.35 + dp * r * 0.8)
+		ci.draw_circle(dc, r * 0.1, Color(0.6, 0.85, 1.0, 1.0 - dp * 0.7)); ci.draw_colored_polygon(PackedVector2Array([dc + Vector2(0, -r * 0.24), dc + Vector2(-r * 0.08, -r * 0.05), dc + Vector2(r * 0.08, -r * 0.05)]), Color(0.6, 0.85, 1.0, 1.0 - dp * 0.7))
+
+
+## -------------------------------------------------------------------------------------------------------------- interaction overlay
+
+func _draw_overlay(ci: Control) -> void:
+	var m := _m()
+	if overlay.has("hover_pad"):
+		var hp: Vector2 = overlay.hover_pad
+		ci.draw_arc(_px(hp), p * 0.42, 0.0, TAU, 20, Color(1.0, 0.85, 0.5, 0.9), maxf(2.0, p * 0.07), true)
+		_blob(ci, _px(hp), p * 0.7, Color(1.0, 0.85, 0.5, 0.18))
+	if overlay.has("ghost"):
+		var g: Dictionary = overlay.ghost
+		var ok: bool = g.ok; var col := Color(0.45, 1.0, 0.5) if ok else Color(1.0, 0.35, 0.3)
+		var pd: Dictionary = g.part
+		var o: Vector2 = g.origin
+		PartArt.draw(ci, pd, _px(o), p, {"lit": 0.0, "smoked": false})
+		var pins: Array = g.pins
+		for q in pins:
+			var c := _px(q)
+			ci.draw_circle(c, p * 0.3, Color(col, 0.28)); ci.draw_arc(c, p * 0.3, 0.0, TAU, 16, col, maxf(2.0, p * 0.07), true)
+		if pins.size() == 2:   # the lead ghost: a dashed line between the pins so the span reads before release
+			var a := _px(pins[0]); var b := _px(pins[1]); var d := (b - a); var n := int(d.length() / (p * 0.35))
+			for i in range(0, n, 2): ci.draw_line(a + d * (float(i) / n), a + d * (float(i + 1) / n), Color(col, 0.8), maxf(2.0, p * 0.07))
+		var bnd := PartArt.screen_bounds(pd, pins.map(func(q): return _px(q)), p)
+		PartArt.rrect(ci, bnd, p * 0.3, Color(col, 0.10))
+	if overlay.has("wire"):
+		var w: Dictionary = overlay.wire
+		var a2 := _px(w.from); var b2: Vector2 = w.to
+		var tg: Vector2 = w.get("target", Vector2(-1, -1))
+		if tg.x >= 0: b2 = _px(tg); ci.draw_arc(b2, p * 0.42, 0.0, TAU, 20, Color(0.5, 1.0, 0.55, 0.95), maxf(2.0, p * 0.08), true)
+		var mid := Vector2(b2.x, a2.y)
+		var pts := PackedVector2Array([a2, mid, b2]) if (absf(a2.x - b2.x) > 1.0 and absf(a2.y - b2.y) > 1.0) else PackedVector2Array([a2, b2])
+		ci.draw_polyline(pts, Color(0, 0, 0, 0.4), p * 0.3, true)
+		ci.draw_polyline(pts, Color(0.95, 0.75, 0.3, 0.9), p * 0.16, true)
+		ci.draw_circle(a2, p * 0.27, Color(0.8, 0.82, 0.86)); ci.draw_circle(a2 + Vector2(-p * 0.07, -p * 0.07), p * 0.07, Color(1, 1, 1, 0.7))
