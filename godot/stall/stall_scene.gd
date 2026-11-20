@@ -251,7 +251,7 @@ func run_bench() -> void:
 func open_predict() -> void:
 	pages.pred_fields = []
 	for pr in backend.ticket.get("predictions", []):
-		pages.pred_fields.append({"id": str(pr.id), "name": str(pr.name), "unit": str(pr.unit), "text": "" if pr.get("entered", null) == null else "%.6g" % float(pr.entered), "done": pr.get("entered", null) != null})
+		pages.pred_fields.append({"id": str(pr.id), "name": str(pr.name), "unit": str(pr.unit), "text": "" if pr.get("entered", null) == null else EngineBench._g(float(pr.entered), 6), "done": pr.get("entered", null) != null})
 	pages.pred_focus = 0; pages.show_page("predict")
 
 func set_prediction(id: String, value: float) -> Dictionary:   # also what typing then Enter does

@@ -158,7 +158,7 @@ func _panel() -> void:
 	S.text(self, S.hand(), "made for Stall 14", plate.position + Vector2(120, 41), 10, Color("#4a4639"))
 	for i in 7: draw_line(Vector2(40, 336 + i * 3), Vector2(36 + 340, 336 + i * 3), Color(0, 0, 0, 0.32), 1.2)   # vent slots under the tube
 
-func _fmt(v: float) -> String: return "%.4g" % v
+func _fmt(v: float) -> String: return EngineBench._g(v, 4)
 
 ## ---- additive layer: phosphor trace with persistence, bloom and the band's glow
 func _draw_glow(ci: Control) -> void:

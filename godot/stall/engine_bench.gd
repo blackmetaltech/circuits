@@ -143,22 +143,29 @@ func _supply_info() -> Dictionary:
 
 func _short_spec(tg: Dictionary) -> String:
 	if tg.is_empty(): return ""
-	var u := str(tg.get("unit", "")); var lo := float(tg.get("lo", 0.0)); var hi := float(tg.get("hi", 0.0))
+	var u := str(tg.get("unit", "")); var lo := _n(tg.get("lo", 0.0)); var hi := _n(tg.get("hi", 0.0))
 	if hi >= lo * 50.0 and hi > 100.0: return ">= %s %s" % [_g(lo), u]
 	return "%s - %s %s" % [_g(lo), _g(hi), u]
 
-static func _g(x: float) -> String: return "%.4g" % x
+## x with `n` significant digits and no trailing zeros ("%g" is not a GDScript format): 14.9551 -> "14.96", 0.5556 -> "0.5556", 4.2 -> "4.2"
+static func _g(x: float, n := 4) -> String:
+	if x == 0.0 or is_nan(x) or is_inf(x): return "0" if x == 0.0 else str(x)
+	var e := int(floor(log(absf(x)) / log(10.0)))
+	var r := snappedf(x, pow(10.0, float(e - n + 1)))
+	var s := String.num(r, maxi(0, n - 1 - e))
+	if s.contains("."): s = s.rstrip("0").rstrip(".")
+	return s
 
 ## The engine's band is in display units; pick the scope's vertical scale so the band sits in view (the engine gives volts/div for voltage probes).
 func _scope_setup(tg: Dictionary) -> void:
 	var mode := str(tg.get("mode", "gauge")); var unit := str(tg.get("unit", ""))
-	var lo := float(tg.get("lo", 0.0)); var hi := float(tg.get("hi", 1.0))
+	var lo := _n(tg.get("lo", 0.0)); var hi := _n(tg.get("hi", 1.0))
 	var ref := hi if hi < lo * 20.0 else lo * 1.5
 	var vdiv := _nice(ref * 1.3 / 6.0)
-	if mode == "probe" and float(scope_q.get("voltsPerDiv", 0.0)) > 0.0: vdiv = float(scope_q.voltsPerDiv) * float(tg.get("scale", 1.0))
+	if mode == "probe" and _n(scope_q.get("voltsPerDiv", 0.0)) > 0.0: vdiv = float(scope_q.voltsPerDiv) * _n(tg.get("scale", 1.0))
 	var label: String = {"A": "CURRENT", "W": "POWER", "V": "VOLTS"}.get(str(tg.get("quantity", "")), "LEVEL")
 	var clip = tg.get("clip", null)
-	scope_view = {"unit": unit, "lo": lo, "hi": minf(hi, vdiv * 7.0), "vdiv": vdiv, "label": label, "mode": mode, "scale": float(tg.get("scale", 1.0)),
+	scope_view = {"unit": unit, "lo": lo, "hi": minf(hi, vdiv * 7.0), "vdiv": vdiv, "label": label, "mode": mode, "scale": _n(tg.get("scale", 1.0)),
 		"clip_pad": (clip.pad if clip is Dictionary else null), "clip_name": (str(clip.connector) if clip is Dictionary else ""), "clipped": false, "attached": mode == "gauge",
 		"value": 0.0, "text": "", "name": str(tg.get("name", ""))}
 
@@ -188,6 +195,9 @@ func bin() -> Array:
 					"left": (int(mx) - int(fam.get("placed", 0))) if mx != null else -1})
 				i += 1
 	return out
+
+## JSON null -> default (float(null) is an error in GDScript)
+static func _n(v, d := 0.0) -> float: return d if v == null else float(v)
 
 static func _watt_tag(p: float) -> String:
 	if absf(p - 1.0 / 6.0) < 0.005: return "⅙ W"
@@ -330,7 +340,8 @@ func _refresh_board() -> void:
 		parts.append(d)
 	wires = []
 	for w in bench_q.get("wires", []):
-		var path: Array = w.path
+		var path: Array = []
+		for q in w.path: path.append([int(q[0]), int(q[1])])
 		wires.append({"wid": str(w.wid), "a": path[0], "b": path[path.size() - 1], "path": path})
 	var ins: Dictionary = bench_q.get("instruments", {})
 	var sc: Dictionary = ins.get("scope", {}) if ins.get("scope", null) is Dictionary else {}
@@ -375,7 +386,7 @@ func _refresh_live() -> void:
 	dmm_q = d if d is Dictionary else {}
 	temps.clear(); smoked.clear()
 	for p in frame.get("parts", []):
-		temps[str(p.uid)] = float(p.get("temp", 25.0))
+		temps[str(p.uid)] = _n(p.get("temp", 25.0))
 		if bool(p.get("smoked", false)): smoked[str(p.uid)] = true
 	for e in frame.get("events", []): smoked[str(e.part)] = true
 	var lk := bool(scope_q.get("lock", false)) and powered
@@ -396,12 +407,12 @@ func _scope_update() -> void:
 	else:
 		attached = bool(sv.get("clipped", false)) and bool(scope_q.get("attached", false))
 		var v: Array = scope_q.get("v", [])
-		if attached and powered and not v.is_empty(): val = float(v[v.size() - 1]) * float(sv.get("scale", 1.0))
+		if attached and powered and not v.is_empty(): val = float(v[v.size() - 1]) * _n(sv.get("scale", 1.0))
 	sv["value"] = val; sv["attached"] = attached; sv["text"] = txt
 	scope_view = sv
 	if not ticket.is_empty(): ticket["scope"] = sv
 
-func scope_value() -> float: return float(scope_view.get("value", 0.0))
+func scope_value() -> float: return _n(scope_view.get("value", 0.0))
 
 ## DmmView reading: {text, unit, mode} straight from the engine LCD.
 func dmm() -> Dictionary:
@@ -430,7 +441,7 @@ func step(dt: float) -> void:
 		var kind := str(part_by(str(u)).get("kind", "R"))
 		var amps := 0.0
 		if pp.has("pins") and (pp.pins as Array).size() > 0: amps = float(pp.pins[0].i)
-		event.emit("smoked", {"uid": str(u), "kind": kind, "amps": amps, "watts": float(pp.get("power", 0.0)), "text": str(ev.get("text", "")), "fx": str(ev.get("kind", "smoke"))})
+		event.emit("smoked", {"uid": str(u), "kind": kind, "amps": amps, "watts": _n(pp.get("power", 0.0)), "text": str(ev.get("text", "")), "fx": str(ev.get("kind", "smoke"))})
 	if locked and not passed:
 		hold += dt
 		if hold >= LOCK_HOLD and not bool(ticket.get("eb", false)) and _bench_key != _board_key(): run_bench()
@@ -448,7 +459,7 @@ func hot_k() -> float:
 ## Heat glow from the engine's own thermal state: normal parts do not glow; warm and hot ride the temperature up the ramp.
 func _heat(p: Dictionary) -> float:
 	var st := str(p.get("state", "normal"))
-	var k := clampf((float(p.get("temp", 25.0)) - 45.0) / 110.0, 0.0, 1.0)
+	var k := clampf((_n(p.get("temp", 25.0)) - 45.0) / 110.0, 0.0, 1.0)
 	match st:
 		"normal": return 0.0
 		"warm": return clampf(maxf(k, 0.35), 0.0, 0.7)
@@ -520,15 +531,15 @@ func _rebuild_model() -> void:
 		if _hidden.has(uid): continue
 		var pins: Array = p.get("pins", [])
 		if not pins.is_empty(): cur_p[uid] = float(pins[0].i); spd_p[uid] = float(pins[0].speed)
-		temps_m[uid] = float(p.get("temp", 25.0)); heat[uid] = _heat(p)
-		if float(p.get("rated", 0.0)) > 0.0 or float(p.get("ratio", 0.0)) > 0.0: rat[uid] = {"p": float(p.get("ratio", 0.0))}
+		temps_m[uid] = _n(p.get("temp", 25.0)); heat[uid] = _heat(p)
+		if _n(p.get("rated", 0.0)) > 0.0 or _n(p.get("ratio", 0.0)) > 0.0: rat[uid] = {"p": _n(p.get("ratio", 0.0))}
 		if bool(p.get("smoked", false)): smoked_l.append(uid)
 		if p.has("led"): led[uid] = {"mood": str(p.led.get("mood", "sleepy")), "bloom": float(p.led.get("bloom", 0.0)), "mA": float(p.led.get("mA", 0.0))}
 	for e in frame.get("events", []): smoked_l.append(str(e.part))
-	var vmin := float(frame.get("vmin", 0.0)); var vmax := float(frame.get("vmax", 1.0))
+	var vmin := _n(frame.get("vmin", 0.0)); var vmax := _n(frame.get("vmax", 1.0))
 	var raw := {"board": bd, "nodes": {"sets": sets, "range": [minf(vmin, 0.0), maxf(vmax, 0.5)]}, "currents": {"wires": cur_w, "parts": cur_p},
-		"thermal": {"ambient": float(frame.get("ambient", 25.0)), "temps": temps_m, "smoked": smoked_l}, "ratings": rat,
-		"liveStatus": {"powered": powered and bool(frame.get("valid", false)), "status": str(frame.get("status", "ok")), "t": float(frame.get("t", 0.0))}}
+		"thermal": {"ambient": _n(frame.get("ambient", 25.0)), "temps": temps_m, "smoked": smoked_l}, "ratings": rat,
+		"liveStatus": {"powered": powered and bool(frame.get("valid", false)), "status": str(frame.get("status", "ok")), "t": _n(frame.get("t", 0.0))}}
 	var m := NodeApi.normalise(raw)
 	var norm := {}
 	for n in frame.get("nodes", []):

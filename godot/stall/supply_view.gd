@@ -68,7 +68,7 @@ func _cond_tag() -> void:
 		for e in c.get("set", []):
 			if str(e.key) == "emf": emf = float(e.value)
 			elif str(e.key) == "r": r = float(e.value)
-		rows.append("%s %s V / %s \u03a9" % [str(c.id), "%.4g" % emf, "%.4g" % r] if emf >= 0.0 else str(c.id))
+		rows.append("%s %s V / %s \u03a9" % [str(c.id), EngineBench._g(emf), EngineBench._g(r)] if emf >= 0.0 else str(c.id))
 	var tag := Rect2(150, 12, 140, 18 + rows.size() * 17)
 	S.paper(self, tag, 1.5, S.PAPER)
 	S.text(self, S.hand(), "bench tests:", tag.position + Vector2(8, 15), 13, S.INK_RED)
