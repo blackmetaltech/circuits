@@ -38,3 +38,4 @@ M1 engine tasks A4, B2, B3, C1, C2, C3, D2b, E1, E2 committed and green. M2-4 Go
 Engine finished for the Godot rebuild: board/probe/DMM/run actions, `bench` `liveFrame` `coach` `scope` (band + lock) `dmm` `wallet` `chapterMap` `ghost` queries, tickets 1-1..1-5 with oracles/tests
 (`src/engine/ch1.test.ts`), payment on pass, exam-bridge stars. Contract and examples: docs/API-CH1.md (incl. the deviations from DESIGN §2.8 that need director sign-off).
 Not done: NiMH reality check for 1-5, tolerance star (runTolerance), M2-3 verify/board-code, Pixel profiling of the live frame.
+- 1-3 Ref B (2× 47 Ω ½ W) should be cheaper than 22 Ω 1 W per DESIGN — adjust the resistor price derivation so ½ W ≈ 2c (main-session decision 11-20)
