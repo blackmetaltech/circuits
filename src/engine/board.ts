@@ -14,6 +14,8 @@ import { partName } from './names';
 export type Problem = { key: string; vars: Record<string, string | number> };
 export const problem = (key: string, vars: Record<string, string | number> = {}): Problem => ({ key, vars });
 export const padText = (p: Pad): string => `${p[0]},${p[1]}`;
+/** How a board connector is named to the player (the ids are the engine's). */
+export const connName = (id: string): string => ({ VP: 'V+', GND: 'GND', IN: 'IN', OUT: 'OUT' } as Record<string, string>)[id] ?? id;
 
 export const getDef = (id: string): PartDef | undefined => findPart(id);
 
@@ -90,7 +92,7 @@ export function checkWire(b: Board, path: Pad[], skipWid?: string): Problem | nu
   for (const q of interior) {
     const k = padKey(q);
     if (occ.pins.has(k)) return problem('err.wire.overPin', { pad: padText(q), part: partName(b, occ.pins.get(k)!.uid) });
-    if (occ.connectors.has(k)) return problem('err.wire.overConnector', { pad: padText(q), connector: occ.connectors.get(k)! });
+    if (occ.connectors.has(k)) return problem('err.wire.overConnector', { pad: padText(q), connector: connName(occ.connectors.get(k)!) });
     if (occ.ends.has(k)) return problem('err.wire.overEnd', { pad: padText(q), wire: occ.ends.get(k)![0]! });
   }
   for (const q of ends) { const k = padKey(q); if (occ.interior.has(k)) return problem('err.wire.tJunction', { pad: padText(q), wire: occ.interior.get(k)![0]! }); }

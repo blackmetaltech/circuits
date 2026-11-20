@@ -243,7 +243,7 @@ describe('UI queries and board actions', () => {
     const r2 = ok(e, 'wire', [6, 5], [8, 2]); expect(r2.wid).toBe('w2'); expect((r2.path as number[][]).length).toBeGreaterThanOrEqual(2);
     expect(bad(e, 'wire', [6, 5], [6, 5])).toMatch(/two different pads/);
     ok(e, 'unwire', 'w1'); expect(st(e).ticket!.board.wires.map((w) => w.wid)).toEqual(['w2']);
-    ok(e, 'unwire', [8, 2]); expect(st(e).ticket!.board.wires).toHaveLength(0); expect(bad(e, 'unwire', [8, 2])).toMatch(/No wire ends/);
+    ok(e, 'unwire', [8, 2]); expect(st(e).ticket!.board.wires).toHaveLength(0); expect(bad(e, 'unwire', [8, 2])).toMatch(/no wire ending/);
     ok(e, 'undo'); expect(st(e).ticket!.board.wires).toHaveLength(1);
     ok(e, 'power', true); ok(e, 'setRunning', false); const p = ok(e, 'advance', 3); expect(p.frames).toBe(0); expect(p.paused).toBe(true); expect(st(e).ticket!.live.frame).toBe(0);
     expect(q(e, 'bench').instruments.paused).toBe(true); ok(e, 'setRunning', true); expect(ok(e, 'advance', 1).frames).toBe(1);

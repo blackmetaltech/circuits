@@ -32,6 +32,48 @@ func socket_pos(which: String) -> Vector2: return Vector2(112, 398) if which == 
 
 func hit_dial(p: Vector2) -> bool: return p.distance_to(DIAL_C) < 82.0
 
+## Four digits and a decimal point on a fixed pitch, so 9.000 V, 5.320 V, 14.96 mA and 4.700 Ω all fit inside the glass; the ghost segments sit under exactly the same cells.
+const LCD_PITCH := 40.0
+const LCD_DOT := 16.0
+const LCD_SIZE := 64
+static func lcd_text(value: Variant, fallback: String) -> String:
+	if value == null:
+		return fallback if fallback.strip_edges() != "" else ""
+	var x := absf(float(value))
+	var e := int(floor(log(x) / log(10.0))) if x >= 1.0 else 0
+	var dec := clampi(3 - e, 0, 3)
+	var s := String.num(x, dec)
+	return ("-" if float(value) < 0.0 and float(s) != 0.0 else "") + s
+
+func _lcd(lcd: Rect2, on: bool) -> void:
+	var ink := Color(0.07, 0.09, 0.05, 0.92); var ghost := Color(0.15, 0.2, 0.1, 0.07 if on else 0.045)
+	var txt := lcd_text(reading.get("value", null), str(reading.get("text", ""))) if on else ""
+	var dashes := txt.begins_with("--") or (txt != "" and not txt.is_valid_float())
+	var neg := txt.begins_with("-") and not dashes; var body := txt.substr(1) if neg else txt
+	var cells := 4; var dot_at := 1   # the point sits after the first digit in the ghost; the live point is placed by the text
+	var width := cells * LCD_PITCH + LCD_DOT
+	var x0 := lcd.end.x - 18.0 - width; var base := lcd.position.y + 84.0
+	# ghost segments: 8 8 8 8 with the point where the reading puts it
+	var dp := body.find(".")
+	var dot_after := (dp - 1) if dp > 0 else -1
+	var x := x0
+	for i in cells:
+		S.text(self, S.mono(), "8", Vector2(x, base), LCD_SIZE, ghost)
+		x += LCD_PITCH
+		if i == dot_after: S.text(self, S.mono(), ".", Vector2(x - 2.0, base), LCD_SIZE, ghost); x += LCD_DOT
+	if on and txt != "":
+		x = x0
+		var ci := 0
+		if dashes:
+			for i in cells: S.text(self, S.mono(), "-", Vector2(x0 + i * LCD_PITCH + 4.0, base), LCD_SIZE, ink)
+		else:
+			for ch in body:
+				if ch == ".": S.text(self, S.mono(), ".", Vector2(x - 2.0, base), LCD_SIZE, ink); x += LCD_DOT; continue
+				S.text(self, S.mono(), ch, Vector2(x, base), LCD_SIZE, ink); x += LCD_PITCH; ci += 1
+		if neg: S.text(self, S.mono(), "-", Vector2(x0 - 24.0, base), LCD_SIZE, ink)
+		S.text(self, S.mono(), "DC" if mode != "Ω" else "OHM", lcd.position + Vector2(10, 22), 14, ink)
+		S.text(self, S.mono(), str(reading.get("unit", "")), lcd.position + Vector2(lcd.size.x - 44, 22), 18, ink)
+
 ## Click on the dial: the half of the dial you hit picks the next / previous position.
 func dial_click(p: Vector2) -> String:
 	var i := MODES.find(mode)
@@ -54,16 +96,7 @@ func _draw() -> void:
 	S.rr(self, lcd.grow(7), 10, Color("#25262a")); S.rr(self, lcd, 6, Color("#a7b88e"))
 	S.vgrad(self, lcd, Color(1, 1, 1, 0.14), Color(0, 0, 0, 0.12), 8)
 	var on := mode != "OFF"
-	var txt := str(reading.get("text", "")) if on else ""
-	if on:
-		S.text(self, S.mono(), "88.88", lcd.position + Vector2(24, 82), 76, Color(0.15, 0.2, 0.1, 0.07))   # ghost segments
-		var ink := Color(0.07, 0.09, 0.05, 0.92)
-		S.text(self, S.mono(), txt, Vector2(lcd.end.x - 22 - S.tw(S.mono(), txt, 70), lcd.position.y + 82), 70, ink)
-		S.text(self, S.mono(), "DC" if mode != "Ω" else "OHM", lcd.position + Vector2(10, 22), 14, ink)
-		S.text(self, S.mono(), str(reading.get("unit", "")), lcd.position + Vector2(lcd.size.x - 44, 22), 18, ink)
-		if txt.begins_with("-"): S.text(self, S.mono(), "", lcd.position, 10, ink)
-	else:
-		S.text(self, S.mono(), "88.88", lcd.position + Vector2(24, 82), 76, Color(0.15, 0.2, 0.1, 0.045))
+	_lcd(lcd, on)
 	# dial: a fat knurled knob with labelled positions around it
 	var labs := {"OFF": "OFF", "V": "V", "mA": "mA", "Ω": "Ω"}
 	for m in MODES:

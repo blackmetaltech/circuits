@@ -40,6 +40,7 @@ var done: Dictionary = {}
 var wallet := 0
 var board_rect := Rect2()
 var drag: Dictionary = {}
+var probe_jack := {"red": "", "black": ""}   ## a DMM lead resting on a supply terminal: which one ("red" = +, "black" = GND side)
 var hover := ""
 var scope_open := false
 var scope_t := 0.0
@@ -134,7 +135,7 @@ func start_ticket(id: String) -> void:
 		top.say("That ticket is still locked: pass the one before it first."); if phase != "bench": go_map()
 		return
 	phase = "bench"; window.dusk = 0.0; window.rain = id == "1-3" or id == "1-4"
-	drag.clear(); rot = 0; locked_at = -1.0; _lock_seq = -1.0; top.toast_age = 9.0
+	drag.clear(); probe_jack = {"red": "", "black": ""}; rot = 0; locked_at = -1.0; _lock_seq = -1.0; top.toast_age = 9.0
 	_ticket_view()
 	bubble_until = t + 9.0; top.bubble = str(backend.ticket.ask); top.bubble_alpha = 0.0
 	if not backend.ENGINE: dmm.set_mode("V"); backend.set_dial("V")
@@ -220,7 +221,9 @@ func _on_event(name: String, data: Dictionary) -> void:
 	match name:
 		"placed": sfx.play("thunk"); props.mood = "hopeful" if props.mood == "idle" else props.mood
 		"wired": sfx.play("zip")
-		"power": sfx.play("click" if data.on else "clack")
+		"power":
+			sfx.play("click" if data.on else "clack")
+			if not bool(data.on): top.say_quick("Power off.")   # a short word, so the rocker's state is never a guess
 		"deleted":
 			sfx.play("page", 0.5)
 			if str(data.get("note", "")) != "": top.say(str(data.note))   # e.g. "p1 removed, and 2 wire(s) that were only held by its legs."
@@ -465,14 +468,30 @@ func wire_at(sp: Vector2) -> String:
 func _probe_tip(which: String) -> Vector2:
 	if drag.get("kind", "") == "probe" and drag.which == which: return drag.pos
 	var pad = backend.probes.get(which, null)
-	if pad != null: return pad_screen(Vector2(pad[0], pad[1]))
+	if pad != null:
+		var jk := str(probe_jack.get(which, ""))
+		if jk != "" and supply.has_jacks() and _jack_pad(jk) == Vector2(pad[0], pad[1]): return supply.position + supply.jack_pos(jk) * supply.scale.x
+		return pad_screen(Vector2(pad[0], pad[1]))
 	return L.probe_rest[which]
+
+## The board connector a supply terminal is wired to: the + terminal reaches the supply connector (VP), the other the ground one.
+func _jack_pad(jk: String) -> Vector2:
+	for c in backend.ticket.get("board", {}).get("connectors", []):
+		var gnd := str(c.get("role", "")) == "ground"
+		if (jk == "black") == gnd and (gnd or str(c.get("role", "")) in ["rail", "supply", "source"]): return Vector2(c.pad[0], c.pad[1])
+	return Vector2(-1, -1)
+
+## Which supply terminal (if any) is under a screen point.
+func _jack_at(sp: Vector2) -> String:
+	if not Rect2(supply.position - Vector2(20, 20), supply.size * supply.scale.x + Vector2(40, 40)).has_point(sp): return ""
+	var jk := supply.jack_at((sp - supply.position) / supply.scale.x)
+	return jk if jk != "" and _jack_pad(jk).x >= 0.0 else ""
 
 func _tip_hit(sp: Vector2) -> String:
 	for w in (["red", "black", "ch1"] if backend.ENGINE else ["red", "black"]):
 		var tip := _probe_tip(w)
 		var cp := Geometry2D.get_closest_point_to_segment(sp, tip, tip + Vector2(52, -96))
-		if cp.distance_to(sp) < 24.0: return w
+		if cp.distance_to(sp) < 26.0 or sp.distance_to(tip) < 42.0: return w   # the metal tip is the natural place to grab: a generous disc around it
 	return ""
 
 func _dmm_socket(which: String) -> Vector2: return dmm.position + dmm.socket_pos(which) * dmm.scale.x
@@ -500,6 +519,7 @@ func _sync_views(dt: float) -> void:
 	scope.hold = clampf(backend.hold / backend.LOCK_HOLD, 0.0, 1.0); scope.smoked = not backend.smoked.is_empty()
 	scope.attached = bool(backend.scope_view.get("attached", true)); scope.clip_name = str(backend.scope_view.get("clip_name", "")); scope.reading = str(backend.scope_view.get("text", ""))
 	supply.on = backend.powered; supply.hover = hover == "rocker"
+	if drag.get("kind", "") != "probe": supply.jack_glow = ""
 	dmm.set_mode(backend.dial); dmm.reading = backend.dmm(); dmm.hover_dial = hover == "dial"
 	# props
 	props.hot = backend.hot_k(); props.smoked = not backend.smoked.is_empty(); props.wallet = (backend.wallet_minor / 100) if backend.ENGINE else wallet; props.wallet_text = backend.wallet_text if backend.ENGINE else ""
@@ -507,7 +527,9 @@ func _sync_views(dt: float) -> void:
 	props.items = backend.bin(); props.hide_item = int(drag.item) if drag.get("kind", "") == "part" else -1; props.hover_item = _slot_hover
 	props.hover = hover if hover in ["notebook", "tin", "box", "cat", "customer", "box_up", "box_down", "exam"] else ""
 	props.exam_open = backend.ENGINE and not backend.predictions_done()
-	if props.mood == "wow" and t > _smoke_mood_until: props.mood = "idle" if not backend.locked else "joy"
+	# joy (the smile, the working gadget) belongs to a PASSED bench only; a held live band is just "let's see"
+	if props.mood == "wow" and t > _smoke_mood_until: props.mood = "joy" if backend.passed else ("hopeful" if backend.locked else "idle")
+	elif props.mood == "joy" and not backend.passed and _lock_seq < 0.0: props.mood = "hopeful"
 	if props.smoked or props.hot > 0.35:
 		var hp := _hottest_screen()
 		if hp != Vector2.ZERO: props.cat_look = (hp - (L.cat as Rect2).get_center()).normalized()
@@ -664,7 +686,9 @@ func _board_overlay() -> void:
 			if sn2.kind == "pin" or sn2.kind == "connector": ov["hover_label"] = str(sn2.label)
 		if hover_wire != "" and hover == "board" and not ov.has("hover_label"): ov["hover_wire"] = hover_wire
 	elif drag.get("kind", "") == "probe":
-		var sp := pad_at(_mouse, 0.8)
+		var jh := _jack_at(_mouse) if drag.which != "ch1" else ""
+		supply.jack_glow = jh
+		var sp := pad_at(_mouse, 0.8) if jh == "" else _jack_pad(jh)
 		drag["snap"] = sp
 		if sp.x >= 0: ov["hover_pad"] = sp
 	bench.overlay = ov
@@ -774,7 +798,7 @@ func _press(sp: Vector2) -> void:
 		"box_up": _scroll_box(-1); sfx.play("tick", 0.5); return
 		"box_down": _scroll_box(1); sfx.play("tick", 0.5); return
 	if hover.begins_with("probe_"):
-		var w := hover.substr(6); drag = {"kind": "probe", "which": w, "pos": sp}; backend.set_probe(w, null); return
+		var w := hover.substr(6); drag = {"kind": "probe", "which": w, "pos": sp}; backend.set_probe(w, null); probe_jack[w] = ""; return
 	if hover == "box":
 		if _slot_hover >= 0: drag = {"kind": "part", "item": _slot_hover}; rot = 0; sfx.play("tick")
 		return
@@ -825,7 +849,9 @@ func _release(sp: Vector2) -> void:
 				for w in backend.wires.duplicate():
 					if w.a == [int(d.pad.x), int(d.pad.y)] or w.b == [int(d.pad.x), int(d.pad.y)]: backend.delete_wire(w.wid); break
 		"probe":
-			var sn := pad_at(sp, 0.8)
+			var jk := _jack_at(sp) if d.which != "ch1" else ""   # a lead dropped on a battery / supply terminal reads that net
+			var sn := _jack_pad(jk) if jk != "" else pad_at(sp, 0.8)
+			probe_jack[d.which] = jk
 			var pr = backend.set_probe(d.which, [int(sn.x), int(sn.y)] if sn.x >= 0 else null)
 			if pr is Dictionary and not pr.ok and str(pr.msg) != "": top.say(str(pr.msg))
 			elif sn.x >= 0: sfx.play("tick")

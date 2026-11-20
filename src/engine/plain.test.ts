@@ -66,7 +66,7 @@ describe('wires say what they touch, and flag the ones that touch nothing', () =
     expect(r.landed.map((x: any) => x.kind)).toEqual(['pin', 'pin']);
     expect(r.landed[1].text).toBe('the LED leg A +'); expect(r.dangling).toEqual([]);
     const h = ok(e, 'wire', [8, 2], [7, 5]);   // one hole beside the K leg
-    expect(h.dangling).toEqual([[7, 5]]); expect(h.message).toMatch(/not touching any part leg/);
+    expect(h.dangling).toEqual([[7, 5]]); expect(h.message).toMatch(/isn't touching a part's leg/);
     expect(h.landed[1]).toMatchObject({ kind: 'empty' });
     const b = q(e, 'bench'); expect(b.dangling.map((d: any) => d.pad)).toEqual([[7, 5]]);
     expect(b.parts.find((p: any) => p.uid === 'p1').pins.map((p: any) => p.label)).toEqual(['A +', 'K -']);
@@ -84,7 +84,7 @@ describe('undo and delete', () => {
   it('deleting a part removes the wires its legs alone were holding; undo brings them back', () => {
     const e = open('1-1'); place(e, 4, 5); ok(e, 'wire', [2, 2], [4, 5]); ok(e, 'wire', [6, 5], [8, 2]);
     const r = ok(e, 'deletePart', 'p1');
-    expect(r.removedWires).toEqual(['w1', 'w2']); expect(r.message).toMatch(/2 wire\(s\)/); expect(q(e, 'bench').wires).toHaveLength(0);
+    expect(r.removedWires).toEqual(['w1', 'w2']); expect(r.message).toMatch(/2 wires/); expect(q(e, 'bench').wires).toHaveLength(0);
     ok(e, 'undo'); expect(q(e, 'bench').wires).toHaveLength(2);
   });
   it('wires that still meet each other stay', () => {

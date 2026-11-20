@@ -306,7 +306,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       if (!nodeAt(tk, p)) refuseKey('err.probe.nothing', { pad: `${p[0]},${p[1]}` });
       tk.board.probes = tk.board.probes.filter((x) => x.ch !== c); tk.board.probes.push({ ch: c as 1 | 2, pad: p }); tk.board.probes.sort((a, b) => a.ch - b.ch);
       tk.live.scope = { ch1: [], ch2: [], t0: 0, dt: 0 }; tk.probed = true;
-      return ok(say('probe.attached', { ch: c, pad: `${p[0]},${p[1]}` }));
+      return ok(say('probe.attached', { ch: c, what: padWhat(tk.board, p).text }));
     },
     detachProbe: (s, ch: unknown) => {
       const { tk } = open(s, defs), c = int(ch, 'ch');
@@ -339,7 +339,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       m.pads = m.red && m.black ? [m.red, m.black] : [];
       if (m.pads.length === 2) tk.probed = true;
       if (m.mode === 'off' && (m.red || m.black)) m.mode = 'dcv';
-      return ok(say(m[key] ? 'meter.lead.set' : 'meter.lead.off', { lead: key, pad: m[key] ? `${m[key]![0]},${m[key]![1]}` : '-' }));
+      return ok(say(m[key] ? 'meter.lead.set' : 'meter.lead.off', { lead: key, what: m[key] ? padWhat(tk.board, m[key]!).text : '-' }));
     },
     /** Turn the DMM dial: 'off' | 'dcv' (V) | 'dca' (mA) | 'ohm'. Leads stay where they are. */
     dmmDial: (s, mode: unknown) => {

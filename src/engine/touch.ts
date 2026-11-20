@@ -3,7 +3,7 @@
 import type { Board, Pad } from '../sim/board/types';
 import { padKey } from '../sim/board/grid';
 import { pinPads } from '../sim/board/footprints';
-import { getDef, occupancy, padText } from './board';
+import { connName, getDef, occupancy } from './board';
 import { say } from './text';
 import { partName } from './names';
 
@@ -29,9 +29,9 @@ export function padWhat(b: Board, pad: Pad, skipWid?: string): PadWhat {
     return { kind: 'pin', uid: p.uid, pin: name, text: say('touch.pin', { part: partName(b, p.uid), label: lab, kind: d ? d.kind : '' }) };
   }
   const cn = occ.connectors.get(k);
-  if (cn) return { kind: 'connector', connector: cn, text: say('touch.connector', { connector: cn }) };
+  if (cn) return { kind: 'connector', connector: cn, text: say('touch.connector', { connector: connName(cn) }) };
   if (occ.ends.has(k)) return { kind: 'wire', text: say('touch.wire', { wire: occ.ends.get(k)![0]! }) };
-  return { kind: 'empty', text: say('touch.empty', { pad: padText(pad) }) };
+  return { kind: 'empty', text: say('touch.empty') };
 }
 
 /** Wire ends that meet nothing: no part pin, no connector, no other wire end on their pad. */

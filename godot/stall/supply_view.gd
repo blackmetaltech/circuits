@@ -33,6 +33,21 @@ func port(which: String) -> Vector2:
 
 func hit_rocker(p: Vector2) -> bool: return ROCKER.grow(8).has_point(p)
 
+## The terminals a meter lead can be dropped on (the snap studs of the holder, the binding posts of the bench supply): "red" is the + side, "black" the ground side.
+var jack_glow := ""   ## which terminal a dragged lead is hovering near
+func jack_pos(which: String) -> Vector2:
+	if kind == "bench": return Vector2(60, 28) if which == "red" else Vector2(120, 28)
+	return Vector2(52, 30) if which == "red" else Vector2(104, 30)
+func has_jacks() -> bool: return kind != "sources"
+## A generous target: 30 design pixels around the terminal ("" when none).
+func jack_at(p: Vector2) -> String:
+	if not has_jacks(): return ""
+	var best := ""; var bd := 30.0
+	for w in ["red", "black"]:
+		var d := p.distance_to(jack_pos(w))
+		if d <= bd: bd = d; best = w
+	return best
+
 func _draw() -> void:
 	var rr := Rect2(0, 8, DESIGN.x, DESIGN.y - 14)
 	S.shadow(self, rr, 18, Vector2(8, 12), 0.5)
@@ -61,6 +76,7 @@ func _holder(rr: Rect2) -> void:
 		var col := Color("#b2261c") if i == 0 else Color("#1a1a1c")
 		draw_circle(c, 17, Color("#0a0a0c")); draw_circle(c, 14, Color("#8d9097")); draw_circle(c, 9, col.lightened(0.1)); draw_circle(c + Vector2(-3, -3), 3, Color(1, 1, 1, 0.5))
 	S.text(self, S.hand(), "+", Vector2(40, 54), 18, Color("#d98a80")); S.text(self, S.hand(), "-", Vector2(98, 54), 22, Color("#9aa0a8"))
+	_jack_ring()
 
 ## The bench tests every condition (docs/API-CH1.md: ticketCard.conditions): a paper tag lists them with the engine's own numbers.
 func _cond_tag() -> void:
@@ -110,6 +126,12 @@ func _bench(rr: Rect2) -> void:
 	for i in 2:
 		var c := Vector2(60 + i * 60, 28); var col := Color("#b2261c") if i == 0 else Color("#1a1a1c")
 		draw_circle(c, 15, Color("#0a0a0c")); draw_circle(c, 12, col); draw_circle(c, 6, Color("#d0b25a"))
+	_jack_ring()
+
+func _jack_ring() -> void:
+	if jack_glow == "": return
+	var c := jack_pos(jack_glow)
+	draw_arc(c, 24.0, 0, TAU, 32, Color("#ffd98a"), 3.0); draw_circle(c, 24.0, Color("#ffd98a", 0.18))
 
 func _rocker() -> void:
 	var r := ROCKER
@@ -133,3 +155,6 @@ func _rocker() -> void:
 	draw_circle(lamp, 8, Color("#220b08")); draw_circle(lamp, 6, Color(1, 0.35, 0.2, 1.0 if on else 0.18))
 	if on: S.glow(self, lamp, 34.0, Color(1, 0.3, 0.15, 0.5))
 	S.text(self, S.hand(), "POWER", Vector2(mid.x - 26, r.end.y + 22), 15, Color("#d8d4c4"))
+	# the state in words, next to the lamp: ON in warm light, OFF dim, so the rocker never has to be decoded from its tilt
+	var word := "ON" if on else "OFF"
+	S.text(self, S.mono(), word, Vector2(lamp.x + 16, lamp.y + 8), 22, Color("#ffd98a") if on else Color("#8a8f98"))

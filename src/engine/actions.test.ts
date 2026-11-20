@@ -94,11 +94,11 @@ describe('teaching failures (every rejection is a plain-words message with the f
     expect(bad(e, 'placePart', 'res-cf', null, '0.25W', 3, 8, 0, false)).toMatch(/positive number for its value/);
     expect(bad(e, 'placePart', 'led-red-5mm', 5, '5mm', 3, 8, 0, false)).toMatch(/no value to set/);
     expect(bad(e, 'placePart', 'res-cf', 470, '0.25W', 3.5, 8, 0, false)).toMatch(/x must be a whole number/);
-    expect(bad(e, 'placePart', 'res-cf', 470, '0.25W', 22, 8, 0, false)).toMatch(/off the board/);
+    expect(bad(e, 'placePart', 'res-cf', 470, '0.25W', 22, 8, 0, false)).toMatch(/off the edge of the board/);
     expect(bad(e, 'placePart', 'res-cf', 470, '0.25W', 3, 8, 5, false)).toMatch(/0, 1, 2 or 3/);
     ok(e, 'placePart', 'led-red-5mm', null, '5mm', 3, 8, 0, false);
     expect(bad(e, 'placePart', 'led-red-5mm', null, '5mm', 12, 8, 0, false)).toMatch(/has only 1 of led-red-5mm/);
-    expect(bad(e, 'placePart', 'res-cf', 470, '0.25W', 5, 8, 0, false)).toMatch(/Pad 5,8 is already taken by a pin of the LED/);
+    expect(bad(e, 'placePart', 'res-cf', 470, '0.25W', 5, 8, 0, false)).toMatch(/That hole is already taken by a pin of the LED/);
     expect(bad(e, 'placePart', 'res-cf', 470, '0.25W', 2, 2, 0, false)).toMatch(/already taken by a pin of the battery/);
   });
   it('the part limit and sandbox mode', () => {
@@ -115,17 +115,17 @@ describe('teaching failures (every rejection is a plain-words message with the f
     expect(bad(e, 'addWire', [[0, 0], [30, 0]])).toMatch(/off the board/);
     expect(bad(e, 'addWire', [[0, 0], [0, 4], [4, 4], [4, 0], [0, 0]])).toMatch(/start and end on the same pad/);
     expect(bad(e, 'addWire', [[0.5, 0], [3, 0]])).toMatch(/whole number/);
-    expect(bad(e, 'addWire', [[0, 5], [12, 5]])).toMatch(/pass over the pin of the [^ ]+( [^ ]+)* resistor at 2,5/);
-    expect(bad(e, 'addWire', [[2, 2], [2, 5]])).toMatch(/already joins/);
+    expect(bad(e, 'addWire', [[0, 5], [12, 5]])).toMatch(/pass over a pin of the [^ ]+( [^ ]+)* resistor/);
+    expect(bad(e, 'addWire', [[2, 2], [2, 5]])).toMatch(/already joined by a wire/);
   });
   it('a wire may cross another (insulated jumper) but not end on its middle or run over its end', () => {
     const e = fresh(); ok(e, 'addWire', [[12, 2], [12, 10]]);
     ok(e, 'addWire', [[10, 6], [14, 6]]);               // crossing at 12,6: legal jumper
     expect(bad(e, 'addWire', [[12, 6], [12, 12]]).length).toBeGreaterThan(0);
     const e2 = fresh(); ok(e2, 'addWire', [[12, 2], [12, 10]]);
-    expect(bad(e2, 'addWire', [[12, 6], [16, 6]])).toMatch(/ends on the middle of wire w1 at 12,6/);
-    expect(bad(e2, 'addWire', [[12, 0], [12, 12]])).toMatch(/pass over the end of wire w1/);
-    expect(bad(e2, 'placePart', 'res-cf', 100, '0.25W', 12, 6, 0, false)).toMatch(/under wire w1/);
+    expect(bad(e2, 'addWire', [[12, 6], [16, 6]])).toMatch(/ends on the middle of another wire/);
+    expect(bad(e2, 'addWire', [[12, 0], [12, 12]])).toMatch(/pass over the end of another wire/);
+    expect(bad(e2, 'placePart', 'res-cf', 100, '0.25W', 12, 6, 0, false)).toMatch(/already runs through that hole/);
   });
   it('fixed parts and unknown ids', () => {
     const e = fresh();
@@ -138,7 +138,7 @@ describe('teaching failures (every rejection is a plain-words message with the f
   it('instruments: probes, meter, supply, generator, scope, pot, jockey', () => {
     const e = fresh(); build(e);
     expect(bad(e, 'attachProbe', 3, [2, 2])).toMatch(/channels 1 and 2/);
-    expect(bad(e, 'attachProbe', 1, [15, 12])).toMatch(/Nothing is connected at pad 15,12/);
+    expect(bad(e, 'attachProbe', 1, [15, 12])).toMatch(/isn.t connected to anything/);
     expect(bad(e, 'attachProbe', 1, [99, 1])).toMatch(/off the board/);
     expect(bad(e, 'detachProbe', 2)).toMatch(/no probe to remove/);
     expect(bad(e, 'setMeter', 'amps', [[2, 2]])).toMatch(/no 'amps' range/);
