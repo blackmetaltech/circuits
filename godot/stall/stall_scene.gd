@@ -138,6 +138,7 @@ func start_ticket(id: String) -> void:
 		top.say("That ticket is still locked: pass the one before it first."); if phase != "bench": go_map()
 		return
 	phase = "bench"; window.dusk = 0.0; window.rain = id == "1-3" or id == "1-4"
+	pages.codex_i = {"1-1": 0, "1-2": 1, "1-3": 3, "1-4": 4, "1-5": 6}.get(id, 0)   # the notebook opens on the page that belongs to this ticket
 	drag.clear(); probe_jack = {"red": "", "black": ""}; rot = 0; locked_at = -1.0; _lock_seq = -1.0; top.toast_age = 9.0
 	_ticket_view()
 	bubble_until = t + 9.0; top.bubble = str(backend.ticket.ask); top.bubble_alpha = 0.0
@@ -184,6 +185,8 @@ func _on_page(id: String, arg: String) -> void:
 		"pred_focus": pages.pred_focus = int(arg)
 		"pred_submit": _submit_predictions()
 		"pred_close": pages.show_page("")
+		"pred_sign": _toggle_sign(int(arg))
+		"debrief_close": pages.show_page("")
 		"settings": pages.show_page("settings")
 		"cute", "toggle:cute": cute = not cute; _apply_prefs(); _save(); _refresh_pages()
 		"toggle:reduced": reduced = not reduced; _apply_prefs(); _save(); _refresh_pages()
@@ -257,6 +260,8 @@ func _finish_lock() -> void:
 	_save()
 	props.fly_coin(scope.position + Vector2(300, 170) * scope.scale.x, 6)
 	sfx.play("kaching"); props.tin_shake = 0.0
+	if backend.ENGINE and bool(backend.ticket.get("eb", false)) and backend.last_result.get("debrief", null) is Dictionary:   # the exam is marked: predicted vs measured, the working
+		pages.debrief = backend.last_result.debrief; pages.show_page("debrief")
 
 ## ------------------------------------------------------------------------------------------------------------------ bench check and predictions (exam ticket)
 
@@ -272,12 +277,19 @@ func open_predict() -> void:
 	pages.pred_fields = []
 	for pr in backend.ticket.get("predictions", []):
 		pages.pred_fields.append({"id": str(pr.id), "name": str(pr.name), "unit": str(pr.unit), "text": "" if pr.get("entered", null) == null else EB._g(float(pr.entered), 6), "done": pr.get("entered", null) != null})
+	pages.star_rule = str(backend.ticket.get("star_rule", ""))
 	pages.pred_focus = 0; pages.show_page("predict")
 
 func set_prediction(id: String, value: float) -> Dictionary:   # also what typing then Enter does
 	var r: Dictionary = backend.predict(id, value)
 	if not r.ok: top.say(str(r.msg))
 	return r
+
+func _toggle_sign(i: int) -> void:   # the on-screen +/- key of the predict slip
+	if i < 0 or i >= pages.pred_fields.size(): return
+	var f: Dictionary = pages.pred_fields[i]
+	var tx := str(f.text); f.text = tx.substr(1) if tx.begins_with("-") else "-" + tx; f.done = false
+	pages.pred_focus = i
 
 func _submit_predictions() -> void:
 	for f in pages.pred_fields:
@@ -412,6 +424,8 @@ func pad_at(sp: Vector2, reach := 0.55) -> Vector2:
 ## What is under a screen point, for wiring: the nearest part leg or board connector within `pin_reach` pads, else the nearest empty pad within `pad_reach`.
 ## {kind: "pin" | "connector" | "pad" | "none", pad: Vector2, label: String}. Legs win over holes, so a wire dropped a pad off a leg still lands on the leg.
 const WIRE_DROP_REACH := 1.35   # a wire dropped one pad off a leg (even with the board's perspective) still lands on the leg; a diagonal neighbour (1.41) does not
+## A finger covers about two pads of a handheld screen: the leg reach grows there (the nearest leg still wins, so it never grabs a far one).
+func drop_reach() -> float: return 1.9 if handheld else WIRE_DROP_REACH
 func snap(sp: Vector2, pin_reach := WIRE_DROP_REACH, pad_reach := 0.7) -> Dictionary:
 	var g := (screen_to_vp(sp) - bench.org) / bench.p
 	var best := {"kind": "none", "pad": Vector2(-1, -1), "label": ""}
@@ -525,11 +539,21 @@ func _process(dt: float) -> void:
 	if phase == "bench" and pages.mode in ["", "notebook"]: backend.step(dt)
 	_sync_views(dt)
 
+## The hover readout ("30.9 mA 0.21 W") describes the board as it was when the pointer last moved: any edit (a part removed, undo, power) clears it and re-reads what is under the pointer now.
+var _tag_key := ""
+func _refresh_hover_tag() -> void:
+	if not backend.ENGINE: return
+	var k := "%s|%s|%s|%d|%d" % [backend._board_key(), backend.powered, backend.smoked.size(), backend.parts.size(), backend.wires.size()]
+	if k == _tag_key: return
+	_tag_key = k; top.tag = {}
+	if drag.is_empty() and phase == "bench": _motion(_mouse)
+
 func _sync() -> void:
 	bench.set_model(backend.model); bench.mark_dirty()
 
 func _sync_views(dt: float) -> void:
 	if bench.model != backend.model: _sync()
+	_refresh_hover_tag()
 	var bt: Dictionary = backend.ticket
 	# scope / supply / dmm
 	scope.value = backend.scope_value(); scope.live = backend.powered; scope.locked = backend.locked
@@ -541,7 +565,7 @@ func _sync_views(dt: float) -> void:
 	# props
 	props.hot = backend.hot_k(); props.smoked = not backend.smoked.is_empty(); props.wallet = (backend.wallet_minor / 100) if backend.ENGINE else wallet; props.wallet_text = backend.wallet_text if backend.ENGINE else ""
 	props.bench_state = "passed" if backend.passed else ("ready" if backend.locked else "idle"); props.bench_hover = hover == "bench"; props.show_bench = backend.ENGINE
-	props.items = backend.bin(); props.hide_item = int(drag.item) if drag.get("kind", "") == "part" else -1; props.hover_item = _slot_hover
+	props.set_items(backend.bin()); props.hide_item = int(drag.item) if drag.get("kind", "") == "part" else -1; props.hover_item = _slot_hover
 	props.hover = hover if hover in ["notebook", "tin", "box", "cat", "customer", "exam"] else ""
 	props.exam_open = backend.ENGINE and not backend.predictions_done()
 	# joy (the smile, the working gadget) belongs to a PASSED bench only; a held live band is just "let's see"
@@ -568,7 +592,7 @@ func _sync_views(dt: float) -> void:
 	var cv: Dictionary = backend.coach_view()
 	var steps: Array = cv.steps; var ci: int = cv.cur
 	pages.coach_vis = steps.map(func(s): return s.shown)
-	pages.coach_steps = steps; pages.coach_cur = ci; pages.coach_done = steps.map(func(s): return s.done)
+	pages.coach_steps = steps; pages.coach_cur = ci; pages.coach_done = steps.map(func(s): return s.done); pages.coach_opt = steps.map(func(s): return s.get("optional", false))
 	var in_play := phase == "bench" and pages.mode == ""
 	if ci >= 0 and in_play and not backend.passed:
 		var st: Dictionary = steps[ci]
@@ -579,7 +603,7 @@ func _sync_views(dt: float) -> void:
 			tot += 1
 			if k <= ci: vis += 1
 		if int(cv.get("step_total", -1)) > 0: vis = int(cv.step_no); tot = int(cv.step_total)   # the engine numbers the steps: the total never moves mid-ticket
-		top.slip_step = "Wren's note  %d / %d" % [vis, tot]
+		top.slip_step = "Wren's note  %d / %d" % [vis, tot] + ("  (back a step: you undid one)" if bool(cv.get("back", false)) else "")
 		_fit_slip()
 		top.arrow_to = _target_pos(str(st.target)); top.show_arrow = top.arrow_to != Vector2.ZERO and not drag.has("kind")
 	elif backend.passed and in_play:
@@ -692,7 +716,7 @@ func _board_overlay() -> void:
 		else: drag["place"] = Vector2(-9999, 0)
 	elif drag.get("kind", "") == "wire":
 		var v2 := screen_to_vp(_mouse)
-		var sn := snap(_mouse, WIRE_DROP_REACH, 0.7)
+		var sn := snap(_mouse, drop_reach(), 0.7)
 		var pinned: bool = sn.kind == "pin" or sn.kind == "connector"
 		ov["wire"] = {"from": drag.pad, "to": v2, "target": sn.pad if sn.kind != "none" else Vector2(-1, -1),
 			"label": str(sn.label) if pinned else ("empty hole: a wire ending here touches no leg" if sn.kind == "pad" else ""), "bad": sn.kind == "pad"}
@@ -741,6 +765,7 @@ func _unhandled_key_input(e: InputEvent) -> void:
 		KEY_ESCAPE:
 			if pages.mode == "notebook" or pages.mode == "settings": _on_page("close", "")
 			elif pages.mode == "predict": pages.show_page("")
+			elif pages.mode == "debrief": pages.show_page("")
 			elif pages.mode == "map": pages.show_page("title"); phase = "title"
 		KEY_N: if phase == "bench": pages.show_page("notebook" if pages.mode == "" else "")
 		KEY_F1: pages.show_page("settings")
@@ -801,7 +826,10 @@ func _press(sp: Vector2) -> void:
 		"tin": sfx.play("coin"); top.say("%d coins in the tin." % wallet); props.tin_shake = 0.3; return
 		"cat": sfx.play("meow", 0.6); top.say("Rezzy is " + ("awake and worried." if props.hot > 0.35 else "asleep. Leave her be.")); return
 		"customer": bubble_until = t + 6.0; return
-		"exam": open_predict(); sfx.play("page", 0.6); return
+		"exam":
+			if backend.ENGINE and backend.passed and backend.last_result.get("debrief", null) is Dictionary: pages.debrief = backend.last_result.debrief; pages.show_page("debrief")
+			else: open_predict()
+			sfx.play("page", 0.6); return
 		"next": go_map(); return
 		"rocker": backend.set_power(not backend.powered); return
 		"bench": run_bench(); return
@@ -812,6 +840,8 @@ func _press(sp: Vector2) -> void:
 	if hover.begins_with("probe_"):
 		var w := hover.substr(6); drag = {"kind": "probe", "which": w, "pos": sp}; backend.set_probe(w, null); probe_jack[w] = ""; return
 	if hover == "box":
+		var chip = props.chip_at(sp)
+		if chip != null: props.rating_filter = str(chip); props.bin_scroll = 0.0; sfx.play("click", 0.5); return
 		if props.box_inner().grow(4).has_point(sp):
 			_fling = 0.0; rot = 0
 			drag = {"kind": "tray", "item": _slot_hover, "start": sp, "scroll0": props.bin_scroll, "mode": "", "last": sp, "lt": t}
@@ -819,7 +849,7 @@ func _press(sp: Vector2) -> void:
 	if hover == "board":
 		var pd := part_at(sp)
 		var pa := pad_at(sp, 0.5)
-		var sn := snap(sp, 0.6 * (1.5 if handheld else 1.0), 0.5)   # a press near a leg or connector starts a wire from that leg (a fatter reach for a finger)
+		var sn := snap(sp, 0.6 * (2.0 if handheld else 1.0), 0.5)   # a press near a leg or connector starts a wire from that leg (a fatter reach for a finger)
 		if sn.kind == "pin" or sn.kind == "connector": drag = {"kind": "wire", "pad": sn.pad}; return
 		if pa.x >= 0 and (pd.is_empty() or pd.fixed or _near_pin(pd, pa)): drag = {"kind": "wire", "pad": pa}; return
 		if not pd.is_empty() and not pd.fixed:
@@ -889,7 +919,7 @@ func _release(sp: Vector2) -> void:
 				var r2: Dictionary = backend.move_part(str(d.uid), int(o2.x), int(o2.y), rot)
 				if not r2.ok: top.say(str(r2.msg))
 		"wire":
-			var tgt := snap(sp, WIRE_DROP_REACH, 0.7)   # the end snaps to the nearest leg or connector within reach, else to the hole
+			var tgt := snap(sp, drop_reach(), 0.7)   # the end snaps to the nearest leg or connector within reach, else to the hole
 			var tp: Vector2 = tgt.pad
 			if tgt.kind != "none" and tp != d.pad:
 				var r3: Dictionary = backend.add_wire([int(d.pad.x), int(d.pad.y)], [int(tp.x), int(tp.y)])
@@ -918,12 +948,13 @@ func _right(sp: Vector2) -> void:
 		var r = backend.delete_wire(wid)
 		if r is Dictionary and not bool(r.get("ok", true)): top.say(str(r.get("msg", "")))
 
+const WHEEL_ROWS := 2.5   # a wheel notch moves two and a half rows: fifteen parts are not a long drive
 func _scroll_box(rows: float) -> void:   # a wheel notch is one row, never past the last row the box really has
 	props.bin_scroll = clampf(props.bin_scroll + rows, 0.0, StallProps.max_scroll(props.box_inner(), props.items.size()))
 
 func _wheel(sp: Vector2, dir: int) -> void:
 	var h := _where(sp)
-	if h == "box" or (L.box as Rect2).has_point(sp): _fling = 0.0; _scroll_box(-float(dir))
+	if h == "box" or (L.box as Rect2).has_point(sp): _fling = 0.0; _scroll_box(-float(dir) * WHEEL_ROWS)
 	elif h == "dial": backend.set_dial(DmmView.MODES[clampi(DmmView.MODES.find(backend.dial) + dir, 0, DmmView.MODES.size() - 1)]); sfx.play("tick")
 	elif h.begins_with("knob"): scope.turn(int(h.substr(4)), float(dir))
 	elif drag.get("kind", "") in ["part", "move"] or h == "board": rot = (rot + (1 if dir > 0 else 3)) % 4

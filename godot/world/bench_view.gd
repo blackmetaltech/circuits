@@ -96,13 +96,14 @@ func mark_dirty() -> void: _parts_dirty = true
 ## The board art (mask, silkscreen, brass connectors) is drawn by this control's own _draw, which Godot only re-runs on queue_redraw: a new ticket
 ## with the same board size but other connectors (1-4 -> 1-5) must repaint it, or the last ticket's rail stays on the bench.
 var _art_key := ""
+var art_repaints := 0             ## how many times a new ticket's board art asked for a repaint (the tests read it)
 func art_signature(mm: Dictionary) -> String:
 	var cs: Array = []
 	for c in mm.get("connectors", []): cs.append("%s@%s,%s:%s" % [str(c.get("id", "")), str(c.pad.x), str(c.pad.y), str(c.get("role", ""))])
 	return "%sx%s|%s" % [str(mm.get("w", 0)), str(mm.get("h", 0)), ",".join(cs)]
 func _restyle_if_needed() -> void:
 	var k := art_signature(_m())
-	if k != _art_key: _art_key = k; queue_redraw()
+	if k != _art_key: _art_key = k; art_repaints += 1; queue_redraw()
 func _relayout_if_needed() -> void:
 	var m := _m()
 	var key := "%d,%d" % [m.w, m.h]
@@ -455,7 +456,6 @@ func _draw_parts(ci: Control) -> void:
 		var pos: Vector2
 		if b.size.y > b.size.x * 1.4: pos = Vector2(b.end.x + 4.0, b.get_center().y + fs * 0.35)
 		else: pos = Vector2(b.get_center().x - wtx * 0.5, b.position.y - 4.0)
-		_txt(ci, s, pos, fs, Color(0.96, 0.95, 0.88))
 		if pt.kind == "LED" and (pt.pin_labels as Array).size() == pt.pins.size() and pt.pins.size() == 2: _led_pin_tags(ci, pt)
 		if show_ratings and live and m.ratings.has(pt.uid):
 			var r: Dictionary = m.ratings[pt.uid]; var worst := 0.0
@@ -591,8 +591,26 @@ func _spawn(c: Vector2, power: float) -> void:
 var _critters: Array = []
 var overlay: Dictionary = {}   ## stall interaction overlay: {ghost:{part,ok,origin,pins}, wire:{from,to,target}, hover_pad}
 
+## Part names ("120 \u03a9", "LED") are drawn on the top layer over a dark chip: a wire or its current dots running through a label never hides a digit.
+func _draw_labels(ci: Control) -> void:
+	var m := _m()
+	var fs := maxi(int(clampf(p * 0.42, 13.0, 24.0)), SS.min_font)
+	var f := ThemeDB.fallback_font
+	for pt in m.parts:
+		var pin_px: Array = pt.pins.map(func(v): return _px(v))
+		var b: Rect2 = PartArt.screen_bounds(pt, pin_px, p)
+		var s: String = pt.label
+		if s == "": continue
+		var wtx := f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
+		var pos: Vector2
+		if b.size.y > b.size.x * 1.4: pos = Vector2(b.end.x + 4.0, b.get_center().y + fs * 0.35)
+		else: pos = Vector2(b.get_center().x - wtx * 0.5, b.position.y - 4.0)
+		PartArt.rrect(ci, Rect2(pos + Vector2(-4.0, -fs - 1.0), Vector2(wtx + 8.0, fs + 7.0)), 5.0, Color(0.03, 0.035, 0.05, 0.72))
+		_txt(ci, s, pos, fs, Color(0.96, 0.95, 0.88))
+
 func _draw_fx(ci: Control) -> void:
 	if cute: _draw_cute(ci)
+	_draw_labels(ci)
 	_draw_dangling(ci, _m())
 	if not overlay.is_empty(): _draw_overlay(ci)
 	for q in _smoke:
@@ -743,6 +761,7 @@ func _draw_overlay(ci: Control) -> void:
 			var bad: bool = bool(w.get("bad", false))
 			var rc := Color(1.0, 0.45, 0.35, 0.95) if bad else Color(0.5, 1.0, 0.55, 0.95)
 			ci.draw_arc(b2, p * 0.46, 0.0, TAU, 20, rc, maxf(2.0, p * 0.09), true)
+			if not bad: _blob(ci, b2, p * 1.1, Color(rc, 0.28)); ci.draw_arc(b2, p * 0.7, 0.0, TAU, 24, Color(rc, 0.6), maxf(2.0, p * 0.06), true)   # the leg this end will land on glows
 			if str(w.get("label", "")) != "": _note(ci, b2, str(w.label), rc)
 		var mid := Vector2(b2.x, a2.y)
 		var pts := PackedVector2Array([a2, mid, b2]) if (absf(a2.x - b2.x) > 1.0 and absf(a2.y - b2.y) > 1.0) else PackedVector2Array([a2, b2])

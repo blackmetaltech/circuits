@@ -61,6 +61,7 @@ var _bench_key := ""
 var _was_lock := false
 var _all_parts: Array = []
 var _smoke_seen := {}
+var _coach_max := 0                       ## the furthest coach step reached on this attempt (a step number that falls back is said out loud)
 
 func _init(b = null) -> void:
 	bridge = b if b != null else CbBridge.new()
@@ -86,7 +87,7 @@ func open_ticket(id: String) -> bool:
 		return false
 	powered = false; locked = false; passed = false; smoked.clear(); temps.clear(); hold = 0.0; t = 0.0; _accum = 0.0; _was_lock = false
 	probes = {"red": null, "black": null, "ch1": null}; dial = "OFF"; dmm_used = false; dmm_loaded = false
-	frame = {}; last_result = {}; _bench_key = ""; _smoke_seen.clear()
+	frame = {}; last_result = {}; _bench_key = ""; _smoke_seen.clear(); _coach_max = 0
 	_load_ticket()
 	return true
 
@@ -132,7 +133,7 @@ func _load_ticket() -> void:
 	for c in bench_q.get("connectors", []):
 		var role := str(c.role)
 		conns.append({"id": str(c.id), "pad": [int(c.pad[0]), int(c.pad[1])], "role": "supply" if role in ["rail", "source"] else ("ground" if role == "ground" else role)})
-	ticket = {"id": id, "figure": card.get("figure", null), "pay_text": str(card.get("payText", "")), "title": str(card.get("title", "")), "customer": str(card.get("customer", "")), "brief": str(card.get("brief", "")),
+	ticket = {"id": id, "figure": card.get("figure", null), "pay_text": str(card.get("payText", "")), "star_rule": str(card.get("starRule", "")), "title": str(card.get("title", "")), "customer": str(card.get("customer", "")), "brief": str(card.get("brief", "")),
 		"gadget": str(fl.get("gadget", "exam")), "ask": str(fl.get("ask", "")), "thanks": str(fl.get("thanks", "")),
 		"price": int(card.get("fee", 0)), "price_text": str(card.get("feeText", "")), "eb": bool(card.get("eb", false)),
 		"specs": card.get("specs", []), "targets": card.get("targets", []), "conditions": card.get("conditions", []), "predictions": card.get("predictions", []),
@@ -558,10 +559,12 @@ func coach_view() -> Dictionary:
 	if c is Dictionary:
 		var i := 0
 		for s in c.get("steps", []):
-			steps.append({"id": str(s.id), "text": str(s.text), "target": _target_of(s.get("anchor", null)), "done": bool(s.get("done", false)), "shown": bool(s.get("shown", true))})
+			steps.append({"id": str(s.id), "text": str(s.text), "target": _target_of(s.get("anchor", null)), "done": bool(s.get("done", false)), "shown": bool(s.get("shown", true)), "optional": bool(s.get("optional", false))})
 			if bool(s.get("active", false)): cur = i
 			i += 1
-	return {"steps": steps, "cur": cur, "step_no": step_no, "step_total": step_total}
+	var back := step_no > 0 and step_no < _coach_max
+	_coach_max = maxi(_coach_max, step_no)
+	return {"steps": steps, "cur": cur, "step_no": step_no, "step_total": step_total, "back": back}
 
 func _target_of(a) -> String:
 	if not (a is Dictionary): return "none"

@@ -25,6 +25,8 @@ var bin_scroll := 0.0             ## shoebox scroll, in rows (fractional while d
 var bin_drag := false             ## the tray is being dragged / flung: show the track
 var exam_fig: Dictionary = {}          ## exam ticket: the engine's figure, drawn small on the problem card that stays on the bench
 var exam_open := true                  ## false once the predictions are in (the card then reads "your predictions are in")
+var all_items: Array = []       ## the whole shoebox (items is what the rating filter lets through)
+var rating_filter := ""         ## "" = all, else a watt tag ("¼ W"): the shelf shows only parts with that rating
 var hide_item := -1             ## the bin item being dragged
 var hover_item := -1
 var hover := ""                 ## notebook | tin | box | customer | cat
@@ -80,7 +82,7 @@ func _exam_card() -> void:
 
 func _draw() -> void:
 	if L.is_empty(): return
-	_mug(); _box(); _cat(); _notebook(); _tin()
+	_mug(); _box(); _chips(); _cat(); _notebook(); _tin()
 	if show_bench: _bench_button()
 	_customer()
 	_exam_card()
@@ -265,7 +267,51 @@ static func slots(inner: Rect2, n: int, scroll: float) -> Array:
 ## The visible window of the tray: the box's inside, above the front lip and its PARTS label.
 func box_inner() -> Rect2:
 	var r := _r("box").grow(-22)
-	return Rect2(r.position, Vector2(r.size.x, maxf(row_h(), r.size.y - 44.0)))
+	var top := chip_h() if not rating_tags().is_empty() else 0.0   # the rating chips sit in a row above the rows
+	return Rect2(r.position + Vector2(0, top), Vector2(r.size.x, maxf(row_h(), r.size.y - 44.0 - top)))
+
+## ---- the rating filter: chips (all / ¼ W / ½ W / 1 W / 5 W) above the rows, only when the shoebox holds more than one rating
+const TAG_ORDER := ["¼ W", "½ W", "1 W", "5 W"]
+static func chip_h() -> float: return 46.0 if S.handheld else 34.0
+func rating_tags() -> Array:
+	var seen := {}
+	for it in all_items: if str(it.get("tag", "")) != "" and it.kind == "R": seen[str(it.tag)] = true
+	if seen.size() < 2: return []
+	var out: Array = []
+	for t in TAG_ORDER: if seen.has(t): out.append(t)
+	for t in seen: if not out.has(t): out.append(t)
+	return out
+
+## Feed the whole shoebox; `items` becomes what the active chip lets through (a stale chip that no longer exists is dropped).
+func set_items(all: Array) -> void:
+	all_items = all
+	var tags := rating_tags()
+	if rating_filter != "" and not tags.has(rating_filter): rating_filter = ""
+	if rating_filter == "": items = all
+	else: items = all.filter(func(it): return str(it.get("tag", "")) == rating_filter)
+
+## Chip rectangles in screen space: [{tag, rect}] ("" = all).
+func chip_rects() -> Array:
+	var tags := rating_tags()
+	if tags.is_empty(): return []
+	var r := _r("box").grow(-22); var out: Array = []
+	var x := r.position.x; var h := chip_h() - 6.0
+	for t in [""] + tags:
+		var lab: String = "all" if t == "" else str(t)
+		var w := S.tw(S.hand(), lab, 20) + 22.0
+		out.append({"tag": t, "rect": Rect2(x, r.position.y + 2.0, w, h)}); x += w + 6.0
+	return out
+
+func chip_at(sp: Vector2) -> Variant:
+	for c in chip_rects(): if (c.rect as Rect2).grow(3).has_point(sp): return str(c.tag)
+	return null
+
+func _chips() -> void:
+	for c in chip_rects():
+		var on: bool = str(c.tag) == rating_filter
+		var rc: Rect2 = c.rect
+		S.rr(self, rc, rc.size.y * 0.5, Color("#ffd98a", 0.95) if on else Color(0.12, 0.09, 0.06, 0.85)); S.rr_line(self, rc, rc.size.y * 0.5, Color("#ffd98a", 0.7), 2.0)
+		S.text(self, S.hand(), "all" if str(c.tag) == "" else str(c.tag), rc.position + Vector2(11, rc.size.y * 0.5 + 7), 20, S.INK if on else Color("#f6ecd0"))
 
 ## How many rows the shoebox shows at once and how far it can scroll (in rows; 0 when everything fits).
 static func rows_visible(inner: Rect2) -> int: return maxi(1, int(inner.size.y / row_h()))

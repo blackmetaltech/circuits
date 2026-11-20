@@ -221,7 +221,10 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       const act = rows.find((r) => r.shown && !r.done && !r.optional) ?? rows.find((r) => r.shown && !r.done);
       const opts = rows.filter((r) => r.optional && r.shown && !r.done && r !== act && (act ? rows.indexOf(r) < rows.indexOf(act) : true));
       if (act) { act.active = true; if (opts.length > 0 && !act.optional) act.text = `${act.text} ${t('coach.optional', { text: opts[0]!.text })}`; }
-      const base = { ticket: def.id, steps: rows as Record<string, unknown>[], active: act ? act.id : null, text: act ? act.text : '', anchor: act ? act.anchor : null, done: rows.filter((r) => r.done && r.shown).length, total: rows.length, stepNo: act ? rows.indexOf(act) + 1 : rows.length, stepTotal: rows.length };
+      // numbered like the notebook reads: only the main line counts (a smoke branch or an optional meter step never takes a number, so the numbers never skip or move)
+      const mainLine = steps.map((st) => st.optional !== true && !(st.when ?? '').split(/[&|]/).includes('smoked'));
+      const stepTotal = mainLine.filter(Boolean).length, stepNo = act ? mainLine.slice(0, rows.indexOf(act)).filter(Boolean).length + 1 : stepTotal;
+      const base = { ticket: def.id, steps: rows as Record<string, unknown>[], active: act ? act.id : null, text: act ? act.text : '', anchor: act ? act.anchor : null, done: rows.filter((r) => r.done && r.shown).length, total: rows.length, stepNo, stepTotal };
       // a part has burned: say so, whatever step the ticket is on (never carry on to "clip the meter")
       const ownBurnStep = act !== undefined && (steps.find((st) => st.id === act.id)?.when ?? '').split(/[&|]/).includes('smoked');
       if (tk.live.smoked.length > 0 && !tk.lastBench?.pass && !ownBurnStep) {

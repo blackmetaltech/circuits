@@ -23,11 +23,14 @@ var wallet := 0
 var wallet_text := ""                     ## the engine's formatted wallet ("$4.50"); empty = "%d coins"
 var pred_fields: Array = []               ## exam slip: [{id, name, unit, text, done}]
 var pred_focus := 0
+var star_rule := ""                        ## the exam's grading rule, printed on the slip before lock-in
+var debrief: Dictionary = {}              ## the exam debrief after the bench (the engine's: predictions vs measured, the KCL working, charging / discharging, stars)
 var tickets: Array = []                   ## [{id,title,customer,spec,price,open,done}]
 var coach_ticket: Dictionary = {}
 var coach_steps: Array = []
 var coach_cur := 0
 var coach_done: Array = []                ## bool per step (for the ticks)
+var coach_opt: Array = []                 ## true for an optional step (never counted against the checklist)
 var coach_vis: Array = []                 ## false for conditional steps that do not apply now (e.g. the smoke note)
 var tab := "coach"
 var codex_i := 0
@@ -78,6 +81,7 @@ func _draw() -> void:
 		"notebook": _notebook(a)
 		"settings": _settings(a)
 		"predict": _predict(a)
+		"debrief": _debrief(a)
 
 ## ------------------------------------------------------------------------------------------------------------------ title
 
@@ -226,6 +230,8 @@ func _map(a: float) -> void:
 			S.text(self, f, "locked", q.position + Vector2(q.size.x - 20 - S.tw(f, "locked", 18), 112), 18, Color(S.INK, 0.45))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		if hv: S.rr_line(self, Rect2(cr.position + Vector2(-3, lift - 3), cr.size + Vector2(6, 6)), 4, Color("#ffd98a", 0.85), 3.0)
+	# what the stars on a chit mean
+	S.text(self, f, "* = met the spec    ** = and under the cost par    *** (exam 1-5) = every prediction within 1 %", Vector2(r.position.x + 40, r.end.y - 30), 17, Color(S.INK, 0.75))
 	# back to the title
 	var br := Rect2(r.end.x - 230, r.end.y - 62, 190, 44)
 	var bh := _btn(br, "goto:title")
@@ -257,14 +263,19 @@ func _notebook(a: float) -> void:
 	for i in coach_steps.size():
 		var st: Dictionary = coach_steps[i]
 		if st.get("target", "") == "none" or (i < coach_vis.size() and not coach_vis[i]): continue
+		var opt: bool = i < coach_opt.size() and coach_opt[i]
 		var txt := str(st.text); var fs := 22
+		if opt and not (i < coach_done.size() and coach_done[i]): txt = "(optional) " + txt
 		var hh := S.wrapped_h(f, txt, fs, half - 170) + 8.0
 		if y + hh > r.end.y - 90: break
 		var isd: bool = i < coach_done.size() and coach_done[i]
 		var cur := i == coach_cur
 		draw_rect(Rect2(lp.x - 8, y - 22, 5, hh), Color(S.AMBER, 0.0 if not cur else 0.9), true)
 		var bx := Vector2(lp.x + 14, y - 6)
-		draw_rect(Rect2(bx - Vector2(12, 12), Vector2(24, 24)), Color(S.INK, 0.12), true); S.rr_line(self, Rect2(bx - Vector2(12, 12), Vector2(24, 24)), 3, Color(S.INK, 0.8), 2.0)
+		if opt and not isd:   # an optional step is a dotted ring, not an empty box: leaving it blank is fine
+			draw_arc(bx, 11.0, 0, TAU, 16, Color(S.INK, 0.5), 2.0)
+		else:
+			draw_rect(Rect2(bx - Vector2(12, 12), Vector2(24, 24)), Color(S.INK, 0.12), true); S.rr_line(self, Rect2(bx - Vector2(12, 12), Vector2(24, 24)), 3, Color(S.INK, 0.8), 2.0)
 		if isd: draw_polyline(PackedVector2Array([bx + Vector2(-8, 0), bx + Vector2(-2, 8), bx + Vector2(12, -12)]), S.INK_RED, 4.0, true)
 		S.text(self, f, txt, Vector2(lp.x + 46, y), fs, Color(S.INK, 1.0 if cur else (0.5 if isd else 0.78)), HORIZONTAL_ALIGNMENT_LEFT, half - 170)
 		y += hh + 14.0
@@ -319,7 +330,9 @@ func _predict(a: float) -> void:
 		S.text(self, f, "Fig. 1", fr.position + Vector2(10, 22), 16, Color(S.INK, 0.6))
 		ExamFigure.draw(self, fr.grow(-10), fig, S.INK, ["V(%s)" % str(fig.get("node", "A")), "I(E2)"])
 		S.text(self, f, "ideal sources, exact resistors", Vector2(fr.position.x + 10, fr.end.y - 8), 14, Color(S.INK, 0.5))
-	var y := q.position.y + (q.size.y * 0.5 - 40.0 if wide else 200.0)
+		if star_rule != "": S.text(self, f, "Marking: " + star_rule, Vector2(fr.position.x, fr.end.y + 24), 15, Color(S.INK_RED, 0.9), HORIZONTAL_ALIGNMENT_LEFT, fr.size.x)
+	var brief_h := S.wrapped_h(f, str(coach_ticket.get("brief", "")), 19, col_w)
+	var y := maxf(q.position.y + (q.size.y * 0.5 - 40.0 if wide else 200.0), q.position.y + 106.0 + brief_h + 30.0)   # the first question starts under however long the problem is
 	for i in pred_fields.size():
 		var pf: Dictionary = pred_fields[i]
 		S.text(self, f, str(pf.name), Vector2(q.position.x + 36, y), 19, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, col_w)
@@ -330,6 +343,9 @@ func _predict(a: float) -> void:
 		S.rr(self, box, 8, Color(S.INK, 0.08)); S.rr_line(self, box, 8, Color(S.INK, 0.85 if cur else (0.5 if hv else 0.3)), 3.0 if cur else 2.0)
 		var txt := str(pf.text)
 		S.text(self, S.mono(), txt, box.position + Vector2(14, 36), 30, S.INK)
+		var sg := Rect2(box.end.x - 52, box.position.y + 5, 44, 40)   # an on-screen +/- key: a finger on a handheld has no minus key
+		var sh := _btn(Rect2(r.get_center() + sg.position, sg.size), "pred_sign", str(i))
+		S.rr(self, sg, 8, Color(S.INK, 0.3 if sh else 0.14)); S.text(self, f, "+/-", sg.position + Vector2(5, 30), 22, S.INK)
 		if cur and fmod(t, 1.0) < 0.6: draw_rect(Rect2(box.position.x + 16 + S.tw(S.mono(), txt, 30), box.position.y + 10, 3, 30), S.INK, true)
 		S.text(self, f, str(pf.unit), box.position + Vector2(box.size.x + 12, 36), 28, S.INK)
 		if pf.get("done", false): S.text(self, f, "recorded", box.position + Vector2(box.size.x + 52, 36), 18, S.INK_RED)
@@ -342,6 +358,52 @@ func _predict(a: float) -> void:
 	S.rr_line(self, cl, 25, Color(S.INK, 0.7 if ch else 0.4), 2.0); S.text(self, f, "later", cl.position + Vector2(44, 36), 26, S.INK)
 	var hint := "type digits, Tab switches line, Enter locks in.  \"later\" keeps this slip on the bench: tap it to reopen."
 	S.text(self, f, hint, Vector2(q.position.x + 36, q.end.y - 12), 14, Color(S.INK, 0.55))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+## ------------------------------------------------------------------------------------------------------------------ exam debrief (after the bench)
+
+func _stars_text(n: int, mx := 3) -> String: return "*".repeat(n) + ".".repeat(maxi(0, mx - n))
+
+func _debrief(a: float) -> void:
+	var w := size.x; var h := size.y; var f := S.hand()
+	draw_rect(Rect2(0, 0, w, h), Color(0.02, 0.01, 0.02, 0.5 * a), true)
+	var sz := Vector2(minf(1100.0, w - 24.0), minf(700.0, h - 24.0))
+	var r := Rect2(w * 0.5 - sz.x * 0.5, h * 0.5 - sz.y * 0.5 + (1.0 - a) * 24, sz.x, sz.y)
+	S.paper(self, r, -0.6, S.PAPER)
+	draw_set_transform(r.get_center(), deg_to_rad(-0.6), Vector2.ONE)
+	var q := Rect2(-r.size * 0.5, r.size)
+	S.pin(self, q.position + Vector2(q.size.x * 0.5, 16))
+	var d := debrief
+	S.text(self, f, "Marked  \u00b7  %s" % str(coach_ticket.get("title", "Exam")), q.position + Vector2(36, 66), 38, S.INK)
+	var stars := int(coach_ticket.get("stars", 0))
+	S.text(self, f, _stars_text(stars), Vector2(q.end.x - 36 - S.tw(f, "***", 44), q.position.y + 70), 44, S.INK_RED)
+	var half := q.size.x * 0.5
+	# left: predicted vs measured
+	var lx := q.position.x + 36; var lw := half - 56.0; var y := q.position.y + 112.0
+	S.text(self, f, "Your numbers against the bench", Vector2(lx, y), 24, S.INK_RED); y += 36.0
+	for row in d.get("rows", []):
+		var okr: bool = bool(row.get("ok", false))
+		var col := Color("#1d7a3a") if okr else Color("#b3261e")
+		S.text(self, f, str(row.name), Vector2(lx, y), 18, Color(S.INK, 0.8), HORIZONTAL_ALIGNMENT_LEFT, lw); y += S.wrapped_h(f, str(row.name), 18, lw) + 4.0
+		var line := "you said %s %s   measured %s %s" % [EngineBench._g(float(row.entered), 4), str(row.unit), EngineBench._g(float(row.truth), 4), str(row.unit)]
+		S.text(self, S.mono(), line, Vector2(lx, y + 4), 20, S.INK); y += 32.0
+		var gp := float(row.gapPct)
+		S.text(self, f, "%s%.1f %% off: %s" % ["+" if gp > 0.0 else "", gp, str(row.gradeText)] + ("   (tick)" if okr else "   (not yet)"), Vector2(lx, y), 22, col); y += 40.0
+	y += 4.0
+	S.text(self, f, str(d.get("starsText", "")), Vector2(lx, y), 19, S.INK, HORIZONTAL_ALIGNMENT_LEFT, lw); y += S.wrapped_h(f, str(d.get("starsText", "")), 19, lw) + 12.0
+	S.text(self, f, str(coach_ticket.get("star_rule", "")), Vector2(lx, y), 16, Color(S.INK, 0.6), HORIZONTAL_ALIGNMENT_LEFT, lw)
+	# right: the KCL working
+	var rx := q.position.x + half + 10.0; var rw := half - 46.0; var ry := q.position.y + 112.0
+	S.text(self, f, "KCL at node %s: currents in = currents out" % str(d.get("node", "A")), Vector2(rx, ry), 24, S.INK_RED, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += 40.0
+	S.text(self, S.mono(), str(d.get("equation", "")), Vector2(rx, ry), 20, S.INK, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += S.wrapped_h(S.mono(), str(d.get("equation", "")), 20, rw) + 10.0
+	for ln in d.get("working", []):
+		S.text(self, f, str(ln), Vector2(rx, ry), 18, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, rw); ry += S.wrapped_h(f, str(ln), 18, rw) + 6.0
+	S.text(self, S.mono(), str(d.get("answer", "")), Vector2(rx, ry + 8), 26, Color("#1d7a3a")); ry += 50.0
+	for c in d.get("currents", []):
+		S.text(self, f, str(c.text), Vector2(rx, ry), 18, S.INK, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += S.wrapped_h(f, str(c.text), 18, rw) + 8.0
+	var ok_r := Rect2(-80, q.end.y - 74, 160, 50)
+	var oh := _btn(Rect2(r.get_center() + ok_r.position, ok_r.size), "debrief_close")
+	S.rr(self, ok_r, 25, S.INK if oh else Color(S.INK, 0.85)); S.text(self, f, "got it", ok_r.position + Vector2(40, 36), 30, S.PAPER)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 ## ------------------------------------------------------------------------------------------------------------------ settings
