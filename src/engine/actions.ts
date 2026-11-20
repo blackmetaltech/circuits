@@ -326,6 +326,10 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       const { tk } = open(s, defs), before = copyBoard(tk);
       const pa = validPad(tk, a, 'a'), pb = validPad(tk, b, 'b');
       if (pa[0] === pb[0] && pa[1] === pb[1]) refuseKey('err.wire.samePad');
+      // the two refusals that no route can fix get their own plain words: the same two pads are already joined, or an end sits under another wire's middle
+      const occ0 = occupancy(tk.board);
+      for (const q of [pa, pb]) { const k = padKey(q); if (occ0.interior.has(k)) refuseKey('err.wire.tJunction', { pad: `${q[0]},${q[1]}`, wire: occ0.interior.get(k)![0]! }); }
+      for (const w of tk.board.wires) { const e0 = padKey(w.path[0]!), e1 = padKey(w.path[w.path.length - 1]!), a = padKey(pa), z = padKey(pb); if ((e0 === a && e1 === z) || (e0 === z && e1 === a)) refuseKey('err.wire.duplicate', { wire: w.wid }); }
       let found: Pad[] | null = null;
       for (const r of routes(pa, pb, tk.board.w, tk.board.h)) {
         const pts = normalisePath(r.map((p) => [p[0], p[1]] as Pad));

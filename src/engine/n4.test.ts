@@ -58,6 +58,13 @@ describe('N4: wires always find a route', () => {
     const r2 = ok(e, 'wire', [8, 8], [4, 9]); expect(r2.path.length).toBeGreaterThanOrEqual(2);
     const r3 = ok(e, 'wire', [5, 15], [6, 0]); expect(r3.path[0]).toEqual([5, 15]);
   });
+  it('the two refusals no route can fix say so in plain words, not "draw it in two steps"', () => {
+    const e = open('1-5');
+    ok(e, 'wire', [4, 4], [4, 9]);
+    const dup = e.act('wire', [[4, 9], [4, 4]]); expect(dup.ok).toBe(false); expect(dup.message).toMatch(/already joined/);
+    const tj = e.act('wire', [[4, 6], [9, 6]]); expect(tj.ok).toBe(false); expect(tj.message).toMatch(/middle of another wire/);
+    expect(e.act('wire', [[4, 4], [5, 9]]).ok).toBe(true);   // a different far end onto the same wired pad is fine
+  });
   it("the ticket's own wires cannot be removed", () => {
     const e = open('1-5');
     expect(e.act('deleteWire', ['fw1']).ok).toBe(false); expect(e.act('unwire', ['fw1']).message).toMatch(/came with the ticket/);

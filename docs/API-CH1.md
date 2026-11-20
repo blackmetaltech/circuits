@@ -178,6 +178,12 @@ one star each for every prediction within 5 %, every prediction within 1 %, buil
 
 Other queries unchanged from M2-1: `progress`, `tickets`, `board`, `nodes`, `currents`, `thermal`, `ratings`, `meter`, `netlist`, `explain(id)`, `failureLog`, `parts`, `legalActions`, `snapshot`.
 
+## N4 additions (handheld round)
+- `bench().wires[].fixed`: pre-wired ticket wires (uids `fw1`...); `deleteWire` / `unwire` refuse them (`err.wire.fixed`), `loadBoard` keeps them. 1-5 ships two (E1 and E2 minus ends to the GND pad). `LevelDef.fixedWires`.
+- `runBench(true)` with the power off switches it on first and returns `autoPowered: true` (message starts "The power switch was off ..."); the live frame restarts.
+- `wire(a, b)` falls back to a Dijkstra router (crossing other wires, never over a leg / connector / wire end), so a route is found whenever both ends are free; `err.wire.duplicate` and `err.wire.tJunction` are raised up front.
+- `liveFrame().events[].text` is the explanation frozen when the part burned (`live.notes`). `undo` / `redo` / `replaceSmoked` while a part is burnt restore it fresh and switch the power off (`undo` result has `fresh: true`); messages read "Undid: placed the 470 Ω resistor."
+
 ## The five tickets (data in `src/data/levels/1-*.ts`)
 
 | id | customer | spec (bench) | board | designed fail (tested) | ref |
