@@ -26,6 +26,11 @@ var pred_focus := 0
 var star_rule := ""                        ## the exam's grading rule, printed on the slip before lock-in
 var debrief: Dictionary = {}              ## the exam debrief after the bench (the engine's: predictions vs measured, the KCL working, charging / discharging, stars)
 var tickets: Array = []                   ## [{id,title,customer,spec,price,open,done}]
+var map_chapter := 1                      ## which chapter's page the map shows
+var map_title := ""                       ## the engine's chapter title and blurb
+var map_blurb := ""
+var chapter_open: Array = [true, false]   ## per chapter: has a ticket that is not locked
+var pred_head := ""                        ## the slip's title line ("2-4 Exam: ... · predict first" or "Cable Fault · the crew's slip")
 var coach_ticket: Dictionary = {}
 var coach_steps: Array = []
 var coach_cur := 0
@@ -179,15 +184,15 @@ func _map(a: float) -> void:
 	_open_book(r, a)
 	var half := r.size.x * 0.5; var f := S.hand()
 	var lp := r.position + Vector2(56, 70)
-	S.text(self, f, "Chapter 1", lp, 28, S.INK_RED)
-	S.text(self, f, "First Light", lp + Vector2(0, 64), 64, S.INK)
+	var ttl := map_title if map_title != "" else "First Light"
+	S.text(self, f, "Chapter %d" % map_chapter, lp, 28, S.INK_RED)
+	S.text(self, f, ttl, lp + Vector2(0, 64), 64 if S.tw(f, ttl, 64) < half - 130.0 else 48, S.INK)
 	var note := "Wren left me the stall, a scope, a shoebox and this notebook. Customers come to the counter with something dead. Fix it, don't burn it.\n\nPin a ticket, build, power on, and watch the band."
+	if map_chapter == 2: note = map_blurb + "\n\nA voltage divider is only as good as what hangs on it. A bridge asks nothing of the cable but a balance. Measure first, then build."
 	S.text(self, f, note, lp + Vector2(0, 124), 24, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, half - 130)
-	# a little doodled LED with rays
 	var dc := r.position + Vector2(half * 0.5, r.size.y - 190)
-	draw_arc(dc, 40, PI, TAU, 16, Color(S.INK, 0.8), 3.0); draw_line(dc + Vector2(-40, 0), dc + Vector2(40, 0), Color(S.INK, 0.8), 3.0)
-	draw_line(dc + Vector2(-14, 0), dc + Vector2(-14, 56), Color(S.INK, 0.8), 3.0); draw_line(dc + Vector2(14, 0), dc + Vector2(14, 44), Color(S.INK, 0.8), 3.0)
-	for i in 5: var ang := PI * (1.15 + 0.175 * i); draw_line(dc + Vector2(cos(ang), sin(ang)) * 56, dc + Vector2(cos(ang), sin(ang)) * 80, Color(S.AMBER.darkened(0.1)), 4.0)
+	if map_chapter == 2: _doodle_divider(dc)
+	else: _doodle_led(dc)
 	S.text(self, f, ("in the tin:  %s" % wallet_text) if wallet_text != "" else ("coins in the tin:  %d" % wallet), r.position + Vector2(56, r.size.y - 60), 28, S.INK)
 	# the chits, pinned on the right page
 	var rp := Rect2(r.position.x + half + 30, r.position.y + 40, half - 60, r.size.y - 80)
@@ -207,7 +212,7 @@ func _map(a: float) -> void:
 		draw_set_transform(cr.get_center() + Vector2(0, lift), deg_to_rad(rot), Vector2.ONE)
 		var q := Rect2(-cr.size * 0.5, cr.size)
 		S.pin(self, q.position + Vector2(q.size.x * 0.5, 12), Color("#d23a2e") if open else Color("#7a7f86"))
-		S.text(self, f, "%s%s" % [str(tk.id), "  EB" if str(tk.id) == "1-5" else ""], q.position + Vector2(14, 48), 18, S.INK_RED)
+		S.text(self, f, "%s%s" % [str(tk.id), "  EB" if bool(tk.get("eb", false)) else ""], q.position + Vector2(14, 48), 18, S.INK_RED)
 		var tsz := 32   # a long title shrinks to fit the chit instead of running into the corner tags
 		while tsz > 18 and S.tw(f, str(tk.title), tsz) > q.size.x - 28.0: tsz -= 2
 		S.text(self, f, str(tk.title), q.position + Vector2(14, 84), tsz, S.INK if open else Color(S.INK, 0.5))
@@ -235,11 +240,37 @@ func _map(a: float) -> void:
 	S.text(self, f, "stars on a chit", Vector2(lx0, ly0), 18, S.INK_RED)
 	S.text(self, f, "*  met the spec", Vector2(lx0, ly0 + 26), 18, Color(S.INK, 0.8))
 	S.text(self, f, "**  and under the cost par", Vector2(lx0, ly0 + 50), 18, Color(S.INK, 0.8))
-	S.text(self, f, "***  exam 1-5: every prediction within 1 %", Vector2(lx0, ly0 + 74), 18, Color(S.INK, 0.8))
+	S.text(self, f, "***  an exam: every prediction within 1 %", Vector2(lx0, ly0 + 74), 18, Color(S.INK, 0.8))
+	for ci in 2:   # the chapters: tabs on the page's right edge (a page nobody has opened yet is dim)
+		var tr := Rect2(r.end.x - 22, r.position.y + 60 + ci * 66, 44, 56)
+		var chv := _btn(tr, "chapter", str(ci + 1))
+		var curc := ci + 1 == map_chapter; var openc: bool = ci < chapter_open.size() and bool(chapter_open[ci])
+		S.rr(self, tr, 8, [Color("#d9663f"), Color("#4a7fb5")][ci].lightened(0.15 if chv or curc else -0.12).darkened(0.0 if openc else 0.35))
+		S.text(self, f, str(ci + 1), tr.position + Vector2(24, 36), 26, Color("#fff8e0", 1.0 if openc else 0.55))
 	# back to the title
 	var br := Rect2(r.end.x - 230, r.end.y - 62, 190, 44)
 	var bh := _btn(br, "goto:title")
 	S.text(self, f, "<  back to the sign", br.position + Vector2(0, 30), 22, S.INK if bh else Color(S.INK, 0.6))
+
+## Chapter 1's doodle: an LED with rays. Chapter 2's: a divider with its load, and a bridge.
+func _doodle_led(dc: Vector2) -> void:
+	draw_arc(dc, 40, PI, TAU, 16, Color(S.INK, 0.8), 3.0); draw_line(dc + Vector2(-40, 0), dc + Vector2(40, 0), Color(S.INK, 0.8), 3.0)
+	draw_line(dc + Vector2(-14, 0), dc + Vector2(-14, 56), Color(S.INK, 0.8), 3.0); draw_line(dc + Vector2(14, 0), dc + Vector2(14, 44), Color(S.INK, 0.8), 3.0)
+	for i in 5: var ang := PI * (1.15 + 0.175 * i); draw_line(dc + Vector2(cos(ang), sin(ang)) * 56, dc + Vector2(cos(ang), sin(ang)) * 80, Color(S.AMBER.darkened(0.1)), 4.0)
+
+func _doodle_divider(dc: Vector2) -> void:
+	var ink := Color(S.INK, 0.8)
+	var top := dc + Vector2(-60, -70); var mid := dc + Vector2(-60, 0); var bot := dc + Vector2(-60, 70)
+	draw_line(top + Vector2(0, -16), top, ink, 3.0); ExamFigure._zig(self, top, mid, 10.0, ink, 3.0); ExamFigure._zig(self, mid, bot, 10.0, ink, 3.0)
+	draw_line(bot, bot + Vector2(0, 14), ink, 3.0); draw_line(bot + Vector2(-16, 14), bot + Vector2(16, 14), ink, 3.0)
+	draw_line(mid, mid + Vector2(70, 0), ink, 3.0); draw_circle(mid, 5, ink)
+	ExamFigure._zig(self, mid + Vector2(70, 0), mid + Vector2(70, 70), 10.0, Color(S.INK_RED, 0.9), 3.0)   # the load, in red ink
+	draw_line(mid + Vector2(70, 70), bot, ink, 3.0)
+	S.text(self, S.hand(), "Vout", mid + Vector2(78, -12), 24, ink)
+	var g := dc + Vector2(120, -20)   # a small galvanometer between two arms
+	draw_circle(g, 24, Color(S.INK, 0.0)); draw_arc(g, 24, 0.0, TAU, 20, ink, 3.0); S.text(self, S.hand(), "G", g + Vector2(-8, 9), 26, ink)
+	draw_line(g + Vector2(0, 24), g + Vector2(0, 60), ink, 3.0); draw_line(g + Vector2(0, -24), g + Vector2(0, -60), ink, 3.0)
+	draw_line(g + Vector2(-60, -60), g + Vector2(60, -60), ink, 3.0); draw_line(g + Vector2(-60, 60), g + Vector2(60, 60), ink, 3.0)
 
 ## ------------------------------------------------------------------------------------------------------------------ Wren's notebook
 
@@ -292,12 +323,13 @@ func _notebook(a: float) -> void:
 	S.rr(self, eq, 6, Color(S.INK, 0.07)); S.rr_line(self, eq, 6, Color(S.INK, 0.35), 2.0)
 	S.text(self, S.mono(), str(e.eq), eq.position + Vector2(24, 44), 36, S.INK)
 	S.text(self, f, str(e.body), rp + Vector2(0, 214), 24, Color(S.INK, 0.9), HORIZONTAL_ALIGNMENT_LEFT, half - 120)
-	for i in CoachData.CODEX.size():   # index tabs down the right edge
-		var tr := Rect2(r.end.x - 22, r.position.y + 60 + i * 66, 44, 56)
+	var tab_dy := minf(66.0, (r.size.y - 130.0) / float(maxi(CoachData.CODEX.size(), 1)))
+	for i in CoachData.CODEX.size():   # index tabs down the right edge (they squeeze together as the notebook fills up)
+		var tr := Rect2(r.end.x - 22, r.position.y + 60 + i * tab_dy, 44, minf(56.0, tab_dy - 4.0))
 		var hv := _btn(tr, "codex", str(i))
 		var cur2 := i == codex_i
 		S.rr(self, tr, 8, [Color("#d9663f"), Color("#e0b43f"), Color("#4f9a6a"), Color("#4a7fb5"), Color("#9a5fb0")][i % 5].lightened(0.1 if hv or cur2 else -0.1))
-		S.text(self, f, str(i + 1), tr.position + Vector2(24, 36), 26, Color("#fff8e0"))
+		S.text(self, f, str(i + 1), tr.position + Vector2(24, tr.size.y * 0.5 + 9.0), 24 if tr.size.y > 40.0 else 20, Color("#fff8e0"))
 	# footer buttons, handwritten
 	var fy := r.end.y - 58.0
 	var items := [["close", "back to the bench", 0.0], ["goto:map", "ticket pages", 0.0], ["goto:title", "title", 0.0], ["settings", "settings", 0.0]]
@@ -324,7 +356,8 @@ func _predict(a: float) -> void:
 	draw_set_transform(r.get_center(), deg_to_rad(-0.8), Vector2.ONE)
 	var q := Rect2(-r.size * 0.5, r.size)
 	S.pin(self, q.position + Vector2(q.size.x * 0.5, 16))
-	S.text(self, f, "%s  \u00b7  predict first" % str(coach_ticket.get("title", "Exam")), q.position + Vector2(36, 70), 40, S.INK)
+	var head := pred_head if pred_head != "" else "%s  \u00b7  predict first" % str(coach_ticket.get("title", "Exam"))
+	S.text(self, f, head, q.position + Vector2(36, 70), 40 if S.tw(f, head, 40) < q.size.x - 72.0 else 30, S.INK)
 	var col_w := (q.size.x * 0.46) if wide else (q.size.x - 72.0)
 	# the problem, as printed on the exam card: its words, and (right) its figure
 	S.text(self, f, str(coach_ticket.get("brief", "")), q.position + Vector2(36, 106), 19, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, col_w)
@@ -332,8 +365,9 @@ func _predict(a: float) -> void:
 		var fr := Rect2(q.position.x + q.size.x * 0.52, q.position.y + 96, q.size.x * 0.44, q.size.y - 262.0)
 		S.rr_line(self, fr, 6, Color(S.INK, 0.35), 2.0)
 		S.text(self, f, "Fig. 1", fr.position + Vector2(10, 22), 16, Color(S.INK, 0.6))
-		ExamFigure.draw(self, fr.grow(-10), fig, S.INK, ["V(%s)" % str(fig.get("node", "A")), "I(E2)"])
-		S.text(self, f, "ideal sources, exact resistors", Vector2(fr.position.x + 10, fr.end.y - 8), 14, Color(S.INK, 0.5))
+		var pot := str(fig.get("kind", "node")) == "pot"
+		ExamFigure.draw(self, fr.grow(-10), fig, S.INK, ["gradient, EMF, r"] if pot else ["V(%s)" % str(fig.get("node", "A")), "I(E2)"])
+		S.text(self, f, "ideal driver cell, exact rheostat" if pot else "ideal sources, exact resistors", Vector2(fr.position.x + 10, fr.end.y - 8), 14, Color(S.INK, 0.5))
 		if star_rule != "": S.text(self, f, "Marking: " + star_rule, Vector2(fr.position.x, fr.end.y + 24), 15, Color(S.INK_RED, 0.9), HORIZONTAL_ALIGNMENT_LEFT, fr.size.x)
 	var brief_h := S.wrapped_h(f, str(coach_ticket.get("brief", "")), 19, col_w)
 	var y := maxf(q.position.y + (q.size.y * 0.5 - 40.0 if wide else 200.0), q.position.y + 106.0 + brief_h + 30.0)   # the first question starts under however long the problem is
@@ -398,7 +432,7 @@ func _debrief(a: float) -> void:
 	S.text(self, f, str(coach_ticket.get("star_rule", "")), Vector2(lx, y), 16, Color(S.INK, 0.6), HORIZONTAL_ALIGNMENT_LEFT, lw)
 	# right: the KCL working
 	var rx := q.position.x + half + 10.0; var rw := half - 46.0; var ry := q.position.y + 112.0
-	S.text(self, f, "KCL at node %s: currents in = currents out" % str(d.get("node", "A")), Vector2(rx, ry), 24, S.INK_RED, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += 40.0
+	S.text(self, f, "The potentiometer, worked out" if str(d.get("node", "A")) == "wire" else "KCL at node %s: currents in = currents out" % str(d.get("node", "A")), Vector2(rx, ry), 24, S.INK_RED, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += 40.0
 	S.text(self, S.mono(), str(d.get("equation", "")), Vector2(rx, ry), 20, S.INK, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += S.wrapped_h(S.mono(), str(d.get("equation", "")), 20, rw) + 10.0
 	for ln in d.get("working", []):
 		S.text(self, f, str(ln), Vector2(rx, ry), 18, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, rw); ry += S.wrapped_h(f, str(ln), 18, rw) + 6.0

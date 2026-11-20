@@ -128,7 +128,7 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         targets: def.bench.specs.flatMap((x) => (x.kind === 'level' ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', lo: x.lo, hi: x.hi }] : [])),
         predictions: def.bench.specs.flatMap((x) => (x.kind === 'predict' ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', unit: x.unit ?? (x.of.probe.trim().toLowerCase().startsWith('i(') ? 'A' : 'V'), entered: o.tk.predictions[x.id] ?? null }] : [])),
         answers: (def.answers ?? []).map((a) => ({ id: a.id, name: def.bench.names[a.id] ? t(def.bench.names[a.id]!) : '', unit: a.unit, entered: o.tk.predictions[a.id] ?? null })),
-        gauge: def.gauge ?? null, supplies: def.supplies, chit: def.chit ?? null, ambientC: def.bench.ambientC, figure: def.figure ?? null,
+        specShort: def.specShort ? t(def.specShort) : '', gauge: def.gauge ?? null, supplies: def.supplies, chit: def.chit ?? null, ambientC: def.bench.ambientC, figure: def.figure ?? null,
         payText: payText(def, REGIONS.get(s.region)), starRule: def.eb ? starsRule() : '',
       };
     },

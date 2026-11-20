@@ -20,7 +20,15 @@ const FLAVOUR := {
 	"1-3": {"gadget": "heater", "ask": "The heater runs too hot for the fish.", "thanks": "The fish are comfortable again."},
 	"1-4": {"gadget": "car", "ask": "My car got slow.", "thanks": "Vroom! Fast again!"},
 	"1-5": {"gadget": "exam", "ask": "Predict first, then probe.", "thanks": "The numbers agree!"},
+	"2-1": {"gadget": "station", "ask": "My weather station reads nonsense.", "thanks": "Dead on: 3.3 volts."},
+	"2-2": {"gadget": "cable", "ask": "Where do we dig?", "thanks": "Found it, right at your mark!"},
+	"2-3": {"gadget": "module", "ask": "Nobody makes this box any more.", "thanks": "Drop-in. It behaves just like the old one."},
+	"2-4": {"gadget": "exam", "ask": "Predict first, then probe.", "thanks": "The numbers agree!"},
 }
+const CHAPTER_TICKETS := {1: ["1-1", "1-2", "1-3", "1-4", "1-5"], 2: ["2-1", "2-2", "2-3", "2-4"]}
+const ALL_TICKETS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4"]
+## The parts of chapter 2 that read better with a word under the value in the shoebox (presentation only).
+const PART_TAG := {"res-box": "box plug", "trimmer": "trimmer", "rheostat": "rheostat"}
 const DIAL_ENGINE := {"OFF": "off", "V": "dcv", "mA": "dca", "Ω": "ohm"}
 const DIAL_LABEL := {"off": "OFF", "dcv": "V", "dca": "mA", "ohm": "Ω"}
 
@@ -108,17 +116,18 @@ func refresh_wallet() -> void:
 	if w is Dictionary: wallet_minor = int(w.get("minor", 0)); wallet_text = str(w.get("text", ""))
 
 ## Chapter map rows for the notebook page: [{id, title, customer, spec, price (minor), price_text, open, done, stars, state}].
-func progress() -> Dictionary:
-	var m = _q("chapterMap", [1])
+func progress(chapter := 1) -> Dictionary:
+	var m = _q("chapterMap", [chapter])
 	var rows: Array = []
 	if m is Dictionary:
 		for tk in m.get("tickets", []):
 			var st := str(tk.get("state", "locked"))
 			rows.append({"id": str(tk.id), "title": str(tk.title), "customer": str(tk.customer), "spec": str(tk.get("spec", "")), "price": int(tk.get("fee", 0)),
 				"price_text": str(tk.get("feeText", "")), "open": st != "locked", "done": st == "passed" or st == "done", "stars": int(tk.get("stars", 0)), "state": st,
-				"pay_text": str(tk.get("payText", "")), "stars_max": int(tk.get("starsMax", 2)),
+				"pay_text": str(tk.get("payText", "")), "stars_max": int(tk.get("starsMax", 2)), "eb": bool(tk.get("eb", false)),
 				"best_text": ("best cost %s" % str((tk.best as Dictionary).get("costText", ""))) if tk.get("best", null) is Dictionary else ""})
-	return {"tickets": rows, "wallet": wallet_minor, "wallet_text": wallet_text, "stars": int((m as Dictionary).get("starsEarned", 0)) if m is Dictionary else 0}
+	return {"tickets": rows, "wallet": wallet_minor, "wallet_text": wallet_text, "stars": int((m as Dictionary).get("starsEarned", 0)) if m is Dictionary else 0, "chapter": chapter,
+		"title": str((m as Dictionary).get("title", "")) if m is Dictionary else "", "blurb": str((m as Dictionary).get("blurb", "")) if m is Dictionary else "", "stars_total": int((m as Dictionary).get("starsTotal", 0)) if m is Dictionary else 0}
 
 func _load_ticket() -> void:
 	card = _q("ticketCard")
@@ -139,7 +148,9 @@ func _load_ticket() -> void:
 		"specs": card.get("specs", []), "targets": card.get("targets", []), "conditions": card.get("conditions", []), "predictions": card.get("predictions", []),
 		"supply": supply, "board": {"w": int(bench_q.get("w", 24)), "h": int(bench_q.get("h", 16)), "connectors": conns}}
 	_scope_setup(tg)
-	ticket["spec_full"] = _short_spec(tg)
+	ticket["spec_full"] = str(card.get("specShort", "")) if str(card.get("specShort", "")) != "" else _short_spec(tg)
+	ticket["answers"] = card.get("answers", [])
+	ticket["chapter"] = int(card.get("chapter", 1))
 	ticket["scope"] = scope_view
 	_exam_hide()
 	_rebuild_model()
@@ -147,15 +158,22 @@ func _load_ticket() -> void:
 func _supply_info() -> Dictionary:
 	var ins: Dictionary = bench_q.get("instruments", {})
 	var sup = ins.get("supply", null)
-	if sup is Dictionary: return {"kind": "bench", "label": "%s V supply" % String.num(float(sup.v), 2).trim_suffix(".0").trim_suffix(".00"), "volts": float(sup.v), "tired": false}
+	if sup is Dictionary: return {"kind": "bench", "label": "%s V supply" % String.num(float(sup.v), 2).trim_suffix(".0").trim_suffix(".00"), "volts": float(sup.v), "tired": false, "adjustable": str(card.get("id", "")) == "2-3"}
 	for p in _all_parts:
 		if str(p.partId).begins_with("bat-pp3"):
 			var tired: bool = str(p.partId).ends_with("tired") or str(p.get("variant", "")) == "tired"
 			return {"kind": "pp3", "label": "tired 9 V pack" if tired else "9 V PP3", "volts": 9.0, "tired": tired}
-	var srcs: Array = []   # an exam ticket: ideal textbook sources fixed on the board (not a battery, not the bench supply)
+	var srcs: Array = []   # an exam ticket: ideal textbook sources fixed on the board (not a battery, not the bench supply); chapter 2 adds its lab cells
+	var lab := false
 	for p in _all_parts:
-		if str(p.partId).begins_with("ideal-vsource"): srcs.append({"name": "E%d" % (srcs.size() + 1), "volts": float(p.get("value", 0.0))})
-	if not srcs.is_empty(): return {"kind": "sources", "label": "textbook sources", "volts": 0.0, "tired": false, "sources": srcs}
+		var pid := str(p.partId)
+		if pid.begins_with("ideal-vsource"): srcs.append({"name": "driver" if str(card.get("id", "")) == "2-4" else "E%d" % (srcs.size() + 1), "volts": float(p.get("value", 0.0))})
+		elif pid == "cell-2v": srcs.append({"name": "cell", "volts": 2.0}); lab = true
+		elif pid == "cell-test": srcs.append({"name": "test", "volts": 1.5}); lab = true
+	if not srcs.is_empty():
+		var cid := str(card.get("id", ""))
+		return {"kind": "sources", "label": "lab cells" if lab else "textbook sources", "volts": 0.0, "tired": false, "sources": srcs,
+			"title": ("ON THE BENCH" if lab else "TEXTBOOK SOURCES  (ideal)"), "note": ("wire the cell into the bridge" if cid == "2-2" else ("driver cell and the cell to test" if cid == "2-4" else "wired by the ticket: just probe"))}
 	return {"kind": "none", "label": "(textbook sources)", "volts": 0.0, "tired": false}
 
 func _short_spec(tg: Dictionary) -> String:
@@ -177,14 +195,14 @@ static func _g(x: float, n := 4) -> String:
 func _scope_setup(tg: Dictionary) -> void:
 	var mode := str(tg.get("mode", "gauge")); var unit := str(tg.get("unit", ""))
 	var lo := _n(tg.get("lo", 0.0)); var hi := _n(tg.get("hi", 1.0))
-	var ref := hi if hi < lo * 20.0 else lo * 1.5
+	var ref := hi if (lo <= 0.0 or hi < lo * 20.0) else lo * 1.5
 	var vdiv := _nice(ref * 1.3 / 6.0)
 	if mode == "probe" and _n(scope_q.get("voltsPerDiv", 0.0)) > 0.0: vdiv = float(scope_q.voltsPerDiv) * _n(tg.get("scale", 1.0))
-	var label: String = {"A": "CURRENT", "W": "POWER", "V": "VOLTS"}.get(str(tg.get("quantity", "")), "LEVEL")
+	var label: String = {"A": "CURRENT", "W": "POWER", "V": "VOLTS", "uA": "NEEDLE"}.get(str(tg.get("quantity", "")), "LEVEL")
 	var clip = tg.get("clip", null)
 	scope_view = {"unit": unit, "lo": lo, "hi": minf(hi, vdiv * 7.0), "vdiv": vdiv, "label": label, "mode": mode, "scale": _n(tg.get("scale", 1.0)),
 		"clip_pad": (clip.pad if clip is Dictionary else null), "clip_name": (str(clip.connector) if clip is Dictionary else ""), "clipped": false, "attached": mode == "gauge",
-		"value": 0.0, "text": "", "name": str(tg.get("name", ""))}
+		"value": 0.0, "text": "", "name": str(tg.get("name", "")), "nogauge": tg.is_empty(), "hidden": tg.is_empty()}
 
 static func _nice(x: float) -> float:
 	if x <= 0.0: return 1.0
@@ -205,7 +223,8 @@ func bin() -> Array:
 				var label := str(fam.name)
 				if v != null: label = NodeApi.format_value(float(v), "R" if kind == "R" else kind)
 				elif kind == "LED": label = "red LED"
-				var tag := _watt_tag(float(va.ratings.P)) if (kind == "R" and va.ratings.has("P") and str(va.id) != "ideal") else ""
+				var tag := _watt_tag(float(va.ratings.P)) if (kind == "R" and va.ratings.has("P") and str(va.id) != "ideal" and not PART_TAG.has(str(fam.partId))) else str(PART_TAG.get(str(fam.partId), ""))
+				if kind == "METER": kind = "GALVO"
 				var mx = fam.get("max", null)
 				out.append({"i": i, "partId": str(fam.partId), "value": v, "variant": str(va.id), "tag": tag, "label": label, "kind": kind, "footprint": str(fam.footprint),
 					"price": int(va.get("price", 0)), "price_text": str(va.get("priceText", "")) if int(va.get("price", 0)) > 0 else "",
@@ -334,18 +353,24 @@ func set_dial(mode: String) -> void:
 
 func predict(id: String, value: float) -> Dictionary:
 	var r := _act("predict", [id, value])
-	card = _q("ticketCard"); ticket["predictions"] = card.get("predictions", [])
+	card = _q("ticketCard"); ticket["predictions"] = card.get("predictions", []); ticket["answers"] = card.get("answers", [])
+	_bench_key = ""   # a new answer is a new reason to bench (the auto bench waits for it)
 	_exam_hide()
 	return {"ok": bool(r.get("ok", false)), "msg": str(r.get("message", ""))}
 
 ## Exam bridge: predict first. The target band (chit and scope) stays hidden until every prediction is locked in, or it gives the answer away.
 func _exam_hide() -> void:
 	var hide := bool(ticket.get("eb", false)) and not predictions_done()
-	scope_view["hidden"] = hide
+	scope_view["hidden"] = hide or bool(scope_view.get("nogauge", false))
 	ticket["spec"] = "predict first, then build" if hide else str(ticket.get("spec_full", ""))
 
 func predictions_done() -> bool:
 	for p in ticket.get("predictions", []): if p.get("entered", null) == null: return false
+	return true
+
+## Numbers worked out on the slip (2-2: the distance): every one entered.
+func answers_done() -> bool:
+	for a in ticket.get("answers", []): if a.get("entered", null) == null: return false
 	return true
 
 ## The formal bench check. A pass pays the ticket (event "paid"); a fail raises "bench_failed" with the engine's explanation of the player's own numbers.
@@ -412,7 +437,10 @@ func _refresh_board() -> void:
 func _scene_part(p: Dictionary) -> Dictionary:
 	var pid := str(p.partId); var kind := str(p.kind)
 	if kind == "HEATER": kind = "LOAD"
+	elif pid == "blackbox": kind = "BOXED"
 	elif kind == "MISC" or pid.begins_with("ideal-vsource"): kind = "BAT"
+	elif kind == "METER": kind = "GALVO"
+	elif kind == "SLIDEWIRE": kind = "SLIDE"
 	var pins: Array = []
 	var pin_labels: Array = []
 	for q in p.pins:
@@ -421,13 +449,21 @@ func _scene_part(p: Dictionary) -> Dictionary:
 	var label := str(p.get("valueText", ""))
 	var variant := str(p.get("variant", ""))
 	var tag := ""
-	if kind == "R" and p.get("ratings", {}).has("P") and variant != "ideal": tag = _watt_tag(float(p.ratings.P))
+	if kind == "R" and p.get("ratings", {}).has("P") and variant != "ideal" and not PART_TAG.has(pid): tag = _watt_tag(float(p.ratings.P))
 	if kind == "LOAD": label = str(p.get("name", "Heater"))
+	elif kind == "BOXED": label = "sealed box"
+	elif kind == "GALVO": label = "galvanometer"
+	elif kind == "SLIDE": label = ""
+	elif pid == "cell-2v": label = "2 V cell"
+	elif pid == "cell-test": label = "test cell"
+	elif kind == "BAT" and (pid == "cell-2v" or pid == "cell-test"): pass
 	elif kind == "BAT": label = (("E%s  %s V" % [str(p.uid).substr(1), _g(float(p.value))]) if pid.begins_with("ideal-vsource") else ("%s V" % _g(float(p.value)))) if p.get("value", null) != null else NodeApi.BAT_LABEL.get(pid, "9 V")
 	elif kind == "R" and tag != "" and _multi_rating(pid): label = "%s %s" % [label, tag]
 	elif kind == "LED": label = "LED"
 	return {"uid": str(p.uid), "partId": pid, "value": p.get("value", null), "label": label, "tag": tag, "kind": kind, "x": int(p.x), "y": int(p.y), "rot": int(p.rot),
-		"flip": bool(p.get("flip", false)), "fixed": bool(p.get("fixed", false)), "variant": variant, "pins": pins, "pin_labels": pin_labels, "smoked": bool(p.get("smoked", false)), "name": str(p.get("name", ""))}
+		"flip": bool(p.get("flip", false)), "fixed": bool(p.get("fixed", false)), "variant": variant, "pins": pins, "pin_labels": pin_labels, "smoked": bool(p.get("smoked", false)), "name": str(p.get("name", "")),
+		"pos": p.get("pos", null), "pos_text": ("%.2f cm" % (float(p.pos) * 100.0)) if kind == "SLIDE" and p.get("pos", null) != null else ("50.00 cm" if kind == "SLIDE" else ""),
+		"step_text": "step %s mm" % _g(jockey_step_mm()) if kind == "SLIDE" else ""}
 
 func _multi_rating(pid: String) -> bool:
 	for fam in card.get("shoebox", []): if str(fam.partId) == pid and (fam.variants as Array).size() > 1: return true
@@ -485,6 +521,48 @@ func dmm() -> Dictionary:
 	var s := str(disp.get("text", "")); var sp := s.rfind(" ")
 	return {"text": s.substr(0, sp) if sp > 0 else s, "value": disp.get("value", null), "unit": str(disp.get("unit", unit)), "mode": dial, "negative": bool(dmm_q.get("negative", false))}
 
+## ------------------------------------------------------------------------------------------------------------------ chapter 2 controls
+
+## The fixed slide wire of the open ticket ({} when there is none).
+func slide_part() -> Dictionary:
+	for p in parts: if str(p.kind) == "SLIDE": return p
+	return {}
+
+## Jockey position in mm from end A (0.1 mm steps are the engine's).
+func jockey_mm() -> float:
+	var sp := slide_part()
+	return (float(sp.pos) * 1000.0) if not sp.is_empty() and sp.get("pos", null) != null else 500.0
+
+var jockey_step_i := 1            ## the jockey keys move 10 mm, 1 mm or 0.1 mm per press
+const JOCKEY_STEPS := [10.0, 1.0, 0.1]
+func jockey_step_mm() -> float: return JOCKEY_STEPS[clampi(jockey_step_i, 0, 2)]
+func cycle_jockey_step() -> void:
+	jockey_step_i = (jockey_step_i + 1) % 3
+	_refresh_board(); _rebuild_model()
+
+func set_jockey(mm: float) -> Dictionary:
+	var sp := slide_part()
+	if sp.is_empty(): return {"ok": false, "msg": ""}
+	var r := _act("setJockey", [str(sp.uid), clampf(mm, 0.0, 1000.0)])
+	if r.get("ok", false):
+		_bench_key = ""; passed = false; hold = 0.0
+		_refresh_board(); _refresh_live(); _rebuild_model()
+	return {"ok": bool(r.get("ok", false)), "msg": str(r.get("message", "")) if not r.get("ok", false) else ""}
+
+## The bench supply's set voltage (engine: instruments.supply.v).
+func supply_volts() -> float:
+	var sup = bench_q.get("instruments", {}).get("supply", null)
+	return float(sup.v) if sup is Dictionary else 0.0
+
+func set_supply(v: float) -> Dictionary:
+	var sup = bench_q.get("instruments", {}).get("supply", null)
+	if not (sup is Dictionary): return {"ok": false, "msg": ""}
+	var r := _act("setSupply", [snappedf(clampf(v, 0.0, 15.0), 0.01), float(sup.ilim)])
+	if r.get("ok", false):
+		_bench_key = ""; passed = false; hold = 0.0
+		_refresh_board(); _refresh_live(); _rebuild_model()
+	return {"ok": bool(r.get("ok", false)), "msg": str(r.get("message", "")) if not r.get("ok", false) else ""}
+
 ## ------------------------------------------------------------------------------------------------------------------ play loop
 
 func step(dt: float) -> void:
@@ -499,7 +577,7 @@ func step(dt: float) -> void:
 	if locked and not passed:
 		hold += dt
 		# the formal check runs by itself once LOCK has held and every part is still cool: a part that is warming is left to play out (glow, then smoke) in real time
-		if hold >= LOCK_HOLD and not bool(ticket.get("eb", false)) and _bench_key != _board_key() and not _any_heating(): run_bench()
+		if hold >= LOCK_HOLD and not bool(ticket.get("eb", false)) and answers_done() and _bench_key != _board_key() and not _any_heating(): run_bench()
 	elif not locked: hold = 0.0
 
 func _any_heating() -> bool:
@@ -578,6 +656,8 @@ func _target_of(a) -> String:
 			return "pad:%d,%d" % [int(pad2[0]), int(pad2[1])] if pad2 is Array else "board"
 		"power": return "rocker"
 		"scope": return "clip"
+		"jockey": return "jockey"
+		"supplyv": return "supplyv"
 		"dmm": return "dmm"
 		"bench": return "bench"
 		"chit": return "chit"
@@ -595,7 +675,7 @@ func _rebuild_model() -> void:
 	var sets: Array = []
 	for n in frame.get("nodes", []): sets.append({"v": float(n.v), "pads": n.pads})
 	var cur_w := {}; var cur_p := {}; var spd_w := {}; var spd_p := {}; var rat := {}; var temps_m := {}; var smoked_l: Array = []
-	var heat := {}; var led := {}
+	var heat := {}; var led := {}; var galvo := {}
 	for w in frame.get("wires", []): cur_w[str(w.wid)] = float(w.i); spd_w[str(w.wid)] = float(w.speed)
 	for p in frame.get("parts", []):
 		var uid := str(p.uid)
@@ -606,6 +686,7 @@ func _rebuild_model() -> void:
 		if _n(p.get("rated", 0.0)) > 0.0 or _n(p.get("ratio", 0.0)) > 0.0: rat[uid] = {"p": _n(p.get("ratio", 0.0))}
 		if bool(p.get("smoked", false)): smoked_l.append(uid)
 		if p.has("led"): led[uid] = {"mood": str(p.led.get("mood", "sleepy")), "bloom": float(p.led.get("bloom", 0.0)), "mA": float(p.led.get("mA", 0.0))}
+		if p.has("galvo"): galvo[str(p.uid)] = float(p.galvo.get("needle", 0.0))
 	for e in frame.get("events", []): smoked_l.append(str(e.part))
 	var vmin := _n(frame.get("vmin", 0.0)); var vmax := _n(frame.get("vmax", 1.0))
 	var raw := {"board": bd, "nodes": {"sets": sets, "range": [minf(vmin, 0.0), maxf(vmax, 0.5)]}, "currents": {"wires": cur_w, "parts": cur_p},
@@ -615,7 +696,7 @@ func _rebuild_model() -> void:
 	var norm := {}
 	for n in frame.get("nodes", []):
 		for q in n.pads: norm["%d,%d" % [int(q[0]), int(q[1])]] = float(n.norm)
-	m["dangling"] = dangling; m["norm"] = norm; m["wire_speed"] = spd_w; m["part_speed"] = spd_p; m["heat"] = heat; m["led"] = led
+	m["dangling"] = dangling; m["norm"] = norm; m["wire_speed"] = spd_w; m["part_speed"] = spd_p; m["heat"] = heat; m["led"] = led; m["galvo"] = galvo
 	model = m
 
 ## ------------------------------------------------------------------------------------------------------------------ test helpers
@@ -632,21 +713,35 @@ const REFS := {
 		"clip": [8, 6], "pred": {"pva": 6.6667, "pie2": 0.5556}},
 }
 
+const REFS_CH2 := {
+	"2-1": {"parts": [["res-cf", 15000, "0.25W", 4, 2, 0], ["res-cf", 82000, "0.25W", 8, 4, 1]], "wires": [[[2, 2], [4, 2]], [[8, 2], [14, 2]], [[8, 4], [8, 2]], [[8, 8], [14, 8]]], "clip": [14, 2]},
+	"2-2": {"parts": [["res-box", 5, "plug", 3, 5, 0], ["galvanometer", null, "100ohm", 13, 8, 0]],
+		"wires": [[[2, 14], [2, 12]], [[22, 12], [22, 14]], [[3, 5], [2, 5], [2, 12]], [[7, 5], [11, 5]], [[17, 5], [22, 5], [22, 12]], [[11, 5], [11, 8], [13, 8]], [[19, 8], [19, 10], [12, 10]]],
+		"jockey": 400.0, "pred": {"dist": 75.0}},
+	"2-3": {"parts": [["res-cf", 1100, "0.25W", 4, 2, 0], ["res-cf", 33, "0.25W", 9, 2, 0]], "wires": [[[2, 2], [4, 2]], [[8, 2], [9, 2]], [[13, 2], [14, 2]]], "supply": 8.0, "leads": [[20, 12], [14, 8]]},
+	"2-4": {"parts": [["rheostat", 10, "ideal", 6, 14, 0], ["galvanometer", null, "100ohm", 12, 7, 0]],
+		"wires": [[[16, 14], [10, 14]], [[6, 14], [2, 14], [2, 12]], [[22, 12], [22, 14]], [[4, 5], [2, 5], [2, 12]], [[10, 5], [10, 7], [12, 7]], [[18, 7], [18, 10], [12, 10]]],
+		"jockey": 750.0, "pred": {"pgrad": 0.02, "pemf": 1.5, "pr": 0.5}},
+}
+
 ## Build the reference design for the open ticket straight through the engine (no UI). Returns true when every step was accepted.
 func build_ref(id: String) -> bool:
-	var R: Dictionary = REFS.get(id, {})
+	var R: Dictionary = REFS.get(id, REFS_CH2.get(id, {}))
 	if R.is_empty(): return false
 	var ok := true
 	if R.has("pred"): for k in R.pred: ok = predict(str(k), float(R.pred[k])).ok and ok
 	for p in R.parts: ok = bool(place({"partId": p[0], "value": p[1], "variant": p[2], "kind": "R"}, p[3], p[4], p[5]).ok) and ok
 	for w in R.wires: ok = _act("addWire", [w]).get("ok", false) and ok
 	if R.has("clip"): ok = bool(set_probe("ch1", R.clip).ok) and ok
+	if R.has("jockey"): ok = bool(set_jockey(float(R.jockey)).ok) and ok
+	if R.has("supply"): ok = bool(set_supply(float(R.supply)).ok) and ok
+	if R.has("leads"): for k in 2: ok = bool(set_probe(["red", "black"][k], R.leads[k]).ok) and ok
 	_after_edit()
 	return ok
 
 ## Pass every ticket before `id` with its reference design (unlocks `id` for the screenshot run and the tests), leaving `id` closed.
 func unlock_through(id: String) -> void:
-	for tk in ["1-1", "1-2", "1-3", "1-4", "1-5"]:
+	for tk in ALL_TICKETS:
 		if tk == id: break
 		if not open_ticket(tk): continue
 		build_ref(tk); set_power(true)

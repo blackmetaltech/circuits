@@ -444,7 +444,7 @@ func _draw_parts(ci: Control) -> void:
 	for pt in m.parts:
 		var i: float = absf(float(m.part_i.get(pt.uid, 0.0))) if live else 0.0
 		var st := {"lit": _led_lit(pt.uid, i, m) if pt.kind == "LED" else 0.0, "smoked": m.smoked.has(pt.uid),
-			"hot": _heat_k(pt.uid, m) if live else 0.0}
+			"hot": _heat_k(pt.uid, m) if live else 0.0, "needle": float(m.get("galvo", {}).get(pt.uid, 0.0)) if live else 0.0}
 		PartArt.draw(ci, pt, _px(Vector2(pt.x, pt.y)), p, st)
 	for pr in m.probes: _probe(ci, pr)
 	# labels and rating bars

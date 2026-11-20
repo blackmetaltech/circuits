@@ -27,6 +27,7 @@ const FOOTPRINTS := {
 	"axial2": [[0, 0], [4, 0]], "radial2": [[0, 0], [2, 0]], "to92": [[0, 0], [1, 0], [2, 0]], "to220": [[0, 0], [2, 0], [4, 0]],
 	"dip8": [[0, 0], [0, 1], [0, 2], [0, 3], [3, 3], [3, 2], [3, 1], [3, 0]], "pot3": [[0, 0], [2, 0], [4, 0]],
 	"xfmr4": [[0, 0], [0, 4], [4, 0], [4, 4]], "relay5": [[0, 0], [0, 4], [4, 0], [4, 2], [4, 4]], "block2": [[0, 0], [6, 0]],
+	"slide3": [[0, 0], [10, -2], [20, 0]],
 }
 ## partId prefix -> [kind, footprint]. First match wins. Only used when the board JSON lacks `kind` / `pins`.
 const PART_TABLE := [
@@ -34,6 +35,8 @@ const PART_TABLE := [
 	["1n", "D", "axial2"], ["bzx", "D", "axial2"], ["bridge", "BRIDGE", ""], ["xfmr", "XFMR", "xfmr4"], ["2n3906", "PNP", "to92"],
 	["2n", "NPN", "to92"], ["bc", "NPN", "to92"], ["tip", "NPN", "to220"], ["bat-", "BAT", "block2"], ["sw-", "SW", ""], ["fuse", "FUSE", "block2"],
 	["inst-probe", "PROBE", ""],
+	["rheostat", "R", "axial2"], ["trimmer", "R", "axial2"], ["galvanometer", "GALVO", "block2"], ["slidewire", "SLIDE", "slide3"], ["blackbox", "BOXED", "block2"],
+	["adc-in", "LOAD", "block2"], ["cable-loop", "LOAD", "block2"], ["cell-", "BAT", "block2"],
 ]
 const BAT_LABEL := {"bat-pp3": "9 V", "bat-pp3-tired": "9 V", "bat-aa": "1.5 V", "bat-cr2032": "3 V"}
 
@@ -141,7 +144,8 @@ static func _norm_part(p: Dictionary) -> Dictionary:
 		else: label = pid.to_upper()
 	return {"uid": str(p.get("uid", "")), "partId": pid, "kind": kind, "value": val, "label": label, "x": x, "y": y, "rot": rot, "flip": flip,
 		"xf_rot": xf_rot, "xf_flip": xf_flip, "pins": pins, "local_pins": local_pins, "fixed": bool(p.get("fixed", false)),
-		"pin_names": p.get("pinNames", []), "pin_labels": p.get("pin_labels", []), "on": bool(p.get("on", false)), "variant": str(p.get("variant", ""))}
+		"pin_names": p.get("pinNames", []), "pin_labels": p.get("pin_labels", []), "on": bool(p.get("on", false)), "variant": str(p.get("variant", "")),
+		"pos": p.get("pos", null), "pos_text": str(p.get("pos_text", "")), "step_text": str(p.get("step_text", ""))}
 
 ## Clockwise quarter turns on a y-down screen after an x-mirror (src/sim/board/grid.ts rotateOffset).
 static func _rot_off(o: Vector2, rot: int, flip: bool) -> Vector2:

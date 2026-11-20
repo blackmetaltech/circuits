@@ -3,6 +3,11 @@
 All notable changes to NODE. The release workflow publishes the section whose heading contains `[x.y.z]`.
 
 ## [0.1.0] - unreleased
+### Chapter 2 "Divide & Measure" (tickets 2-1 .. 2-4)
+- Four tickets on the engine and the stall, built to the chapter-1 standard (tickets with prices, plain-word fails, coach steps with anchors, exam slip with graded predictions and a debrief, codex pages, stars and fees): 2-1 Sensor Reference (a divider that has to count its 10 kohm ADC load), 2-2 Cable Fault (a metre bridge: slide wire, jockey, galvanometer, resistance box; the answer is a distance in metres), 2-3 Black Box (copy a sealed module with one source and a series resistance, tested at four loads), 2-4 EB Slide-wire Potentiometer (gradient, EMF, internal resistance; two balance marks).
+- Engine: `match` and `answer` checks, bench-only test loads, per-condition jockey positions, `LOAD` fixtures, a `slide3` footprint, `accuracy` metric, `a|b` unlock lists (chapter 2 opens after 1-4 or the 1-5 exam), galvanometer needle in the live frame, coach conditions `link` / `shared` / `answered` / `jockey` / `shorted` / `supplyset`. Details and every deviation from DESIGN §2.8 are in `docs/API-CH2.md` and the level file headers.
+- Stall: code-drawn slide wire with a jockey you drag (and nudge with keys, arrows and the wheel, 0.1 mm), galvanometer, sealed module, ADC chip, cable reel, resistance-box plug, rheostat, trimmer, dry cell; the bench supply gets voltage keys on 2-3; a crew slip for the 2-2 distance; the notebook map has chapter tabs; six new codex pages.
+- Tests: `src/engine/ch2.test.ts`, `godot/tests/ch2_engine_flow.gd`.
 ### Novice play-test round N4 (impatient 13-year-old, handheld 1280x800)
 - 1-5 is about the prediction, not the wiring: E1 and E2 arrive with their minus ends already soldered to the GND pad (`fixedWires`, ids fw1 / fw2, not removable: right-click says "soldered in place"); the player places R1 R2 R3 and draws 6 wires. The A and GND pads are engraved on their brass bars in large dark letters (GND with a ground symbol, A with a cyan ring); the sources read "E1 10 V" / "E2 5 V".
 - The bench never tests a dark bench: GO with the power switch off switches it on (engine `runBench(true)` -> `autoPowered`; click, toast "the power was off: I switched it on"), tested in vitest and in the Godot flow.

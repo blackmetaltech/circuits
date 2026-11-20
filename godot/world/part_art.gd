@@ -60,7 +60,7 @@ static func draw(ci: CanvasItem, part: Dictionary, o: Vector2, p: float, st: Dic
 ## A lead end stud on every pin pad, so the two leads of a part read as two connection points. LED legs are colour-coded: warm anode, cool cathode.
 static func _studs(ci: CanvasItem, part: Dictionary, p: float) -> void:
 	var kind := str(part.kind)
-	if kind in ["BAT", "LOAD", "XFMR", "BRIDGE", "SW"]: return
+	if kind in ["BAT", "LOAD", "XFMR", "BRIDGE", "SW", "SLIDE", "GALVO", "BOXED"]: return
 	var lp: Array = part.local_pins
 	for i in lp.size():
 		var c: Vector2 = lp[i] * p
@@ -81,13 +81,26 @@ static func _body(ci: CanvasItem, part: Dictionary, p: float, st: Dictionary, sh
 		"D": _diode(ci, p, sh, smoked)
 		"NPN", "PNP": _bjt(ci, lp, p, sh, smoked)
 		"XFMR": _xfmr(ci, p, sh)
-		"BAT": _battery(ci, lp, p, sh)
+		"BAT":
+			if str(part.partId) == "cell-test": PartArt2.dry_cell(ci, lp, p, sh)
+			else: _battery(ci, lp, p, sh)
 		"BRIDGE": _bridge(ci, part, p, sh, smoked)
 		"SW": _switch(ci, lp, p, sh, bool(part.on))
-		"LOAD": _load(ci, lp, p, sh, float(st.get("hot", 0.0)))
+		"LOAD":
+			match str(part.partId):
+				"adc-in": PartArt2.adc_chip(ci, lp, p, sh)
+				"cable-loop": PartArt2.cable_reel(ci, lp, p, sh)
+				_: _load(ci, lp, p, sh, float(st.get("hot", 0.0)))
+		"GALVO": PartArt2.galvo(ci, lp, p, sh, float(st.get("needle", 0.0)))
+		"SLIDE": PartArt2.slide(ci, part, lp, p, sh)
+		"BOXED": PartArt2.sealed(ci, lp, p, sh)
 		_: _generic(ci, lp, p, sh)
 
 static func _resistor(ci: CanvasItem, part: Dictionary, p: float, sh: bool, smoked: bool, hot := 0.0) -> void:
+	match str(part.partId):
+		"res-box": PartArt2.res_box(ci, p, sh); return
+		"rheostat": PartArt2.rheostat(ci, p, sh); return
+		"trimmer": PartArt2.trimmer(ci, part, p, sh); return
 	var big: bool = str(part.partId).begins_with("res-ww")
 	_leads(ci, [Vector2(0, 0), Vector2(4, 0)], p, [Vector2(1.0, 0), Vector2(3.0, 0)] if not big else [Vector2(0.6, 0), Vector2(3.4, 0)])
 	var x0 := (0.9 if not big else 0.6) * p; var x1 := (3.1 if not big else 3.4) * p; var hh := (0.42 if not big else 0.62) * p
@@ -250,5 +263,6 @@ static func screen_bounds(part: Dictionary, pin_px: Array, p: float) -> Rect2:
 	var mn := Vector2(1e9, 1e9); var mx := Vector2(-1e9, -1e9)
 	for v in pin_px: mn = mn.min(v); mx = mx.max(v)
 	var pad := p * (0.9 if str(part.kind) != "XFMR" else 0.8)
-	if str(part.kind) in ["BAT"]: pad = p * 1.5
+	if str(part.kind) in ["BAT", "GALVO", "BOXED"]: pad = p * 1.6
+	if str(part.kind) == "SLIDE": pad = p * 1.2
 	return Rect2(mn - Vector2(pad, pad), (mx - mn) + Vector2(pad, pad) * 2.0)

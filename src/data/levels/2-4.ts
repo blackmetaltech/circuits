@@ -13,9 +13,7 @@ export const L2_4: LevelDef = {
   id: '2-4', chapter: 2, titleKey: 'ticket.2-4.title', briefKey: 'ticket.2-4.brief', customer: 'exam', teaches: ['potentiometer', 'potential-gradient', 'internal-resistance', 'null-method'],
   board: {
     w: 24, h: 16,
-    connectors: [
-      { id: 'GND', pad: [22, 14], role: 'ground' }, { id: 'EP', pad: [4, 5], role: 'probe' }, { id: 'EM', pad: [10, 5], role: 'probe' },
-    ],
+    connectors: [{ id: 'GND', pad: [22, 14], role: 'ground' }],
   },
   fixed: [
     { uid: 'f1', partId: 'ideal-vsource', value: 4, variant: 'ideal', x: 16, y: 14, rot: 0, flip: false, fixed: true },
@@ -31,7 +29,7 @@ export const L2_4: LevelDef = {
   constraints: { maxParts: 2 },
   bench: {
     h: 1e-4, settle: 1e-3, window: 1e-3, ic: 'zero', ambientC: 25,
-    testLoads: [{ id: 'shunt', a: 'ep', b: 'em', r: 1e9 }],
+    testLoads: [{ id: 'shunt', a: '@cell-test#1.+', b: '@cell-test#1.-', r: 1e9 }],
     conditions: [
       { id: 'open circuit', set: [{ target: 'shunt', key: 'r', value: 1e9 }, { target: 'f3', key: 'pos', value: 0.75 }] },
       { id: 'shunted by 4.5 ohm', set: [{ target: 'shunt', key: 'r', value: 4.5 }, { target: 'f3', key: 'pos', value: 0.675 }] },
@@ -62,6 +60,7 @@ export const L2_4: LevelDef = {
     jockeys: { f3: 750 },
     predictions: { pgrad: 0.02, pemf: 1.5, pr: 0.5 },
   },
+  specShort: 'ticket.2-4.short',
   scope: 'must',
   after: ['2-1', '2-2|2-3'],
   pay: { fee: 800, perStar: 150 },
@@ -70,7 +69,7 @@ export const L2_4: LevelDef = {
   coach: [
     { id: 'predict', key: 'coach.2-4.s1', anchor: { target: 'chit' }, done: 'predicted' },
     { id: 'build', key: 'coach.2-4.s2', anchor: { target: 'bin', partId: 'rheostat' }, done: 'part:rheostat&part:galvanometer' },
-    { id: 'wire', key: 'coach.2-4.s3', anchor: { target: 'connector', connector: 'EP' }, done: 'wired&joined:EP&shared:f3.J&link:f2.+~f3.A&link:f3.B~GND' },
+    { id: 'wire', key: 'coach.2-4.s3', anchor: { target: 'part', partId: 'cell-test', pin: '+' }, done: 'wired&shared:f2.+&shared:f3.J&link:f2.+~f3.A&link:f3.B~GND' },
     { id: 'null', key: 'coach.2-4.s4', anchor: { target: 'jockey' }, done: 'jockey', when: 'wired&powered', optional: true },
     { id: 'power', key: 'coach.2-4.s5', anchor: { target: 'power' }, done: 'powered', when: 'wired' },
     { id: 'run-bench', key: 'coach.2-4.s6', anchor: { target: 'bench' }, done: 'benched', when: 'wired&predicted' },

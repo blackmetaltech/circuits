@@ -19,7 +19,7 @@ export const L2_2: LevelDef = {
   id: '2-2', chapter: 2, titleKey: 'ticket.2-2.title', briefKey: 'ticket.2-2.brief', customer: 'cablecrew', teaches: ['wheatstone', 'metre-bridge', 'null-method', 'balance-ratio'],
   board: {
     w: 24, h: 16,
-    connectors: [{ id: 'C', pad: [11, 5], role: 'probe' }, { id: 'GND', pad: [22, 14], role: 'ground' }],
+    connectors: [{ id: 'GND', pad: [22, 14], role: 'ground' }],
   },
   fixed: [
     { uid: 'f1', partId: 'cell-2v', value: null, variant: '2V', x: 2, y: 14, rot: 0, flip: false, fixed: true },
@@ -65,6 +65,7 @@ export const L2_2: LevelDef = {
     jockeys: { f3: 400 },
     predictions: { dist: 75 },
   },
+  specShort: 'ticket.2-2.short',
   scope: 'must',
   after: ['2-1'],
   pay: { fee: 600, perStar: 200 },
@@ -73,8 +74,8 @@ export const L2_2: LevelDef = {
   coach: [
     { id: 'galvo', key: 'coach.2-2.s1', anchor: { target: 'bin', partId: 'galvanometer' }, done: 'part:galvanometer' },
     { id: 'box', key: 'coach.2-2.s2', anchor: { target: 'bin', partId: 'res-box' }, done: 'part:res-box' },
-    { id: 'wire', key: 'coach.2-2.s3', anchor: { target: 'connector', connector: 'C' }, done: 'wired&joined:C&shared:f3.J&link:f1.+~f3.A' },
-    { id: 'ground', key: 'coach.2-2.sg', anchor: { target: 'connector', connector: 'GND' }, done: 'link:f3.B~GND', when: 'wired&joined:C&shared:f3.J&link:f1.+~f3.A' },
+    { id: 'wire', key: 'coach.2-2.s3', anchor: { target: 'part', partId: 'cable-loop', pin: '1' }, done: 'wired&shared:f2.1&shared:f3.J&link:f1.+~f3.A' },
+    { id: 'ground', key: 'coach.2-2.sg', anchor: { target: 'connector', connector: 'GND' }, done: 'link:f3.B~GND', when: 'wired&shared:f2.1&shared:f3.J&link:f1.+~f3.A' },
     { id: 'power', key: 'coach.2-2.s4', anchor: { target: 'power' }, done: 'powered', when: 'wired&link:f3.B~GND' },
     { id: 'null', key: 'coach.2-2.s5', anchor: { target: 'jockey' }, done: 'jockey', when: 'powered' },
     { id: 'answer', key: 'coach.2-2.s6', anchor: { target: 'chit' }, done: 'answered', when: 'powered&jockey' },

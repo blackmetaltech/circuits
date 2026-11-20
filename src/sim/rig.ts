@@ -146,9 +146,15 @@ export function buildRig(inp: RigInput): Rig {
       }
     }
   }
+  // a test load's end is a connector / node name, `0`, or a part pin `@partId#n.PIN` (the cell under test's + terminal)
+  const endNode = (ref: string): number => {
+    const m = /^@([a-z0-9-]+)#(\d+)\.(.+)$/.exec(ref);
+    if (m) { const uid = board.parts.filter((p) => p.partId === m[1]!)[Number(m[2]) - 1]?.uid, d = getDef(m[1]!), idx = d ? d.pins.indexOf(m[3]!) : -1, ns = uid ? base.conn.pinNodes[uid] : undefined; return ns && idx >= 0 ? ns[idx]! : -1; }
+    return ref === '0' || ref.toLowerCase() === 'gnd' ? 0 : nodeNames.indexOf(ref.toLowerCase());
+  };
   for (const tl of inp.testLoads ?? []) {   // bench-only test loads: a condition overrides their r
     const ov = (inp.overrides ?? []).find((o) => o.target === tl.id && o.key === 'r');
-    const ia = nodeNames.indexOf(tl.a.toLowerCase()), ib = tl.b === '0' || tl.b.toLowerCase() === 'gnd' ? 0 : nodeNames.indexOf(tl.b.toLowerCase());
+    const ia = endNode(tl.a), ib = endNode(tl.b);
     if (ia >= 0 && ib >= 0 && ia !== ib) add({ id: tl.id, kind: 'R', owner: tl.id, nodes: [ia, ib], p: { r: ov ? ov.value : tl.r } });
   }
   for (const n of inp.probeLoads ?? []) { const k = nodeNames.indexOf(n.toLowerCase()); if (k > 0) add({ id: `load.${n.toLowerCase()}`, kind: 'R', owner: '', nodes: [k, 0], p: { r: PROBE_RIN } }); }

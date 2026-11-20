@@ -25,6 +25,7 @@ var bin_scroll := 0.0             ## shoebox scroll, in rows (fractional while d
 var bin_drag := false             ## the tray is being dragged / flung: show the track
 var exam_fig: Dictionary = {}          ## exam ticket: the engine's figure, drawn small on the problem card that stays on the bench
 var exam_open := true                  ## false once the predictions are in (the card then reads "your predictions are in")
+var crew: Dictionary = {}              ## a ticket that asks for a worked-out number (2-2): {answers:[{id, name, unit, entered}]}, shown as the crew's slip on the bench
 var all_items: Array = []       ## the whole shoebox (items is what the rating filter lets through)
 var rating_filter := ""         ## "" = all, else a watt tag ("¼ W"): the shelf shows only parts with that rating
 var hide_item := -1             ## the bin item being dragged
@@ -66,6 +67,7 @@ func _r(n: String) -> Rect2: return L.get(n, Rect2())
 ## The exam problem card: it stays on the bench after "later", with the figure on it. Tap it (or press P) to open the predict slip again.
 func _exam_card() -> void:
 	var r := _r("exam")
+	if exam_fig.is_empty() and not crew.is_empty() and r.size != Vector2.ZERO: _crew_slip(r); return
 	if exam_fig.is_empty() or r.size == Vector2.ZERO: return
 	var c := r.get_center(); var hv: bool = hover == "exam"
 	var lift := -6.0 if hv else 0.0
@@ -77,6 +79,29 @@ func _exam_card() -> void:
 	S.text(self, S.hand(), "EXAM SLIP", q.position + Vector2(12, 36), 16, S.INK_RED)
 	ExamFigure.draw(self, Rect2(q.position + Vector2(6, 42), Vector2(q.size.x - 12, q.size.y - 82)), exam_fig, S.INK, [], true)
 	S.text(self, S.hand(), "tap: open the slip" if not exam_open else "tap to predict", q.position + Vector2(12, q.size.y - 12), 15, Color(S.INK, 0.8))
+	if hv: S.rr_line(self, q.grow(3), 5, Color("#ffd98a", 0.9), 3.0)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+## The crew's slip (2-2): the foreman's note with the line the player fills in. Tap it (or press P) to write the distance.
+func _crew_slip(r: Rect2) -> void:
+	var c := r.get_center(); var hv: bool = hover == "exam"
+	var lift := -6.0 if hv else 0.0
+	S.shadow(self, Rect2(r.position + Vector2(0, lift), r.size), 6, Vector2(6, 9), 0.4)
+	S.paper(self, Rect2(r.position + Vector2(0, lift), r.size), -2.0, Color("#f7f0d6"))
+	draw_set_transform(c + Vector2(0, lift), deg_to_rad(-2.0), Vector2.ONE)
+	var q := Rect2(-r.size * 0.5, r.size)
+	S.pin(self, q.position + Vector2(q.size.x * 0.5, 11), Color("#c9533d"))
+	S.text(self, S.hand(), "CREW'S SLIP", q.position + Vector2(12, 36), 16, S.INK_RED)
+	S.text(self, S.hand(), "Where do we dig?", q.position + Vector2(12, 66), 18, S.INK)
+	var a: Dictionary = (crew.answers as Array)[0] if (crew.get("answers", []) as Array).size() > 0 else {}
+	var entered = a.get("entered", null)
+	var line := Rect2(q.position.x + 12, q.position.y + 96, q.size.x - 24, 44)
+	S.rr(self, line, 6, Color(S.INK, 0.07)); S.rr_line(self, line, 6, Color(S.INK, 0.5 if entered != null else 0.3), 2.0)
+	var txt: String = "%s m" % EngineBench._g(float(entered), 5) if entered != null else "___ m"
+	S.text(self, S.mono(), txt, line.position + Vector2(10, 32), 26, S.INK)
+	S.text(self, S.hand(), "X = R (100 - l) / l,", q.position + Vector2(12, 166), 16, Color(S.INK, 0.8))
+	S.text(self, S.hand(), "then 0.1 ohm per metre", q.position + Vector2(12, 186), 16, Color(S.INK, 0.8))
+	S.text(self, S.hand(), "tap: write the distance" if entered == null else "tap: change it", q.position + Vector2(12, q.size.y - 10), 15, Color(S.INK, 0.8))
 	if hv: S.rr_line(self, q.grow(3), 5, Color("#ffd98a", 0.9), 3.0)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
@@ -419,6 +444,10 @@ func _customer() -> void:
 	c.y += bob
 	var skin := Color("#e0a878"); var cloth := Color("#c9533d"); var hair := Color("#2a1a12")
 	var kind := "kid"
+	match gadget:
+		"cable": cloth = Color("#e8892a"); hair = Color("#2a2420"); skin = Color("#c98e5e"); kind = "hardhat"
+		"module": cloth = Color("#3a6f8f"); hair = Color("#14100d"); skin = Color("#b9784e"); kind = "glasses"
+		"station": cloth = Color("#5a8f4a"); hair = Color("#6b3a1e"); skin = Color("#f0bf94")
 	match customer:
 		"Ash": cloth = Color("#e8c431"); hair = Color("#3a2a20"); kind = "helmet"
 		"Mr. Brook": cloth = Color("#4a6c7d"); hair = Color("#c9c9c9"); skin = Color("#c98e5e"); kind = "beard"
@@ -439,6 +468,9 @@ func _customer() -> void:
 	draw_circle(hc + Vector2(-48, 4), 12, skin); draw_circle(hc + Vector2(48, 4), 12, skin)                            # ears
 	match kind:
 		"helmet": draw_arc(hc, 66, PI * 1.02, PI * 1.98, 20, Color("#e8c431"), 22.0); draw_arc(hc, 76, PI * 1.1, PI * 1.9, 20, Color("#b5970f"), 4.0)
+		"hardhat":
+			draw_arc(hc, 66, PI * 1.0, PI * 2.0, 20, Color("#f08a1c"), 26.0); draw_line(hc + Vector2(-80, -54), hc + Vector2(80, -54), Color("#d97712"), 9.0); draw_line(hc + Vector2(0, -80), hc + Vector2(0, -56), Color("#d97712"), 7.0)
+			draw_arc(hc + Vector2(0, 44), 30, 0.25, PI - 0.25, 10, hair, 7.0)   # a moustache
 		"cap":
 			draw_arc(hc, 64, PI * 1.05, PI * 1.95, 20, Color("#2d6fb0"), 24.0); draw_rect(Rect2(hc.x - 28, hc.y - 34, 90, 12), Color("#245a92"), true)
 		"beard": draw_arc(hc + Vector2(0, 8), 56, 0.15, PI - 0.15, 16, hair, 34.0); draw_arc(hc, 64, PI * 1.1, PI * 1.9, 16, hair, 12.0)
@@ -490,6 +522,22 @@ func _gadget(g: Vector2) -> void:
 			S.rr(self, Rect2(g.x - 48, g.y - 34, 96, 34), 10, Color("#d23a2e")); S.rr(self, Rect2(g.x - 24, g.y - 56, 50, 28), 10, Color("#e8574a"))
 			for sgn in [-1.0, 1.0]: draw_circle(g + Vector2(sgn * 30, 2), 12, Color("#14100d")); draw_circle(g + Vector2(sgn * 30, 2), 5, Color("#8b8f98"))
 			if ok: draw_line(g + Vector2(-70, -10), g + Vector2(-100, -10), Color(1, 1, 1, 0.5), 3.0); draw_line(g + Vector2(-66, 4), g + Vector2(-110, 4), Color(1, 1, 1, 0.4), 3.0)
+		"station":   # a weather station: mast, anemometer cups and a vane
+			draw_line(g + Vector2(0, 20), g + Vector2(0, -96), Color("#8b8f98"), 6.0); S.rr(self, Rect2(g.x - 22, g.y - 40, 44, 34), 6, Color("#e8e8e0"))
+			for sgn in [-1.0, 1.0]: draw_line(g + Vector2(0, -96), g + Vector2(sgn * 34, -96), Color("#8b8f98"), 4.0); draw_circle(g + Vector2(sgn * 34, -96), 8, Color("#d23a2e"))
+			draw_colored_polygon(PackedVector2Array([g + Vector2(2, -76), g + Vector2(34, -70), g + Vector2(2, -64)]), Color("#3a6fb0"))
+			if ok: S.glow(self, g + Vector2(0, -22), 60.0, Color(0.5, 1, 0.6, 0.35))
+			S.text(self, S.mono(), "3.30" if ok else "?.??", g + Vector2(-20, -16), 15, Color("#1d7a3a") if ok else Color("#b3261e"))
+		"cable":   # a reel of telephone cable with its end sticking out
+			draw_circle(g + Vector2(0, -26), 38, Color("#f08a1c")); draw_circle(g + Vector2(0, -26), 31, Color("#1a1a1c")); draw_circle(g + Vector2(0, -26), 16, Color("#f08a1c")); draw_circle(g + Vector2(0, -26), 5, Color("#2a1a08"))
+			for k in 3: draw_arc(g + Vector2(0, -26), 31 - k * 5, 0.0, TAU, 20, Color("#33343a"), 2.0)
+			draw_line(g + Vector2(30, -8), g + Vector2(70, 6), Color("#1a1a1c"), 6.0)
+			if ok: draw_line(g + Vector2(-48, -70), g + Vector2(-20, -50), Color("#d23a2e"), 6.0); S.text(self, S.hand(), "X", g + Vector2(-66, -72), 26, Color("#d23a2e"))
+		"module":   # a small sealed box with pins
+			S.rr(self, Rect2(g.x - 40, g.y - 62, 80, 62), 6, Color("#14151a")); S.rr(self, Rect2(g.x - 30, g.y - 50, 60, 26), 3, Color("#efe5c8"))
+			S.text(self, S.hand(), "SEALED", g + Vector2(-26, -30), 16, Color(0.55, 0.1, 0.08))
+			for i in 4: draw_line(g + Vector2(-27 + i * 18, 0), g + Vector2(-27 + i * 18, 14), Color("#c9ced4"), 4.0)
+			if ok: S.glow(self, g + Vector2(0, -30), 64.0, Color(0.5, 0.9, 1, 0.3))
 		_:   # exam sheet
 			S.paper(self, Rect2(g.x - 40, g.y - 76, 80, 100), -4.0, S.PAPER, false, Transform2D(0.0, Vector2(_cs, _cs), 0.0, _cc))
 			S.text(self, S.hand(), "✓" if ok else "?", Vector2(g.x - 12, g.y - 20), 56, S.INK_RED if ok else S.INK)

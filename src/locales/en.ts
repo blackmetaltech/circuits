@@ -128,6 +128,10 @@ export const en: Record<string, string> = {
   // chapter 2 "Divide & Measure" (tickets 2-1 .. 2-4)
   'ticket.2-1.title': 'Sensor Reference',
   'ticket.2-1.brief': "{customer}'s weather station reads its sensors with a converter chip (the ADC). The chip's input pin needs 3.3 V, give or take 2 %, and it behaves like a 10 kilohm resistor to ground, soldered between OUT and GND. The bench supply gives 9 V. Build a voltage divider from IN down to GND with OUT in the middle, so that OUT is 3.3 V with the ADC attached. {mentor}: the divider formula in your head forgets the load, and the load is part of the circuit. A low-power divider earns the extra star.",
+  'ticket.2-1.short': 'OUT 3.30 V, 2 %, ADC attached',
+  'ticket.2-2.short': 'needle on zero, then the distance',
+  'ticket.2-3.short': 'match the box within 2 %, four loads',
+  'ticket.2-4.short': 'predict first, then build and probe',
   'ticket.2-1.spec.vout': 'Voltage at OUT between 3.23 V and 3.37 V (3.3 V, 2 %), with the ADC attached',
   'ticket.2-1.hint.nudge': "A divider is two resistors in series from IN to GND with OUT in the middle. But the ADC's 10 kilohm sits across the bottom resistor, in parallel with it: count it.",
   'ticket.2-1.hint.equation': 'The bottom half is your bottom resistor in parallel with the {rLoad} ohm of the ADC. You want {vOut} V out of {vin} V, so (bottom half) / (top resistor + bottom half) = {vOut} / {vin}. Pick the bottom resistor first, work out the parallel value, then solve for the top one.',

@@ -56,7 +56,7 @@ export interface BenchPlan {
   /** spec id -> i18n key of its name (shown on the ticket card and in the bench report). */
   names: Record<string, string>;
   ambientC: number;
-  /** Bench-only test loads (chapter 2): a resistor from node `a` to node `b` (connector names, `0` = GND) that exists ONLY in the formal bench run, never in the live view. A condition's `set`
+  /** Bench-only test loads (chapter 2): a resistor from node `a` to node `b` (connector names, `0` = GND, or a part pin written `@partId#n.PIN`) that exists ONLY in the formal bench run, never in the live view. A condition's `set`
    *  overrides its `r` (`{ target: <id>, key: 'r', value }`): 'the 100 ohm test load', 'the shunt'. */
   testLoads?: { id: string; a: string; b: string; r: number }[];
 }
@@ -179,6 +179,8 @@ export interface LevelDef {
   figure?: ExamFigure;
   /** Numbers the player enters on the slip and the bench checks against the hidden truth (2-2). */
   answers?: AnswerDef[];
+  /** i18n key of the one-line spec printed on the ticket chit (chapter 2: the scope band is a null or a match, not a range). */
+  specShort?: string;
   /** Plain-words explainer for a missed level spec: 'divider' (2-1, the load on the bottom resistor). */
   explain?: 'divider' | 'bridge' | 'blackbox' | 'pot';
   /** Where the ticket's chit hangs on the chapter-1 notebook page, in 0..1 page coordinates. */

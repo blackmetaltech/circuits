@@ -10,11 +10,16 @@ const ROCKER := Rect2(300, 40, 70, 100)
 var kind := "pp3"
 var label := "9 V PP3"
 var tired := false
+var sources_title := "TEXTBOOK SOURCES  (ideal)"
+var sources_note := "wired by the ticket: just probe"
 var sources: Array = []            ## exam tickets: the ideal textbook sources fixed on the board [{name, volts}], listed on the panel instead of a battery
 var conditions: Array = []         ## the ticket's bench conditions (engine): [{id, set:[{target,key,value}], ambientC}], drawn as a tag when there are several
 var on := false
 var hover := false
 var volts := 9.0
+var adjustable := false            ## the ticket lets the player set the voltage (2-3): the bench supply grows [-] [step] [+] keys and a two-decimal display
+var step_i := 0                    ## 0: 1 V, 1: 0.1 V, 2: 0.01 V per press
+const STEPS := [1.0, 0.1, 0.01]
 var amps := 0.0
 var t := 0.0
 var _tilt := 0.0
@@ -31,6 +36,19 @@ func _process(dt: float) -> void:
 func port(which: String) -> Vector2:
 	if kind == "bench": return Vector2(60, 18) if which == "red" else Vector2(120, 18)
 	return Vector2(52, 20) if which == "red" else Vector2(104, 20)
+
+const V_MINUS := Rect2(24, 112, 64, 46)
+const V_STEP := Rect2(96, 112, 100, 46)
+const V_PLUS := Rect2(204, 112, 64, 46)
+## The voltage keys of an adjustable bench supply: "v-" | "v+" | "vstep" | "" (a generous 8 design px around each, so a finger finds them).
+func hit_vadj(p: Vector2) -> String:
+	if kind != "bench" or not adjustable: return ""
+	var g := 8.0 if not S.handheld else 14.0
+	if V_MINUS.grow(g).has_point(p): return "v-"
+	if V_PLUS.grow(g).has_point(p): return "v+"
+	if V_STEP.grow(g).has_point(p): return "vstep"
+	return ""
+func v_step() -> float: return STEPS[clampi(step_i, 0, 2)]
 
 func hit_rocker(p: Vector2) -> bool: return ROCKER.grow(8.0 if not S.handheld else 20.0).has_point(p)   # handheld: 44+ screen px each way
 
@@ -104,7 +122,7 @@ func _sources(rr: Rect2) -> void:
 	S.rr(self, rr, 14, Color("#3b3e44")); S.rr(self, rr.grow(-3), 12, Color("#585c64"))
 	S.vgrad(self, Rect2(8, 12, 384, 50), Color(1, 1, 1, 0.12), Color(1, 1, 1, 0.0), 6)
 	for c in [Vector2(14, 20), Vector2(386, 20), Vector2(14, 156), Vector2(386, 156)]: S.screw(self, c, 5.0, c.x * 0.1)
-	S.text(self, S.hand(), "TEXTBOOK SOURCES  (ideal)", Vector2(26, 38), 17, Color("#d8d4c4"))
+	S.text(self, S.hand(), sources_title, Vector2(26, 38), 17, Color("#d8d4c4"))
 	for i in sources.size():
 		var s: Dictionary = sources[i]
 		var row := Rect2(26, 52 + i * 52, 250, 44)
@@ -113,11 +131,12 @@ func _sources(rr: Rect2) -> void:
 		var vt := "%s V" % EngineBench._g(float(s.volts))
 		S.text(self, S.mono(), vt, row.position + Vector2(row.size.x - 14 - S.tw(S.mono(), vt, 30), 33), 30, Color(1.0, 0.28, 0.15, 1.0 if on else 0.55))
 		if on: S.glow(self, row.get_center(), 90.0, Color(1, 0.2, 0.1, 0.08))
-	S.text(self, S.hand(), "wired by the ticket: just probe", Vector2(26, 158), 14, Color("#b8b4a4"))
+	S.text(self, S.hand(), sources_note, Vector2(26, 158), 14, Color("#b8b4a4"))
 
 func _bench(rr: Rect2) -> void:
 	S.rr(self, rr, 14, Color("#3b3e44")); S.rr(self, rr.grow(-3), 12, Color("#585c64"))
 	S.vgrad(self, Rect2(8, 12, 384, 50), Color(1, 1, 1, 0.12), Color(1, 1, 1, 0.0), 6)
+	if adjustable: _bench_adjustable(rr); return
 	for c in [Vector2(14, 20), Vector2(386, 20), Vector2(14, 156), Vector2(386, 156)]: S.screw(self, c, 5.0, c.x * 0.1)
 	var disp := Rect2(160, 52, 120, 70)
 	S.rr(self, disp.grow(4), 6, Color("#15161a")); S.rr(self, disp, 4, Color("#150604"))
@@ -128,6 +147,29 @@ func _bench(rr: Rect2) -> void:
 	S.text(self, S.hand(), "V", disp.position + Vector2(disp.size.x - 18, 66), 14, Color(1, 0.4, 0.3, 0.7))
 	S.knob(self, Vector2(100, 112), 24.0, 0.9 if on else -0.4)
 	S.text(self, S.hand(), label, Vector2(24, 158), 15, Color("#d8d4c4"))
+	for i in 2:
+		var c := Vector2(60 + i * 60, 28); var col := Color("#b2261c") if i == 0 else Color("#1a1a1c")
+		draw_circle(c, 15, Color("#0a0a0c")); draw_circle(c, 12, col); draw_circle(c, 6, Color("#d0b25a"))
+	_jack_ring()
+
+## The adjustable bench supply: the set voltage is always shown (two decimals), with [-] [step] [+] keys (the knob is decoration; the wheel and the up / down arrows work too).
+func _bench_adjustable(_rr: Rect2) -> void:
+	var disp := Rect2(24, 40, 190, 66)
+	S.rr(self, disp.grow(4), 6, Color("#15161a")); S.rr(self, disp, 4, Color("#150604"))
+	var txt := "%.2f" % volts
+	S.text(self, S.mono(), "88.88", disp.position + Vector2(8, 52), 52, Color(1, 0.2, 0.1, 0.10))
+	S.text(self, S.mono(), txt, disp.position + Vector2(disp.size.x - 34 - S.tw(S.mono(), txt, 52), 52), 52, Color(1.0, 0.28, 0.15, 1.0 if on else 0.55))
+	if on: S.glow(self, disp.get_center(), 100.0, Color(1, 0.2, 0.1, 0.16))
+	S.text(self, S.hand(), "V", disp.position + Vector2(disp.size.x - 26, 52), 22, Color(1, 0.4, 0.3, 0.8))
+	S.knob(self, Vector2(250, 78), 22.0, 0.3 + volts * 0.2)
+	for k in [[V_MINUS, "-"], [V_PLUS, "+"]]:
+		var rc: Rect2 = k[0]
+		S.rr(self, rc, 8, Color("#1b1d21")); S.rr(self, rc.grow(-3), 6, Color("#2c2f35"))
+		S.text(self, S.mono(), str(k[1]), rc.position + Vector2(rc.size.x * 0.5 - 10, rc.size.y * 0.5 + 13), 40, Color("#ffd98a"))
+	S.rr(self, V_STEP, 8, Color("#1b1d21")); S.rr(self, V_STEP.grow(-3), 6, Color("#2c2f35"))
+	var st := "step %s V" % EngineBench._g(STEPS[clampi(step_i, 0, 2)])
+	S.text(self, S.hand(), st, V_STEP.position + Vector2(V_STEP.size.x * 0.5 - S.tw(S.hand(), st, 18) * 0.5, 30), 18, Color("#d8d4c4"))
+	for c in [Vector2(14, 20), Vector2(386, 20)]: S.screw(self, c, 5.0, c.x * 0.1)
 	for i in 2:
 		var c := Vector2(60 + i * 60, 28); var col := Color("#b2261c") if i == 0 else Color("#1a1a1c")
 		draw_circle(c, 15, Color("#0a0a0c")); draw_circle(c, 12, col); draw_circle(c, 6, Color("#d0b25a"))

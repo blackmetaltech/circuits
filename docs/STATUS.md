@@ -49,3 +49,8 @@ New in the UI: DMM ohm mode, the scope's CH1 clip as a real lead to drag onto th
 been held 1.2 s, except on the exam ticket), the 1-5 exam slip (type V(A) and I(E2), the engine grades them), the fresh / tired battery tag on 1-2 (the bench tests both), supply cables routed around the board.
 Tests: `godot/tests/stall_flow.gd` (engine; `CB_FIXTURE=1` for the double), `godot/tests/ch1_engine_flow.gd` (all five tickets to LOCK with the reference designs, plus the naive 1-1 and 1-3 smokes and the 1-2 tired-battery bench fail).
 Open: the 1-2 tired battery is shown and benched but cannot be switched live (the engine has no live condition switch); 1-5 NiMH swap and phone (2424x1080) shots not redone.
+
+## 2026-11-20 chapter 2 "Divide & Measure" (engine + stall)
+Tickets 2-1 Sensor Reference, 2-2 Cable Fault, 2-3 Black Box, 2-4 EB Slide-wire Potentiometer: data in `src/data/levels/2-*.ts` (each header lists its deviations from DESIGN §2.8), contract and what changed in docs/API-CH2.md,
+tests `src/engine/ch2.test.ts` (36) and `godot/tests/ch2_engine_flow.gd` (every ticket through the UI with the reference designs and the naive fails, ErrorTrap zero). Screens in docs/screens/ch2/.
+Open: the 2-4 reality check (driver cell with r = 0.3 ohm) is an engine test, not a UI action; Engineer's +-0.5 cm jockey reading resolution (2-2) and the 0.4 A meter fuse case (2-3) are not built (see the headers); the fixture bench (CB_FIXTURE=1) is chapter 1 only.

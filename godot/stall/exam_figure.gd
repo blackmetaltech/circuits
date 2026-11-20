@@ -10,6 +10,7 @@ const DESIGN := Vector2(440, 400)
 ## Draw `fig` (the engine's figure) into `r`. `ink` is the pen colour; `asks` are the unknowns to mark on the figure ("V(A)", "I(E2)").
 static func draw(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, asks: Array = [], small := false) -> void:
 	if fig.is_empty(): return
+	if str(fig.get("kind", "node")) == "pot": _draw_pot(ci, r, fig, ink, asks, small); return
 	var k := minf(r.size.x / DESIGN.x, r.size.y / DESIGN.y)
 	var o := r.position + (r.size - DESIGN * k) * 0.5
 	var P := func(x: float, y: float) -> Vector2: return o + Vector2(x, y) * k
@@ -75,3 +76,48 @@ static func _zig(ci: CanvasItem, a: Vector2, b: Vector2, amp: float, ink: Color,
 		pts.append(a + d * u + side * (1.0 if i % 2 == 0 else -1.0))
 	pts.append(b)
 	ci.draw_polyline(pts, ink, w, true)
+
+## The 2-4 figure, the way a textbook draws a slide-wire potentiometer: the wire AB with its jockey J, the driver cell and rheostat in the main loop below, the cell under test,
+## its shunt and a galvanometer G in the loop above. All numbers are the engine's (figure.pot).
+static func _draw_pot(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, asks: Array, small: bool) -> void:
+	var pot: Dictionary = fig.get("pot", {})
+	var k := minf(r.size.x / DESIGN.x, r.size.y / DESIGN.y)
+	var o := r.position + (r.size - DESIGN * k) * 0.5
+	var P := func(x: float, y: float) -> Vector2: return o + Vector2(x, y) * k
+	var w := maxf(1.6, 3.0 * k)
+	var f := S.hand()
+	var fs := int(maxf(9.0, (20.0 if not small else 30.0) * k))
+	var ay := 250.0
+	# the slide wire AB: a thick line with its ends named, the jockey arrow coming down onto it
+	ci.draw_line(P.call(70, ay), P.call(370, ay), ink, w * 2.4)
+	S.text(ci, f, "A", P.call(50, ay + 8), int(fs * 1.6), S.INK_RED); S.text(ci, f, "B", P.call(378, ay + 8), int(fs * 1.6), S.INK_RED)
+	if not small: S.text(ci, f, "%s cm, %s \u03a9" % [EngineBench._g(float(pot.get("wireCm", 100))), EngineBench._g(float(pot.get("wireOhm", 10)))], P.call(150, ay + 34), fs, ink)
+	# main loop below: A down, the driver cell, the rheostat, up to B
+	_wire(ci, [P.call(70, ay), P.call(70, 330), P.call(110, 330)], ink, w)
+	_cell(ci, P.call(110, 330), k, ink, w)
+	_wire(ci, [P.call(124, 330), P.call(170, 330)], ink, w)
+	_zig(ci, P.call(170, 330), P.call(260, 330), 9.0 * k, ink, w)
+	_wire(ci, [P.call(260, 330), P.call(370, 330), P.call(370, ay)], ink, w)
+	S.text(ci, f, "%s V" % EngineBench._g(float(pot.get("driverV", 4))), P.call(96, 360), fs, ink)
+	S.text(ci, f, "%s \u03a9" % EngineBench._g(float(pot.get("rheostat", 10))), P.call(190, 360), fs, ink)
+	# the loop above: A up, the cell under test (with its shunt over it), the galvanometer, over to the jockey and down onto the wire
+	_wire(ci, [P.call(70, ay), P.call(70, 150), P.call(110, 150)], ink, w)
+	_cell(ci, P.call(110, 150), k, ink, w)
+	_wire(ci, [P.call(124, 150), P.call(190, 150)], ink, w)
+	ci.draw_arc(P.call(214, 150), 24.0 * k, 0.0, TAU, 24, ink, w); S.text(ci, f, "G", P.call(205, 160), int(fs * 1.4), ink)
+	_wire(ci, [P.call(238, 150), P.call(290, 150), P.call(290, ay - 8)], ink, w)
+	ci.draw_colored_polygon(PackedVector2Array([P.call(290, ay - 2), P.call(283, ay - 18), P.call(297, ay - 18)]), ink)
+	S.text(ci, f, "J", P.call(298, 196), int(fs * 1.4), S.INK_RED)
+	_wire(ci, [P.call(70, 150), P.call(70, 98), P.call(116, 98)], ink, w)
+	_zig(ci, P.call(116, 98), P.call(176, 98), 8.0 * k, ink, w)
+	_wire(ci, [P.call(176, 98), P.call(190, 98), P.call(190, 150)], ink, w)
+	S.text(ci, f, "%s \u03a9 (shunt)" % EngineBench._g(float(pot.get("shunt", 4.5))), P.call(100, 78), fs, ink)
+	if not small:
+		S.text(ci, f, "balances at %s cm, open circuit" % EngineBench._g(float(pot.get("l1Cm", 75)), 4), P.call(210, 214), fs, Color(ink, 0.85))
+		S.text(ci, f, "and at %s cm with the shunt on" % EngineBench._g(float(pot.get("l2Cm", 67.5)), 4), P.call(210, 236), fs, Color(ink, 0.85))
+		if not asks.is_empty(): S.text(ci, f, "find:  " + "   ".join(asks), P.call(70, 30), fs, S.INK_RED)
+
+## A cell symbol: a long thin plate (+, left) and a short fat plate (-, right), centred on `c` (the left plate sits at c, the right plate 14 design px to its right).
+static func _cell(ci: CanvasItem, c: Vector2, k: float, ink: Color, w: float) -> void:
+	ci.draw_line(c + Vector2(0, -18.0 * k), c + Vector2(0, 18.0 * k), ink, w)
+	ci.draw_line(c + Vector2(14.0 * k, -9.0 * k), c + Vector2(14.0 * k, 9.0 * k), ink, w * 1.9)
