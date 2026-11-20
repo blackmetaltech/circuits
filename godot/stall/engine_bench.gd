@@ -48,6 +48,10 @@ var scope_q: Dictionary = {}        ## scope()
 var dmm_q: Dictionary = {}          ## dmm()
 var bench_q: Dictionary = {}        ## bench()
 var last_result: Dictionary = {}    ## benchResult() after the last run
+var dangling: Array = []            ## wire ends that touch no leg: [{wid, pad: [x, y]}] (bench().dangling)
+var open_pins: Array = []           ## part legs with nothing wired to them
+var undo_depth := 0
+var last_note := ""                 ## the engine's sentence for the last edit (wire landing, removed wires, undo)
 var wallet_minor := 0
 var wallet_text := "$0.00"
 var scope_view: Dictionary = {}     ## what ScopeView draws: {unit, lo, hi, vdiv, label, mode, clip_pad, clipped, value, text, attached}
@@ -253,19 +257,32 @@ func move_part(uid: String, x: int, y: int, rot: int) -> Dictionary:
 func delete_part(uid: String) -> void:
 	var p := part_by(uid)
 	if p.is_empty() or p.fixed: return
-	_act("deletePart", [uid]); _after_edit(); event.emit("deleted", {"uid": uid})
+	var r := _act("deletePart", [uid]); _after_edit()
+	last_note = str(r.get("message", "")) if r.get("ok", false) else ""
+	event.emit("deleted", {"uid": uid, "note": last_note, "wires": r.get("removedWires", [])})
 
 func add_wire(a: Array, b: Array) -> Dictionary:
 	if a == b: return {"ok": false, "msg": ""}
 	var r := _act("wire", [a, b])
 	if not r.get("ok", false): return {"ok": false, "msg": str(r.get("message", ""))}
-	_after_edit(); event.emit("wired", {"wid": str(r.get("wid", ""))})
-	return {"ok": true, "msg": "", "wid": str(r.get("wid", ""))}
+	_after_edit()
+	var landed: Array = r.get("landed", [])
+	var dang: Array = r.get("dangling", [])
+	last_note = str(r.get("message", ""))
+	event.emit("wired", {"wid": str(r.get("wid", "")), "landed": landed, "dangling": dang, "note": last_note})
+	return {"ok": true, "msg": "", "wid": str(r.get("wid", "")), "landed": landed, "dangling": dang, "note": last_note}
 
 func delete_wire(wid: String) -> void:
 	_act("unwire", [wid]); _after_edit()
 
-func undo() -> void: _act("undo"); _after_edit()
+## Take back the last edit (Ctrl+Z). The engine keeps the history (bench().undoDepth); returns its sentence.
+func undo() -> Dictionary:
+	var r := _act("undo")
+	if r.get("ok", false):
+		smoked.clear(); _smoke_seen.clear(); _after_edit()
+		if powered: _refresh_live()
+	last_note = str(r.get("message", ""))
+	return {"ok": bool(r.get("ok", false)), "msg": last_note}
 
 func set_power(on: bool) -> void:
 	if powered == on: return
@@ -343,6 +360,10 @@ func _refresh_board() -> void:
 		_all_parts.append(d)
 		if bool(p.get("fixed", false)) and str(p.partId).begins_with("bat-pp3"): _hidden[d.uid] = true; continue
 		parts.append(d)
+	dangling = []
+	for d in bench_q.get("dangling", []): dangling.append({"wid": str(d.wid), "pad": [int(d.pad[0]), int(d.pad[1])]})
+	open_pins = bench_q.get("openPins", [])
+	undo_depth = int(bench_q.get("undoDepth", 0))
 	wires = []
 	for w in bench_q.get("wires", []):
 		var path: Array = []
@@ -363,7 +384,10 @@ func _scene_part(p: Dictionary) -> Dictionary:
 	if kind == "HEATER": kind = "LOAD"
 	elif kind == "MISC" or pid.begins_with("ideal-vsource"): kind = "BAT"
 	var pins: Array = []
-	for q in p.pins: pins.append([int(q.pad[0]), int(q.pad[1])])
+	var pin_labels: Array = []
+	for q in p.pins:
+		pins.append([int(q.pad[0]), int(q.pad[1])])
+		pin_labels.append(str(q.get("label", q.get("name", ""))))
 	var label := str(p.get("valueText", ""))
 	var variant := str(p.get("variant", ""))
 	var tag := ""
@@ -373,7 +397,7 @@ func _scene_part(p: Dictionary) -> Dictionary:
 	elif kind == "R" and tag != "" and _multi_rating(pid): label = "%s %s" % [label, tag]
 	elif kind == "LED": label = "LED"
 	return {"uid": str(p.uid), "partId": pid, "value": p.get("value", null), "label": label, "tag": tag, "kind": kind, "x": int(p.x), "y": int(p.y), "rot": int(p.rot),
-		"flip": bool(p.get("flip", false)), "fixed": bool(p.get("fixed", false)), "variant": variant, "pins": pins, "smoked": bool(p.get("smoked", false)), "name": str(p.get("name", ""))}
+		"flip": bool(p.get("flip", false)), "fixed": bool(p.get("fixed", false)), "variant": variant, "pins": pins, "pin_labels": pin_labels, "smoked": bool(p.get("smoked", false)), "name": str(p.get("name", ""))}
 
 func _multi_rating(pid: String) -> bool:
 	for fam in card.get("shoebox", []): if str(fam.partId) == pid and (fam.variants as Array).size() > 1: return true
@@ -500,13 +524,15 @@ func volt_at(pad: Array) -> float:
 func coach_view() -> Dictionary:
 	var c = _q("coach")
 	var steps: Array = []; var cur := -1
+	var step_no := -1; var step_total := -1
+	if c is Dictionary: step_no = int(c.get("stepNo", -1)); step_total = int(c.get("stepTotal", -1))   # the engine numbers the steps: the total never changes mid-ticket
 	if c is Dictionary:
 		var i := 0
 		for s in c.get("steps", []):
 			steps.append({"id": str(s.id), "text": str(s.text), "target": _target_of(s.get("anchor", null)), "done": bool(s.get("done", false)), "shown": bool(s.get("shown", true))})
 			if bool(s.get("active", false)): cur = i
 			i += 1
-	return {"steps": steps, "cur": cur}
+	return {"steps": steps, "cur": cur, "step_no": step_no, "step_total": step_total}
 
 func _target_of(a) -> String:
 	if not (a is Dictionary): return "none"
@@ -557,7 +583,7 @@ func _rebuild_model() -> void:
 	var norm := {}
 	for n in frame.get("nodes", []):
 		for q in n.pads: norm["%d,%d" % [int(q[0]), int(q[1])]] = float(n.norm)
-	m["norm"] = norm; m["wire_speed"] = spd_w; m["part_speed"] = spd_p; m["heat"] = heat; m["led"] = led
+	m["dangling"] = dangling; m["norm"] = norm; m["wire_speed"] = spd_w; m["part_speed"] = spd_p; m["heat"] = heat; m["led"] = led
 	model = m
 
 ## ------------------------------------------------------------------------------------------------------------------ test helpers

@@ -195,7 +195,9 @@ func _map(a: float) -> void:
 		var q := Rect2(-cr.size * 0.5, cr.size)
 		S.pin(self, q.position + Vector2(q.size.x * 0.5, 12), Color("#d23a2e") if open else Color("#7a7f86"))
 		S.text(self, f, "%s%s" % [str(tk.id), "  EB" if str(tk.id) == "1-5" else ""], q.position + Vector2(14, 48), 18, S.INK_RED)
-		S.text(self, f, str(tk.title), q.position + Vector2(14, 84), 32, S.INK if open else Color(S.INK, 0.5))
+		var tsz := 32   # a long title shrinks to fit the chit instead of running into the corner tags
+		while tsz > 18 and S.tw(f, str(tk.title), tsz) > q.size.x - 28.0: tsz -= 2
+		S.text(self, f, str(tk.title), q.position + Vector2(14, 84), tsz, S.INK if open else Color(S.INK, 0.5))
 		S.text(self, f, "for %s" % str(tk.customer), q.position + Vector2(14, 112), 20, Color(S.INK, 0.8 if open else 0.4))
 		S.text(self, f, str(tk.spec), q.position + Vector2(14, 144), 18, Color(S.INK, 0.9 if open else 0.4), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 26)
 		var fee: String = str(tk.get("price_text", "")) if str(tk.get("price_text", "")) != "" else "%d coins" % int(tk.price)
@@ -205,7 +207,7 @@ func _map(a: float) -> void:
 			draw_set_transform(cr.get_center() + Vector2(cr.size.x * 0.27, -cr.size.y * 0.01), deg_to_rad(-12), Vector2.ONE)
 			S.rr_line(self, Rect2(-52, -20, 104, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5); S.text(self, f, "FIXED", Vector2(-36, 10), 26, Color(0.1, 0.55, 0.2, 0.9))
 		elif not open:
-			S.text(self, f, "locked", q.position + Vector2(q.size.x - 86, 78), 18, Color(S.INK, 0.45))
+			S.text(self, f, "locked", q.position + Vector2(q.size.x - 20 - S.tw(f, "locked", 18), 112), 18, Color(S.INK, 0.45))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		if hv: S.rr_line(self, Rect2(cr.position + Vector2(-3, lift - 3), cr.size + Vector2(6, 6)), 4, Color("#ffd98a", 0.85), 3.0)
 	# back to the title

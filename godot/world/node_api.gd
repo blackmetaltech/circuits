@@ -141,7 +141,7 @@ static func _norm_part(p: Dictionary) -> Dictionary:
 		else: label = pid.to_upper()
 	return {"uid": str(p.get("uid", "")), "partId": pid, "kind": kind, "value": val, "label": label, "x": x, "y": y, "rot": rot, "flip": flip,
 		"xf_rot": xf_rot, "xf_flip": xf_flip, "pins": pins, "local_pins": local_pins, "fixed": bool(p.get("fixed", false)),
-		"pin_names": p.get("pinNames", []), "on": bool(p.get("on", false)), "variant": str(p.get("variant", ""))}
+		"pin_names": p.get("pinNames", []), "pin_labels": p.get("pin_labels", []), "on": bool(p.get("on", false)), "variant": str(p.get("variant", ""))}
 
 ## Clockwise quarter turns on a y-down screen after an x-mirror (src/sim/board/grid.ts rotateOffset).
 static func _rot_off(o: Vector2, rot: int, flip: bool) -> Vector2:

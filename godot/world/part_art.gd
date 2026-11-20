@@ -54,7 +54,19 @@ static func draw(ci: CanvasItem, part: Dictionary, o: Vector2, p: float, st: Dic
 		if sh: ci.draw_set_transform(o + Vector2(p * 0.10, p * 0.16), rot, sc)
 		else: ci.draw_set_transform(o, rot, sc)
 		_body(ci, part, p, st, sh)
+		if not sh: _studs(ci, part, p)
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+## A lead end stud on every pin pad, so the two leads of a part read as two connection points. LED legs are colour-coded: warm anode, cool cathode.
+static func _studs(ci: CanvasItem, part: Dictionary, p: float) -> void:
+	var kind := str(part.kind)
+	if kind in ["BAT", "LOAD", "XFMR", "BRIDGE", "SW"]: return
+	var lp: Array = part.local_pins
+	for i in lp.size():
+		var c: Vector2 = lp[i] * p
+		var ring := Color(0.85, 0.85, 0.88)
+		if kind == "LED": ring = Color("#ff8a7a") if i == 0 else Color("#7fb2ff")
+		ci.draw_circle(c, p * 0.2, Color(0.06, 0.06, 0.08)); ci.draw_circle(c, p * 0.16, ring); ci.draw_circle(c, p * 0.08, Color(0.25, 0.25, 0.28))
 
 static func _c(c: Color, sh: bool) -> Color: return SHADOW if sh else c
 
@@ -97,18 +109,22 @@ static func _resistor(ci: CanvasItem, part: Dictionary, p: float, sh: bool, smok
 	ci.draw_line(Vector2(xs[3] * p, -hh), Vector2(xs[3] * p, hh), GOLD, p * 0.14)
 
 static func _led(ci: CanvasItem, p: float, sh: bool, lit: float, smoked: bool) -> void:
-	_leads(ci, [Vector2(0, 0), Vector2(2, 0)], p, [Vector2(0.4, 0), Vector2(1.6, 0)])
+	# two legs you can see: the long anode leg (A +, warm) on the left, the short cathode leg (K -, cool) on the right, a smaller dome between them
 	var c := Vector2(p, 0)
-	_disc(ci, c, p * 1.02, _c(Color(0.55, 0.09, 0.09, 0.9), sh))
+	var rd := p * 0.58
+	if not sh:
+		ci.draw_line(Vector2(0, 0), Vector2(p * 0.46, 0), Color(0.3, 0.3, 0.33), p * 0.16); ci.draw_line(Vector2(0, 0), Vector2(p * 0.46, 0), SILVER, p * 0.11)   # A leg: long, runs from its pad to the dome
+		ci.draw_line(Vector2(p * 2.0, 0), Vector2(p * 1.58, 0), Color(0.3, 0.3, 0.33), p * 0.16); ci.draw_line(Vector2(p * 2.0, 0), Vector2(p * 1.58, 0), SILVER, p * 0.11)   # K leg
+	_disc(ci, c, rd * 1.1, _c(Color(0.55, 0.09, 0.09, 0.9), sh))
 	if sh: return
 	var dome := Color(0.42, 0.04, 0.05).lerp(Color(1.0, 0.3, 0.22), lit)
 	if smoked: dome = Color(0.1, 0.07, 0.07)
-	_disc(ci, c, p * 0.82, dome)
-	if lit > 0.0 and not smoked: _disc(ci, c, p * 0.42, Color(1, 0.72, 0.6, 0.35 + 0.5 * lit))
-	ci.draw_circle(c + Vector2(-p * 0.3, -p * 0.3), p * 0.17, Color(1, 1, 1, 0.42 if not smoked else 0.1))
-	ci.draw_line(c + Vector2(p * 0.98, -p * 0.5), c + Vector2(p * 0.98, p * 0.5), Color(0.25, 0.03, 0.03), p * 0.12)   # flat = cathode
+	_disc(ci, c, rd, dome)
+	if lit > 0.0 and not smoked: _disc(ci, c, rd * 0.5, Color(1, 0.72, 0.6, 0.35 + 0.5 * lit))
+	ci.draw_circle(c + Vector2(-rd * 0.36, -rd * 0.36), rd * 0.17, Color(1, 1, 1, 0.42 if not smoked else 0.1))
+	ci.draw_line(c + Vector2(rd * 1.02, -rd * 0.62), c + Vector2(rd * 1.02, rd * 0.62), Color(0.95, 0.82, 0.8, 0.9), p * 0.1)   # the flat side of the rim = cathode
 	if smoked:   # a crack across the dome
-		ci.draw_polyline(PackedVector2Array([c + Vector2(-p * 0.6, -p * 0.5), c + Vector2(-p * 0.1, -p * 0.05), c + Vector2(p * 0.2, -p * 0.3), c + Vector2(p * 0.55, p * 0.3)]), Color(0.7, 0.7, 0.72), p * 0.06)
+		ci.draw_polyline(PackedVector2Array([c + Vector2(-rd * 0.7, -rd * 0.6), c + Vector2(-rd * 0.1, -rd * 0.05), c + Vector2(rd * 0.25, -rd * 0.35), c + Vector2(rd * 0.65, rd * 0.35)]), Color(0.7, 0.7, 0.72), p * 0.06)
 
 static func _electrolytic(ci: CanvasItem, p: float, sh: bool, smoked: bool) -> void:
 	_leads(ci, [Vector2(0, 0), Vector2(2, 0)], p, [Vector2(0.5, 0), Vector2(1.5, 0)])

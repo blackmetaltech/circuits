@@ -22,6 +22,7 @@ var bubble := ""
 var bubble_alpha := 0.0
 var toast := ""
 var toast_age := 9.0
+var toast_dur := 3.5
 var hint_box_drop := false
 var peek: Dictionary = {}
 var _arrow_k := 0.0
@@ -37,7 +38,7 @@ func _process(dt: float) -> void:
 	_arrow_k = minf(1.0, _arrow_k + dt * 1.6)
 	queue_redraw()
 
-func say(s: String) -> void: toast = s; toast_age = 0.0
+func say(s: String) -> void: toast = s; toast_age = 0.0; toast_dur = clampf(3.5 + float(s.length()) * 0.045, 3.5, 11.0)   # a long sentence stays long enough to read
 
 func slip_rect() -> Rect2: return L.get("slip", Rect2())
 
@@ -52,7 +53,7 @@ func _draw() -> void:
 	_slip()
 	if bubble_alpha > 0.01: _bubble()
 	if not tag.is_empty(): _tag()
-	if toast_age < 3.5: _toast()
+	if toast_age < toast_dur: _toast()
 
 func _cable(c: Dictionary) -> void:
 	var clip: Vector2 = c.b
@@ -163,7 +164,7 @@ func _tag() -> void:
 	S.text(self, S.mono(), s, r.position + Vector2(11, 23), 20, S.AMBER)
 
 func _toast() -> void:
-	var a := clampf(minf(toast_age * 4.0, (3.5 - toast_age) * 2.0), 0.0, 1.0)
+	var a := clampf(minf(toast_age * 4.0, (toast_dur - toast_age) * 2.0), 0.0, 1.0)
 	var th := S.wrapped_h(S.hand(), toast, 22, 620.0)
 	var r := Rect2(size.x * 0.5 - 330, 196, 660, maxf(46.0, th + 24.0))
 	S.paper(self, r, -0.6, Color(0.97, 0.93, 0.8, a))

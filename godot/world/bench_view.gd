@@ -316,6 +316,55 @@ func _length(pts: Array) -> float:
 	for i in pts.size() - 1: l += pts[i].distance_to(pts[i + 1])
 	return l
 
+const WIRE_HUES := [Color("#d8514a"), Color("#e2a93a"), Color("#4fae6a"), Color("#4b8fd6"), Color("#b074d6"), Color("#d9d9cf")]
+
+func _wire_index(wid: String) -> int: return int(wid.substr(1)) if wid.length() > 1 and wid.substr(1).is_valid_int() else wid.hash()
+
+static func _edge_key(a: Vector2, b: Vector2) -> String:
+	var lo := a; var hi := b
+	if b.x < a.x or (b.x == a.x and b.y < a.y): lo = b; hi = a
+	return "%d,%d>%d,%d" % [int(lo.x), int(lo.y), int(hi.x), int(hi.y)]
+
+## Screen polylines of every wire. Wires that run along the same pads are offset sideways (a fixed lane order by wire id), so two overlapping runs read as two wires.
+func _wire_geom(m: Dictionary) -> Dictionary:
+	var users := {}   # unit edge -> [wid]
+	for w in m.wires:
+		var path: Array = w.path
+		for i in path.size() - 1:
+			var a: Vector2 = path[i]; var b: Vector2 = path[i + 1]
+			var d := (b - a); var n := int(maxf(absf(d.x), absf(d.y))); if n < 1: continue
+			var st := d / float(n)
+			for k in n:
+				var ek := _edge_key(a + st * k, a + st * (k + 1))
+				if not users.has(ek): users[ek] = []
+				if not (users[ek] as Array).has(str(w.wid)): (users[ek] as Array).append(str(w.wid))
+	var out := {}
+	for w in m.wires:
+		var path: Array = w.path
+		if path.size() < 2: continue
+		var pts := PackedVector2Array()
+		pts.append(_px(path[0]))
+		for i in path.size() - 1:
+			var a: Vector2 = path[i]; var b: Vector2 = path[i + 1]
+			var d := b - a
+			var n := int(maxf(absf(d.x), absf(d.y))); if n < 1: continue
+			var lane := 0.0
+			var cnt := 1
+			for k in n:   # the busiest unit edge of this run decides the spacing
+				var ids: Array = users[_edge_key(a + d / float(n) * k, a + d / float(n) * (k + 1))]
+				if ids.size() >= cnt:
+					var ord := ids.duplicate(); ord.sort_custom(func(x, y): return _wire_index(str(x)) < _wire_index(str(y)))
+					cnt = ids.size(); lane = float(ord.find(str(w.wid))) - float(cnt - 1) * 0.5
+			var lo := a; var hi := b
+			if b.x < a.x or (b.x == a.x and b.y < a.y): lo = b; hi = a
+			var cd := (hi - lo).normalized()
+			var nrm := Vector2(-cd.y, cd.x)
+			var off := nrm * lane * p * 0.27 if cnt > 1 else Vector2.ZERO
+			pts.append(_px(a) + off); pts.append(_px(b) + off)
+		pts.append(_px(path[path.size() - 1]))
+		out[str(w.wid)] = Array(pts)
+	return out
+
 func _draw_parts(ci: Control) -> void:
 	var m := _m(); var live: bool = m.powered
 	# node tint on the pads (a coloured ring + a dark collar)
@@ -332,23 +381,27 @@ func _draw_parts(ci: Control) -> void:
 		if m.smoked.has(pt.uid):
 			var c: Vector2 = bounds[pt.uid].get_center()
 			ci.draw_circle(c, bounds[pt.uid].size.length() * 0.38, Color(0, 0, 0, 0.28)); ci.draw_circle(c, bounds[pt.uid].size.length() * 0.24, Color(0, 0, 0, 0.35))
-	# wires (insulated jumpers), tinted by node voltage
-	for w in m.wires:
-		var pts: Array = w.path.map(func(v): return _px(v))
+	# wires (insulated jumpers): unpowered they carry their own hue, powered they are tinted by node voltage. Runs that share a lane are fanned out side by side.
+	var geo := _wire_geom(m)
+	for wi in m.wires.size():
+		var w: Dictionary = m.wires[wi]
+		var pts: Array = geo.get(str(w.wid), [])
 		if pts.size() < 2: continue
+		var hue: Color = WIRE_HUES[_wire_index(str(w.wid)) % WIRE_HUES.size()]
 		var col := _node_color(w.path[0], m)
-		var base := Color(0.34, 0.37, 0.42).lerp(col, 0.9 if live else 0.35)
+		var base: Color = hue.darkened(0.1) if not live else hue.lerp(col, 0.78)
+		var wd := p * 0.26
 		var sh := PackedVector2Array(pts.map(func(v): return v + Vector2(p * 0.1, p * 0.16)))
-		ci.draw_polyline(sh, Color(0, 0, 0, 0.35), p * 0.3, true)
+		ci.draw_polyline(sh, Color(0, 0, 0, 0.35), wd * 1.05, true)
 		var pa := PackedVector2Array(pts)
-		ci.draw_polyline(pa, Color(0.03, 0.035, 0.04), p * 0.32, true)
-		for v in pts: ci.draw_circle(v, p * 0.16, Color(0.03, 0.035, 0.04))
-		ci.draw_polyline(pa, base.darkened(0.25), p * 0.22, true)
-		ci.draw_polyline(PackedVector2Array(pts.map(func(v): return v + Vector2(0, -p * 0.04))), base, p * 0.14, true)
-		ci.draw_polyline(PackedVector2Array(pts.map(func(v): return v + Vector2(0, -p * 0.07))), Color(1, 1, 1, 0.22), p * 0.04, true)
-		for v in pts: ci.draw_circle(v, p * 0.11, base)
-		for e in [pts[0], pts[pts.size() - 1]]:   # solder blobs
-			ci.draw_circle(e, p * 0.27, Color(0.5, 0.52, 0.56)); ci.draw_circle(e, p * 0.23, Color(0.8, 0.82, 0.86)); ci.draw_circle(e + Vector2(-p * 0.07, -p * 0.07), p * 0.07, Color(1, 1, 1, 0.7))
+		ci.draw_polyline(pa, Color(0.03, 0.035, 0.04), wd * 1.12, true)
+		for v in pts: ci.draw_circle(v, wd * 0.56, Color(0.03, 0.035, 0.04))
+		ci.draw_polyline(pa, base.darkened(0.25), wd * 0.78, true)
+		ci.draw_polyline(PackedVector2Array(pts.map(func(v): return v + Vector2(0, -p * 0.035))), base, wd * 0.5, true)
+		ci.draw_polyline(PackedVector2Array(pts.map(func(v): return v + Vector2(0, -p * 0.06))), Color(1, 1, 1, 0.22), p * 0.035, true)
+		for v in pts: ci.draw_circle(v, wd * 0.36, base)
+		for e in [_px(w.path[0]), _px(w.path[w.path.size() - 1])]:   # solder blobs sit on the pads themselves
+			ci.draw_circle(e, p * 0.25, Color(0.5, 0.52, 0.56)); ci.draw_circle(e, p * 0.21, Color(0.8, 0.82, 0.86)); ci.draw_circle(e + Vector2(-p * 0.07, -p * 0.07), p * 0.06, Color(1, 1, 1, 0.7))
 	# parts
 	for pt in m.parts:
 		var i: float = absf(float(m.part_i.get(pt.uid, 0.0))) if live else 0.0
@@ -366,6 +419,7 @@ func _draw_parts(ci: Control) -> void:
 		if b.size.y > b.size.x * 1.4: pos = Vector2(b.end.x + 4.0, b.get_center().y + fs * 0.35)
 		else: pos = Vector2(b.get_center().x - wtx * 0.5, b.position.y - 4.0)
 		_txt(ci, s, pos, fs, Color(0.96, 0.95, 0.88))
+		if pt.kind == "LED" and (pt.pin_labels as Array).size() == pt.pins.size() and pt.pins.size() == 2: _led_pin_tags(ci, pt)
 		if show_ratings and live and m.ratings.has(pt.uid):
 			var r: Dictionary = m.ratings[pt.uid]; var worst := 0.0
 			for k in r: worst = maxf(worst, float(r[k]))
@@ -373,6 +427,17 @@ func _draw_parts(ci: Control) -> void:
 			ci.draw_rect(Rect2(bp, Vector2(bw, p * 0.13)), Color(0, 0, 0, 0.7))
 			var rc := Color("#3fd47a") if worst < 0.7 else (AMBER if worst < 0.95 else Color("#ff4a3a"))
 			ci.draw_rect(Rect2(bp, Vector2(bw * clampf(worst, 0.0, 1.0), p * 0.13)), rc)
+
+## "A +" on the long (anode) leg and "K -" on the flat (cathode) side, written beside each leg on the board.
+func _led_pin_tags(ci: Control, pt: Dictionary) -> void:
+	var fs := int(clampf(p * 0.4, 11.0, 17.0))
+	var mid := (_px(pt.pins[0]) + _px(pt.pins[1])) * 0.5
+	for i in 2:
+		var pp := _px(pt.pins[i]); var dir := (pp - mid).normalized()
+		var raw := str(pt.pin_labels[i]).replace("-", "\u2212")
+		var tw := ThemeDB.fallback_font.get_string_size(raw, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
+		var at := pp + dir * (p * 0.42) + Vector2((tw * -0.5 if absf(dir.x) < 0.5 else (-tw if dir.x < 0 else 0.0)), (fs * 0.35 if absf(dir.x) > 0.5 else (-p * 0.18 if dir.y < 0 else fs + p * 0.12)))
+		_txt(ci, raw, at, fs, Color("#ff9d8c") if i == 0 else Color("#8fbfff"))
 
 func _probe(ci: Control, pr: Dictionary) -> void:
 	var tip := _px(pr.pad); var col := Color("#7CFF6B") if pr.ch == 1 else Color("#FFB547")
@@ -427,10 +492,12 @@ func _draw_glow(ci: Control) -> void:
 				_blob(ci, lp, p * (2.4 + 1.6 * k), Color(lc, 0.55 * k * flick))
 				_blob(ci, lp, p * 1.1, Color(1.0, 0.8, 0.7, 0.8 * k))
 	# current dots along wires ...
+	var geo := _wire_geom(m)
 	for w in m.wires:
 		var amps: float = m.wire_i.get(w.wid, 0.0)
 		if absf(amps) < 1e-9: continue
-		var pts: Array = w.path.map(func(v): return _px(v))
+		var pts: Array = geo.get(str(w.wid), [])
+		if pts.size() < 2: continue
 		_dots(ci, pts, str(w.wid), _node_color(w.path[0], m), 1.0, not cute)
 	# ... and through parts
 	for pt in m.parts:
@@ -484,6 +551,7 @@ var overlay: Dictionary = {}   ## stall interaction overlay: {ghost:{part,ok,ori
 
 func _draw_fx(ci: Control) -> void:
 	if cute: _draw_cute(ci)
+	_draw_dangling(ci, _m())
 	if not overlay.is_empty(): _draw_overlay(ci)
 	for q in _smoke:
 		var k: float = q.age / q.life
@@ -536,7 +604,7 @@ func _led_lit(uid: String, amps: float, m: Dictionary) -> float:
 	return float(lm.bloom) if not lm.is_empty() else _led_k(amps)
 
 func _led_face(ci: CanvasItem, cen: Vector2, ma: float, smoked: bool, uid: String, mood := "") -> void:
-	var r := p * 0.82
+	var r := p * 0.6
 	var ink := Color(0.09, 0.015, 0.02, 0.95) if ma > 3.0 else Color(0.95, 0.72, 0.72, 0.9)
 	var w := maxf(1.5, p * 0.075)
 	var ey := cen.y - r * 0.1; var ex := r * 0.34
@@ -574,14 +642,41 @@ func _led_face(ci: CanvasItem, cen: Vector2, ma: float, smoked: bool, uid: Strin
 		ci.draw_circle(dc, r * 0.1, Color(0.6, 0.85, 1.0, 1.0 - dp * 0.7)); ci.draw_colored_polygon(PackedVector2Array([dc + Vector2(0, -r * 0.24), dc + Vector2(-r * 0.08, -r * 0.05), dc + Vector2(r * 0.08, -r * 0.05)]), Color(0.6, 0.85, 1.0, 1.0 - dp * 0.7))
 
 
+## A small dark label box beside a point (which pin the pointer is on, where a wire would land).
+func _note(ci: CanvasItem, at: Vector2, text: String, col: Color) -> void:
+	var fs := int(clampf(p * 0.42, 12.0, 18.0))
+	var f := ThemeDB.fallback_font
+	var tw := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
+	var r := Rect2(at + Vector2(p * 0.55, -p * 1.15), Vector2(tw + 14.0, fs + 10.0))
+	if r.end.x > size.x - 4.0: r.position.x = at.x - p * 0.55 - r.size.x
+	if r.position.y < 2.0: r.position.y = at.y + p * 0.5
+	PartArt.rrect(ci, r, 6.0, Color(0.06, 0.07, 0.09, 0.92)); PartArt.rrect(ci, r.grow(-1.5), 5.0, Color(0.1, 0.12, 0.14, 0.95))
+	ci.draw_string(f, r.position + Vector2(7.0, fs + 3.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, col)
+
+## A wire end that touches no leg: a pulsing red ring with a cross, so it cannot be mistaken for a connection.
+func _draw_dangling(ci: CanvasItem, m: Dictionary) -> void:
+	for d in m.get("dangling", []):
+		var c := _px(Vector2(d.pad[0], d.pad[1]))
+		var k := 0.5 + 0.5 * sin(t * 5.0)
+		ci.draw_arc(c, p * (0.42 + 0.06 * k), 0.0, TAU, 24, Color(1.0, 0.3, 0.25, 0.7 + 0.3 * k), maxf(2.0, p * 0.09), true)
+		var r := p * 0.17
+		ci.draw_line(c + Vector2(-r, -r), c + Vector2(r, r), Color(1.0, 0.3, 0.25), maxf(2.0, p * 0.08)); ci.draw_line(c + Vector2(-r, r), c + Vector2(r, -r), Color(1.0, 0.3, 0.25), maxf(2.0, p * 0.08))
+
 ## -------------------------------------------------------------------------------------------------------------- interaction overlay
 
 func _draw_overlay(ci: Control) -> void:
 	var m := _m()
+	if overlay.has("hover_wire"):
+		var hw: Array = _wire_geom(m).get(str(overlay.hover_wire), [])
+		if hw.size() >= 2:
+			ci.draw_polyline(PackedVector2Array(hw), Color(1.0, 0.85, 0.4, 0.5), p * 0.55, true)
+			ci.draw_polyline(PackedVector2Array(hw), Color(1.0, 0.95, 0.75, 0.9), p * 0.09, true)
 	if overlay.has("hover_pad"):
 		var hp: Vector2 = overlay.hover_pad
-		ci.draw_arc(_px(hp), p * 0.42, 0.0, TAU, 20, Color(1.0, 0.85, 0.5, 0.9), maxf(2.0, p * 0.07), true)
-		_blob(ci, _px(hp), p * 0.7, Color(1.0, 0.85, 0.5, 0.18))
+		var pin_hit: bool = str(overlay.get("hover_label", "")) != ""
+		ci.draw_arc(_px(hp), p * (0.5 if pin_hit else 0.42), 0.0, TAU, 20, Color(0.55, 1.0, 0.6, 0.95) if pin_hit else Color(1.0, 0.85, 0.5, 0.9), maxf(2.0, p * (0.1 if pin_hit else 0.07)), true)
+		_blob(ci, _px(hp), p * (0.95 if pin_hit else 0.7), Color(0.55, 1.0, 0.6, 0.3) if pin_hit else Color(1.0, 0.85, 0.5, 0.18))
+		if pin_hit: _note(ci, _px(hp), str(overlay.hover_label), Color(0.55, 1.0, 0.6))
 	if overlay.has("ghost"):
 		var g: Dictionary = overlay.ghost
 		var ok: bool = g.ok; var col := Color(0.45, 1.0, 0.5) if ok else Color(1.0, 0.35, 0.3)
@@ -601,7 +696,12 @@ func _draw_overlay(ci: Control) -> void:
 		var w: Dictionary = overlay.wire
 		var a2 := _px(w.from); var b2: Vector2 = w.to
 		var tg: Vector2 = w.get("target", Vector2(-1, -1))
-		if tg.x >= 0: b2 = _px(tg); ci.draw_arc(b2, p * 0.42, 0.0, TAU, 20, Color(0.5, 1.0, 0.55, 0.95), maxf(2.0, p * 0.08), true)
+		if tg.x >= 0:
+			b2 = _px(tg)
+			var bad: bool = bool(w.get("bad", false))
+			var rc := Color(1.0, 0.45, 0.35, 0.95) if bad else Color(0.5, 1.0, 0.55, 0.95)
+			ci.draw_arc(b2, p * 0.46, 0.0, TAU, 20, rc, maxf(2.0, p * 0.09), true)
+			if str(w.get("label", "")) != "": _note(ci, b2, str(w.label), rc)
 		var mid := Vector2(b2.x, a2.y)
 		var pts := PackedVector2Array([a2, mid, b2]) if (absf(a2.x - b2.x) > 1.0 and absf(a2.y - b2.y) > 1.0) else PackedVector2Array([a2, b2])
 		ci.draw_polyline(pts, Color(0, 0, 0, 0.4), p * 0.3, true)

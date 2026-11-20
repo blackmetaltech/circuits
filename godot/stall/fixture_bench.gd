@@ -75,6 +75,9 @@ const RATING_W := {"res-cf": 0.25, "res-mf5": 0.5, "res-1w": 1.0, "res-ww5": 5.0
 
 var ticket: Dictionary = {}
 var parts: Array = []       ## [{uid, partId, value, label, kind, x, y, rot, flip, fixed, pins: [pad,..]}]  (view-model shaped; pins absolute)
+var dangling: Array = []    ## (engine bench only: wire ends that touch no leg)
+var undo_depth := 0
+var last_note := ""
 var wires: Array = []       ## [{wid, a:[x,y], b:[x,y], path:[[x,y]..]}]
 var probes := {"red": null, "black": null}
 var dial := "V"             ## OFF | V | mA
@@ -219,6 +222,8 @@ func add_wire(a: Array, b: Array) -> Dictionary:
 	wires.append({"wid": wid, "a": a, "b": b, "path": _route(a, b)})
 	_dirty = true; _refresh(); event.emit("wired", {"wid": wid})
 	return {"ok": true, "msg": "", "wid": wid}
+
+func undo() -> Dictionary: return {"ok": false, "msg": "Undo lives on the engine bench."}
 
 func delete_wire(wid: String) -> void:
 	for i in wires.size(): if wires[i].wid == wid: wires.remove_at(i); break

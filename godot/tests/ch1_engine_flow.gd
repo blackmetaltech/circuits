@@ -97,6 +97,10 @@ func _key(code: Key, uni := 0) -> void:
 	var e := InputEventKey.new(); e.pressed = true; e.keycode = code; e.unicode = uni
 	sc._unhandled_key_input(e)
 
+func _ctrl_z() -> void:
+	var e := InputEventKey.new(); e.pressed = true; e.keycode = KEY_Z; e.ctrl_pressed = true
+	sc._unhandled_key_input(e)
+
 func _type(s: String) -> void:
 	for ch in s: _key(OS.find_keycode_from_string(ch) if ch != "." else KEY_PERIOD, ch.unicode_at(0))
 
@@ -124,6 +128,60 @@ func _run() -> void:
 	bk = sc.backend
 	bk.event.connect(func(n, _d): evlog.append(n))
 	var wallet0: int = bk.wallet_minor
+	print("== a novice's first bench (1-1): legs, snapping, dangling ends, undo, plain words")
+	await _start("1-1")
+	ok(_drag_part("led-red-5mm", null, "5mm", 8, 5, 0), "the LED is placed by pointer")
+	var led0: Dictionary = bk.parts.filter(func(p): return p.kind == "LED")[0]
+	ok(led0.pin_labels == ["A +", "K -"], "the LED legs carry their polarity names from the engine: %s" % str(led0.pin_labels))
+	var pa := sc.pad_screen(Vector2(8, 5)); sc._motion(pa); sc._board_overlay()
+	ok(str(sc.bench.overlay.get("hover_label", "")).contains("A +") and sc.bench.overlay.has("hover_pad"), "hovering the long leg highlights the pin and names it: %s" % str(sc.bench.overlay.get("hover_label", "")))
+	# a wire dropped ONE PAD OFF the leg snaps to the leg and says which pin it landed on
+	var from_px := sc.pad_screen(Vector2(2, 2)); var off_px := sc.pad_screen(Vector2(7, 5))
+	sc._motion(from_px); sc._press(from_px); sc._motion(off_px); sc._board_overlay()
+	var ovw: Dictionary = sc.bench.overlay.get("wire", {})
+	ok(ovw.get("target", Vector2(-1, -1)) == Vector2(8, 5) and str(ovw.get("label", "")).contains("A +") and not bool(ovw.get("bad", true)), "while dragging, the wire end shows the leg it would land on: %s" % str(ovw.get("label", "")))
+	sc._release(off_px)
+	ok(bk.wires.size() == 1 and bk.wires[0].b == [8, 5], "a wire dropped one pad off the A leg snaps to the A leg (%s)" % str(bk.wires[0].b if bk.wires.size() > 0 else "none"))
+	ok(bk.dangling.is_empty() and sc.top.toast.contains("A +"), "it is not dangling, and the toast names the pin: %s" % sc.top.toast)
+	# hover a wire: highlighted, with the removal hint
+	var w1: Dictionary = bk.wires[0]
+	var wm := sc.vp_to_screen(sc.bench.org + (Vector2(w1.path[0][0], w1.path[0][1]) + Vector2(w1.path[1][0], w1.path[1][1])) * 0.5 * sc.bench.p)
+	sc._motion(wm); sc._board_overlay()
+	ok(sc.hover_wire == str(w1.wid) and str(sc.top.tag.get("text", "")).contains("right-click to remove") and str(sc.bench.overlay.get("hover_wire", "")) == str(w1.wid), "hovering a wire highlights it and says right-click to remove")
+	# a wire that ends on an empty hole far from any leg is flagged
+	ok(_drag_wire([8, 2], [14, 10]), "a second wire is dragged to an empty hole")
+	ok(bk.dangling.size() == 1 and bk.dangling[0].pad == [14, 10], "the engine reports that end as dangling")
+	ok(sc.top.toast.contains("not touching any part leg") and sc.bench.model.dangling.size() == 1, "a dangling end marker is shown and the toast says so: %s" % sc.top.toast)
+	_ctrl_z()
+	ok(bk.wires.size() == 1 and bk.dangling.is_empty(), "Ctrl+Z takes the dangling wire back")
+	# the other leg, one pad off as well
+	ok(_drag_wire([8, 2], [11, 5]), "the GND wire is dropped one pad off the K leg")
+	ok(bk.wires.size() == 2 and bk.wires[1].b == [10, 5] and bk.dangling.is_empty(), "it snapped to the K leg")
+	# deleting the LED takes the wires its legs held (and Ctrl+Z puts everything back)
+	sc._right(sc.pad_screen(Vector2(9, 5)))
+	ok(bk.part_by("p1").is_empty() and bk.wires.is_empty(), "right-click on the LED removes it and the two wires only its legs held")
+	ok(sc.top.toast.contains("2 wire(s)"), "the toast says so: %s" % sc.top.toast)
+	_ctrl_z()
+	ok(not bk.part_by("p1").is_empty() and bk.wires.size() == 2, "Ctrl+Z brings the LED and both wires back")
+	# the naive build: the LED straight across the battery cracks at once, with the numbers in mA
+	_rocker(); _clock(0.5)
+	ok(bk.smoked.size() == 1, "the LED across the battery smokes at once")
+	ok(str(bk.frame.events[0].text).begins_with("Burned: too much current,") and str(bk.frame.events[0].text).contains("mA vs 30 mA max"), "engine note: %s" % str(bk.frame.events[0].text).left(70))
+	ok(sc.top.toast.begins_with("Burned: too much current"), "the toast shows the engine's burned note")
+	ok(bk.model.led["p1"].mood == "cracked", "the cute-mode LED face is cracked")
+	await _start("1-1")
+	_drag_part("led-red-5mm", null, "5mm", 8, 5, 0)
+	sc.run_bench()
+	ok(evlog.has("bench_failed") and sc.top.toast.contains("No current through the LED") and sc.top.toast.contains("0 mA") and sc.top.toast.contains("10 to 20 mA"), "the bench failure is plain words with units: %s" % sc.top.toast.left(120))
+	ok(sc.top.toast.contains("backwards") and not sc.top.toast.contains("i(p1)"), "and offers the likely cause")
+	await _start("1-1")
+	# cute mode: the LED face follows the engine's current (sleepy at 0, happy in spec)
+	ok(_build("1-1"), "the reference torch is built")
+	var m0: Dictionary = bk.model.led.get("p2", {})
+	ok(str(m0.get("mood", "sleepy")) == "sleepy", "unpowered: the LED face is sleepy")
+	_rocker(); _clock(0.6)
+	ok(str(bk.model.led["p2"].mood) == "happy" and bk.model.led["p2"].mA > 14.0, "powered at 15 mA: the face is happy (engine mood)")
+
 	print("== 1-1 Torch")
 	await _start("1-1")
 	ok(sc.pages.mode == "", "the bench is open, no modal over it")

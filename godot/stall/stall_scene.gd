@@ -55,6 +55,8 @@ var _lock_seq := -1.0
 var _next_rect := Rect2()
 var _ticket_ids: Array = ["1-1", "1-2", "1-3", "1-4", "1-5"]
 var _flow_log: Array = []
+var hover_wire := ""                 ## wid of the wire under the pointer (highlighted; right-click removes it)
+const CONN_NAME := {"VP": "battery + (V+)", "GND": "GND", "IN": "IN", "OUT": "OUT"}
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -212,7 +214,9 @@ func _on_event(name: String, data: Dictionary) -> void:
 		"placed": sfx.play("thunk"); props.mood = "hopeful" if props.mood == "idle" else props.mood
 		"wired": sfx.play("zip")
 		"power": sfx.play("click" if data.on else "clack")
-		"deleted": sfx.play("page", 0.5)
+		"deleted":
+			sfx.play("page", 0.5)
+			if str(data.get("note", "")) != "": top.say(str(data.note))   # e.g. "p1 removed, and 2 wire(s) that were only held by its legs."
 		"smoked":
 			sfx.play("crack" if data.kind == "LED" else "pop"); sfx.play("meow", 0.5)
 			props.mood = "wow"; _smoke_mood_until = t + 4.0
@@ -344,6 +348,7 @@ func _draw() -> void:   # the bench itself: static, redrawn on resize only
 		var k := float(gj) / 12.0
 		draw_line(mp[0].lerp(mp[3], k), mp[1].lerp(mp[2], k), Color(1, 1, 1, 0.07), 1.5)
 	S.text(self, S.hand(), "STALL 14  ·  LANTERN LANE", Vector2(board_rect.position.x + 12, board_rect.position.y - 16), 18, Color(1, 1, 1, 0.22))
+	S.text(self, S.hand(), "drag a part in  ·  drag leg to leg to wire  ·  right-click removes  ·  Ctrl+Z undoes  ·  R turns", Vector2(board_rect.position.x + 12, board_rect.end.y + 40), 17, Color(1, 1, 1, 0.34))
 	# solder stains and flux marks, a burn ring, a screw
 	var rng := RandomNumberGenerator.new(); rng.seed = 31
 	for i in 22:
@@ -383,6 +388,52 @@ func pad_at(sp: Vector2, reach := 0.55) -> Vector2:
 	if pad.x < 0 or pad.y < 0 or pad.x > _bw() - 1 or pad.y > _bh() - 1: return Vector2(-1, -1)
 	return pad if (g - pad).length() <= reach else Vector2(-1, -1)
 
+## What is under a screen point, for wiring: the nearest part leg or board connector within `pin_reach` pads, else the nearest empty pad within `pad_reach`.
+## {kind: "pin" | "connector" | "pad" | "none", pad: Vector2, label: String}. Legs win over holes, so a wire dropped a pad off a leg still lands on the leg.
+const WIRE_DROP_REACH := 1.1
+func snap(sp: Vector2, pin_reach := WIRE_DROP_REACH, pad_reach := 0.7) -> Dictionary:
+	var g := (screen_to_vp(sp) - bench.org) / bench.p
+	var best := {"kind": "none", "pad": Vector2(-1, -1), "label": ""}
+	var bd := pin_reach
+	for c in _pin_index():
+		var dd := g.distance_to(c.pad as Vector2)
+		if dd <= bd: bd = dd; best = c
+	if best.kind != "none": return best
+	var pa := pad_at(sp, pad_reach)
+	if pa.x >= 0: return {"kind": "pad", "pad": pa, "label": ""}
+	return best
+
+## Every leg of every placed part and every board connector, with its name for the player.
+func _pin_index() -> Array:
+	var out: Array = []
+	for pt in backend.parts:
+		var labs: Array = pt.get("pin_labels", [])
+		for i in pt.pins.size():
+			var q: Vector2 = pt.pins[i] if pt.pins[i] is Vector2 else Vector2(pt.pins[i][0], pt.pins[i][1])
+			out.append({"kind": "pin", "pad": q, "label": _leg_name(pt, i, str(labs[i]) if i < labs.size() else str(i + 1)), "uid": str(pt.uid)})
+	for c in backend.ticket.board.connectors:
+		var q2 := Vector2(c.pad[0], c.pad[1])
+		var dup := false
+		for o in out: if (o.pad as Vector2) == q2: dup = true
+		if not dup: out.append({"kind": "connector", "pad": q2, "label": str(CONN_NAME.get(str(c.id), str(c.id)))})
+	return out
+
+static func _leg_name(pt: Dictionary, i: int, lab: String) -> String:
+	if str(pt.kind) == "LED": return "LED %s" % (lab.replace("-", "\u2212") + ("  (long leg)" if i == 0 else "  (flat side)"))
+	return "%s  lead %s" % [str(pt.label), lab]
+
+## The name of whatever sits on a pad (for the "wire joined" note).
+func pad_label(pad: Vector2) -> String:
+	for c in _pin_index(): if (c.pad as Vector2) == pad: return str(c.label)
+	return "empty hole"
+
+func _undo() -> void:
+	if phase != "bench" or pages.mode != "" or not backend.ENGINE: return
+	drag.clear()
+	var r: Dictionary = backend.undo()
+	if r.ok: sfx.play("page", 0.6); top.say(str(r.msg))
+	else: top.say("Nothing to undo.")
+
 func part_at(sp: Vector2) -> Dictionary:
 	var v := screen_to_vp(sp)
 	var m: Dictionary = backend.model
@@ -399,7 +450,7 @@ func wire_at(sp: Vector2) -> String:
 		var pts: Array = w.path.map(func(q): return bench.org + Vector2(q[0], q[1]) * bench.p)
 		for i in pts.size() - 1:
 			var cp := Geometry2D.get_closest_point_to_segment(v, pts[i], pts[i + 1])
-			if cp.distance_to(v) < bench.p * 0.3: return str(w.wid)
+			if cp.distance_to(v) < bench.p * 0.34: return str(w.wid)
 	return ""
 
 func _probe_tip(which: String) -> Vector2:
@@ -477,6 +528,7 @@ func _sync_views(dt: float) -> void:
 			if not sk.shown and k != ci: continue
 			tot += 1
 			if k <= ci: vis += 1
+		if int(cv.get("step_total", -1)) > 0: vis = int(cv.step_no); tot = int(cv.step_total)   # the engine numbers the steps: the total never moves mid-ticket
 		top.slip_step = "Wren's note  %d / %d" % [vis, tot]
 		_fit_slip()
 		top.arrow_to = _target_pos(str(st.target)); top.show_arrow = top.arrow_to != Vector2.ZERO and not drag.has("kind")
@@ -590,11 +642,16 @@ func _board_overlay() -> void:
 		else: drag["place"] = Vector2(-9999, 0)
 	elif drag.get("kind", "") == "wire":
 		var v2 := screen_to_vp(_mouse)
-		var tp := pad_at(_mouse, 0.7)
-		ov["wire"] = {"from": drag.pad, "to": v2, "target": tp}
+		var sn := snap(_mouse, WIRE_DROP_REACH, 0.7)
+		var pinned: bool = sn.kind == "pin" or sn.kind == "connector"
+		ov["wire"] = {"from": drag.pad, "to": v2, "target": sn.pad if sn.kind != "none" else Vector2(-1, -1),
+			"label": str(sn.label) if pinned else ("empty hole: a wire ending here touches no leg" if sn.kind == "pad" else ""), "bad": sn.kind == "pad"}
 	if not drag.has("kind"):
-		var hp := pad_at(_mouse, 0.5)
-		if hp.x >= 0 and hover == "board": ov["hover_pad"] = hp
+		var sn2 := snap(_mouse, 0.8, 0.5)
+		if sn2.kind != "none" and hover == "board":
+			ov["hover_pad"] = sn2.pad
+			if sn2.kind == "pin" or sn2.kind == "connector": ov["hover_label"] = str(sn2.label)
+		if hover_wire != "" and hover == "board" and not ov.has("hover_label"): ov["hover_wire"] = hover_wire
 	elif drag.get("kind", "") == "probe":
 		var sp := pad_at(_mouse, 0.8)
 		drag["snap"] = sp
@@ -626,6 +683,8 @@ func _unhandled_key_input(e: InputEvent) -> void:
 		KEY_ENTER, KEY_KP_ENTER: if phase == "bench" and pages.mode == "": run_bench()
 		KEY_P: if phase == "bench" and pages.mode == "" and backend.ENGINE and bool(backend.ticket.get("eb", false)): open_predict()
 		KEY_SPACE: if phase == "bench" and pages.mode == "": backend.set_power(not backend.powered)
+		KEY_Z: if e.ctrl_pressed or e.meta_pressed: _undo()
+		KEY_U: _undo()
 		KEY_R: rot = (rot + 1) % 4
 		KEY_ESCAPE:
 			if pages.mode == "notebook" or pages.mode == "settings": _on_page("close", "")
@@ -665,9 +724,13 @@ func _motion(sp: Vector2) -> void:
 		var sl := StallProps.slots(props.box_inner(), props.items.size(), props.bin_scroll)
 		for i in sl.size(): if (sl[i] as Rect2).size != Vector2.ZERO and (sl[i] as Rect2).has_point(sp): _slot_hover = i
 	if drag.get("kind", "") == "probe": drag.pos = sp
+	hover_wire = ""
+	if drag.is_empty() and hover == "board" and snap(sp, 0.6, 0.0).kind == "none" and part_at(sp).is_empty():
+		hover_wire = wire_at(sp)
 	# hover readouts (the Learner tooltip): node voltage and part current, only while it means something
 	top.tag = {}
-	if drag.is_empty() and hover == "board" and backend.powered:
+	if hover_wire != "": top.tag = {"text": "right-click to remove", "pos": sp}
+	elif drag.is_empty() and hover == "board" and backend.powered:
 		var pd := part_at(sp)
 		if not pd.is_empty() and (pd.kind == "LED" or pd.kind == "R"):
 			var i: float = backend.part_current(str(pd.uid))
@@ -699,6 +762,8 @@ func _press(sp: Vector2) -> void:
 	if hover == "board":
 		var pd := part_at(sp)
 		var pa := pad_at(sp, 0.5)
+		var sn := snap(sp, 0.6, 0.5)   # a press near a leg or connector starts a wire from that leg
+		if sn.kind == "pin" or sn.kind == "connector": drag = {"kind": "wire", "pad": sn.pad}; return
 		if pa.x >= 0 and (pd.is_empty() or pd.fixed or _near_pin(pd, pa)): drag = {"kind": "wire", "pad": pa}; return
 		if not pd.is_empty() and not pd.fixed:
 			var full: Dictionary = backend.part_by(str(pd.uid)); rot = int(full.rot)
@@ -727,10 +792,15 @@ func _release(sp: Vector2) -> void:
 				var r2: Dictionary = backend.move_part(str(d.uid), int(o2.x), int(o2.y), rot)
 				if not r2.ok: top.say(str(r2.msg))
 		"wire":
-			var tp := pad_at(sp, 0.7)
-			if tp.x >= 0 and tp != d.pad:
+			var tgt := snap(sp, WIRE_DROP_REACH, 0.7)   # the end snaps to the nearest leg or connector within reach, else to the hole
+			var tp: Vector2 = tgt.pad
+			if tgt.kind != "none" and tp != d.pad:
 				var r3: Dictionary = backend.add_wire([int(d.pad.x), int(d.pad.y)], [int(tp.x), int(tp.y)])
 				if not r3.ok and str(r3.msg) != "": top.say(str(r3.msg))
+				elif r3.ok:
+					var dang: Array = r3.get("dangling", [])
+					if not dang.is_empty(): top.say(str(r3.get("note", "")))   # the end touches no leg: the engine says so
+					else: top.say("Wire joined: %s  to  %s." % [pad_label(d.pad), pad_label(tp)])
 			elif (L.box as Rect2).has_point(sp):   # dragged a wire end back to the box: take the wire off that pad
 				for w in backend.wires.duplicate():
 					if w.a == [int(d.pad.x), int(d.pad.y)] or w.b == [int(d.pad.x), int(d.pad.y)]: backend.delete_wire(w.wid); break

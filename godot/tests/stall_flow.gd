@@ -61,6 +61,9 @@ func _run() -> void:
 	var slots := StallProps.slots(sc.props.box_inner(), sc.props.items.size(), sc.props.bin_scroll)
 	var led_slot := _bin_idx(null)
 	var led_c: Vector2 = (slots[led_slot] as Rect2).get_center()
+	var step1_before := str(sc.top.slip_step)
+	var arrow_before: Vector2 = sc.top.arrow_to
+	if eng: ok(sc.top.show_arrow and (sc.L.box as Rect2).grow(40).has_point(sc.top.arrow_to), "step 1: the arrow points into the shoebox (%s)" % step1_before)
 	sc._motion(led_c); sc._press(led_c)
 	ok(sc.drag.get("kind", "") == "part", "pressing the LED slot picks the part up")
 	var target := sc.pad_screen(lay.led_mid)
@@ -70,6 +73,10 @@ func _run() -> void:
 	sc._release(target); await _frames(2)
 	var leds: Array = sc.backend.parts.filter(func(p): return p.kind == "LED")
 	ok(leds.size() == 1, "releasing over the board places the LED")
+	if eng:
+		var step1 := str(sc.top.slip_step)
+		ok(step1.contains("/ " + _step_total(step1_before)) and step1 != step1_before, "Wren's note moves on but its total stays: '%s' -> '%s'" % [step1_before, step1])
+		ok(sc.top.arrow_to.distance_to(arrow_before) > 80.0 and not (sc.L.box as Rect2).grow(40).has_point(sc.top.arrow_to), "the arrow left the shoebox once the LED is placed (now %s)" % str(sc.top.arrow_to))
 	ok(leds.size() == 1 and (leds[0].pins as Array)[0] == lay.led_pins[0] and (leds[0].pins as Array)[1] == lay.led_pins[1], "its leads snapped to pads %s-%s" % [str(lay.led_pins[0]), str(lay.led_pins[1])])
 	sc._motion(led_c); sc._press(led_c); sc._motion(sc.pad_screen(lay.led_mid)); await _frames(3); sc._release(sc.pad_screen(lay.led_mid))
 	ok(sc.backend.parts.filter(func(p): return p.kind == "LED").size() == 1, "a taken pad (or the one-LED shoebox) refuses a second part")
@@ -117,6 +124,8 @@ func _run() -> void:
 	sc.start_ticket("1-3"); sc.pages.show_page("notebook"); await _frames(3); ok(sc.pages.mode == "notebook", "the notebook opens over the bench")
 	print("\n%d checks, %d failed" % [checks, fails])
 	quit(1 if fails > 0 else 0)
+
+func _step_total(slip: String) -> String: return slip.split("/")[1].strip_edges()
 
 func _torch(r_idx: int) -> void:
 	var bk = sc.backend
