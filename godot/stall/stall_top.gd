@@ -143,7 +143,7 @@ func _chit() -> void:
 		y += float(psz) + 10.0
 		S.text(self, f, pay, Vector2(q.position.x + 14, y), 13, Color(S.INK, 0.7), HORIZONTAL_ALIGNMENT_LEFT, inner)
 	if locked:   # a rubber stamp
-		draw_set_transform(c + (Vector2(28, 62) if not S.handheld else Vector2(40, -34)), deg_to_rad(-12.0), Vector2.ONE)
+		draw_set_transform(c + (Vector2(28, 62) if not S.handheld else Vector2(62, 10)), deg_to_rad(-12.0), Vector2.ONE)
 		S.rr_line(self, Rect2(-56, -20, 112, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5)
 		S.text(self, S.hand(), "FIXED", Vector2(-38, 10), 28, Color(0.1, 0.55, 0.2, 0.9))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
