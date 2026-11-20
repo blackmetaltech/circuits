@@ -23,6 +23,7 @@ var bubble_alpha := 0.0
 var toast := ""
 var toast_age := 9.0
 var toast_dur := 3.5
+var toast_quick := false         ## a transient confirmation ("Wire joined"), drawn as a small dark tag so it is never mistaken for Wren's slip
 var hint_box_drop := false
 var peek: Dictionary = {}
 var _arrow_k := 0.0
@@ -38,7 +39,10 @@ func _process(dt: float) -> void:
 	_arrow_k = minf(1.0, _arrow_k + dt * 1.6)
 	queue_redraw()
 
-func say(s: String) -> void: toast = s; toast_age = 0.0; toast_dur = clampf(3.5 + float(s.length()) * 0.045, 3.5, 11.0)   # a long sentence stays long enough to read
+func say(s: String) -> void: toast = s; toast_quick = false; toast_age = 0.0; toast_dur = clampf(3.5 + float(s.length()) * 0.045, 3.5, 11.0)   # a long sentence stays long enough to read
+
+## A short confirmation that fades fast and looks like the hover readout, not like a note from Wren.
+func say_quick(s: String) -> void: toast = s; toast_quick = true; toast_age = 0.0; toast_dur = 2.0
 
 func slip_rect() -> Rect2: return L.get("slip", Rect2())
 
@@ -110,13 +114,20 @@ func _chit() -> void:
 	var c := r.get_center(); draw_set_transform(c, deg_to_rad(-3.0), Vector2.ONE)
 	var q := Rect2(-r.size * 0.5, r.size)
 	S.pin(self, q.position + Vector2(r.size.x * 0.5, 10))
-	S.text(self, S.hand(), "TICKET %s" % str(ticket.id), q.position + Vector2(14, 44), 16, S.INK_RED)
-	S.text(self, S.hand(), str(ticket.title), q.position + Vector2(14, 74), 28, S.INK)
-	S.text(self, S.hand(), "for %s" % str(ticket.customer), q.position + Vector2(14, 98), 18, Color(S.INK, 0.8))
-	draw_line(q.position + Vector2(12, 108), q.position + Vector2(r.size.x - 12, 108), Color(S.INK, 0.25), 1.5)
-	S.text(self, S.hand(), str(ticket.spec), q.position + Vector2(14, 132), 17, S.INK, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 28)
-	var fee: String = str(ticket.get("price_text", "")) if str(ticket.get("price_text", "")) != "" else "%d coins" % int(ticket.price)
-	S.text(self, S.hand(), fee, q.position + Vector2(r.size.x - 14 - S.tw(S.hand(), fee, 15), 98), 15, Color(S.INK, 0.75))
+	var f := S.hand(); var inner := r.size.x - 28.0
+	var fee: String = str(ticket.get("price_text", "")) if str(ticket.get("price_text", "")) != "" else "%d coins" % int(ticket.get("price", 0))
+	S.text(self, f, "TICKET %s%s" % [str(ticket.get("id", "")), "  EB" if bool(ticket.get("eb", false)) else ""], q.position + Vector2(14, 38), 15, S.INK_RED)
+	S.text(self, f, fee, q.position + Vector2(r.size.x - 14 - S.tw(f, fee, 17), 38), 17, Color(S.INK, 0.8))
+	var tsz := 28   # a long title shrinks to fit the chit instead of running into the price
+	while tsz > 16 and S.tw(f, str(ticket.get("title", "")), tsz) > inner: tsz -= 2
+	S.text(self, f, str(ticket.get("title", "")), q.position + Vector2(14, 70), tsz, S.INK)
+	var csz := 18
+	while csz > 12 and S.tw(f, "for %s" % str(ticket.get("customer", "")), csz) > inner: csz -= 1
+	S.text(self, f, "for %s" % str(ticket.get("customer", "")), q.position + Vector2(14, 92), csz, Color(S.INK, 0.8))
+	draw_line(q.position + Vector2(12, 102), q.position + Vector2(r.size.x - 12, 102), Color(S.INK, 0.25), 1.5)
+	S.text(self, f, str(ticket.get("spec", "")), q.position + Vector2(14, 124), 16, S.INK, HORIZONTAL_ALIGNMENT_LEFT, inner)
+	var pay := str(ticket.get("pay_text", ""))
+	if pay != "": S.text(self, f, pay, q.position + Vector2(14, r.size.y - 36), 13, Color(S.INK, 0.6), HORIZONTAL_ALIGNMENT_LEFT, inner)
 	if locked:   # a rubber stamp
 		draw_set_transform(c + Vector2(28, 62), deg_to_rad(-12.0), Vector2.ONE)
 		S.rr_line(self, Rect2(-56, -20, 112, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5)
@@ -165,6 +176,12 @@ func _tag() -> void:
 
 func _toast() -> void:
 	var a := clampf(minf(toast_age * 4.0, (toast_dur - toast_age) * 2.0), 0.0, 1.0)
+	if toast_quick:
+		var w := S.tw(S.mono(), toast, 18) + 26.0
+		var q := Rect2(size.x * 0.5 - w * 0.5, 200, w, 30)
+		S.rr(self, q, 8, Color("#14161a", 0.88 * a)); S.rr_line(self, q, 8, Color(S.AMBER, 0.5 * a), 1.5)
+		S.text(self, S.mono(), toast, q.position + Vector2(13, 21), 18, Color(S.AMBER, a))
+		return
 	var th := S.wrapped_h(S.hand(), toast, 22, 620.0)
 	var r := Rect2(size.x * 0.5 - 330, 196, 660, maxf(46.0, th + 24.0))
 	S.paper(self, r, -0.6, Color(0.97, 0.93, 0.8, a))

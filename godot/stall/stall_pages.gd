@@ -112,8 +112,14 @@ func _title() -> void:
 			draw_string_outline(f, Vector2(lx, cy + fs * 0.18), ch, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, [14, 8, 4][p], Color(col, [0.12, 0.25, 0.55][p] * k))
 		draw_string(f, Vector2(lx, cy + fs * 0.18), ch, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, Color(col.lerp(Color.WHITE, 0.8), k))
 		lx += cw
-	S.text(self, f, "Stall 14  ·  Lantern Lane", Vector2(cx - S.tw(f, "Stall 14  ·  Lantern Lane", 32) * 0.5, board.end.y + 46), 32, Color(1, 0.9, 0.7, 0.9))
-	S.text(self, f, "Every resistor is a promise about heat.", Vector2(cx - S.tw(f, "Every resistor is a promise about heat.", 22) * 0.5, board.end.y + 82), 22, Color(1, 0.9, 0.7, 0.6))
+	# two lines under the sign: the stall's name, then the tagline with real air between them (the lines are sized from the font, not from guessed pixels)
+	var l1 := "Stall 14  ·  Lantern Lane"; var l2 := "Every resistor is a promise about heat."
+	var y1 := board.end.y + 20.0 + f.get_ascent(32)
+	var y2 := y1 + f.get_descent(32) + 14.0 + f.get_ascent(22)
+	var plate := Rect2(cx - S.tw(f, l1, 32) * 0.5 - 26.0, board.end.y + 10.0, S.tw(f, l1, 32) + 52.0, y2 + f.get_descent(22) + 14.0 - board.end.y - 10.0)
+	S.rr(self, plate, 14, Color(0.03, 0.02, 0.05, 0.62))   # a dark plate so the two lines read over the perfboard
+	S.text(self, f, l1, Vector2(cx - S.tw(f, l1, 32) * 0.5, y1), 32, Color(1, 0.9, 0.7, 0.9))
+	S.text(self, f, l2, Vector2(cx - S.tw(f, l2, 22) * 0.5, y2), 22, Color(1, 0.9, 0.7, 0.6))
 	# hanging painted signs
 	var items: Array = []
 	if has_save: items.append(["continue", "Continue", Color("#2f6b45")])
@@ -144,6 +150,7 @@ func _title() -> void:
 ## ------------------------------------------------------------------------------------------------------------------ chapter map
 
 func _open_book(r: Rect2, a: float) -> void:
+	if r.size.x < 200.0 or r.size.y < 200.0: return   # the window is mid-resize (the page has no room yet): nothing to draw this frame
 	draw_rect(Rect2(0, 0, size.x, size.y), Color(0.03, 0.02, 0.03, 0.55 * a), true)
 	S.shadow(self, r, 14, Vector2(10, 18), 0.6 * a)
 	S.rr(self, r.grow(12), 16, Color("#26453c")); S.rr(self, r.grow(8), 14, Color("#2f5a4d"))
@@ -179,7 +186,7 @@ func _map(a: float) -> void:
 	# the chits, pinned on the right page
 	var rp := Rect2(r.position.x + half + 30, r.position.y + 40, half - 60, r.size.y - 80)
 	S.text(self, f, "tickets on the spike", rp.position + Vector2(10, 30), 26, Color(S.INK, 0.7))
-	var cw := rp.size.x * 0.46; var ch := 176.0
+	var cw := rp.size.x * 0.46; var ch := 208.0
 	for i in tickets.size():
 		var tk: Dictionary = tickets[i]
 		var col := i % 2; var row := i / 2
@@ -199,12 +206,18 @@ func _map(a: float) -> void:
 		while tsz > 18 and S.tw(f, str(tk.title), tsz) > q.size.x - 28.0: tsz -= 2
 		S.text(self, f, str(tk.title), q.position + Vector2(14, 84), tsz, S.INK if open else Color(S.INK, 0.5))
 		S.text(self, f, "for %s" % str(tk.customer), q.position + Vector2(14, 112), 20, Color(S.INK, 0.8 if open else 0.4))
-		S.text(self, f, str(tk.spec), q.position + Vector2(14, 144), 18, Color(S.INK, 0.9 if open else 0.4), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 26)
+		S.text(self, f, str(tk.spec), q.position + Vector2(14, 136), 17, Color(S.INK, 0.9 if open else 0.4), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 26)
+		var pay := str(tk.get("pay_text", ""))
+		if open and pay != "": S.text(self, f, pay, q.position + Vector2(14, q.size.y - 12), 14, Color(S.INK, 0.6))
 		var fee: String = str(tk.get("price_text", "")) if str(tk.get("price_text", "")) != "" else "%d coins" % int(tk.price)
 		S.text(self, f, fee, q.position + Vector2(q.size.x - 20 - S.tw(f, fee, 17), 48), 17, Color(S.INK, 0.7))
-		if int(tk.get("stars", 0)) > 0: S.text(self, f, "*".repeat(int(tk.stars)), q.position + Vector2(118, 52), 30, S.INK_RED)
+		if int(tk.get("stars", 0)) > 0 or tk.done:
+			var smax := int(tk.get("stars_max", 2)); var got := int(tk.get("stars", 0))
+			S.text(self, f, "*".repeat(got) + ".".repeat(maxi(0, smax - got)), q.position + Vector2(118, 52), 30, S.INK_RED)
+		if tk.done and hv: S.text(self, f, "tap to replay: better stars, lower cost", q.position + Vector2(14, q.size.y - 32), 15, S.INK_RED)
+		elif tk.done and str(tk.get("best_text", "")) != "": S.text(self, f, str(tk.best_text), q.position + Vector2(14, q.size.y - 32), 15, Color(S.INK, 0.7))
 		if tk.done:
-			draw_set_transform(cr.get_center() + Vector2(cr.size.x * 0.27, -cr.size.y * 0.01), deg_to_rad(-12), Vector2.ONE)
+			draw_set_transform(cr.get_center() + Vector2(cr.size.x * 0.27, cr.size.y * 0.02), deg_to_rad(-12), Vector2.ONE)
 			S.rr_line(self, Rect2(-52, -20, 104, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5); S.text(self, f, "FIXED", Vector2(-36, 10), 26, Color(0.1, 0.55, 0.2, 0.9))
 		elif not open:
 			S.text(self, f, "locked", q.position + Vector2(q.size.x - 20 - S.tw(f, "locked", 18), 112), 18, Color(S.INK, 0.45))
@@ -276,34 +289,48 @@ func _notebook(a: float) -> void:
 func _predict(a: float) -> void:
 	var w := size.x; var h := size.y; var f := S.hand()
 	draw_rect(Rect2(0, 0, w, h), Color(0.02, 0.01, 0.02, 0.45 * a), true)
-	var r := Rect2(w * 0.5 - 360, h * 0.5 - 260 + (1.0 - a) * 24, 720, 520)
+	var fig: Dictionary = coach_ticket.get("figure", {}) if coach_ticket.get("figure", null) is Dictionary else {}
+	var wide := not fig.is_empty()
+	var sz := Vector2(1000, 640) if wide else Vector2(720, 520)
+	sz = Vector2(minf(sz.x, w - 24.0), minf(sz.y, h - 24.0))
+	var r := Rect2(w * 0.5 - sz.x * 0.5, h * 0.5 - sz.y * 0.5 + (1.0 - a) * 24, sz.x, sz.y)
 	S.paper(self, r, -0.8, S.PAPER)
 	draw_set_transform(r.get_center(), deg_to_rad(-0.8), Vector2.ONE)
 	var q := Rect2(-r.size * 0.5, r.size)
 	S.pin(self, q.position + Vector2(q.size.x * 0.5, 16))
-	S.text(self, f, "Predict first", q.position + Vector2(36, 76), 52, S.INK)
-	S.text(self, f, "Work it out on paper, write the numbers here, then build it. The bench checks you against the real thing.", q.position + Vector2(36, 112), 20, Color(S.INK, 0.75), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 72)
-	var y := q.position.y + 200.0
+	S.text(self, f, "%s  \u00b7  predict first" % str(coach_ticket.get("title", "Exam")), q.position + Vector2(36, 70), 40, S.INK)
+	var col_w := (q.size.x * 0.46) if wide else (q.size.x - 72.0)
+	# the problem, as printed on the exam card: its words, and (right) its figure
+	S.text(self, f, str(coach_ticket.get("brief", "")), q.position + Vector2(36, 106), 19, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, col_w)
+	if wide:
+		var fr := Rect2(q.position.x + q.size.x * 0.52, q.position.y + 96, q.size.x * 0.44, q.size.y - 200.0)
+		S.rr_line(self, fr, 6, Color(S.INK, 0.35), 2.0)
+		S.text(self, f, "Fig. 1", fr.position + Vector2(10, 22), 16, Color(S.INK, 0.6))
+		ExamFigure.draw(self, fr.grow(-10), fig, S.INK, ["V(%s)" % str(fig.get("node", "A")), "I(E2)"])
+		S.text(self, f, "ideal sources, exact resistors", Vector2(fr.position.x + 10, fr.end.y - 8), 14, Color(S.INK, 0.5))
+	var y := q.position.y + (q.size.y * 0.5 - 40.0 if wide else 200.0)
 	for i in pred_fields.size():
 		var pf: Dictionary = pred_fields[i]
-		S.text(self, f, str(pf.name), Vector2(q.position.x + 36, y), 20, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 72)
-		var box := Rect2(q.position.x + 36, y + 14, 380, 54)
+		S.text(self, f, str(pf.name), Vector2(q.position.x + 36, y), 19, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, col_w)
+		var lh := S.wrapped_h(f, str(pf.name), 19, col_w)
+		var box := Rect2(q.position.x + 36, y + lh - 8, minf(320.0, col_w - 90.0), 50)
 		var hv := _btn(Rect2(r.get_center() + box.position, box.size), "pred_focus", str(i))
 		var cur := i == pred_focus
 		S.rr(self, box, 8, Color(S.INK, 0.08)); S.rr_line(self, box, 8, Color(S.INK, 0.85 if cur else (0.5 if hv else 0.3)), 3.0 if cur else 2.0)
 		var txt := str(pf.text)
-		S.text(self, S.mono(), txt, box.position + Vector2(14, 38), 32, S.INK)
-		if cur and fmod(t, 1.0) < 0.6: draw_rect(Rect2(box.position.x + 16 + S.tw(S.mono(), txt, 32), box.position.y + 10, 3, 34), S.INK, true)
-		S.text(self, f, str(pf.unit), box.position + Vector2(box.size.x + 14, 38), 30, S.INK)
-		if pf.get("done", false): S.text(self, f, "recorded", box.position + Vector2(box.size.x + 70, 38), 22, S.INK_RED)
-		y += 120.0
-	var ok_r := Rect2(q.position.x + 36, q.end.y - 84, 220, 52)
+		S.text(self, S.mono(), txt, box.position + Vector2(14, 36), 30, S.INK)
+		if cur and fmod(t, 1.0) < 0.6: draw_rect(Rect2(box.position.x + 16 + S.tw(S.mono(), txt, 30), box.position.y + 10, 3, 30), S.INK, true)
+		S.text(self, f, str(pf.unit), box.position + Vector2(box.size.x + 12, 36), 28, S.INK)
+		if pf.get("done", false): S.text(self, f, "recorded", box.position + Vector2(box.size.x + 52, 36), 18, S.INK_RED)
+		y += lh + 78.0
+	var ok_r := Rect2(q.position.x + 36, q.end.y - 78, 200, 50)
 	var oh := _btn(Rect2(r.get_center() + ok_r.position, ok_r.size), "pred_submit")
-	S.rr(self, ok_r, 26, S.INK if oh else Color(S.INK, 0.85)); S.text(self, f, "lock in", ok_r.position + Vector2(52, 38), 32, S.PAPER)
-	var cl := Rect2(q.position.x + 290, q.end.y - 84, 160, 52)
+	S.rr(self, ok_r, 25, S.INK if oh else Color(S.INK, 0.85)); S.text(self, f, "lock in", ok_r.position + Vector2(46, 36), 30, S.PAPER)
+	var cl := Rect2(q.position.x + 262, q.end.y - 78, 150, 50)
 	var ch := _btn(Rect2(r.get_center() + cl.position, cl.size), "pred_close")
-	S.rr_line(self, cl, 26, Color(S.INK, 0.7 if ch else 0.4), 2.0); S.text(self, f, "later", cl.position + Vector2(48, 38), 28, S.INK)
-	S.text(self, f, "type digits, Tab switches line, Enter locks in", q.position + Vector2(q.size.x - 36 - S.tw(f, "type digits, Tab switches line, Enter locks in", 16), q.end.y - 24), 16, Color(S.INK, 0.5))
+	S.rr_line(self, cl, 25, Color(S.INK, 0.7 if ch else 0.4), 2.0); S.text(self, f, "later", cl.position + Vector2(44, 36), 26, S.INK)
+	var hint := "type digits, Tab switches line, Enter locks in.  \"later\" keeps this slip on the bench: tap it to reopen."
+	S.text(self, f, hint, Vector2(q.position.x + 36, q.end.y - 12), 14, Color(S.INK, 0.55))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 ## ------------------------------------------------------------------------------------------------------------------ settings

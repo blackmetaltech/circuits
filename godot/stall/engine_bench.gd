@@ -77,7 +77,7 @@ func _q(name: String, args: Array = []): return bridge.q(name, args)
 
 func open_ticket(id: String) -> bool:
 	var prev := str(ticket.get("id", ""))
-	if not ticket.is_empty(): _act("closeTicket")
+	_act("closeTicket")   # whatever the engine still has open (it may be one this side lost track of: a load, a failed open)
 	var r := _act("openTicket", [id])
 	if not r.get("ok", false):   # e.g. locked: keep the ticket that was open
 		push_warning("openTicket %s: %s" % [id, r.get("message", "")])
@@ -91,7 +91,7 @@ func open_ticket(id: String) -> bool:
 	return true
 
 func close_ticket() -> void:
-	if not ticket.is_empty(): _act("closeTicket")
+	_act("closeTicket")
 	ticket = {}
 
 func new_game() -> void:
@@ -114,7 +114,9 @@ func progress() -> Dictionary:
 		for tk in m.get("tickets", []):
 			var st := str(tk.get("state", "locked"))
 			rows.append({"id": str(tk.id), "title": str(tk.title), "customer": str(tk.customer), "spec": str(tk.get("spec", "")), "price": int(tk.get("fee", 0)),
-				"price_text": str(tk.get("feeText", "")), "open": st != "locked", "done": st == "passed" or st == "done", "stars": int(tk.get("stars", 0)), "state": st})
+				"price_text": str(tk.get("feeText", "")), "open": st != "locked", "done": st == "passed" or st == "done", "stars": int(tk.get("stars", 0)), "state": st,
+				"pay_text": str(tk.get("payText", "")), "stars_max": int(tk.get("starsMax", 2)),
+				"best_text": ("best cost %s" % str((tk.best as Dictionary).get("costText", ""))) if tk.get("best", null) is Dictionary else ""})
 	return {"tickets": rows, "wallet": wallet_minor, "wallet_text": wallet_text, "stars": int((m as Dictionary).get("starsEarned", 0)) if m is Dictionary else 0}
 
 func _load_ticket() -> void:
@@ -130,7 +132,7 @@ func _load_ticket() -> void:
 	for c in bench_q.get("connectors", []):
 		var role := str(c.role)
 		conns.append({"id": str(c.id), "pad": [int(c.pad[0]), int(c.pad[1])], "role": "supply" if role in ["rail", "source"] else ("ground" if role == "ground" else role)})
-	ticket = {"id": id, "title": str(card.get("title", "")), "customer": str(card.get("customer", "")), "brief": str(card.get("brief", "")),
+	ticket = {"id": id, "figure": card.get("figure", null), "pay_text": str(card.get("payText", "")), "title": str(card.get("title", "")), "customer": str(card.get("customer", "")), "brief": str(card.get("brief", "")),
 		"gadget": str(fl.get("gadget", "exam")), "ask": str(fl.get("ask", "")), "thanks": str(fl.get("thanks", "")),
 		"price": int(card.get("fee", 0)), "price_text": str(card.get("feeText", "")), "eb": bool(card.get("eb", false)),
 		"specs": card.get("specs", []), "targets": card.get("targets", []), "conditions": card.get("conditions", []), "predictions": card.get("predictions", []),
@@ -148,6 +150,10 @@ func _supply_info() -> Dictionary:
 		if str(p.partId).begins_with("bat-pp3"):
 			var tired: bool = str(p.partId).ends_with("tired") or str(p.get("variant", "")) == "tired"
 			return {"kind": "pp3", "label": "tired 9 V pack" if tired else "9 V PP3", "volts": 9.0, "tired": tired}
+	var srcs: Array = []   # an exam ticket: ideal textbook sources fixed on the board (not a battery, not the bench supply)
+	for p in _all_parts:
+		if str(p.partId).begins_with("ideal-vsource"): srcs.append({"name": "E%d" % (srcs.size() + 1), "volts": float(p.get("value", 0.0))})
+	if not srcs.is_empty(): return {"kind": "sources", "label": "textbook sources", "volts": 0.0, "tired": false, "sources": srcs}
 	return {"kind": "none", "label": "(textbook sources)", "volts": 0.0, "tired": false}
 
 func _short_spec(tg: Dictionary) -> String:
@@ -226,7 +232,7 @@ func pins_of(item: Dictionary, x: int, y: int, rot: int) -> Array:
 func can_place(item: Dictionary, x: int, y: int, rot: int, skip_uid := "") -> String:
 	if skip_uid != "":   # a move: the part's own pads are not "taken"
 		for q in pins_of(item, x, y, rot):
-			if q.x < 0 or q.y < 0 or q.x > int(ticket.board.w) - 1 or q.y > int(ticket.board.h) - 1: return "That would hang off the board."
+			if q.x < 0 or q.y < 0 or q.x > int(ticket.get("board", {}).get("w", 24)) - 1 or q.y > int(ticket.get("board", {}).get("h", 16)) - 1: return "That would hang off the board."
 		return ""
 	var g = _q("ghost", [item.partId, x, y, rot, false])
 	if g is Dictionary and not bool(g.get("ok", true)): return str(g.get("problem", "That does not fit there."))
@@ -309,7 +315,7 @@ func set_probe(which: String, pad) -> Dictionary:
 		r = _act("attachProbe", [1, pad]) if pad != null else _act("detachProbe", [1])
 	else:
 		r = _act("dmmLead", [which, pad])
-	if r.get("ok", false): probes[which] = pad
+	if r.get("ok", false): probes[which] = pad; _bench_key = ""   # something has been measured: a refused bench may try again by itself
 	else: probes[which] = null
 	dmm_used = dmm_used or (pad != null and which != "ch1")
 	_refresh_board(); _refresh_live(); _rebuild_model()
@@ -332,7 +338,7 @@ func predictions_done() -> bool:
 
 ## The formal bench check. A pass pays the ticket (event "paid"); a fail raises "bench_failed" with the engine's explanation of the player's own numbers.
 func run_bench() -> Dictionary:
-	var r := _act("runBench")
+	var r := _act("runBench", [true])
 	var res = _q("benchResult")
 	last_result = res if res is Dictionary else {}
 	_bench_key = _board_key()

@@ -22,6 +22,8 @@ var mood := "idle"              ## idle | hopeful | joy | wow (customer)
 var customer := "Lio"
 var items: Array = []           ## bin items: {partId, value, label, tag, kind, i}
 var bin_scroll := 0
+var exam_fig: Dictionary = {}          ## exam ticket: the engine's figure, drawn small on the problem card that stays on the bench
+var exam_open := true                  ## false once the predictions are in (the card then reads "your predictions are in")
 var hide_item := -1             ## the bin item being dragged
 var hover_item := -1
 var hover := ""                 ## notebook | tin | box | customer | cat
@@ -57,11 +59,29 @@ func fly_coin(from: Vector2, count := 6) -> void:
 
 func _r(n: String) -> Rect2: return L.get(n, Rect2())
 
+## The exam problem card: it stays on the bench after "later", with the figure on it. Tap it (or press P) to open the predict slip again.
+func _exam_card() -> void:
+	var r := _r("exam")
+	if exam_fig.is_empty() or r.size == Vector2.ZERO: return
+	var c := r.get_center(); var hv: bool = hover == "exam"
+	var lift := -6.0 if hv else 0.0
+	S.shadow(self, Rect2(r.position + Vector2(0, lift), r.size), 6, Vector2(6, 9), 0.4)
+	S.paper(self, Rect2(r.position + Vector2(0, lift), r.size), 2.0, Color("#fbf6e4"))
+	draw_set_transform(c + Vector2(0, lift), deg_to_rad(2.0), Vector2.ONE)
+	var q := Rect2(-r.size * 0.5, r.size)
+	S.pin(self, q.position + Vector2(q.size.x * 0.5, 11), Color("#3a6fb0"))
+	S.text(self, S.hand(), "EXAM SLIP", q.position + Vector2(12, 36), 16, S.INK_RED)
+	ExamFigure.draw(self, Rect2(q.position + Vector2(6, 42), Vector2(q.size.x - 12, q.size.y - 82)), exam_fig, S.INK, [], true)
+	S.text(self, S.hand(), "tap: open the slip" if not exam_open else "tap to predict", q.position + Vector2(12, q.size.y - 12), 15, Color(S.INK, 0.8))
+	if hv: S.rr_line(self, q.grow(3), 5, Color("#ffd98a", 0.9), 3.0)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
 func _draw() -> void:
 	if L.is_empty(): return
 	_mug(); _box(); _cat(); _notebook(); _tin()
 	if show_bench: _bench_button()
 	_customer()
+	_exam_card()
 	for c in coins:
 		if c.age < 0.0: continue
 		var k: float = c.age / c.life
@@ -238,6 +258,16 @@ static func slots(inner: Rect2, n: int, scroll: int) -> Array:
 
 func box_inner() -> Rect2: return _r("box").grow(-22)
 
+## How many rows of parts the shoebox shows at once, and how far it can scroll (one wheel notch or one arrow click = one row, always).
+static func rows_visible(inner: Rect2) -> int: return maxi(1, int(inner.size.y / 86.0))
+static func max_scroll(inner: Rect2, n: int) -> int: return maxi(0, (n + 1) / 2 - rows_visible(inner))
+## The two scroll arrows (small tabs on the box's right edge); each is a Rect2 with zero size when there is nowhere to scroll that way.
+static func arrows(inner: Rect2, n: int, scroll: int) -> Dictionary:
+	var mx := max_scroll(inner, n)
+	var up := Rect2(inner.end.x - 34, inner.position.y + 4, 30, 26) if scroll > 0 else Rect2()
+	var dn := Rect2(inner.end.x - 34, inner.end.y - 30, 30, 26) if scroll < mx else Rect2()
+	return {"up": up, "down": dn}
+
 func _box() -> void:
 	var r := _r("box"); var c := r.get_center()
 	draw_set_transform(c, deg_to_rad(1.6), Vector2.ONE)
@@ -298,7 +328,26 @@ func _items(c: Vector2) -> void:
 		var pt: String = str(it.get("price_text", ""))
 		if int(it.get("left", -1)) >= 0: pt = ("%s  x%d" % [pt, int(it.left)]).strip_edges()
 		if pt != "": S.text(self, S.hand(), pt, Vector2(cell.end.x - 8 - S.tw(S.hand(), pt, 15), cell.position.y + 20), 15, Color("#e9dfc4", 0.75))
-	if sl.size() > 0 and bin_scroll > 0: S.text(self, S.hand(), "^", Vector2(inner.end.x - 12, inner.position.y + 10), 18, Color(1, 1, 1, 0.5))
+	_scroll_cues(inner, n)
+
+## Scrolling you can see: a dark fade where more parts hide, an arrow tab you can click, and a thin track showing where you are.
+func _scroll_cues(inner: Rect2, n: int) -> void:
+	var mx := max_scroll(inner, n)
+	if mx <= 0: return
+	var ar := arrows(inner, n, bin_scroll)
+	if bin_scroll > 0: S.vgrad(self, Rect2(inner.position, Vector2(inner.size.x, 34)), Color("#120c07", 0.92), Color("#120c07", 0.0), 6)
+	if bin_scroll < mx: S.vgrad(self, Rect2(inner.position.x, inner.end.y - 34, inner.size.x, 34), Color("#120c07", 0.0), Color("#120c07", 0.92), 6)
+	for k in ["up", "down"]:
+		var rr: Rect2 = ar[k]
+		if rr.size == Vector2.ZERO: continue
+		var hv: bool = hover == "box_" + k
+		S.rr(self, rr, 6, Color("#ffd98a", 0.95) if hv else Color("#e9dfc4", 0.85))
+		var c := rr.get_center(); var d := -1.0 if k == "up" else 1.0
+		draw_colored_polygon(PackedVector2Array([c + Vector2(-8, -4 * d), c + Vector2(8, -4 * d), c + Vector2(0, 5 * d)]), Color("#3a2a1a"))
+	var tr := Rect2(inner.end.x - 5, inner.position.y + 36, 3, inner.size.y - 72)   # the track and the thumb
+	draw_rect(tr, Color(1, 1, 1, 0.12), true)
+	var th := maxf(18.0, tr.size.y * float(rows_visible(inner)) / float((n + 1) / 2))
+	draw_rect(Rect2(tr.position.x, tr.position.y + (tr.size.y - th) * float(bin_scroll) / float(mx), tr.size.x, th), Color("#ffd98a", 0.8), true)
 
 ## ------------------------------------------------------------------------------------------------------------------ customer
 

@@ -85,7 +85,7 @@ export const en: Record<string, string> = {
   'coach.1-5.s1': 'This is an exam problem. Enter your predictions for V(A) and the current through E2 on the card before you touch the board.',
   'coach.1-5.s2': 'Drag the resistors from the textbook box: R1 (2 ohm), R2 (3 ohm), R3 (6 ohm).',
   'coach.1-5.s3': 'Wire E1 through R1 to A, E2 through R2 to A, A through R3 to ground, and tie both batteries to GND.',
-  'coach.1-5.s4': 'Clip the meter on A and compare it with your prediction.',
+  'coach.1-5.s4': 'Clip the scope (or the meter) on node A, anywhere on that node, and compare the real voltage with your prediction.',
   'coach.1-5.s5': 'Run the bench.',
   'coach.1-5.s6': 'Marked. See how close your prediction was.',
   'bench.predict.exact': 'within 1 %',

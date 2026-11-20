@@ -106,7 +106,11 @@ func _screen_env() -> void:   # CB_SCREEN=title|map|bench ; CB_TICKET=1-3 (QA ho
 		for id in _ticket_ids: done[id] = done.get(id, false)
 		if backend.ENGINE and OS.get_environment("CB_SHOTS") == "": backend.unlock_through(tk if tk != "" and scr in ["bench", "level", "notebook"] else "1-5")   # play the earlier tickets with their reference designs
 	match scr:
-		"bench", "level": start_ticket(tk if tk != "" else "1-1")
+		"bench", "level":
+			start_ticket(tk if tk != "" else "1-1")
+			if OS.get_environment("CB_REF") == "1" and backend.ENGINE:   # QA hook: the ticket's reference design is already built (and its predictions entered)
+				backend.build_ref(str(backend.ticket.id)); pages.show_page(""); _lay_key = ""
+				if OS.get_environment("CB_POWER") == "1": backend.set_power(true)
 		"map": go_map()
 		"notebook": start_ticket(tk if tk != "" else "1-1"); pages.show_page("notebook")
 		"settings": pages.show_page("settings")
@@ -139,10 +143,13 @@ func start_ticket(id: String) -> void:
 	if backend.ENGINE and bool(backend.ticket.get("eb", false)) and not backend.predictions_done(): open_predict()
 
 func _ticket_view() -> void:   # push the open ticket onto the instruments and props
+	if backend.ticket.is_empty(): return
 	props.mood = "idle"; props.customer = str(backend.ticket.customer); props.gadget = str(backend.ticket.gadget); props.bin_scroll = 0
+	props.exam_fig = backend.ticket.figure if bool(backend.ticket.get("eb", false)) and backend.ticket.get("figure", null) is Dictionary else {}
 	scope.sc = backend.ticket.scope; scope.locked = false
 	var sp: Dictionary = backend.ticket.supply
 	supply.kind = str(sp.kind) if sp.kind != "none" else "bench"
+	supply.sources = sp.get("sources", [])
 	supply.label = str(sp.label); supply.tired = sp.get("tired", false); supply.volts = float(sp.get("volts", sp.get("emf", 0.0)))
 	supply.conditions = backend.ticket.get("conditions", []) if backend.ENGINE else []
 
@@ -232,7 +239,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 func _finish_lock() -> void:
 	locked_at = t
 	props.mood = "joy"; top.bubble = str(backend.ticket.thanks); bubble_until = t + 14.0
-	var price := int(backend.ticket.price)
+	var price := int(backend.ticket.get("price", 0))
 	if backend.ENGINE:
 		wallet = backend.wallet_minor; done[str(backend.ticket.id)] = true; _refresh_pages()
 		if not _nosave(): backend.save_game()
@@ -310,7 +317,8 @@ func _layout() -> void:
 	L.customer = Rect2(780, 765 + dy, 300, 270)
 	L.bubble = Rect2(1060, 815 + dy, 250, 118)
 	L.next = Rect2(1070, 945 + dy, 220, 50)
-	L.chit = Rect2(sc_x + 404.0, 190.0 + dy * 0.05 + 258.0, 190, 172)
+	L.exam = Rect2(1062, 816 + dy, 196, 224)   # the exam problem card (exam tickets): it stays on the bench after "later"
+	L.chit = Rect2(sc_x + 404.0, 190.0 + dy * 0.05 + 258.0, 190, 190)
 	L.slip = Rect2(318, 870 + dy, 420, 160)
 	L.probe_rest = {"red": Vector2(dmm_x - 52, 968 + dy * 0.8), "black": Vector2(dmm_x - 112, 998 + dy * 0.8), "ch1": Vector2(sc_x - 22.0, 700.0 + dy * 0.6)}
 	L.bench = Rect2(sup_x + 4.0, low + 160.0, 250.0, 60.0)
@@ -377,8 +385,8 @@ func screen_to_vp(sp: Vector2) -> Vector2:
 
 func pad_screen(pad: Vector2) -> Vector2: return vp_to_screen(bench.org + pad * bench.p)
 
-func _bw() -> int: return int(backend.ticket.board.w)
-func _bh() -> int: return int(backend.ticket.board.h)
+func _bw() -> int: return int(backend.ticket.get("board", {}).get("w", 24))
+func _bh() -> int: return int(backend.ticket.get("board", {}).get("h", 16))
 
 ## nearest pad to a screen point within `reach` (in pads); returns Vector2(-1,-1) when none
 func pad_at(sp: Vector2, reach := 0.55) -> Vector2:
@@ -411,7 +419,7 @@ func _pin_index() -> Array:
 		for i in pt.pins.size():
 			var q: Vector2 = pt.pins[i] if pt.pins[i] is Vector2 else Vector2(pt.pins[i][0], pt.pins[i][1])
 			out.append({"kind": "pin", "pad": q, "label": _leg_name(pt, i, str(labs[i]) if i < labs.size() else str(i + 1)), "uid": str(pt.uid)})
-	for c in backend.ticket.board.connectors:
+	for c in backend.ticket.get("board", {}).get("connectors", []):
 		var q2 := Vector2(c.pad[0], c.pad[1])
 		var dup := false
 		for o in out: if (o.pad as Vector2) == q2: dup = true
@@ -497,7 +505,8 @@ func _sync_views(dt: float) -> void:
 	props.hot = backend.hot_k(); props.smoked = not backend.smoked.is_empty(); props.wallet = (backend.wallet_minor / 100) if backend.ENGINE else wallet; props.wallet_text = backend.wallet_text if backend.ENGINE else ""
 	props.bench_state = "passed" if backend.passed else ("ready" if backend.locked else "idle"); props.bench_hover = hover == "bench"; props.show_bench = backend.ENGINE
 	props.items = backend.bin(); props.hide_item = int(drag.item) if drag.get("kind", "") == "part" else -1; props.hover_item = _slot_hover
-	props.hover = hover if hover in ["notebook", "tin", "box", "cat", "customer"] else ""
+	props.hover = hover if hover in ["notebook", "tin", "box", "cat", "customer", "box_up", "box_down", "exam"] else ""
+	props.exam_open = backend.ENGINE and not backend.predictions_done()
 	if props.mood == "wow" and t > _smoke_mood_until: props.mood = "idle" if not backend.locked else "joy"
 	if props.smoked or props.hot > 0.35:
 		var hp := _hottest_screen()
@@ -508,14 +517,15 @@ func _sync_views(dt: float) -> void:
 		_lock_seq += dt
 		if _lock_seq > 0.55: _lock_seq = -1.0; _finish_lock()
 	# bubble
-	top.bubble_alpha = move_toward(top.bubble_alpha, 1.0 if (t < bubble_until and phase == "bench" and pages.mode == "") else 0.0, dt * 3.0)
+	top.bubble_alpha = move_toward(top.bubble_alpha, 1.0 if (t < bubble_until and phase == "bench" and pages.mode == "" and props.exam_fig.is_empty()) else 0.0, dt * 3.0)
 	# coach slip and arrow
 	top.ticket = bt; top.locked = backend.passed
+	pages.coach_ticket = bt   # the notebook's page header is always the ticket that is open now
 	top.peek = {}
 	if phone and scope_t < 0.98:   # the scope drawer is folded: a peek strip keeps the trace and the LOCK lamp in view (tap it, or Tab, to open)
 		var samples: Array = []
 		for k in 48: samples.append(scope._vals[(scope._head + scope.COLS - 1 - (47 - k) * 3 + scope.COLS * 2) % scope.COLS])
-		top.peek = {"rect": Rect2(size.x - 92.0, scope.position.y + 6.0, 86.0, 330.0), "locked": backend.locked, "live": backend.powered, "samples": samples, "sc": bt.scope, "id": str(bt.id), "alpha": 1.0 - scope_t}
+		top.peek = {"rect": Rect2(size.x - 92.0, scope.position.y + 6.0, 86.0, 330.0), "locked": backend.locked, "live": backend.powered, "samples": samples, "sc": bt.get("scope", {}), "id": str(bt.get("id", "")), "alpha": 1.0 - scope_t}
 	var cv: Dictionary = backend.coach_view()
 	var steps: Array = cv.steps; var ci: int = cv.cur
 	pages.coach_vis = steps.map(func(s): return s.shown)
@@ -540,7 +550,7 @@ func _sync_views(dt: float) -> void:
 	# cables, probe leads, the scope's clip lead
 	top.cables = []
 	var cn: Array = bt.board.connectors if bt.has("board") else []
-	if bt.has("supply") and str(bt.supply.kind) != "none":
+	if bt.has("supply") and str(bt.supply.get("kind", "none")) in ["pp3", "bench"]:   # (exam sources are fixed on the board: no cables)
 		for c in cn:
 			if c.role in ["supply", "ground"]:
 				var pad := Vector2(c.pad[0], c.pad[1]); var clip := pad_screen(pad) + Vector2(36, 0)
@@ -618,7 +628,7 @@ func _target_pos(name: String) -> Vector2:
 			return (sl[0] as Rect2).get_center() if sl.size() > 0 and (sl[0] as Rect2).size != Vector2.ZERO else (L.box as Rect2).get_center()
 		"board": return board_rect.get_center()
 		"pad:IN":
-			for c in backend.ticket.board.connectors: if c.id == "IN": return pad_screen(Vector2(c.pad[0], c.pad[1])) + Vector2(10, 0)
+			for c in backend.ticket.get("board", {}).get("connectors", []): if c.id == "IN": return pad_screen(Vector2(c.pad[0], c.pad[1])) + Vector2(10, 0)
 			return board_rect.get_center()
 		"rocker": return supply.position + (SupplyView.ROCKER.get_center() + Vector2(0, -20)) * supply.scale.x
 		"scope": return scope.position + Vector2(220, 170) * scope.scale.x
@@ -707,11 +717,16 @@ func _where(sp: Vector2) -> String:
 		var ik := scope.hit_knob((sp - scope.position) / scope.scale.x)
 		return "knob%d" % ik if ik >= 0 else "scope"
 	if backend.ENGINE and (L.bench as Rect2).has_point(sp): return "bench"
+	if not props.exam_fig.is_empty() and (L.exam as Rect2).has_point(sp): return "exam"
 	if (L.notebook as Rect2).has_point(sp): return "notebook"
 	if (L.tin as Rect2).grow(6).has_point(sp): return "tin"
 	if (L.cat as Rect2).has_point(sp): return "cat"
 	if backend.locked and _next_rect.has_point(sp): return "next"
-	if (L.box as Rect2).has_point(sp): return "box"
+	if (L.box as Rect2).has_point(sp):
+		var ar := StallProps.arrows(props.box_inner(), props.items.size(), props.bin_scroll)
+		if (ar.up as Rect2).has_point(sp): return "box_up"
+		if (ar.down as Rect2).has_point(sp): return "box_down"
+		return "box"
 	if (L.customer as Rect2).has_point(sp): return "customer"
 	if Rect2(top.slip_rect()).has_point(sp) and top.slip_text != "" and backend.locked: return "next"
 	if board_rect.grow(6).has_point(sp): return "board"
@@ -748,6 +763,7 @@ func _press(sp: Vector2) -> void:
 		"tin": sfx.play("coin"); top.say("%d coins in the tin." % wallet); props.tin_shake = 0.3; return
 		"cat": sfx.play("meow", 0.6); top.say("Rezzy is " + ("awake and worried." if props.hot > 0.35 else "asleep. Leave her be.")); return
 		"customer": bubble_until = t + 6.0; return
+		"exam": open_predict(); sfx.play("page", 0.6); return
 		"next": go_map(); return
 		"rocker": backend.set_power(not backend.powered); return
 		"bench": run_bench(); return
@@ -755,6 +771,8 @@ func _press(sp: Vector2) -> void:
 			backend.set_dial(dmm.dial_click((sp - dmm.position) / dmm.scale.x)); sfx.play("tick"); return
 		"scope": if phone: scope_open = not scope_open; return
 		"peek": scope_open = not scope_open; return
+		"box_up": _scroll_box(-1); sfx.play("tick", 0.5); return
+		"box_down": _scroll_box(1); sfx.play("tick", 0.5); return
 	if hover.begins_with("probe_"):
 		var w := hover.substr(6); drag = {"kind": "probe", "which": w, "pos": sp}; backend.set_probe(w, null); return
 	if hover == "box":
@@ -802,7 +820,7 @@ func _release(sp: Vector2) -> void:
 				elif r3.ok:
 					var dang: Array = r3.get("dangling", [])
 					if not dang.is_empty(): top.say(str(r3.get("note", "")))   # the end touches no leg: the engine says so
-					else: top.say("Wire joined: %s  to  %s." % [pad_label(d.pad), pad_label(tp)])
+					else: top.say_quick("Wire joined: %s  to  %s." % [pad_label(d.pad), pad_label(tp)])
 			elif (L.box as Rect2).has_point(sp):   # dragged a wire end back to the box: take the wire off that pad
 				for w in backend.wires.duplicate():
 					if w.a == [int(d.pad.x), int(d.pad.y)] or w.b == [int(d.pad.x), int(d.pad.y)]: backend.delete_wire(w.wid); break
@@ -819,9 +837,12 @@ func _right(sp: Vector2) -> void:
 	var wid := wire_at(sp)
 	if wid != "": backend.delete_wire(wid)
 
+func _scroll_box(rows: int) -> void:   # one row at a time, never past the last row the box really has
+	props.bin_scroll = clampi(props.bin_scroll + rows, 0, StallProps.max_scroll(props.box_inner(), props.items.size()))
+
 func _wheel(sp: Vector2, dir: int) -> void:
 	var h := _where(sp)
-	if h == "box" or (L.box as Rect2).has_point(sp): props.bin_scroll = clampi(props.bin_scroll - dir, 0, maxi(0, (props.items.size() + 1) / 2 - 4))
+	if h in ["box", "box_up", "box_down"] or (L.box as Rect2).has_point(sp): _scroll_box(-dir)
 	elif h == "dial": backend.set_dial(DmmView.MODES[clampi(DmmView.MODES.find(backend.dial) + dir, 0, DmmView.MODES.size() - 1)]); sfx.play("tick")
 	elif h.begins_with("knob"): scope.turn(int(h.substr(4)), float(dir))
 	elif drag.get("kind", "") in ["part", "move"] or h == "board": rot = (rot + (1 if dir > 0 else 3)) % 4

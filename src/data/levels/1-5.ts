@@ -57,7 +57,7 @@ export const L1_5: LevelDef = {
     { id: 'predict', key: 'coach.1-5.s1', anchor: { target: 'chit' }, done: 'predicted' },
     { id: 'build', key: 'coach.1-5.s2', anchor: { target: 'bin', partId: 'res-exact' }, done: 'part:res-exact' },
     { id: 'wire', key: 'coach.1-5.s3', anchor: { target: 'connector', connector: 'A' }, done: 'wired' },
-    { id: 'probe', key: 'coach.1-5.s4', anchor: { target: 'dmm' }, done: 'measured', when: 'wired' },
+    { id: 'probe', key: 'coach.1-5.s4', anchor: { target: 'scope' }, done: 'probing', when: 'wired', optional: true },
     { id: 'run-bench', key: 'coach.1-5.s5', anchor: { target: 'bench' }, done: 'benched', when: 'wired&predicted' },
     { id: 'done', key: 'coach.1-5.s6', anchor: { target: 'chit' }, done: '!passed', when: 'passed' },
   ],

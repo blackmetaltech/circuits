@@ -46,8 +46,8 @@ const STEPS := {
 }
 
 const CODEX := [
-	{"title": "Ohm's law", "eq": "V = I x R", "body": "Volts across a resistor push amps through it. 9 V over 470 ohm is 19 mA. Nothing to memorise: it is just division."},
-	{"title": "An LED needs a limit", "eq": "R = (V - Vf) / I", "body": "A red LED drops about 2 V and is rated 30 mA. Without a resistor the battery tries to push amps, and the die cracks. That is the smoke."},
+	{"title": "Ohm's law", "eq": "V = I x R", "body": "Volts across a resistor push amps through it. But an LED keeps about 2 V for itself, so the resistor only gets what is left: (9 V - 2 V) over 470 ohm is 14.9 mA, which is what the scope reads. Forget the LED's 2 V and you would say 19 mA (9 over 470): the gap is the LED. Nothing to memorise: it is just division."},
+	{"title": "An LED needs a limit", "eq": "R = (V - Vf) / I", "body": "A red LED drops about 2 V whatever the current, and is rated 30 mA. The battery's 9 V minus that 2 V must fall across something that limits the current to 10 to 20 mA. With nothing there, only the battery's own tiny resistance limits it and the die cracks. That is the smoke."},
 	{"title": "Every resistor is a promise about heat", "eq": "P = I x I x R", "body": "A quarter-watt resistor that dissipates half a watt glows, then smokes. Choose the watts before you power on."},
 	{"title": "Tired batteries", "eq": "V = E - I x r", "body": "A battery is a perfect source with a small resistor inside. The tired ones have a bigger r, so the voltage sags under load. Most power goes into a load equal to r."},
 	{"title": "Kirchhoff, two sentences", "eq": "sum of I at a node = 0", "body": "Whatever flows into a node flows out. Around any loop the voltages add to zero. Two batteries meeting at a node: one may be charging the other."},

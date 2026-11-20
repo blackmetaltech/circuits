@@ -10,6 +10,7 @@ const ROCKER := Rect2(300, 40, 70, 100)
 var kind := "pp3"
 var label := "9 V PP3"
 var tired := false
+var sources: Array = []            ## exam tickets: the ideal textbook sources fixed on the board [{name, volts}], listed on the panel instead of a battery
 var conditions: Array = []         ## the ticket's bench conditions (engine): [{id, set:[{target,key,value}], ambientC}], drawn as a tag when there are several
 var on := false
 var hover := false
@@ -36,6 +37,7 @@ func _draw() -> void:
 	var rr := Rect2(0, 8, DESIGN.x, DESIGN.y - 14)
 	S.shadow(self, rr, 18, Vector2(8, 12), 0.5)
 	if kind == "bench": _bench(rr)
+	elif kind == "sources": _sources(rr)
 	else: _holder(rr)
 	_rocker()
 
@@ -69,10 +71,28 @@ func _cond_tag() -> void:
 			if str(e.key) == "emf": emf = float(e.value)
 			elif str(e.key) == "r": r = float(e.value)
 		rows.append("%s %s V / %s \u03a9" % [str(c.id), EngineBench._g(emf), EngineBench._g(r)] if emf >= 0.0 else str(c.id))
-	var tag := Rect2(150, 12, 140, 18 + rows.size() * 17)
+	# a tag tied to the cell, big enough to read at the supply's 0.8 scale (it hangs over the battery's blank half)
+	var tag := Rect2(130, 52, 146, 34 + rows.size() * 27)
+	draw_line(Vector2(tag.position.x + 12, tag.position.y), Vector2(104, 30), Color("#c9b78a"), 2.5)   # its string, up to the minus stud
 	S.paper(self, tag, 1.5, S.PAPER)
-	S.text(self, S.hand(), "bench tests:", tag.position + Vector2(8, 15), 13, S.INK_RED)
-	for i in rows.size(): S.text(self, S.hand(), rows[i], tag.position + Vector2(8, 31 + i * 16), 13, S.INK)
+	S.text(self, S.hand(), "bench tests:", tag.position + Vector2(10, 22), 19, S.INK_RED)
+	for i in rows.size(): S.text(self, S.hand(), rows[i], tag.position + Vector2(10, 49 + i * 27), 20, S.INK)
+
+## The exam bench: two fixed ideal sources, named and with their volts. There is no knob and no one voltage, so no 0.0 V display.
+func _sources(rr: Rect2) -> void:
+	S.rr(self, rr, 14, Color("#3b3e44")); S.rr(self, rr.grow(-3), 12, Color("#585c64"))
+	S.vgrad(self, Rect2(8, 12, 384, 50), Color(1, 1, 1, 0.12), Color(1, 1, 1, 0.0), 6)
+	for c in [Vector2(14, 20), Vector2(386, 20), Vector2(14, 156), Vector2(386, 156)]: S.screw(self, c, 5.0, c.x * 0.1)
+	S.text(self, S.hand(), "TEXTBOOK SOURCES  (ideal)", Vector2(26, 38), 17, Color("#d8d4c4"))
+	for i in sources.size():
+		var s: Dictionary = sources[i]
+		var row := Rect2(26, 52 + i * 52, 250, 44)
+		S.rr(self, row, 6, Color("#150604"))
+		S.text(self, S.mono(), "%s" % str(s.name), row.position + Vector2(12, 33), 30, Color(1.0, 0.45, 0.3, 1.0 if on else 0.55))
+		var vt := "%s V" % EngineBench._g(float(s.volts))
+		S.text(self, S.mono(), vt, row.position + Vector2(row.size.x - 14 - S.tw(S.mono(), vt, 30), 33), 30, Color(1.0, 0.28, 0.15, 1.0 if on else 0.55))
+		if on: S.glow(self, row.get_center(), 90.0, Color(1, 0.2, 0.1, 0.08))
+	S.text(self, S.hand(), "wired by the ticket: just probe", Vector2(26, 158), 14, Color("#b8b4a4"))
 
 func _bench(rr: Rect2) -> void:
 	S.rr(self, rr, 14, Color("#3b3e44")); S.rr(self, rr.grow(-3), 12, Color("#585c64"))

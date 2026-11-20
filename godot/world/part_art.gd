@@ -26,7 +26,7 @@ static func bands(v: float) -> Array:
 	return [two / 10, two % 10, e - 1]
 
 static func rrect(ci: CanvasItem, r: Rect2, rad: float, col: Color) -> void:
-	rad = minf(rad, minf(r.size.x, r.size.y) * 0.5)
+	rad = minf(rad, minf(r.size.x, r.size.y) * 0.49)   # (exactly half makes duplicate points and the triangulator refuses the polygon)
 	var pts := PackedVector2Array()
 	var corners := [[r.position + Vector2(rad, rad), PI], [r.position + Vector2(r.size.x - rad, rad), PI * 1.5],
 		[r.position + r.size - Vector2(rad, rad), 0.0], [r.position + Vector2(rad, r.size.y - rad), PI * 0.5]]
