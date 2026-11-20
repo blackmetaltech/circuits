@@ -33,6 +33,7 @@ var tab := "coach"
 var codex_i := 0
 var mouse := Vector2.ZERO
 var _buttons: Array = []
+var _book := Rect2()                       ## the open notebook's page: clicks inside it stay inside
 var _intro := 0.0
 var _prev_mode := ""
 
@@ -55,6 +56,7 @@ func _gui_input(e: InputEvent) -> void:
 	if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
 		for b in _buttons:
 			if (b.rect as Rect2).has_point(e.position): act.emit(b.id, b.get("arg", "")); accept_event(); return
+		if mode == "notebook" and _book.has_point(e.position): accept_event(); return   # reading, not closing: only the X, Esc, a click outside the book or the footer buttons close it
 		if mode == "notebook" or mode == "settings": act.emit("close", "")
 		accept_event()
 	elif e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_RIGHT and mode != "title": act.emit("close", ""); accept_event()
@@ -234,7 +236,12 @@ func _notebook(a: float) -> void:
 	var w := size.x; var h := size.y
 	var r := Rect2(w * 0.5 - 740, h * 0.5 - 410 + (1.0 - a) * 30, 1480, 820)
 	r = r.intersection(Rect2(20, 20, w - 40, h - 40))
+	_book = r
 	_open_book(r, a * 0.8)
+	var xr := Rect2(r.end.x - 78, r.position.y + 10, 60, 60)   # a close button you can see (and hit with a thumb)
+	var xh := _btn(xr, "close")
+	S.rr(self, xr, 30, Color(S.INK_RED, 0.9 if xh else 0.7))
+	draw_line(xr.get_center() + Vector2(-12, -12), xr.get_center() + Vector2(12, 12), Color("#fff8e0"), 5.0); draw_line(xr.get_center() + Vector2(-12, 12), xr.get_center() + Vector2(12, -12), Color("#fff8e0"), 5.0)
 	var half := r.size.x * 0.5; var f := S.hand()
 	# left page: this ticket's coach steps with ticks; the current one is circled
 	var lp := r.position + Vector2(60, 66)

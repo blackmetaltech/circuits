@@ -33,6 +33,7 @@ var _lock_flash := 0.0
 var _knob_ang := [0.6, -0.4, 0.2, 1.0]
 
 func _ready() -> void:
+	set_meta(&"small_text", true)   # engraved decoration stays small on handheld (the readings are big already)
 	custom_minimum_size = DESIGN; size = DESIGN
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_vals.resize(COLS); _stamp.resize(COLS)

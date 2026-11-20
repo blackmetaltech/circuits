@@ -37,14 +37,19 @@ static func ui() -> Font:
 	return _ui
 
 ## Draw text; `w` > 0 wraps (returns the number of lines drawn when wrapping).
+## Handheld (1280x800 and smaller): the scene sets `min_font` so no text is drawn under ~16 screen px; `handheld` also widens touch targets.
+static var min_font := 0
+static var handheld := false
+
 static func text(ci: CanvasItem, f: Font, s: String, pos: Vector2, size: int, col: Color, align := HORIZONTAL_ALIGNMENT_LEFT, w := -1.0) -> void:
+	if not ci.has_meta(&"small_text"): size = maxi(size, min_font)
 	if w > 0.0: ci.draw_multiline_string(f, pos, s, align, w, size, -1, col)
 	else: ci.draw_string(f, pos, s, align, -1.0, size, col)
 
-static func tw(f: Font, s: String, size: int) -> float: return f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x
+static func tw(f: Font, s: String, size: int) -> float: return f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1.0, maxi(size, min_font)).x
 
 static func wrapped_h(f: Font, s: String, size: int, w: float) -> float:
-	return f.get_multiline_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, w, size).y
+	return f.get_multiline_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, w, maxi(size, min_font)).y
 
 static func glow(ci: CanvasItem, c: Vector2, r: float, col: Color) -> void:
 	ci.draw_texture_rect(BenchView.glow(), Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0), false, col)

@@ -30,6 +30,9 @@ var tex: TextureRect
 var bench: BenchView
 var L: Dictionary = {}
 var phone := false
+var _fling := 0.0                     ## shoebox scroll inertia after a swipe, rows per second
+var handheld := false                 ## small physical window: 16 px text, 44 px touch targets (see _layout)
+var scr_k := 1.0                      ## screen pixels per design pixel
 var phase := "title"
 var t := 0.0
 var cute := true
@@ -145,7 +148,7 @@ func start_ticket(id: String) -> void:
 
 func _ticket_view() -> void:   # push the open ticket onto the instruments and props
 	if backend.ticket.is_empty(): return
-	props.mood = "idle"; props.customer = str(backend.ticket.customer); props.gadget = str(backend.ticket.gadget); props.bin_scroll = 0
+	props.mood = "idle"; props.customer = str(backend.ticket.customer); props.gadget = str(backend.ticket.gadget); props.bin_scroll = 0.0
 	props.exam_fig = backend.ticket.figure if bool(backend.ticket.get("eb", false)) and backend.ticket.get("figure", null) is Dictionary else {}
 	scope.sc = backend.ticket.scope; scope.locked = false
 	var sp: Dictionary = backend.ticket.supply
@@ -223,7 +226,9 @@ func _on_event(name: String, data: Dictionary) -> void:
 		"wired": sfx.play("zip")
 		"power":
 			sfx.play("click" if data.on else "clack")
-			if not bool(data.on): top.say_quick("Power off.")   # a short word, so the rocker's state is never a guess
+			if bool(data.get("auto", false)):
+				if bool(data.on): top.say_quick("The power was off: I switched it on for the bench test.")
+			elif not bool(data.on): top.say_quick("Power off.")   # a short word, so the rocker's state is never a guess
 		"deleted":
 			sfx.play("page", 0.5)
 			if str(data.get("note", "")) != "": top.say(str(data.note))   # e.g. "p1 removed, and 2 wire(s) that were only held by its legs."
@@ -299,6 +304,11 @@ func _predict_key(e: InputEventKey) -> void:
 
 func _layout() -> void:
 	var W := size.x; var H := size.y
+	# handheld: the window is much smaller than the 1920x1080 design (Steam Deck 1280x800): text and touch targets are sized in SCREEN pixels
+	var k := float(get_window().size.x) / maxf(W, 1.0)
+	var lay := OS.get_environment("CB_LAYOUT")   # handheld | desktop force a layout (tests, QA); otherwise it follows the window
+	handheld = lay == "handheld" or (lay != "desktop" and k < 0.8)
+	S.handheld = handheld; S.min_font = int(ceilf(16.0 / maxf(k, 0.3))) if handheld else 0; scr_k = k
 	var dy := maxf(0.0, H - 1080.0)
 	phone = W / maxf(H, 1.0) > 2.0
 	var sill := 182.0 + dy * 0.05
@@ -321,7 +331,7 @@ func _layout() -> void:
 	L.bubble = Rect2(1060, 815 + dy, 250, 118)
 	L.next = Rect2(1070, 945 + dy, 220, 50)
 	L.exam = Rect2(1062, 816 + dy, 196, 224)   # the exam problem card (exam tickets): it stays on the bench after "later"
-	L.chit = Rect2(sc_x + 404.0, 190.0 + dy * 0.05 + 258.0, 190, 190)
+	L.chit = Rect2(sc_x + 404.0, 190.0 + dy * 0.05 + 258.0, 190, 190) if not handheld else Rect2(sc_x + 340.0, 190.0 + dy * 0.05 + 250.0, 270, 248)   # handheld: a bigger chit for 16 px text
 	L.slip = Rect2(318, 870 + dy, 420, 160)
 	L.probe_rest = {"red": Vector2(dmm_x - 52, 968 + dy * 0.8), "black": Vector2(dmm_x - 112, 998 + dy * 0.8), "ch1": Vector2(sc_x - 22.0, 700.0 + dy * 0.6)}
 	L.bench = Rect2(sup_x + 4.0, low + 160.0, 250.0, 60.0)
@@ -456,6 +466,10 @@ func part_at(sp: Vector2) -> Dictionary:
 		if b.has_point(v): return pt
 	return {}
 
+func _wire_fixed(wid: String) -> bool:
+	for w in backend.wires: if str(w.wid) == wid: return bool(w.get("fixed", false))
+	return false
+
 func wire_at(sp: Vector2) -> String:
 	var v := screen_to_vp(sp)
 	for w in backend.wires:
@@ -491,7 +505,7 @@ func _tip_hit(sp: Vector2) -> String:
 	for w in (["red", "black", "ch1"] if backend.ENGINE else ["red", "black"]):
 		var tip := _probe_tip(w)
 		var cp := Geometry2D.get_closest_point_to_segment(sp, tip, tip + Vector2(52, -96))
-		if cp.distance_to(sp) < 26.0 or sp.distance_to(tip) < 42.0: return w   # the metal tip is the natural place to grab: a generous disc around it
+		if cp.distance_to(sp) < (26.0 if not handheld else 36.0) or sp.distance_to(tip) < (42.0 if not handheld else 56.0): return w   # the metal tip is the natural place to grab: a generous disc around it
 	return ""
 
 func _dmm_socket(which: String) -> Vector2: return dmm.position + dmm.socket_pos(which) * dmm.scale.x
@@ -505,6 +519,9 @@ func _process(dt: float) -> void:
 	if phone: scope_t = move_toward(scope_t, 1.0 if scope_open else 0.0, dt * 3.5)
 	if key != _lay_key or phone:
 		_lay_key = key; _layout(); queue_redraw()
+	if absf(_fling) > 0.05 and drag.get("kind", "") != "tray":
+		props.bin_scroll = clampf(props.bin_scroll + _fling * dt, 0.0, StallProps.max_scroll(props.box_inner(), props.items.size()))
+		_fling *= pow(0.04, dt)
 	if phase == "bench" and pages.mode in ["", "notebook"]: backend.step(dt)
 	_sync_views(dt)
 
@@ -525,7 +542,7 @@ func _sync_views(dt: float) -> void:
 	props.hot = backend.hot_k(); props.smoked = not backend.smoked.is_empty(); props.wallet = (backend.wallet_minor / 100) if backend.ENGINE else wallet; props.wallet_text = backend.wallet_text if backend.ENGINE else ""
 	props.bench_state = "passed" if backend.passed else ("ready" if backend.locked else "idle"); props.bench_hover = hover == "bench"; props.show_bench = backend.ENGINE
 	props.items = backend.bin(); props.hide_item = int(drag.item) if drag.get("kind", "") == "part" else -1; props.hover_item = _slot_hover
-	props.hover = hover if hover in ["notebook", "tin", "box", "cat", "customer", "box_up", "box_down", "exam"] else ""
+	props.hover = hover if hover in ["notebook", "tin", "box", "cat", "customer", "exam"] else ""
 	props.exam_open = backend.ENGINE and not backend.predictions_done()
 	# joy (the smile, the working gadget) belongs to a PASSED bench only; a held live band is just "let's see"
 	if props.mood == "wow" and t > _smoke_mood_until: props.mood = "joy" if backend.passed else ("hopeful" if backend.locked else "idle")
@@ -723,7 +740,7 @@ func _unhandled_key_input(e: InputEvent) -> void:
 		KEY_R: rot = (rot + 1) % 4
 		KEY_ESCAPE:
 			if pages.mode == "notebook" or pages.mode == "settings": _on_page("close", "")
-			elif phase == "bench": pages.show_page("notebook")
+			elif pages.mode == "predict": pages.show_page("")
 			elif pages.mode == "map": pages.show_page("title"); phase = "title"
 		KEY_N: if phase == "bench": pages.show_page("notebook" if pages.mode == "" else "")
 		KEY_F1: pages.show_page("settings")
@@ -746,11 +763,7 @@ func _where(sp: Vector2) -> String:
 	if (L.tin as Rect2).grow(6).has_point(sp): return "tin"
 	if (L.cat as Rect2).has_point(sp): return "cat"
 	if backend.locked and _next_rect.has_point(sp): return "next"
-	if (L.box as Rect2).has_point(sp):
-		var ar := StallProps.arrows(props.box_inner(), props.items.size(), props.bin_scroll)
-		if (ar.up as Rect2).has_point(sp): return "box_up"
-		if (ar.down as Rect2).has_point(sp): return "box_down"
-		return "box"
+	if (L.box as Rect2).has_point(sp): return "box"
 	if (L.customer as Rect2).has_point(sp): return "customer"
 	if Rect2(top.slip_rect()).has_point(sp) and top.slip_text != "" and backend.locked: return "next"
 	if board_rect.grow(6).has_point(sp): return "board"
@@ -760,16 +773,17 @@ func _motion(sp: Vector2) -> void:
 	_mouse = sp
 	hover = _where(sp)
 	_slot_hover = -1
-	if hover == "box":
+	if hover == "box" and props.box_inner().has_point(sp):
 		var sl := StallProps.slots(props.box_inner(), props.items.size(), props.bin_scroll)
 		for i in sl.size(): if (sl[i] as Rect2).size != Vector2.ZERO and (sl[i] as Rect2).has_point(sp): _slot_hover = i
 	if drag.get("kind", "") == "probe": drag.pos = sp
+	elif drag.get("kind", "") == "tray": _tray_motion(sp)
 	hover_wire = ""
 	if drag.is_empty() and hover == "board" and snap(sp, 0.6, 0.0).kind == "none" and part_at(sp).is_empty():
 		hover_wire = wire_at(sp)
 	# hover readouts (the Learner tooltip): node voltage and part current, only while it means something
 	top.tag = {}
-	if hover_wire != "": top.tag = {"text": "right-click to remove", "pos": sp}
+	if hover_wire != "": top.tag = {"text": "soldered in place" if _wire_fixed(hover_wire) else "right-click to remove", "pos": sp}
 	elif drag.is_empty() and hover == "board" and backend.powered:
 		var pd := part_at(sp)
 		if not pd.is_empty() and (pd.kind == "LED" or pd.kind == "R"):
@@ -795,30 +809,69 @@ func _press(sp: Vector2) -> void:
 			backend.set_dial(dmm.dial_click((sp - dmm.position) / dmm.scale.x)); sfx.play("tick"); return
 		"scope": if phone: scope_open = not scope_open; return
 		"peek": scope_open = not scope_open; return
-		"box_up": _scroll_box(-1); sfx.play("tick", 0.5); return
-		"box_down": _scroll_box(1); sfx.play("tick", 0.5); return
 	if hover.begins_with("probe_"):
 		var w := hover.substr(6); drag = {"kind": "probe", "which": w, "pos": sp}; backend.set_probe(w, null); probe_jack[w] = ""; return
 	if hover == "box":
-		if _slot_hover >= 0: drag = {"kind": "part", "item": _slot_hover}; rot = 0; sfx.play("tick")
+		if props.box_inner().grow(4).has_point(sp):
+			_fling = 0.0; rot = 0
+			drag = {"kind": "tray", "item": _slot_hover, "start": sp, "scroll0": props.bin_scroll, "mode": "", "last": sp, "lt": t}
 		return
 	if hover == "board":
 		var pd := part_at(sp)
 		var pa := pad_at(sp, 0.5)
-		var sn := snap(sp, 0.6, 0.5)   # a press near a leg or connector starts a wire from that leg
+		var sn := snap(sp, 0.6 * (1.5 if handheld else 1.0), 0.5)   # a press near a leg or connector starts a wire from that leg (a fatter reach for a finger)
 		if sn.kind == "pin" or sn.kind == "connector": drag = {"kind": "wire", "pad": sn.pad}; return
 		if pa.x >= 0 and (pd.is_empty() or pd.fixed or _near_pin(pd, pa)): drag = {"kind": "wire", "pad": pa}; return
 		if not pd.is_empty() and not pd.fixed:
+			var leg := _leg_at(pd, sp)   # a press on the lead between a leg and the body wires from that leg; only the body itself drags the part
+			if leg.x >= 0: drag = {"kind": "wire", "pad": leg}; return
 			var full: Dictionary = backend.part_by(str(pd.uid)); rot = int(full.rot)
 			drag = {"kind": "move", "item": -1, "uid": str(pd.uid), "part": {"partId": full.partId, "value": full.value, "kind": full.kind, "label": full.label, "tag": full.get("tag", "")}}
 			return
 		if pa.x >= 0: drag = {"kind": "wire", "pad": pa}
 
+## The leg (pin pad) a press lands on when it is on a part's lead rather than its body, else Vector2(-1, -1). The body is the middle of the part along its legs
+## (a resistor's tube, an LED's dome); everything between a body and its leg tip is lead, and a drag from there is always a wire.
+func _leg_at(pd: Dictionary, sp: Vector2) -> Vector2:
+	var pins: Array = pd.pins
+	if pins.size() < 2: return Vector2(-1, -1)
+	var g := (screen_to_vp(sp) - bench.org) / bench.p
+	var c := Vector2.ZERO; var span := 0.0
+	for q in pins: c += q as Vector2
+	c /= float(pins.size())
+	for a in pins: for b in pins: span = maxf(span, (a as Vector2).distance_to(b as Vector2))
+	var body_r := maxf(0.45, span * 0.26)
+	if g.distance_to(c) <= body_r: return Vector2(-1, -1)
+	var best := Vector2(-1, -1); var bd := 1e9
+	for q in pins:
+		var dq := g.distance_to(q as Vector2)
+		if dq < bd: bd = dq; best = q as Vector2
+	return best
+
 func _near_pin(pd: Dictionary, pa: Vector2) -> bool:
 	for q in pd.pins: if (q as Vector2) == pa: return true
 	return false
 
+## A press in the shoebox: a mostly vertical drag scrolls the box (like a finger on a list); a sideways drag, or one that leaves the box, lifts the part under the press.
+func _tray_motion(sp: Vector2) -> void:
+	var dv: Vector2 = sp - (drag.start as Vector2)
+	if drag.mode == "":
+		if absf(dv.y) > 10.0 and absf(dv.y) > absf(dv.x) * 1.2: drag.mode = "scroll"
+		elif int(drag.item) >= 0 and dv.length() > 14.0 and (absf(dv.x) >= absf(dv.y) * 0.8 or not props.box_inner().has_point(sp)): _tray_lift(); return
+	if drag.mode == "scroll":
+		var dt := maxf(t - float(drag.lt), 0.001)
+		_fling = clampf((float(drag.last.y) - sp.y) / StallProps.row_h() / dt, -14.0, 14.0)
+		drag.last = sp; drag.lt = t
+		props.bin_scroll = clampf(float(drag.scroll0) - dv.y / StallProps.row_h(), 0.0, StallProps.max_scroll(props.box_inner(), props.items.size()))
+
+func _tray_lift() -> void:
+	var item := int(drag.item)
+	drag = {"kind": "part", "item": item}; sfx.play("tick")   # (the rotation was reset when the box was pressed: R before the drag still counts)
+
 func _release(sp: Vector2) -> void:
+	if drag.get("kind", "") == "tray":
+		if int(drag.item) >= 0 and drag.mode == "" and (sp - (drag.start as Vector2)).length() > 14.0: _tray_lift()
+		elif drag.mode != "scroll": _fling = 0.0
 	if drag.get("kind", "") in ["part", "move"]: _mouse = sp; _board_overlay()   # drop where the pointer is NOW, not where the last drawn frame saw it
 	var d := drag; drag = {}
 	if d.is_empty(): return
@@ -847,7 +900,7 @@ func _release(sp: Vector2) -> void:
 					else: top.say_quick("Wire joined: %s  to  %s." % [pad_label(d.pad), pad_label(tp)])
 			elif (L.box as Rect2).has_point(sp):   # dragged a wire end back to the box: take the wire off that pad
 				for w in backend.wires.duplicate():
-					if w.a == [int(d.pad.x), int(d.pad.y)] or w.b == [int(d.pad.x), int(d.pad.y)]: backend.delete_wire(w.wid); break
+					if (w.a == [int(d.pad.x), int(d.pad.y)] or w.b == [int(d.pad.x), int(d.pad.y)]) and not bool(w.get("fixed", false)): backend.delete_wire(w.wid); break
 		"probe":
 			var jk := _jack_at(sp) if d.which != "ch1" else ""   # a lead dropped on a battery / supply terminal reads that net
 			var sn := _jack_pad(jk) if jk != "" else pad_at(sp, 0.8)
@@ -861,14 +914,16 @@ func _right(sp: Vector2) -> void:
 	var pd := part_at(sp)
 	if not pd.is_empty() and not pd.fixed: backend.delete_part(str(pd.uid)); return
 	var wid := wire_at(sp)
-	if wid != "": backend.delete_wire(wid)
+	if wid != "":
+		var r = backend.delete_wire(wid)
+		if r is Dictionary and not bool(r.get("ok", true)): top.say(str(r.get("msg", "")))
 
-func _scroll_box(rows: int) -> void:   # one row at a time, never past the last row the box really has
-	props.bin_scroll = clampi(props.bin_scroll + rows, 0, StallProps.max_scroll(props.box_inner(), props.items.size()))
+func _scroll_box(rows: float) -> void:   # a wheel notch is one row, never past the last row the box really has
+	props.bin_scroll = clampf(props.bin_scroll + rows, 0.0, StallProps.max_scroll(props.box_inner(), props.items.size()))
 
 func _wheel(sp: Vector2, dir: int) -> void:
 	var h := _where(sp)
-	if h in ["box", "box_up", "box_down"] or (L.box as Rect2).has_point(sp): _scroll_box(-dir)
+	if h == "box" or (L.box as Rect2).has_point(sp): _fling = 0.0; _scroll_box(-float(dir))
 	elif h == "dial": backend.set_dial(DmmView.MODES[clampi(DmmView.MODES.find(backend.dial) + dir, 0, DmmView.MODES.size() - 1)]); sfx.play("tick")
 	elif h.begins_with("knob"): scope.turn(int(h.substr(4)), float(dir))
 	elif drag.get("kind", "") in ["part", "move"] or h == "board": rot = (rot + (1 if dir > 0 else 3)) % 4

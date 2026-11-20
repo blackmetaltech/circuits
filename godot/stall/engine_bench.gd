@@ -279,8 +279,9 @@ func add_wire(a: Array, b: Array) -> Dictionary:
 	event.emit("wired", {"wid": str(r.get("wid", "")), "landed": landed, "dangling": dang, "note": last_note})
 	return {"ok": true, "msg": "", "wid": str(r.get("wid", "")), "landed": landed, "dangling": dang, "note": last_note}
 
-func delete_wire(wid: String) -> void:
-	_act("unwire", [wid]); _after_edit()
+func delete_wire(wid: String) -> Dictionary:
+	var r := _act("unwire", [wid]); _after_edit()
+	return {"ok": bool(r.get("ok", false)), "msg": str(r.get("message", ""))}
 
 ## Take back the last edit (Ctrl+Z). The engine keeps the history (bench().undoDepth); returns its sentence.
 func undo() -> Dictionary:
@@ -289,7 +290,9 @@ func undo() -> Dictionary:
 		for uid in smoked.keys(): if _act("replaceSmoked", [str(uid)]).get("ok", false): n += 1
 		if n > 0:
 			smoked.clear(); _smoke_seen.clear(); _after_edit()
-			last_note = "Fresh part in place of the burnt one. Ctrl+Z again takes edits back."
+			powered = false; frame = {}
+			event.emit("power", {"on": false, "auto": true, "silent": true})
+			last_note = "Fresh part in place of the burnt one, and the power is off: switch it on when you want to try again. Ctrl+Z again takes edits back."
 			return {"ok": true, "msg": last_note}
 	var r := _act("undo")
 	if r.get("ok", false):
@@ -347,6 +350,10 @@ func predictions_done() -> bool:
 ## The formal bench check. A pass pays the ticket (event "paid"); a fail raises "bench_failed" with the engine's explanation of the player's own numbers.
 func run_bench() -> Dictionary:
 	var r := _act("runBench", [true])
+	if bool(r.get("autoPowered", false)):   # the power switch was off: the engine switched it on for the bench; the rocker, click and toast follow
+		powered = true; hold = 0.0; _accum = 0.0; smoked.clear(); _smoke_seen.clear()
+		_refresh_board(); _refresh_live(); _rebuild_model()
+		event.emit("power", {"on": true, "auto": true})
 	var res = _q("benchResult")
 	last_result = res if res is Dictionary else {}
 	_bench_key = _board_key()
@@ -357,9 +364,10 @@ func run_bench() -> Dictionary:
 	else:
 		var why := str(r.get("message", ""))
 		var fl: Array = last_result.get("failures", [])
+		var pre := "The power switch was off, so I switched it on for the test.  " if bool(r.get("autoPowered", false)) else ""
 		if not fl.is_empty(): why = str((fl[0] as Dictionary).get("text", why))
 		for p in last_result.get("predictions", []): if str(p.get("grade", "")) == "miss": why = "%s  (%s)" % [why, str(p.get("gradeText", ""))]
-		event.emit("bench_failed", {"text": why, "result": last_result})
+		event.emit("bench_failed", {"text": pre + why, "result": last_result})
 	return r
 
 func _board_key() -> String: return "%s|%d" % [str(bench_q.get("ticket", "")), int(bench_q.get("undoDepth", 0))]
@@ -389,7 +397,7 @@ func _refresh_board() -> void:
 	for w in bench_q.get("wires", []):
 		var path: Array = []
 		for q in w.path: path.append([int(q[0]), int(q[1])])
-		wires.append({"wid": str(w.wid), "a": path[0], "b": path[path.size() - 1], "path": path})
+		wires.append({"wid": str(w.wid), "a": path[0], "b": path[path.size() - 1], "path": path, "fixed": bool(w.get("fixed", false))})
 	var ins: Dictionary = bench_q.get("instruments", {})
 	var sc: Dictionary = ins.get("scope", {}) if ins.get("scope", null) is Dictionary else {}
 	probes.ch1 = null
@@ -414,7 +422,7 @@ func _scene_part(p: Dictionary) -> Dictionary:
 	var tag := ""
 	if kind == "R" and p.get("ratings", {}).has("P") and variant != "ideal": tag = _watt_tag(float(p.ratings.P))
 	if kind == "LOAD": label = str(p.get("name", "Heater"))
-	elif kind == "BAT": label = ("%s V" % _g(float(p.value))) if p.get("value", null) != null else NodeApi.BAT_LABEL.get(pid, "9 V")
+	elif kind == "BAT": label = (("E%s  %s V" % [str(p.uid).substr(1), _g(float(p.value))]) if pid.begins_with("ideal-vsource") else ("%s V" % _g(float(p.value)))) if p.get("value", null) != null else NodeApi.BAT_LABEL.get(pid, "9 V")
 	elif kind == "R" and tag != "" and _multi_rating(pid): label = "%s %s" % [label, tag]
 	elif kind == "LED": label = "LED"
 	return {"uid": str(p.uid), "partId": pid, "value": p.get("value", null), "label": label, "tag": tag, "kind": kind, "x": int(p.x), "y": int(p.y), "rot": int(p.rot),
@@ -617,7 +625,7 @@ const REFS := {
 	"1-3": {"parts": [["res-cf", 22, "1W", 4, 2, 0]], "wires": [[[2, 2], [4, 2]], [[8, 2], [14, 2]]], "clip": [14, 2]},
 	"1-4": {"parts": [["res-ww5", 4.7, "5W", 2, 5, 0]], "wires": [[[2, 2], [2, 5]], [[6, 5], [6, 2], [8, 2]]]},
 	"1-5": {"parts": [["res-exact", 2, "ideal", 4, 2, 0], ["res-exact", 3, "ideal", 10, 4, 0], ["res-exact", 6, "ideal", 8, 7, 1]],
-		"wires": [[[2, 2], [4, 2]], [[8, 2], [8, 6]], [[14, 2], [14, 4]], [[10, 4], [10, 6], [8, 6]], [[8, 6], [8, 7]], [[8, 11], [8, 12]], [[2, 8], [2, 12], [8, 12]], [[14, 8], [14, 12], [8, 12]]],
+		"wires": [[[2, 2], [4, 2]], [[8, 2], [8, 6]], [[14, 2], [14, 4]], [[10, 4], [10, 6], [8, 6]], [[8, 6], [8, 7]], [[8, 11], [8, 12]]],   # the minus ends of E1 and E2 come pre-wired to the GND pad (fixed wires of the ticket)
 		"clip": [8, 6], "pred": {"pva": 6.6667, "pie2": 0.5556}},
 }
 

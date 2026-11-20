@@ -17,6 +17,7 @@ var _ang := -0.78
 var _click := 0.0
 
 func _ready() -> void:
+	set_meta(&"small_text", true)   # engraved decoration stays small on handheld (the readings are big already)
 	custom_minimum_size = DESIGN; size = DESIGN; mouse_filter = Control.MOUSE_FILTER_IGNORE; set_process(true)
 
 func _process(dt: float) -> void:

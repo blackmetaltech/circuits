@@ -12,7 +12,7 @@ var eng := false
 var trap := ErrorTrap.new()
 
 func _initialize() -> void:
-	OS.set_environment("CB_NOSAVE", "1")
+	OS.set_environment("CB_NOSAVE", "1"); OS.set_environment("CB_LAYOUT", "desktop")
 	OS.add_logger(trap)
 	_run()
 
@@ -67,9 +67,10 @@ func _run() -> void:
 	var arrow_before: Vector2 = sc.top.arrow_to
 	if eng: ok(sc.top.show_arrow and (sc.L.box as Rect2).grow(40).has_point(sc.top.arrow_to), "step 1: the arrow points into the shoebox (%s)" % step1_before)
 	sc._motion(led_c); sc._press(led_c)
-	ok(sc.drag.get("kind", "") == "part", "pressing the LED slot picks the part up")
+	ok(sc.drag.get("kind", "") == "tray" and int(sc.drag.item) == led_slot, "pressing the LED row grabs it (a vertical drag would scroll the box)")
 	var target := sc.pad_screen(lay.led_mid)
 	sc._motion(target); await _frames(3)
+	ok(sc.drag.get("kind", "") == "part", "dragging it out of the box picks the part up")
 	var gh: Dictionary = sc.bench.overlay.get("ghost", {})
 	ok(not gh.is_empty() and bool(gh.ok), "a lead ghost follows the pointer and is valid over free pads")
 	sc._release(target); await _frames(2)

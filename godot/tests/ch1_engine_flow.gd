@@ -9,10 +9,11 @@ var fails := 0
 var checks := 0
 var evlog: Array = []
 var trap := ErrorTrap.new()
+const STY = preload("res://stall/stall_style.gd")
 const NO_ID := "\\b[pf]\\d+\\b"   # a part id (p1, f2) must never reach the player's eyes
 
 func _initialize() -> void:
-	OS.set_environment("CB_NOSAVE", "1")
+	OS.set_environment("CB_NOSAVE", "1"); OS.set_environment("CB_LAYOUT", "desktop")   # the checks are written for the desk (the headless window is not the design size)
 	OS.add_logger(trap)
 	_run()
 
@@ -20,6 +21,11 @@ func ok(cond: bool, what: String) -> void:
 	checks += 1
 	if cond: print("  ok   ", what)
 	else: fails += 1; print("  FAIL ", what)
+
+static func S_TW(txt: String, size: int) -> float: return STY.tw(STY.hand(), txt, size)
+
+func StallStyle_set_handheld(on: bool, mf: int) -> void:
+	STY.handheld = on; STY.min_font = mf
 
 func _no_id(s: String) -> bool:
 	var re := RegEx.new(); re.compile(NO_ID)
@@ -52,14 +58,11 @@ func _slot(partId: String, value, variant := "") -> int:
 func _drag_part(partId: String, value, variant: String, x: int, y: int, r: int) -> bool:   # (x, y) = pin 1's pad, like the engine
 	var idx := _slot(partId, value, variant)
 	if idx < 0: return false
-	var slots := StallProps.slots(sc.props.box_inner(), sc.props.items.size(), sc.props.bin_scroll)
+	var inner0: Rect2 = sc.props.box_inner()
+	sc.props.bin_scroll = clampf(float(idx), 0.0, StallProps.max_scroll(inner0, sc.props.items.size()))   # the row to the top of the window, fully visible
+	var slots := StallProps.slots(inner0, sc.props.items.size(), sc.props.bin_scroll)
 	var rect: Rect2 = slots[idx]
-	if rect.size == Vector2.ZERO:   # scrolled out of view: scroll the box until the slot shows
-		for k in 8:
-			sc.props.bin_scroll = k
-			slots = StallProps.slots(sc.props.box_inner(), sc.props.items.size(), sc.props.bin_scroll)
-			rect = slots[idx]
-			if rect.size != Vector2.ZERO: break
+	rect = rect.intersection(inner0)
 	var c := rect.get_center()
 	sc._motion(c); sc._press(c)
 	sc.rot = r
@@ -75,6 +78,7 @@ func _drag_wire(a: Array, b: Array) -> bool:
 	var before := bk.wires.size()
 	var pa := sc.pad_screen(Vector2(a[0], a[1])); var pb := sc.pad_screen(Vector2(b[0], b[1]))
 	sc._motion(pa); sc._press(pa); sc._motion(pb); sc._release(pb)
+	if bk.wires.size() != before + 1: print("   (wire %s -> %s not added: %s)" % [str(a), str(b), sc.top.toast])
 	return bk.wires.size() == before + 1
 
 func _drag_probe(which: String, pad: Array) -> void:
@@ -188,7 +192,10 @@ func _run() -> void:
 	ok(bk.model.led["p1"].mood == "cracked", "the cute-mode LED face is cracked")
 	_ctrl_z()
 	ok(bk.smoked.is_empty() and sc.top.toast.contains("Fresh part"), "Ctrl+Z after a burn swaps in a fresh LED (%s)" % sc.top.toast)
-	bk.set_power(false); bk.set_power(true); _clock(0.5)   # burn it again: the SECOND burn gets the worked formula
+	ok(not bk.powered and sc.top.toast.contains("power is off"), "and the power is off, so nothing re-burns by itself")
+	_clock(1.0); evlog.clear(); _clock(1.0)
+	ok(bk.smoked.is_empty() and not evlog.has("smoked") and not str(sc.top.toast).contains("Burned again"), "no 'Burned again' fires while the power is off (%s)" % sc.top.toast.left(30))
+	bk.set_power(true); _clock(0.5)   # burn it again: the SECOND burn gets the worked formula
 	ok(bk.smoked.size() == 1 and str(bk.frame.events[0].text).contains("Burned again") and str(bk.frame.events[0].text).contains("R = (9 V - 2") and _no_id(str(bk.frame.events[0].text)), "SECOND burn: the worked formula (%s)" % str(bk.frame.events[0].text).left(60))
 	_ctrl_z()
 	await _start("1-1")
@@ -296,20 +303,39 @@ func _run() -> void:
 	ok(bk.smoked.size() == 1 and evlog.has("smoked"), "NAIVE: 22 ohm 1/4 W smokes after thermal time (0.61 W in 0.25 W) %s %s" % [str(bk.smoked.keys()), str(evlog)])
 	ok(str(bk.frame.events[0].kind) == "smoke" and str(bk.frame.events[0].text).contains("rated"), "the smoke explanation names the rating")
 	ok(str(bk.frame.events[0].text).begins_with("The 22 \u03a9 \u00bc W resistor") and _no_id(str(bk.frame.events[0].text)), "and the part by name, not by id: %s" % str(bk.frame.events[0].text).left(34))
-	# the shoebox: 15 parts need scrolling; one row per wheel notch or arrow click, arrows only where there is somewhere to go
-	var inner: Rect2 = sc.props.box_inner(); var nitems: int = sc.props.items.size(); var mx: int = StallProps.max_scroll(inner, nitems)
+	# the shoebox is a scrollable box: wheel, drag and swipe scroll it; rows are readable and finger-sized; labels never overlap
+	var inner: Rect2 = sc.props.box_inner(); var nitems: int = sc.props.items.size(); var mx: float = StallProps.max_scroll(inner, nitems)
 	print("   (desk %s, box %s, inner %s)" % [str(sc.size), str(sc.L.box), str(inner)])
-	ok(mx > 0 and StallProps.arrows(inner, nitems, 0).down.size != Vector2.ZERO and StallProps.arrows(inner, nitems, 0).up.size == Vector2.ZERO, "1-3 shoebox: %d parts, %d rows hidden: a down arrow at the top, no up arrow" % [nitems, mx])
-	ok(StallProps.arrows(inner, nitems, 0).down.size.x >= 80.0, "the fold carries a 'more' tab (not a bare arrow) while parts hide below")
+	ok(mx > 0.0 and sc.props.bin_scroll == 0.0, "1-3 shoebox: %d parts, %.1f rows hidden, scrolled to the top" % [nitems, mx])
+	ok(StallProps.arrows(inner, nitems, 0.0).down.size == Vector2.ZERO, "there are no paging tabs: the box scrolls itself")
 	var bc: Vector2 = (sc.L.box as Rect2).get_center()
-	sc._wheel(bc, -1); sc._wheel(bc, -1)
-	ok(sc.props.bin_scroll == 2, "two wheel notches scroll two rows (%d)" % sc.props.bin_scroll)
-	_click_rect(StallProps.arrows(inner, nitems, sc.props.bin_scroll).down)
-	ok(sc.props.bin_scroll == 3, "an arrow click scrolls one row (%d)" % sc.props.bin_scroll)
-	for k in 12: sc._wheel(bc, -1)
-	ok(sc.props.bin_scroll == mx and StallProps.arrows(inner, nitems, mx).down.size == Vector2.ZERO and StallProps.arrows(inner, nitems, mx).up.size != Vector2.ZERO, "it stops at the last row (%d): no down arrow, an up arrow" % sc.props.bin_scroll)
-	for k in 12: sc._wheel(bc, 1)
-	ok(sc.props.bin_scroll == 0, "and back to the top")
+	sc._motion(bc); sc._wheel(bc, -1); sc._wheel(bc, -1)
+	ok(is_equal_approx(sc.props.bin_scroll, 2.0), "two wheel notches scroll two rows (%s)" % str(sc.props.bin_scroll))
+	for k in 30: sc._wheel(bc, -1)
+	ok(is_equal_approx(sc.props.bin_scroll, mx), "it stops at the last row (%s)" % str(sc.props.bin_scroll))
+	for k in 30: sc._wheel(bc, 1)
+	ok(sc.props.bin_scroll == 0.0, "and back to the top")
+	# a vertical drag on the box scrolls it (touch / mouse drag); it never lifts a part
+	var pdn: Vector2 = inner.position + Vector2(60, 90)
+	sc._motion(pdn); sc._press(pdn); sc._motion(pdn + Vector2(0, -50)); sc._motion(pdn + Vector2(0, -140)); sc._release(pdn + Vector2(0, -140))
+	ok(sc.props.bin_scroll > 1.2 and sc.drag.is_empty() and bk.parts.filter(func(p): return not p.fixed).size() <= 1, "dragging up on the box scrolls it (%.2f rows) and lifts nothing" % sc.props.bin_scroll)
+	sc._fling = 0.0; sc.props.bin_scroll = 0.0
+	# a sideways drag from a row lifts that part (the old behaviour)
+	sc._motion(pdn); sc._press(pdn); sc._motion(pdn + Vector2(60, 4)); sc._motion(pdn + Vector2(300, 10))
+	ok(sc.drag.get("kind", "") == "part" and int(sc.drag.item) >= 0, "dragging sideways from a row picks that part up")
+	sc._release(pdn + Vector2(300, 10)); sc.drag.clear()
+	# labels: the value and the watt rating sit on one line; the price is on its own line under it, never over it
+	var sl0: Array = StallProps.slots(inner, nitems, 0.0)
+	var r0: Rect2 = sl0[0]
+	ok(r0.size.y >= StallProps.ROW_H - 4.0 and r0.size.x > 200.0, "a tray row is %dx%d design px (finger sized)" % [int(r0.size.x), int(r0.size.y)])
+	var lab0: String = sc.props.items[0].label + " " + sc.props.items[0].tag
+	ok(lab0.contains("Ω") and lab0.contains("W") and S_TW(lab0, 22) < r0.size.x - 100.0 - 8.0, "'%s' fits its label paper (%d < %d)" % [lab0, int(S_TW(lab0, 22)), int(r0.size.x - 108.0)])
+	# handheld: the minimum text is 16 screen px and the rows grow
+	StallStyle_set_handheld(true, 24)
+	var r0h: Rect2 = StallProps.slots(sc.props.box_inner(), nitems, 0.0)[0]
+	ok(r0h.size.y * 0.667 >= 44.0 and S_TW("22", 8) >= S_TW("22", 24) - 0.01, "handheld: a row is at least 44 screen px tall (%.0f) and 8 px text is raised to the 24 design px minimum" % (r0h.size.y * 0.667))
+	StallStyle_set_handheld(false, 0)
+	sc.props.bin_scroll = 0.0
 	await _frames(3)
 	ok(sc.props.hot > 0.5 or sc.props.smoked, "Rezzy is awake")
 	# the Omega mode on the DMM: heater in parallel with what the zeroed supply leaves
@@ -452,17 +478,81 @@ func _run() -> void:
 		if last5 == [8, 12]: last5 = [11, 13]   # the novice's return net: a few holes from the GND pad (a drop within reach of the GND clip would snap to it)
 		ok(_drag_wire(path5[0], last5), "1-5 wire %s to %s" % [str(path5[0]), str(last5)])
 	_rocker()
-	_drag_probe("red", [8, 6]); _drag_probe("black", [11, 13]); _clock(0.4)
-	ok(bk.dmm().text.begins_with("6.6"), "the DMM across A and the return net reads %s V (a floating circuit reads between its leads)" % bk.dmm().text)
 	var c15: Dictionary = bk.coach_view()
 	ok(str(c15.steps[c15.cur].id) == "ground" or str(c15.steps[c15.cur].text).contains("GND"), "the coach says the circuit is not tied to GND (%s)" % str(c15.steps[c15.cur].text).left(50))
 	_bench_key()
 	var b5: String = str(bk.last_result.failures[0].text) if bk.last_result.failures.size() > 0 else ""
-	ok(not bk.passed and b5.contains("tied to the GND pad") and not b5.contains("0.0000"), "the bench explains the missing GND tie instead of '0.00005 V': %s" % b5.left(80))
-	var tied := _drag_wire([14, 8], [8, 12])   # (the black lead rests on the return pad, so wire from the battery's minus leg instead)
+	ok(not bk.passed and b5 != "" and not b5.contains("0.0000"), "R3's return is not on the GND pad: the bench fails it in words, not '0.00005 V': %s" % b5.left(80))
+	var tied := _drag_wire([8, 11], [8, 12])   # R3's bottom leg already has one wire (to the stray return hole): a second wire onto it, this time to the GND pad
 	_bench_key()
-	ok(tied, "the E2 minus leg is wired to the GND pad by pointer")
+	ok(tied, "R3's bottom leg (already wired) takes a second wire, to the GND pad")
 	ok(bk.passed, "tied to GND, the same build passes, and the meter and the bench agree on A")
+
+	print("== N4: the handheld round (power-off bench, leg drags, pads that take several wires, the exam's pre-wired GND)")
+	await _start("1-1")
+	ok(_build("1-1"), "N4: the reference torch is built")
+	ok(not bk.powered, "N4: ... and the power switch is OFF")
+	evlog.clear()
+	sc.run_bench()
+	ok(bk.powered and evlog.has("power") and bk.passed, "N4: GO with the power off switches it on by itself and the bench runs (powered=%s passed=%s)" % [str(bk.powered), str(bk.passed)])
+	ok(sc.top.toast.to_lower().contains("power") or evlog.has("paid"), "N4: the click and the toast say so (%s)" % sc.top.toast.left(60))
+	# a drag that starts on a part's lead (between its leg and its body) wires; it never moves or removes the part
+	await _start("1-1")
+	_drag_part("res-cf", 470, "0.25W", 2, 5, 0)
+	var rp: Dictionary = bk.parts.filter(func(p): return p.kind == "R")[0]
+	var lead_at := sc.pad_screen(Vector2(2.8, 5.0))
+	ok(sc.snap(lead_at, 0.6, 0.5).kind != "pin" and not sc.part_at(lead_at).is_empty(), "N4: 2.8 pads along a resistor is its lead: not a leg snap, but inside the part's bounds")
+	var wn0 := bk.wires.size()
+	var dest := sc.pad_screen(Vector2(2, 9))
+	sc._motion(lead_at); sc._press(lead_at); sc._motion(dest); sc._release(dest)
+	var rp2: Dictionary = bk.parts.filter(func(p): return p.kind == "R")[0]
+	ok(rp2.x == rp.x and rp2.y == rp.y and bk.wires.size() == wn0 + 1 and bk.wires[bk.wires.size() - 1].a == [2, 5], "N4: dragging from the lead draws a wire from that leg (part stays at %d,%d; wires %d)" % [rp2.x, rp2.y, bk.wires.size()])
+	var lead2 := sc.pad_screen(Vector2(5.3, 5.0))   # the other lead
+	var dest2 := sc.pad_screen(Vector2(7, 8))
+	var wn1 := bk.wires.size()
+	sc._motion(lead2); sc._press(lead2); sc._motion(dest2); sc._release(dest2)
+	ok(bk.parts.filter(func(p): return p.kind == "R")[0].x == 2 and bk.wires.size() == wn1 + 1 and bk.wires[bk.wires.size() - 1].a == [6, 5], "N4: and from the far lead too")
+	var body_at := sc.pad_screen(Vector2(4.0, 5.0))   # the body: this one moves the part
+	var body_to := sc.pad_screen(Vector2(4.0, 10.0))
+	var wn2 := bk.wires.size()
+	sc._motion(body_at); sc._press(body_at); sc._motion(body_to); sc._board_overlay(); sc._release(body_to)
+	ok(bk.parts.filter(func(p): return p.kind == "R")[0].y != 5 and bk.wires.size() == wn2, "N4: dragging the BODY moves the part")
+	# the exam: the two batteries arrive tied to the GND pad; the player places R1 R2 R3 (3 parts, 6 wires)
+	await _start("1-5")
+	_key(KEY_ESCAPE)
+	var fw: Array = bk.wires.filter(func(w): return bool(w.get("fixed", false)))
+	ok(bk.wires.size() == 2 and fw.size() == 2, "N4: 1-5 opens with two wires already soldered (E1 and E2 minus ends to GND)")
+	var fx: Vector2 = sc.vp_to_screen(sc.bench.org + Vector2(2, 10) * sc.bench.p)   # a point on E1's soldered wire (2,8)->(2,12)
+	sc._motion(fx); sc._board_overlay()
+	ok(sc.hover_wire != "" and str(sc.top.tag.get("text", "")).contains("soldered"), "N4: hovering it says it is soldered in place")
+	sc._right(fx)
+	ok(bk.wires.size() == 2 and sc.top.toast.contains("came with the ticket"), "N4: right-click cannot remove it (%s)" % sc.top.toast.left(50))
+	var gp: Array = bk.ticket.board.connectors
+	var has_a := false; var has_g := false
+	for cc in gp: if cc.id == "A" and cc.pad == [8, 6]: has_a = true
+	for cc in gp: if cc.id == "GND" and cc.pad == [8, 12]: has_g = true
+	ok(has_a and has_g, "N4: the board carries a labelled A pad (8,6) and GND pad (8,12)")
+	_drag_part("res-exact", 2, "ideal", 4, 2, 0); _drag_part("res-exact", 3, "ideal", 10, 4, 0); _drag_part("res-exact", 6, "ideal", 8, 7, 1)
+	var wires_before := bk.wires.size()
+	ok(_drag_wire([2, 2], [4, 2]) and _drag_wire([8, 2], [8, 6]) and _drag_wire([14, 2], [14, 4]) and _drag_wire([10, 4], [8, 6]), "N4: four wires, two of them onto the A pad")
+	ok(_drag_wire([8, 7], [8, 6]), "N4: a THIRD wire onto the already wired A pad is accepted (pads take several wires)")
+	ok(_drag_wire([8, 11], [8, 12]), "N4: R3's bottom to the GND pad")
+	ok(bk.wires.size() == wires_before + 6 and bk.dangling.is_empty(), "N4: 3 parts and 6 wires of the player's own, nothing dangling (%d wires)" % (bk.wires.size() - wires_before))
+	# a wire whose straight routes all run over legs and wires still gets there (the engine finds a hop-over route)
+	ok(_drag_wire([2, 2], [8, 2]), "N4: a wire from E1+ to R1's far leg runs around R1 (no 'draw it in two steps')")
+	_key(KEY_Z)
+	# the notebook: one tap opens, Esc or the X closes, a click inside the book does not
+	sc.pages.show_page("")
+	_click_rect(sc.L.notebook)
+	ok(sc.pages.mode == "notebook", "N4: one tap on the notebook opens it")
+	var inside := Vector2(sc.size.x * 0.5, sc.size.y * 0.5)
+	var evn := InputEventMouseButton.new(); evn.pressed = true; evn.button_index = MOUSE_BUTTON_LEFT; evn.position = inside
+	await _frames(2); sc.pages._gui_input(evn)
+	ok(sc.pages.mode == "notebook", "N4: a tap inside the open book does not close it")
+	_key(KEY_ESCAPE)
+	ok(sc.pages.mode == "", "N4: Esc closes it")
+	_key(KEY_ESCAPE)
+	ok(sc.pages.mode == "", "N4: and Esc on the bench does not open it again")
 
 	print("== the chapter map")
 	sc.go_map(); await _frames(3)

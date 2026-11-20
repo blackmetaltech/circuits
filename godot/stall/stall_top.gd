@@ -116,18 +116,32 @@ func _chit() -> void:
 	S.pin(self, q.position + Vector2(r.size.x * 0.5, 10))
 	var f := S.hand(); var inner := r.size.x - 28.0
 	var fee: String = str(ticket.get("price_text", "")) if str(ticket.get("price_text", "")) != "" else "%d coins" % int(ticket.get("price", 0))
-	S.text(self, f, "TICKET %s%s" % [str(ticket.get("id", "")), "  EB" if bool(ticket.get("eb", false)) else ""], q.position + Vector2(14, 38), 15, S.INK_RED)
-	S.text(self, f, fee, q.position + Vector2(r.size.x - 14 - S.tw(f, fee, 17), 38), 17, Color(S.INK, 0.8))
+	# a flowing layout: every line sits under the one above, whatever the text size (handheld grows the text to 16 screen px)
+	var y := q.position.y + 14.0 + float(maxi(15, S.min_font)) + 12.0
+	S.text(self, f, "TICKET %s%s" % [str(ticket.get("id", "")), "  EB" if bool(ticket.get("eb", false)) else ""], Vector2(q.position.x + 14, y), 15, S.INK_RED)
+	S.text(self, f, fee, Vector2(q.position.x + r.size.x - 14 - S.tw(f, fee, 17), y), 17, Color(S.INK, 0.8))
 	var tsz := 28   # a long title shrinks to fit the chit instead of running into the price
 	while tsz > 16 and S.tw(f, str(ticket.get("title", "")), tsz) > inner: tsz -= 2
-	S.text(self, f, str(ticket.get("title", "")), q.position + Vector2(14, 70), tsz, S.INK)
+	tsz = maxi(tsz, S.min_font)
+	y += float(tsz) + 8.0
+	S.text(self, f, str(ticket.get("title", "")), Vector2(q.position.x + 14, y), tsz, S.INK)
 	var csz := 18
 	while csz > 12 and S.tw(f, "for %s" % str(ticket.get("customer", "")), csz) > inner: csz -= 1
-	S.text(self, f, "for %s" % str(ticket.get("customer", "")), q.position + Vector2(14, 92), csz, Color(S.INK, 0.8))
-	draw_line(q.position + Vector2(12, 102), q.position + Vector2(r.size.x - 12, 102), Color(S.INK, 0.25), 1.5)
-	S.text(self, f, str(ticket.get("spec", "")), q.position + Vector2(14, 124), 16, S.INK, HORIZONTAL_ALIGNMENT_LEFT, inner)
+	csz = maxi(csz, S.min_font)
+	y += float(csz) + 6.0
+	S.text(self, f, "for %s" % str(ticket.get("customer", "")), Vector2(q.position.x + 14, y), csz, Color(S.INK, 0.8))
+	y += 10.0
+	draw_line(Vector2(q.position.x + 12, y), Vector2(q.position.x + r.size.x - 12, y), Color(S.INK, 0.25), 1.5)
+	var spec := str(ticket.get("spec", ""))
+	var ssz := maxi(16, S.min_font)
+	y += float(ssz) + 8.0
+	S.text(self, f, spec, Vector2(q.position.x + 14, y), 16, S.INK, HORIZONTAL_ALIGNMENT_LEFT, inner)
+	y += S.wrapped_h(f, spec, 16, inner) - float(ssz)
 	var pay := str(ticket.get("pay_text", ""))
-	if pay != "": S.text(self, f, pay, q.position + Vector2(14, r.size.y - 36), 13, Color(S.INK, 0.6), HORIZONTAL_ALIGNMENT_LEFT, inner)
+	if pay != "":
+		var psz := maxi(13, S.min_font)
+		y += float(psz) + 10.0
+		S.text(self, f, pay, Vector2(q.position.x + 14, y), 13, Color(S.INK, 0.7), HORIZONTAL_ALIGNMENT_LEFT, inner)
 	if locked:   # a rubber stamp
 		draw_set_transform(c + Vector2(28, 62), deg_to_rad(-12.0), Vector2.ONE)
 		S.rr_line(self, Rect2(-56, -20, 112, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5)

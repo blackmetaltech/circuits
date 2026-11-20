@@ -21,7 +21,8 @@ var gadget := "torch"
 var mood := "idle"              ## idle | hopeful | joy | wow (customer)
 var customer := "Lio"
 var items: Array = []           ## bin items: {partId, value, label, tag, kind, i}
-var bin_scroll := 0
+var bin_scroll := 0.0             ## shoebox scroll, in rows (fractional while dragging)
+var bin_drag := false             ## the tray is being dragged / flung: show the track
 var exam_fig: Dictionary = {}          ## exam ticket: the engine's figure, drawn small on the problem card that stays on the bench
 var exam_open := true                  ## false once the predictions are in (the card then reads "your predictions are in")
 var hide_item := -1             ## the bin item being dragged
@@ -41,6 +42,7 @@ func _ready() -> void:
 
 func _process(dt: float) -> void:
 	t += dt
+	_sync_tray()
 	var target := 1.0 if (hot > 0.35 or smoked) else 0.0
 	_awake = move_toward(_awake, target, dt * (4.0 if target > _awake else 0.5))
 	tin_shake = maxf(0.0, tin_shake - dt)
@@ -246,27 +248,30 @@ func _tin() -> void:
 
 ## ------------------------------------------------------------------------------------------------------------------ shoebox (the bin)
 
-static func slots(inner: Rect2, n: int, scroll: int) -> Array:
+const ROW_H := 68.0               ## one shoebox row (design px): 45 screen px at 1920x1080
+static func row_h() -> float: return ROW_H * 1.2 if S.handheld else ROW_H   ## handheld: 54 screen px, a finger-sized target with 16 px text
+
+## The shoebox is a scrollable list: one row per part (value + watt rating on one line, price and stock under it). `scroll` is in ROWS and may be fractional
+## (wheel, drag and touch scroll smoothly). A slot is Rect2() when it is entirely outside the visible window `inner`; a partly visible row is returned whole
+## (the tray clips it), so hit tests must also check `inner.has_point`.
+static func slots(inner: Rect2, n: int, scroll: float) -> Array:
 	var out: Array = []
-	var cols := 2; var cw := inner.size.x / cols; var rh := 86.0
-	var rows_visible := int(inner.size.y / rh)
 	for i in n:
-		var k := i - scroll * cols
-		if k < 0 or k >= rows_visible * cols: out.append(Rect2()); continue
-		out.append(Rect2(inner.position.x + float(k % cols) * cw + 3, inner.position.y + float(k / cols) * rh + 3, cw - 6, rh - 6))
+		var rh := row_h(); var y := inner.position.y + (float(i) - scroll) * rh
+		if y + rh <= inner.position.y or y >= inner.end.y: out.append(Rect2()); continue
+		out.append(Rect2(inner.position.x + 2, y + 2, inner.size.x - 4, rh - 4))
 	return out
 
-func box_inner() -> Rect2: return _r("box").grow(-22)
+## The visible window of the tray: the box's inside, above the front lip and its PARTS label.
+func box_inner() -> Rect2:
+	var r := _r("box").grow(-22)
+	return Rect2(r.position, Vector2(r.size.x, maxf(row_h(), r.size.y - 44.0)))
 
-## How many rows of parts the shoebox shows at once, and how far it can scroll (one wheel notch or one arrow click = one row, always).
-static func rows_visible(inner: Rect2) -> int: return maxi(1, int(inner.size.y / 86.0))
-static func max_scroll(inner: Rect2, n: int) -> int: return maxi(0, (n + 1) / 2 - rows_visible(inner))
-## The two scroll arrows (small tabs on the box's right edge); each is a Rect2 with zero size when there is nowhere to scroll that way.
-static func arrows(inner: Rect2, n: int, scroll: int) -> Dictionary:
-	var mx := max_scroll(inner, n)
-	var up := Rect2(inner.end.x - 104, inner.position.y + 4, 100, 26) if scroll > 0 else Rect2()
-	var dn := Rect2(inner.end.x - 104, inner.end.y - 58, 100, 26) if scroll < mx else Rect2()   # above the front lip
-	return {"up": up, "down": dn}
+## How many rows the shoebox shows at once and how far it can scroll (in rows; 0 when everything fits).
+static func rows_visible(inner: Rect2) -> int: return maxi(1, int(inner.size.y / row_h()))
+static func max_scroll(inner: Rect2, n: int) -> float: return maxf(0.0, float(n) - inner.size.y / row_h())
+## The old paging tabs are gone (the box scrolls by drag, wheel and touch); kept so callers get two empty rects.
+static func arrows(_inner: Rect2, _n: int, _scroll: float) -> Dictionary: return {"up": Rect2(), "down": Rect2()}
 
 func _box() -> void:
 	var r := _r("box"); var c := r.get_center()
@@ -300,57 +305,65 @@ func part_dict(it: Dictionary) -> Dictionary:
 		_item_cache[key] = NodeApi._norm_part({"uid": "bin", "partId": it.partId, "value": it.value, "kind": it.kind, "x": 0, "y": 0, "rot": 0, "flip": false, "label": it.label})
 	return _item_cache[key]
 
-func _items(c: Vector2) -> void:
+func _items(_c: Vector2) -> void: pass   # the rows are drawn by the clipping tray child (_Tray), after the box
+
+## A Control that clips to the shoebox window and draws its rows (a parent's _draw cannot be clipped to a sub-rectangle).
+class _Tray extends Control:
+	var props
+	func _draw() -> void: if props != null: props._draw_rows(self)
+
+var _tray: Control
+
+func _sync_tray() -> void:
+	if _tray == null:
+		_tray = _Tray.new(); _tray.props = self; _tray.clip_contents = true; _tray.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(_tray)
+	var inner := box_inner()
+	_tray.position = inner.position; _tray.size = inner.size
+	_tray.queue_redraw()
+
+func _draw_rows(ci: Control) -> void:
 	var inner := box_inner(); var n := items.size()
 	var sl := slots(inner, n, bin_scroll)
-	var pp := 20.0
+	var off := -inner.position   # the tray child sits at the window's corner: draw in its local coordinates
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	for i in n:
-		var cell: Rect2 = sl[i]
-		if cell.size == Vector2.ZERO: continue
+		var g: Rect2 = sl[i]
+		if g.size == Vector2.ZERO: continue
+		var cell := Rect2(g.position + off, g.size)
 		var it: Dictionary = items[i]
 		var a := 0.28 if i == hide_item else 1.0
 		var hov := i == hover_item and i != hide_item
-		if hov: S.rr(self, cell, 8, Color(1, 0.85, 0.5, 0.12))
+		S.rr(ci, cell, 8, Color(1, 0.85, 0.5, 0.20) if hov else Color(1, 1, 1, 0.045))
 		var pd := part_dict(it)
-		var org := Vector2(cell.position.x + 16.0, cell.position.y + 24.0)
-		if it.kind == "LED": org.x += 10.0
-		if it.kind == "BAT": org.x -= 4.0; pp = 15.0
-		else: pp = 20.0
-		var mod := Color(1, 1, 1, a)
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		# PartArt draws with its own colours; fade by drawing under a modulated canvas group via self_modulate is not per-draw, so lift alpha with a veil
-		PartArt.draw(self, pd, org + (Vector2(0, -3.0) if hov else Vector2.ZERO), pp, {"lit": 0.0, "smoked": false})
-		if a < 1.0: S.rr(self, cell, 8, Color(0.12, 0.09, 0.06, 0.7))
-		var tag := Rect2(cell.position.x + 6, cell.end.y - 30, cell.size.x - 12, 26)
-		S.paper(self, tag, 0.0 if i % 2 == 0 else 0.8, Color("#efe5c8"))
-		var lab: String = it.label if it.tag == "" or it.kind == "BAT" else "%s  %s" % [it.label, it.tag]
-		S.text(self, S.hand(), lab, Vector2(tag.position.x + 8, tag.position.y + 20), 17, S.INK)
+		var pp := 17.0 if it.kind != "BAT" else 13.0
+		var org := Vector2(cell.position.x + 12.0, cell.position.y + cell.size.y * 0.5)
+		if it.kind == "LED": org.x += 14.0
+		PartArt.draw(ci, pd, org + (Vector2(0, -2.0) if hov else Vector2.ZERO), pp, {"lit": 0.0, "smoked": false})
+		if a < 1.0: S.rr(ci, cell, 8, Color(0.12, 0.09, 0.06, 0.7))
+		# the label: value and watt rating together on one line (never overlapping the price), price and stock under it
+		var lab: String = it.label if it.tag == "" or it.kind == "BAT" else "%s %s" % [it.label, it.tag]
+		var lx := cell.position.x + 96.0
+		var tag := Rect2(lx - 6.0, cell.position.y + 5.0, cell.end.x - lx - 2.0, 33.0)
+		S.paper(ci, tag, 0.0, Color("#efe5c8"))
+		S.text(ci, S.hand(), lab, Vector2(lx, tag.position.y + 25.0), 22, S.INK)
 		var pt: String = str(it.get("price_text", ""))
-		if int(it.get("left", -1)) >= 0: pt = ("%s  x%d" % [pt, int(it.left)]).strip_edges()
-		if pt != "": S.text(self, S.hand(), pt, Vector2(cell.end.x - 8 - S.tw(S.hand(), pt, 15), cell.position.y + 20), 15, Color("#e9dfc4", 0.75))
-	_scroll_cues(inner, n)
+		if int(it.get("left", -1)) >= 0: pt = ("%s   x%d left" % [pt, int(it.left)]).strip_edges()
+		if pt != "": S.text(ci, S.hand(), pt, Vector2(lx, cell.end.y - 7.0), 18, Color("#e9dfc4", 0.9))
+	_scroll_cues(ci, Rect2(Vector2.ZERO, inner.size), n)
 
-## Scrolling you can see: a dark fade where more parts hide, an arrow tab you can click, and a thin track showing where you are.
-func _scroll_cues(inner: Rect2, n: int) -> void:
+## Scrolling you can see: a dark fade where more parts hide and a track with a thumb on the right edge (drag the tray, use the wheel, or swipe).
+func _scroll_cues(ci: Control, inner: Rect2, n: int) -> void:
 	var mx := max_scroll(inner, n)
-	if mx <= 0: return
-	var ar := arrows(inner, n, bin_scroll)
-	if bin_scroll > 0: S.vgrad(self, Rect2(inner.position, Vector2(inner.size.x, 34)), Color("#120c07", 0.92), Color("#120c07", 0.0), 6)
-	if bin_scroll < mx: S.vgrad(self, Rect2(inner.position.x, inner.end.y - 34, inner.size.x, 34), Color("#120c07", 0.0), Color("#120c07", 0.92), 6)
-	for k in ["up", "down"]:
-		var rr: Rect2 = ar[k]
-		if rr.size == Vector2.ZERO: continue
-		var hv: bool = hover == "box_" + k
-		S.rr(self, rr, 6, Color("#ffd98a", 0.95) if hv else Color("#e9dfc4", 0.85))
-		var c := rr.get_center(); var d := -1.0 if k == "up" else 1.0
-		var word := "more" if k == "down" else "back"   # a paper tab on the fold: more parts below / back up
-		var wx := S.tw(S.hand(), word, 18)
-		S.text(self, S.hand(), word, Vector2(c.x - wx * 0.5 - 12.0, c.y + 6.0), 18, Color("#3a2a1a"))
-		draw_colored_polygon(PackedVector2Array([c + Vector2(wx * 0.5 + 2.0, -4 * d), c + Vector2(wx * 0.5 + 18.0, -4 * d), c + Vector2(wx * 0.5 + 10.0, 5 * d)]), Color("#3a2a1a"))
-	var tr := Rect2(inner.end.x - 5, inner.position.y + 36, 3, inner.size.y - 72)   # the track and the thumb
-	draw_rect(tr, Color(1, 1, 1, 0.12), true)
-	var th := maxf(18.0, tr.size.y * float(rows_visible(inner)) / float((n + 1) / 2))
-	draw_rect(Rect2(tr.position.x, tr.position.y + (tr.size.y - th) * float(bin_scroll) / float(mx), tr.size.x, th), Color("#ffd98a", 0.8), true)
+	if mx <= 0.0: return
+	if bin_scroll > 0.02: S.vgrad(ci, Rect2(inner.position, Vector2(inner.size.x, 30)), Color("#120c07", 0.92), Color("#120c07", 0.0), 6)
+	if bin_scroll < mx - 0.02: S.vgrad(ci, Rect2(inner.position.x, inner.end.y - 30, inner.size.x, 30), Color("#120c07", 0.0), Color("#120c07", 0.92), 6)
+	var tr := Rect2(inner.end.x - 9, inner.position.y + 4, 6, inner.size.y - 8)   # the track and the thumb
+	ci.draw_rect(tr, Color(1, 1, 1, 0.18), true)
+	var th := maxf(34.0, tr.size.y * (inner.size.y / row_h()) / float(n))
+	ci.draw_rect(Rect2(tr.position.x, tr.position.y + (tr.size.y - th) * bin_scroll / mx, tr.size.x, th), Color("#ffd98a", 0.95), true)
+	if bin_scroll < mx - 0.02:   # a hint on the lower fade while there are more parts below
+		var word := "more parts below"
+		S.text(ci, S.hand(), word, Vector2(inner.get_center().x - S.tw(S.hand(), word, 20) * 0.5, inner.end.y - 8.0), 20, Color("#ffd98a", 0.95))
 
 ## ------------------------------------------------------------------------------------------------------------------ customer
 

@@ -9,7 +9,7 @@ var fails := 0
 var checks := 0
 
 func _initialize() -> void:
-	OS.set_environment("CB_NOSAVE", "1")
+	OS.set_environment("CB_NOSAVE", "1"); OS.set_environment("CB_LAYOUT", "desktop")
 	OS.add_logger(trap)
 	_run()
 

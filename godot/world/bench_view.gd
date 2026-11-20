@@ -16,6 +16,7 @@ class Layer extends Control:
 			var mat := CanvasItemMaterial.new(); mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD; material = mat
 	func _draw() -> void: fn.call(self)
 
+const SS = preload("res://stall/stall_style.gd")   ## handheld minimum text size lives here
 const WALNUT := Color("#3B2A20")
 const MASK := Color("#14161A")
 const PAD_GOLD := Color("#D4A74A")
@@ -240,6 +241,7 @@ func _node_color(pad: Vector2, m: Dictionary) -> Color:
 
 func _txt(ci: CanvasItem, s: String, pos: Vector2, size_px: int, col: Color, align := HORIZONTAL_ALIGNMENT_LEFT, outline := true) -> void:
 	var f := ThemeDB.fallback_font
+	size_px = maxi(size_px, SS.min_font)
 	if outline: ci.draw_string_outline(f, pos, s, align, -1.0, size_px, 4, Color(0.02, 0.02, 0.03, 0.9))
 	ci.draw_string(f, pos, s, align, -1.0, size_px, col)
 
@@ -295,11 +297,32 @@ func _connector(c: Dictionary, m: Dictionary) -> void:   # the brass edge connec
 	PartArt.rrect(self, r, p * 0.18, Color("#b8893a"))
 	draw_line(r.position + Vector2(p * 0.1, p * 0.16), Vector2(r.end.x - p * 0.1, r.position.y + p * 0.16), Color(1, 0.9, 0.6, 0.45), p * 0.07)
 	draw_circle(pos, p * 0.26, Color("#e3c070")); draw_circle(pos, p * 0.1, Color(0.05, 0.04, 0.03))
+	# the name is engraved on the brass itself, big and dark, so which pad is GND and which is A (or IN / OUT) is never a guess
 	var s := _label_key(c.id)
-	var fs := int(clampf(p * 0.34, 9.0, 20.0))
-	var tw := ThemeDB.fallback_font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
-	var ty := pos.y - p * 0.62 if pos.y > br.position.y + p * 1.8 else pos.y + p * 0.62 + fs
-	draw_string(ThemeDB.fallback_font, Vector2(pos.x - tw * 0.5 + (p * 0.5 if left else -p * 0.5), ty), s, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, Color(0.92, 0.88, 0.75, 0.9))
+	var long := {"GND": "GND", "A": "A", "VP": "V+"}.get(str(c.id), s) as String
+	var fs := maxi(int(clampf(p * 0.56, 14.0, 26.0)), SS.min_font)
+	var f := ThemeDB.fallback_font
+	var tw := f.get_string_size(long, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
+	var ink := Color(0.16, 0.1, 0.03, 0.95)
+	var gy := pos.y + fs * 0.36
+	var gnd: bool = str(c.id) == "GND" or str(c.get("role", "")) == "ground"
+	var sym := p * 0.5 if gnd else 0.0   # a ground symbol sits before the word
+	if left:
+		var tx := pos.x - p * 0.55 - tw
+		draw_string(f, Vector2(tx, gy), long, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, ink)
+		if gnd: _ground_symbol(self, Vector2(tx - sym * 0.85, pos.y), p * 0.3, ink)
+	else:
+		var tx2 := pos.x + p * (2.3 if str(c.get("role", "")) in ["supply", "ground", "rail"] and str(c.id) != "A" else 0.55) + sym
+		draw_string(f, Vector2(tx2, gy), long, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, ink)
+		if gnd: _ground_symbol(self, Vector2(tx2 - sym * 0.55, pos.y), p * 0.3, ink)
+	if str(c.id) == "A":   # the junction pad of the exam: a bright ring says "wire the three resistors here"
+		draw_arc(pos, p * 0.42, 0, TAU, 28, CYAN, maxf(2.0, p * 0.07))
+
+static func _ground_symbol(ci: CanvasItem, c: Vector2, r: float, col: Color) -> void:
+	ci.draw_line(c + Vector2(0, -r * 1.2), c + Vector2(0, -r * 0.3), col, maxf(2.0, r * 0.22))
+	for k in 3:
+		var hw := r * (1.0 - float(k) * 0.32)
+		ci.draw_line(c + Vector2(-hw, -r * 0.3 + float(k) * r * 0.42), c + Vector2(hw, -r * 0.3 + float(k) * r * 0.42), col, maxf(2.0, r * 0.22))
 
 ## -------------------------------------------------------------------------------------------------------------- wires, parts, labels
 
@@ -410,7 +433,7 @@ func _draw_parts(ci: Control) -> void:
 		PartArt.draw(ci, pt, _px(Vector2(pt.x, pt.y)), p, st)
 	for pr in m.probes: _probe(ci, pr)
 	# labels and rating bars
-	var fs := int(clampf(p * 0.34, 10.0, 22.0))
+	var fs := maxi(int(clampf(p * 0.34, 10.0, 22.0)), SS.min_font)
 	for pt in m.parts:
 		var b: Rect2 = bounds[pt.uid]
 		var s: String = pt.label
@@ -430,7 +453,7 @@ func _draw_parts(ci: Control) -> void:
 
 ## "A +" on the long (anode) leg and "K -" on the flat (cathode) side, written beside each leg on the board.
 func _led_pin_tags(ci: Control, pt: Dictionary) -> void:
-	var fs := int(clampf(p * 0.5, 13.0, 20.0))
+	var fs := maxi(int(clampf(p * 0.5, 13.0, 20.0)), SS.min_font)
 	var f := ThemeDB.fallback_font
 	var mid := (_px(pt.pins[0]) + _px(pt.pins[1])) * 0.5
 	for i in 2:
@@ -453,7 +476,7 @@ func _probe(ci: Control, pr: Dictionary) -> void:
 	ci.draw_line(h, far, col, p * 0.24)
 	ci.draw_circle(tip, p * 0.12, Color.WHITE)
 	var s := tr("PROBE_CH%d" % pr.ch)
-	_txt(ci, s, far + Vector2(p * 0.3, 0), int(clampf(p * 0.32, 9.0, 18.0)), col)
+	_txt(ci, s, far + Vector2(p * 0.3, 0), maxi(int(clampf(p * 0.32, 9.0, 18.0)), SS.min_font), col)
 
 const SILVER_STEEL := Color(0.8, 0.82, 0.86)
 
@@ -649,7 +672,7 @@ func _led_face(ci: CanvasItem, cen: Vector2, ma: float, smoked: bool, uid: Strin
 
 ## A small dark label box beside a point (which pin the pointer is on, where a wire would land).
 func _note(ci: CanvasItem, at: Vector2, text: String, col: Color) -> void:
-	var fs := int(clampf(p * 0.42, 12.0, 18.0))
+	var fs := maxi(int(clampf(p * 0.42, 12.0, 18.0)), SS.min_font)
 	var f := ThemeDB.fallback_font
 	var tw := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
 	var r := Rect2(at + Vector2(p * 0.55, -p * 1.15), Vector2(tw + 14.0, fs + 10.0))
