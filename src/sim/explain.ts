@@ -8,6 +8,7 @@ import type { BenchFailure } from './bench/types';
 
 export type Vars = Record<string, string | number>;
 export interface Explained { key: string; vars: Vars }
+function capFirst(s: string): string { return s === '' ? s : s[0]!.toUpperCase() + s.slice(1); }
 
 // ---------------------------------------------------------------- number formatting (deterministic: loops, no Math.log/pow)
 /** Round to `n` significant figures. */
@@ -53,43 +54,71 @@ const firstAtLeast = (table: readonly number[], x: number): number => table.find
 // ---------------------------------------------------------------- §7.3 templates
 export function explainResistorPower(a: { part: string; v: number; r: number; p: number; rated: number }): Explained {
   return { key: 'explain.resistor.power', vars: {
-    part: a.part, p: sig(a.p), rated: sig(a.rated), v: sig(a.v), r: si(a.r, 'Ω'), ratio: sig(a.p / a.rated, 2),
+    ...pn(a.part), p: sig(a.p), rated: sig(a.rated), v: sig(a.v), r: si(a.r, 'Ω'), ratio: sig(a.p / a.rated, 2),
     rNext: firstAtLeast(POWER_RATINGS, a.p * POWER_MARGIN), rEach: si(2 * a.r, 'Ω'), pEach: sig(a.p / 2),
   } };
 }
-/** A battery or supply straight onto an LED: only the source's own resistance and the LED's resistance limited the current. */
-export function explainLedOvercurrent(a: { part: string; i: number; iRated: number; vSupply: number; vForward: number; rSource: number; rLed: number }): Explained {
-  const iWant = a.iRated / 2;
-  return { key: 'explain.led.overcurrent', vars: {
-    part: a.part, i: sig(a.i), iRated: sig(a.iRated), iMA: sig(a.i * 1000), iRatedMA: sig(a.iRated * 1000), iWantMA: sig(iWant * 1000), rSource: sig(a.rSource, 2), rLed: sig(a.rLed, 2),
-    vSupply: sig(a.vSupply), vForward: sig(a.vForward), iWant: sig(iWant), rSeries: si(nearestE12((a.vSupply - a.vForward) / iWant), 'Ω'),
+/** What the loop around a burned LED holds, from the live board: its own numbers (source, resistors, how many LEDs) and how many times the player has already burned one here. */
+export interface LedLoop {
+  vSupply: number; vForward: number; rSource: number; rLed: number;
+  /** Series resistance of the resistors on the board, ohms; 0 when there is none. */
+  rRes?: number;
+  /** How the player's name for the resistor(s): "the 100 Ω ¼ W resistor", "2 resistors". */
+  rWhat?: string;
+  /** LEDs on the board. */
+  nLeds?: number;
+  /** The LED's model, so a thermal burn (power known, current not) can be turned back into a current. */
+  model?: { Is: number; N: number; Rs: number };
+  iRated?: number;
+}
+/** Current of an LED that dissipates p watts: solves p = I x (N Vt ln(I / Is + 1) + I Rs) by bisection (monotonic in I). */
+export function ledCurrentFromPower(p: number, m: { Is: number; N: number; Rs: number }): number {
+  let lo = 0, hi = 5;
+  for (let k = 0; k < 70; k++) {
+    const mid = (lo + hi) / 2, pw = mid * (m.N * 0.025852 * dmath.log(mid / m.Is + 1) + mid * m.Rs);
+    if (pw < p) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+/** An LED burned. The text follows the LIVE circuit (bare on the supply, or with a resistor that was too small) and the teaching cadence:
+ * the first burn gives the cause and points at Kirchhoff's voltage law without the answer; a repeat burn gives the worked formula. `prior` = earlier failures on this ticket. */
+export function explainLedOvercurrent(a: { part: string; i: number; iRated: number; loop: LedLoop; prior?: number }): Explained {
+  const L = a.loop, iWant = a.iRated / 2, again = (a.prior ?? 0) >= 1, rRes = L.rRes ?? 0;
+  const many = (L.nLeds ?? 1) > 1;
+  const key = many ? 'explain.led.overcurrent.many'
+    : rRes > 0 ? (again ? 'explain.led.overcurrent.res.again' : 'explain.led.overcurrent.res.first')
+    : (again ? 'explain.led.overcurrent.bare.again' : 'explain.led.overcurrent.bare.first');
+  return { key, vars: {
+    ...pn(a.part), i: sig(a.i), iRated: sig(a.iRated), iMA: sig(a.i * 1000), iRatedMA: sig(a.iRated * 1000), iWantMA: sig(iWant * 1000), rSource: sig(L.rSource, 2), rLed: sig(L.rLed, 2),
+    vSupply: sig(L.vSupply), vForward: sig(L.vForward), vLeft: sig(L.vSupply - L.vForward), iWant: sig(iWant), rSeries: si(nearestE12((L.vSupply - L.vForward) / iWant), 'Ω'),
+    rRes: si(rRes, 'Ω'), rWhat: L.rWhat ?? 'a resistor',
   } };
 }
 export function explainElecOvervoltage(a: { part: string; v: number; vRated: number }): Explained {
-  return { key: 'explain.cap.overvoltage', vars: { part: a.part, v: sig(a.v), vRated: sig(a.vRated), vPick: firstAtLeast(CAP_VOLTAGES, a.v * VOLTAGE_MARGIN) } };
+  return { key: 'explain.cap.overvoltage', vars: { ...pn(a.part), v: sig(a.v), vRated: sig(a.vRated), vPick: firstAtLeast(CAP_VOLTAGES, a.v * VOLTAGE_MARGIN) } };
 }
 export function explainElecReversed(a: { part: string; v: number }): Explained {
-  return { key: 'explain.cap.reversed', vars: { part: a.part, v: sig(a.v) } };
+  return { key: 'explain.cap.reversed', vars: { ...pn(a.part), v: sig(a.v) } };
 }
 /** A transistor that dissipates in the active region because its base drive was too small for the load current. */
 export function explainBjtActive(a: { part: string; vce: number; ic: number; ib: number; pRated: number; beta?: number }): Explained {
   const beta = a.beta ?? 10;
   return { key: 'explain.bjt.active', vars: {
-    part: a.part, vce: sig(a.vce), ic: sig(a.ic), p: sig(a.vce * a.ic), pRated: sig(a.pRated), ib: si(a.ib, 'A'), ibNeeded: si(a.ic / beta, 'A'), beta,
+    ...pn(a.part), vce: sig(a.vce), ic: sig(a.ic), p: sig(a.vce * a.ic), pRated: sig(a.pRated), ib: si(a.ib, 'A'), ibNeeded: si(a.ic / beta, 'A'), beta,
   } };
 }
 export function explainInductiveKick(a: { part: string; load: string; vPeak: number; vceo: number }): Explained {
-  return { key: 'explain.inductiveKick', vars: { part: a.part, load: a.load, vPeak: sig(a.vPeak), vceo: sig(a.vceo) } };
+  return { key: 'explain.inductiveKick', vars: { ...pn(a.part), load: a.load, vPeak: sig(a.vPeak), vceo: sig(a.vceo) } };
 }
 export function explainMosfetUnderdriven(a: { part: string; vgs: number; vth: number; id: number; vds: number; theta: number }): Explained {
   return { key: 'explain.mosfet.underdriven', vars: {
-    part: a.part, vgs: sig(a.vgs), vth: sig(a.vth), id: si(a.id, 'A'), vds: sig(a.vds), p: sig(a.id * a.vds), theta: sig(a.theta),
+    ...pn(a.part), vgs: sig(a.vgs), vth: sig(a.vth), id: si(a.id, 'A'), vds: sig(a.vds), p: sig(a.id * a.vds), theta: sig(a.theta),
   } };
 }
 export function explainRegulatorThermal(a: { part: string; vin: number; vout: number; i: number; ta: number; theta: number; tShutdown?: number; tTarget?: number }): Explained {
   const p = (a.vin - a.vout) * a.i, tTarget = a.tTarget ?? 125;
   return { key: 'explain.regulator.thermal', vars: {
-    part: a.part, p: sig(p), vin: sig(a.vin), vout: sig(a.vout), i: sig(a.i), ta: sig(a.ta), theta: sig(a.theta), tj: sig(a.ta + p * a.theta),
+    ...pn(a.part), p: sig(p), vin: sig(a.vin), vout: sig(a.vout), i: sig(a.i), ta: sig(a.ta), theta: sig(a.theta), tj: sig(a.ta + p * a.theta),
     tShutdown: a.tShutdown ?? 150, tTarget, thetaNeeded: sig((tTarget - a.ta) / p),
   } };
 }
@@ -100,7 +129,7 @@ export function explainSlew(a: { slew: number; vPeak: number; f: number }): Expl
 export function explainGbw(a: { part: string; gbw: number; gain: number; f: number }): Explained {
   const bw = a.gbw / a.gain, g2 = Math.sqrt(a.gain);
   return { key: 'explain.opamp.gbw', vars: {
-    part: a.part, gbw: si(a.gbw, 'Hz'), gain: sig(a.gain), bw: si(bw, 'Hz'), f: si(a.f, 'Hz'),
+    ...pn(a.part), gbw: si(a.gbw, 'Hz'), gain: sig(a.gain), bw: si(bw, 'Hz'), f: si(a.f, 'Hz'),
     dB: sig(-10 * dmath.log10(1 + (a.f / bw) * (a.f / bw))), g2: sig(g2), bw2: si(a.gbw / g2, 'Hz'),
   } };
 }
@@ -128,7 +157,7 @@ export function explainBandMiss(a: { probe: string; level: number; tCross: numbe
   } };
 }
 export function explainFloatingGate(a: { part: string; rPull?: number }): Explained {
-  return { key: 'explain.floatingGate', vars: { part: a.part, rPull: si(a.rPull ?? 100e3, 'Ω') } };
+  return { key: 'explain.floatingGate', vars: { ...pn(a.part), rPull: si(a.rPull ?? 100e3, 'Ω') } };
 }
 
 // ---------------------------------------------------------------- solver and topology (already carry the user's node and element names)
@@ -181,11 +210,25 @@ export interface ExplainContext {
   resistance?: Readonly<Record<string, number>>;
   /** Part ids that are electrolytic capacitors. */
   electrolytic?: readonly string[];
-  /** Supply and LED figures for a straight-on LED. */
-  led?: Readonly<Record<string, { vSupply: number; vForward: number; rSource: number; rLed: number }>>;
+  /** Supply, loop and LED figures for a burned LED. */
+  led?: Readonly<Record<string, LedLoop>>;
+  /** How many failures the player already had on this ticket (the first burn teaches the cause, a repeat gives the worked formula). */
+  prior?: number;
 }
 /** Upgrade a rating or smoke failure ({ key, vars } from ratings.ts / smoke.ts) to the full explainer when the context has what it needs; otherwise return it unchanged. */
 export function explainFailure(f: BenchFailure, ctx: ExplainContext = {}): Explained {
+  return named(explainRaw(f, ctx), ctx);
+}
+/** {part} and its sentence-start form {Part}. */
+const pn = (part: string): { part: string; Part: string } => ({ part, Part: capFirst(part) });
+/** The part by name for the player ("the LED", "the 100 Ω ¼ W resistor"), never its id: {part} mid-sentence, {Part} at the start of one. */
+function named(e: Explained, ctx: ExplainContext): Explained {
+  const uid = e.vars.part;
+  if (typeof uid !== 'string' || !ctx.miss?.names) return e;
+  const nameOf = ctx.miss.names[uid] ?? 'the part';
+  return { key: e.key, vars: { ...e.vars, part: nameOf, Part: capFirst(nameOf) } };
+}
+function explainRaw(f: BenchFailure, ctx: ExplainContext): Explained {
   const v = f.vars, part = String(v.part ?? '');
   const num = (k: string): number => Number(v[k]);
   switch (f.key) {
@@ -200,7 +243,12 @@ export function explainFailure(f: BenchFailure, ctx: ExplainContext = {}): Expla
     case 'rating.cap.reverse': case 'smoke.cap.reverse': return explainElecReversed({ part, v: num('v') });
     case 'rating.led.current': case 'smoke.led.die': {
       const l = ctx.led?.[part];
-      if (l) return explainLedOvercurrent({ part, i: num(f.key === 'rating.led.current' ? 'value' : 'i'), iRated: num(f.key === 'rating.led.current' ? 'limit' : 'iF'), ...l });
+      if (l) return explainLedOvercurrent({ part, i: num(f.key === 'rating.led.current' ? 'value' : 'i'), iRated: num(f.key === 'rating.led.current' ? 'limit' : 'iF'), loop: l, prior: ctx.prior });
+      break;
+    }
+    case 'smoke.thermal': {   // an LED that cooked (a resistor too small for it): the power is known, the current follows from the LED's curve
+      const l = ctx.led?.[part];
+      if (l?.model && l.iRated) return explainLedOvercurrent({ part, i: ledCurrentFromPower(num('P'), l.model), iRated: l.iRated, loop: l, prior: ctx.prior });
       break;
     }
     case 'bench.level.fail': case 'bench.metric.fail': { const e = explainLevelMiss(f, ctx.miss); if (e) return e; break; }

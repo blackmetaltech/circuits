@@ -55,7 +55,7 @@ describe('the crack note', () => {
     const ev = q(e, 'liveFrame').events[0];
     expect(ev.kind).toBe('crack');
     expect(ev.text).toMatch(/^Burned: too much current, \d{3} mA vs 30 mA max/);
-    expect(ev.text).toMatch(/470/);
+    expect(ev.text).toMatch(/voltage law/); expect(ev.text).not.toMatch(/470|\bp1\b/);
   });
 });
 
@@ -64,7 +64,7 @@ describe('wires say what they touch, and flag the ones that touch nothing', () =
     const e = open('1-1'); place(e, 4, 5);
     const r = ok(e, 'wire', [2, 2], [4, 5]);
     expect(r.landed.map((x: any) => x.kind)).toEqual(['pin', 'pin']);
-    expect(r.landed[1].text).toBe('p1 leg A +'); expect(r.dangling).toEqual([]);
+    expect(r.landed[1].text).toBe('the LED leg A +'); expect(r.dangling).toEqual([]);
     const h = ok(e, 'wire', [8, 2], [7, 5]);   // one hole beside the K leg
     expect(h.dangling).toEqual([[7, 5]]); expect(h.message).toMatch(/not touching any part leg/);
     expect(h.landed[1]).toMatchObject({ kind: 'empty' });

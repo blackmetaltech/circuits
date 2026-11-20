@@ -42,10 +42,19 @@ describe('templates filled from a solved state', () => {
     const c = circ('D1 a 0 LEDr\n.model LEDr led(is=1.19e-17 n=2 rs=9.9)', (nl) => nl.elements.push({ id: 'B1', kind: 'BAT', owner: 'p0', nodes: [1, 0], p: { emf: 9, r: 1.7 } }));
     const op = solveOp(c); expect(op.ok).toBe(true);
     const i = elementCurrent(c, op.x, 'D1'), vf = nodeVoltage(op.x, c.nodeIndex.a);
-    const e = X.explainLedOvercurrent({ part: 'D1', i, iRated: 0.03, vSupply: 9, vForward: 2, rSource: 1.7, rLed: 10 });
+    const loop = { vSupply: 9, vForward: 2, rSource: 1.7, rLed: 10 };
+    const e = X.explainLedOvercurrent({ part: 'D1', i, iRated: 0.03, loop });
     expect(i).toBeGreaterThan(0.1); expect(vf).toBeGreaterThan(1.5);
     expect(e.vars).toMatchObject({ iRated: 0.03, iWant: 0.015, rSeries: '470 Ω', rSource: 1.7 });
-    expect(text(e)).toContain(`Burned: too much current, ${X.sig(i * 1000)} mA vs 30 mA max`); expect(text(e)).toContain('R = (9 - 2) V / 15 mA = about 470 Ω');
+    // the first burn: the cause, KVL, the numbers of the actual failure, and NOT the answer
+    expect(text(e)).toContain(`Burned: too much current, ${X.sig(i * 1000)} mA vs 30 mA max`); expect(text(e)).toContain('voltage law'); expect(text(e)).toContain('about 15 mA');
+    expect(text(e)).not.toMatch(/470|R = /);
+    // a repeat burn gets the worked formula
+    const again = text(X.explainLedOvercurrent({ part: 'D1', i, iRated: 0.03, loop, prior: 1 }));
+    expect(again).toContain('R = (9 V - 2 V) / 15 mA = about 470 Ω');
+    // with a resistor in the loop the text says so (never "nothing else in the loop")
+    const res = text(X.explainLedOvercurrent({ part: 'D1', i: 0.064, iRated: 0.03, loop: { ...loop, rRes: 100, rWhat: 'the 100 Ω ¼ W resistor' } }));
+    expect(res).toContain('the 100 Ω ¼ W resistor'); expect(res).not.toMatch(/nothing else|nothing but/);
   });
   it('electrolytic overvoltage and reversed', () => {
     const e = X.explainElecOvervoltage({ part: 'C1', v: 17.1, vRated: 16 });
@@ -116,7 +125,7 @@ describe('failures from the solver and the topology check', () => {
   });
   it('smoke and rating keys map to explainers when the context is given', () => {
     const led = X.explainFailure({ key: 'smoke.led.die', vars: { part: 'D1', i: 0.6, iF: 0.03 } }, { led: { D1: { vSupply: 9, vForward: 2, rSource: 1.7, rLed: 10 } } });
-    expect(led.key).toBe('explain.led.overcurrent'); expect(led.vars.i).toBe(0.6);
+    expect(led.key).toBe('explain.led.overcurrent.bare.first'); expect(led.vars.i).toBe(0.6);
     expect(X.explainFailure({ key: 'smoke.cap.over', vars: { part: 'C1', v: 20, vrated: 16 } }, { electrolytic: ['C1'] }).key).toBe('explain.cap.overvoltage');
     expect(X.explainFailure({ key: 'smoke.cap.reverse', vars: { part: 'C3', v: -4.2 } }).key).toBe('explain.cap.reversed');
     expect(X.explainFailure({ key: 'smoke.resistor', vars: { part: 'R2', P: 0.7, Prated: 0.25 } }, { resistance: { R2: 22 } }).key).toBe('explain.resistor.power');
@@ -132,7 +141,7 @@ describe('locales', () => {
     expect([...new Set(used)].sort()).toEqual([...keys].sort());
   });
   it('every explain.* string has plain-words text and balanced placeholders; checkLocales is clean', () => {
-    expect(keys.length).toBe(16);
+    expect(keys.length).toBe(20);
     expect(checkLocales({ en: simEn, fr: { ...simEn } }, 'en')).toEqual({ missing: [], extra: [], badPlaceholders: [] });
     for (const k of keys) expect(simEn[k].match(/\{/g)?.length, k).toBe(simEn[k].match(/\}/g)?.length);
   });

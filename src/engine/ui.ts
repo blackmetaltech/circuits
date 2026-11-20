@@ -21,6 +21,7 @@ import { levelDefOf } from './tickets';
 import { liveRig } from './ticket-run';
 import { say } from './text';
 import { danglingEnds, openPins, pinLabel } from './touch';
+import { nameVars } from './names';
 
 export interface Sol { rig: Rig; ckt: Circuit; x: Float64Array; state: number[] }
 export interface UiDeps {
@@ -29,7 +30,7 @@ export interface UiDeps {
   mine: (tk: TicketState, def: LevelDef) => Sol | null;
   regionString: (region: string, key: string) => string;
   /** Failure -> English with the player's own numbers (queries.ts explainedText). */
-  explained?: (f: { key: string; vars: Record<string, string | number> }, tk: TicketState | null, def: LevelDef | undefined) => string;
+  explained?: (f: { key: string; vars: Record<string, string | number> }, tk: TicketState | null, def: LevelDef | undefined, prior?: number) => string;
 }
 
 const unitOf = (d: PartDef): string => (d.kind === 'C' || d.kind === 'CE' ? 'F' : d.kind === 'L' ? 'H' : ['R', 'POT', 'HEATER', 'SPEAKER', 'MOTOR', 'SLIDEWIRE'].includes(d.kind) ? 'Ω' : d.id.startsWith('ideal-vsource') ? 'V' : '');
@@ -193,7 +194,7 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       const events = tk.live.smoked.map((uid) => {
         const f = [...log].reverse().find((x) => x.ticket === tk.id && x.vars.part === uid), pd = tk.board.parts.find((p) => p.uid === uid), d = pd ? getDef(pd.partId) : undefined;
         const kind = !d ? 'smoke' : ['LED', 'D', 'Z', 'SCHOTTKY', 'NPN', 'PNP', 'DARLINGTON', 'NMOS'].includes(d.kind) ? 'crack' : d.kind === 'CE' ? 'vent' : 'smoke';
-        return { part: uid, kind, failureId: f?.id ?? null, key: f?.kind ?? 'smoke.thermal', text: f ? (deps.explained ? deps.explained({ key: f.kind, vars: f.vars }, tk, o.def) : say(f.kind, f.vars)) : '' };
+        return { part: uid, kind, failureId: f?.id ?? null, key: f?.kind ?? 'smoke.thermal', text: f ? (deps.explained ? deps.explained({ key: f.kind, vars: f.vars }, tk, o.def, log.filter((x) => x.ticket === tk.id && x.id < f.id).length + (s.progress.tickets[tk.id]?.attempts ?? 0)) : say(f.kind, nameVars(tk.board, f.vars))) : '' };
       });
       return {
         valid: !!sol, powered: tk.live.powered, paused: tk.live.paused === true, frame: tk.live.frame, t: tk.live.t, status: tk.live.status,

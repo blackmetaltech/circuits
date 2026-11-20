@@ -21,6 +21,7 @@ import { levelDefOf, openTicketIn, refBoard } from './tickets';
 import { benchTicket, evalHint, liveCfg, liveRig, probeOn } from './ticket-run';
 import { refuse, refuseKey, say } from './text';
 import { danglingEnds, padWhat } from './touch';
+import { capFirst, nameVars, partName } from './names';
 
 type Defs = readonly LevelDef[];
 const SANDBOX_PARTS = 80, CAMPAIGN_PARTS = 40;
@@ -106,10 +107,12 @@ function partOf(tk: TicketState, uid: unknown, forEdit: boolean): PlacedPart {
   const id = str(uid, 'uid');
   const p = tk.board.parts.find((x) => x.uid === id);
   if (!p) refuseKey('err.part.none', { uid: id, have: tk.board.parts.map((x) => x.uid).join(', ') || '-' });
-  if (forEdit && p!.fixed) refuseKey('err.part.fixed', { uid: id, name: p!.partId });
+  if (forEdit && p!.fixed) refuseKey('err.part.fixed', nm(tk, id));
   return p!;
 }
 
+/** The player's name for a part, as {what} (mid-sentence) and {What} (sentence start). */
+const nm = (tk: TicketState, uid: string): Record<string, string> => { const what = partName(tk.board, uid); return { what, What: capFirst(what) }; };
 const touch = (tk: TicketState): void => { tk.lastBench = null; };
 const resetLive = (live: TicketState['live']): void => { live.x = []; live.hist = []; live.h = 0; live.be = 0; live.t = 0; live.issues = []; live.scope = { ch1: [], ch2: [], t0: 0, dt: 0 }; };
 
@@ -203,7 +206,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       const part = newPart(s, tk, def, { partId, value, rating, x, y, rot, flip });
       tk.board.parts.push(part); sortParts(tk.board); commit(tk, 'placePart', before);
       const d = getDef(part.partId)!;
-      return ok(say(d.kind === 'CE' ? 'part.placed.polar' : 'part.placed', { uid: part.uid, name: t(d.nameKey) }), { uid: part.uid, value: part.value, variant: part.variant });
+      return ok(say(d.kind === 'CE' ? 'part.placed.polar' : 'part.placed', { ...nm(tk, part.uid), name: t(d.nameKey) }), { uid: part.uid, value: part.value, variant: part.variant });
     },
     movePart: (s, uid: unknown, x: unknown, y: unknown) => {
       const { tk } = open(s, defs), p = partOf(tk, uid, true), before = copyBoard(tk);
@@ -212,7 +215,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       if (spot) refuse(spot);
       p.x = nx; p.y = ny; commit(tk, 'movePart', before);
       const hang = danglingEnds(tk.board).length;
-      return ok(say('part.moved', { uid: p.uid, x: nx, y: ny }) + (hang > 0 ? ' ' + say('part.moved.hanging', { n: hang }) : ''));
+      return ok(say('part.moved', { ...nm(tk, p.uid), x: nx, y: ny }) + (hang > 0 ? ' ' + say('part.moved.hanging', { n: hang }) : ''));
     },
     rotatePart: (s, uid: unknown, flip?: unknown) => {
       const { tk } = open(s, defs), p = partOf(tk, uid, true), before = copyBoard(tk);
@@ -220,10 +223,11 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       const spot = checkPartSpot(tk.board, getDef(p.partId)!, { x: p.x, y: p.y, rot, flip: fl }, p.uid);
       if (spot) refuse(spot);
       p.rot = rot; p.flip = fl; commit(tk, 'rotatePart', before);
-      return ok(say('part.rotated', { uid: p.uid, rot: rot * 90 }));
+      return ok(say('part.rotated', { ...nm(tk, p.uid), rot: rot * 90 }));
     },
     deletePart: (s, uid: unknown) => {
       const { tk } = open(s, defs), p = partOf(tk, uid, true), before = copyBoard(tk);
+      const gone0 = nm(tk, p.uid);
       const legs = new Set(before.parts.filter((x) => x.uid === p.uid).flatMap((x) => { const d = getDef(x.partId); return d ? pinPads(x, d).map((q) => `${q[0]},${q[1]}`) : []; }));
       tk.board.parts = tk.board.parts.filter((x) => x.uid !== p.uid);
       // a wire whose end was held only by this part's leg now hangs in the air: take it off too (undo puts it back)
@@ -232,7 +236,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       tk.board.wires = tk.board.wires.filter((w) => !gone.includes(w.wid));
       tk.live.smoked = tk.live.smoked.filter((u) => u !== p.uid); delete tk.live.temps[p.uid];
       commit(tk, 'deletePart', before);
-      return ok(say(gone.length > 0 ? 'part.deleted.wires' : 'part.deleted', { uid: p.uid, n: gone.length }), { removedWires: gone });
+      return ok(say(gone.length > 0 ? 'part.deleted.wires' : 'part.deleted', { ...gone0, n: gone.length }), { removedWires: gone });
     },
     setValue: (s, uid: unknown, value: unknown) => {
       const { tk, def } = open(s, defs), p = partOf(tk, uid, true), before = copyBoard(tk);
@@ -240,14 +244,14 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       if (!allowed) refuseKey('err.value.none', { name: p.partId });
       const r = snapValue(d, allowed!, value); if (isProblem(r)) refuse(r); else p.value = r.value;
       commit(tk, 'setValue', before);
-      return ok(say('part.valueSet', { uid: p.uid, name: t(d.nameKey) }), { value: p.value });
+      return ok(say('part.valueSet', nm(tk, p.uid)), { value: p.value });
     },
     swapVariant: (s, uid: unknown, rating: unknown) => {
       const { tk, def } = open(s, defs), p = partOf(tk, uid, true), before = copyBoard(tk);
       const { d, entry } = binEntry(s, def, p.partId), variants = allowedVariants(d, entry), r = str(rating, 'rating');
       if (!variants.includes(r)) refuseKey('err.variant.notAllowed', { name: p.partId, rating: r, allowed: variants.join(', ') });
       p.variant = r; commit(tk, 'swapVariant', before);
-      return ok(say('part.swapped', { uid: p.uid, rating: r }));
+      return ok(say('part.swapped', { ...nm(tk, p.uid), rating: r }));
     },
     addWire: (s, path: unknown) => {
       const { tk } = open(s, defs), before = copyBoard(tk);
@@ -436,9 +440,9 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
         const id = (s.progress.failureLog[s.progress.failureLog.length - 1]?.id ?? 0) + 1;
         pushFailure(s.progress, { id, ticket: tk.id, tick: s.tick, kind: ev.key, vars: ev.vars });
         rec.smokes += 1;
-        s.log.push({ tick: s.tick, level: 'bad', text: say(ev.key, ev.vars) });
+        s.log.push({ tick: s.tick, level: 'bad', text: say(ev.key, nameVars(tk.board, ev.vars)) });
       }
-      if (out.events.length > 0) return ok(say('live.smoked', { part: out.events.map((e) => e.part).join(', '), text: say(out.events[0]!.key, out.events[0]!.vars) }), { frames: out.frames, smoked: out.events.map((e) => e.part), status: live.status });
+      if (out.events.length > 0) return ok(say('live.smoked', { part: out.events.map((e) => partName(tk.board, e.part)).join(', '), text: say(out.events[0]!.key, nameVars(tk.board, out.events[0]!.vars)) }), { frames: out.frames, smoked: out.events.map((e) => e.part), status: live.status });
       return ok(say('live.advanced', { n: out.frames, t: sig(live.t, 3) }), { frames: out.frames, smoked: [], status: live.status });
     },
     runBench: (s) => {
@@ -518,9 +522,9 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
     replaceSmoked: (s, uid: unknown) => {
       const { tk } = open(s, defs), id = str(uid, 'uid');
       if (!tk.board.parts.some((p) => p.uid === id)) refuseKey('err.part.none', { uid: id, have: tk.board.parts.map((x) => x.uid).join(', ') || '-' });
-      if (!tk.live.smoked.includes(id)) refuseKey('err.smoked.none', { uid: id });
+      if (!tk.live.smoked.includes(id)) refuseKey('err.smoked.none', nm(tk, id));
       tk.live.smoked = tk.live.smoked.filter((u) => u !== id); delete tk.live.temps[id]; resetLive(tk.live); tk.lastBench = null;
-      return ok(say('part.replaced', { uid: id }));
+      return ok(say('part.replaced', nm(tk, id)));
     },
 
     // ---- boards as data (solution-code actions; the code format itself is M2-3)

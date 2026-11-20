@@ -5,6 +5,7 @@ import { padKey } from '../sim/board/grid';
 import { pinPads } from '../sim/board/footprints';
 import { getDef, occupancy, padText } from './board';
 import { say } from './text';
+import { partName } from './names';
 
 /** How a pin is named to the player: the LED and diode legs by polarity, everything else by its pin name. */
 export function pinLabel(partId: string, pinName: string): string {
@@ -25,7 +26,7 @@ export function padWhat(b: Board, pad: Pad, skipWid?: string): PadWhat {
   if (pin) {
     const p = b.parts.find((x) => x.uid === pin.uid)!, d = getDef(p.partId);
     const name = d ? d.pins[pin.pin]! : String(pin.pin + 1), lab = pinLabel(p.partId, name);
-    return { kind: 'pin', uid: p.uid, pin: name, text: say('touch.pin', { part: p.uid, label: lab, kind: d ? d.kind : '' }) };
+    return { kind: 'pin', uid: p.uid, pin: name, text: say('touch.pin', { part: partName(b, p.uid), label: lab, kind: d ? d.kind : '' }) };
   }
   const cn = occ.connectors.get(k);
   if (cn) return { kind: 'connector', connector: cn, text: say('touch.connector', { connector: cn }) };

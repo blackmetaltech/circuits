@@ -7,7 +7,8 @@ import type { LevelDef } from '../data/levels/types';
 import type { Pad } from '../sim/board/types';
 import { pinPads } from '../sim/board/footprints';
 import { checkRatings, ratingProbes } from '../sim/ratings';
-import { explainFailure, si, sig, type ExplainContext } from '../sim/explain';
+import { explainFailure, si, sig, type ExplainContext, type LedLoop } from '../sim/explain';
+import { nameVars, partNames } from './names';
 import { elementPowers, thermalState } from '../sim/thermal';
 import { SCOPE_SCREEN_POINTS } from '../sim/live';
 import { makeProbe } from '../sim/mna/tran';
@@ -46,9 +47,10 @@ const PREDICT_GRADE: Record<string, string> = { exact: 'bench.predict.exact', cl
 const text = (f: { key: string; vars: Record<string, string | number> }): string => say(f.key, f.vars);
 
 /** Context the explainers need to put the player's own numbers in (resistances, electrolytics, supply and LED figures). */
-function explainCtx(tk: TicketState | null, def: LevelDef | undefined): ExplainContext {
-  const names: Record<string, string> = {}, kinds: Record<string, string> = {};
-  const ctx: ExplainContext = { resistance: {}, electrolytic: [], led: {}, miss: { names, kinds } };
+function explainCtx(tk: TicketState | null, def: LevelDef | undefined, prior = 0): ExplainContext {
+  const kinds: Record<string, string> = {};
+  const names: Record<string, string> = tk ? partNames(tk.board) : {};
+  const ctx: ExplainContext = { resistance: {}, electrolytic: [], led: {}, miss: { names, kinds }, prior };
   if (!tk || !def) return ctx;
   const rig = liveRig(tk, def);
   let vSupply = 0, rSource = 0;
@@ -56,23 +58,24 @@ function explainCtx(tk: TicketState | null, def: LevelDef | undefined): ExplainC
     if (e.kind === 'BAT') { vSupply = Math.max(vSupply, e.p.emf ?? 0); rSource = e.p.r ?? 0; }
     if (e.kind === 'BENCH') vSupply = Math.max(vSupply, e.p.v ?? 0);
   }
+  const resistors = tk.board.parts.filter((p) => getDef(p.partId)?.kind === 'R' && p.value !== null);
+  const rRes = resistors.reduce((a, p) => a + (p.value ?? 0), 0);
+  const rWhat = resistors.length === 1 ? names[resistors[0]!.uid]! : `${resistors.length} resistors`;
+  const nLeds = tk.board.parts.filter((p) => getDef(p.partId)?.kind === 'LED').length;
   for (const p of tk.board.parts) {
     const d = getDef(p.partId); if (!d) continue;
     kinds[p.uid] = d.kind;
-    const same = tk.board.parts.filter((x) => getDef(x.partId)?.kind === d.kind).length > 1;
-    names[p.uid] = d.kind === 'LED' ? say(same ? 'name.led.n' : 'name.led', { uid: p.uid }) : d.kind === 'BAT' ? say('name.battery') : d.kind === 'HEATER' ? say('name.heater')
-      : d.kind === 'R' && p.value !== null ? say('name.resistor', { value: si(p.value, 'Ω') }) : say('name.part', { name: t(d.nameKey), uid: p.uid });
     if (d.kind === 'R' || d.kind === 'HEATER') (ctx.resistance as Record<string, number>)[p.uid] = p.value ?? d.model.R ?? 0;
     if (d.kind === 'CE') (ctx.electrolytic as string[]).push(p.uid);
     if (d.kind === 'LED') {
       const v = d.variants.find((x) => x.id === p.variant) ?? d.variants[0]!, iw = v.ratings.IFwork ?? 0.02, m = d.model;
       const vf = m.N! * 0.025852 * dmath.log(iw / m.Is! + 1) + iw * m.Rs!;
-      (ctx.led as Record<string, { vSupply: number; vForward: number; rSource: number; rLed: number }>)[p.uid] = { vSupply, vForward: vf, rSource, rLed: m.Rs! + (m.N! * 0.025852) / iw };
+      (ctx.led as Record<string, LedLoop>)[p.uid] = { vSupply, vForward: vf, rSource, rLed: m.Rs! + (m.N! * 0.025852) / iw, rRes, rWhat, nLeds, model: { Is: m.Is!, N: m.N!, Rs: m.Rs! }, iRated: v.ratings.IF };
     }
   }
   return ctx;
 }
-export const explainedText = (f: { key: string; vars: Record<string, string | number> }, tk: TicketState | null, def: LevelDef | undefined): string => text(explainFailure(f, explainCtx(tk, def)));
+export const explainedText = (f: { key: string; vars: Record<string, string | number> }, tk: TicketState | null, def: LevelDef | undefined, prior = 0): string => text(explainFailure(f, explainCtx(tk, def, prior)));
 
 /** Current into the part at each node (sum over its elements), from the saved solution. */
 function partPinCurrents(sol: Solution, uid: string): Record<number, number> {
@@ -208,7 +211,7 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
           const P = Math.max(0, rr.power[p.id]?.avg ?? 0), pr = p.ratings.P ?? p.ratings.Pd ?? p.ratings.PD ?? p.ratings.Ptot;
           const finds = rr.findings.filter((f) => f.part === p.id);
           const ratio = pr ? P / pr : finds.reduce((m, f) => Math.max(m, f.limit > 0 ? f.value / f.limit : 0), 0);
-          return { uid: p.id, power: P, rated: pr ?? null, ratio, violations: finds.map((f) => ({ what: f.what, value: f.value, limit: f.limit, key: f.key, text: text({ key: f.key, vars: f.vars }) })) };
+          return { uid: p.id, power: P, rated: pr ?? null, ratio, violations: finds.map((f) => ({ what: f.what, value: f.value, limit: f.limit, key: f.key, text: text({ key: f.key, vars: nameVars(o.tk.board, f.vars) }) })) };
         }),
       };
     },
@@ -261,7 +264,7 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         pay: b.pay ?? 0, payText: b.pay ? formatMinor(b.pay, pack) : '',
         predictions: b.predictions.map((p) => ({ ...p, name: o.def.bench.names[p.id] ? t(o.def.bench.names[p.id]!) : p.id, gradeText: t(PREDICT_GRADE[p.grade] ?? 'bench.predict.miss'), gap: p.truth === 0 ? 0 : sig(((p.entered - p.truth) / Math.abs(p.truth)) * 100, 3) })),
         specs: b.specs.map((x) => ({ ...x, name: t(x.key) })),
-        failures: b.failures.map((f) => ({ key: f.key, vars: f.vars, text: explainedText(f, o.tk, o.def) })),
+        failures: b.failures.map((f) => ({ key: f.key, vars: f.vars, text: explainedText(f, o.tk, o.def, Math.max(0, (s.progress.tickets[o.tk.id]?.attempts ?? 1) - 1) + s.progress.failureLog.filter((x) => x.ticket === o.tk.id).length - b.smoked.length) })).filter((f, i, all) => all.findIndex((g) => g.text === f.text) === i),
       };
     },
     /** An explainer from the failure log (the player's own numbers, DESIGN §7.3); `id` is the failure id. */
@@ -269,10 +272,10 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
       const f = s.progress.failureLog.find((x) => x.id === id);
       if (!f) return null;
       const o = defOf(s), ctxTk = o && o.tk.id === f.ticket ? o : null;
-      const raw = { key: f.kind, vars: f.vars }, up = explainFailure(raw, explainCtx(ctxTk?.tk ?? null, ctxTk?.def));
+      const raw = { key: f.kind, vars: f.vars }, up = explainFailure(raw, explainCtx(ctxTk?.tk ?? null, ctxTk?.def, s.progress.failureLog.filter((x) => x.ticket === f.ticket && x.id < f.id).length));
       return { id: f.id, ticket: f.ticket, tick: f.tick, key: up.key, vars: up.vars, text: text(up) };
     },
-    failureLog: (s) => s.progress.failureLog.map((f) => ({ id: f.id, ticket: f.ticket, tick: f.tick, kind: f.kind, text: say(f.kind, f.vars) })),
+    failureLog: (s) => s.progress.failureLog.map((f) => { const o = defOf(s); return { id: f.id, ticket: f.ticket, tick: f.tick, kind: f.kind, text: say(f.kind, o && o.tk.id === f.ticket ? nameVars(o.tk.board, f.vars) : f.vars) }; }),
     /** The catalogue as the tray shows it: bin parts (default while a ticket is open) or all, with allowed values, variants and prices. */
     parts: (s, binOnly?: unknown) => {
       const o = defOf(s), only = binOnly === undefined ? !!o : binOnly === true, pack = REGIONS.get(s.region);

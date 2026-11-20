@@ -11,7 +11,9 @@ export function fmtVars(v: Vars): Vars {
   for (const [k, x] of Object.entries(v)) o[k] = typeof x === 'number' && Number.isFinite(x) && !Number.isInteger(x) ? sig(x, 3) : x;
   return o;
 }
-export const say = (key: string, vars: Vars = {}): string => t(key, fmtVars(vars));
+const capFirst = (s: string): string => (s === '' ? s : s[0]!.toUpperCase() + s.slice(1));
+/** {Part} (sentence start) always travels with {part}. */
+export const say = (key: string, vars: Vars = {}): string => t(key, fmtVars(typeof vars.part === 'string' && vars.Part === undefined ? { ...vars, Part: capFirst(vars.part) } : vars));
 /** Reject the action with a teaching message. */
 export const refuse = (p: Problem): never => fail(say(p.key, p.vars));
 export const refuseKey = (key: string, vars: Vars = {}): never => fail(say(key, vars));

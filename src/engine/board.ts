@@ -9,6 +9,7 @@ import { padKey, segmentPads } from '../sim/board/grid';
 import { pinPads } from '../sim/board/footprints';
 import { validateWire } from '../sim/board/connectivity';
 import { si } from '../sim/explain';
+import { partName } from './names';
 
 export type Problem = { key: string; vars: Record<string, string | number> };
 export const problem = (key: string, vars: Record<string, string | number> = {}): Problem => ({ key, vars });
@@ -72,7 +73,7 @@ export function checkPartSpot(b: Board, def: PartDef, geo: Pick<PlacedPart, 'x' 
   }
   for (const q of pads) {
     const k = padKey(q), pin = occ.pins.get(k);
-    if (pin) { const other = b.parts.find((x) => x.uid === pin.uid)!; const od = getDef(other.partId); return problem('err.pad.occupied', { pad: padText(q), part: pin.uid, name: od ? od.id : other.partId }); }
+    if (pin) { const other = b.parts.find((x) => x.uid === pin.uid)!; const od = getDef(other.partId); return problem('err.pad.occupied', { pad: padText(q), part: partName(b, pin.uid) }); }
     if (occ.interior.has(k)) return problem('err.pad.underWire', { pad: padText(q), wire: occ.interior.get(k)![0]! });
   }
   return null;
@@ -88,7 +89,7 @@ export function checkWire(b: Board, path: Pad[], skipWid?: string): Problem | nu
   const { ends, interior } = wirePads(path);
   for (const q of interior) {
     const k = padKey(q);
-    if (occ.pins.has(k)) return problem('err.wire.overPin', { pad: padText(q), part: occ.pins.get(k)!.uid });
+    if (occ.pins.has(k)) return problem('err.wire.overPin', { pad: padText(q), part: partName(b, occ.pins.get(k)!.uid) });
     if (occ.connectors.has(k)) return problem('err.wire.overConnector', { pad: padText(q), connector: occ.connectors.get(k)! });
     if (occ.ends.has(k)) return problem('err.wire.overEnd', { pad: padText(q), wire: occ.ends.get(k)![0]! });
   }
