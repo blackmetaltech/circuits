@@ -18,7 +18,7 @@ import { allowedValues, allowedVariants, checkPartSpot, getDef, problem } from '
 import { partPrice } from './metrics';
 import type { NodeState, TicketState } from './state';
 import { isUnlocked, levelDefOf } from './tickets';
-import { liveRig } from './ticket-run';
+import { liveRig, probeOn } from './ticket-run';
 import { say } from './text';
 import { danglingEnds, openPins, pinLabel } from './touch';
 import { capFirst, nameVars, partNames } from './names';
@@ -148,6 +148,21 @@ export function scopeTarget(s: NodeState, tk: TicketState, def: LevelDef, sol: S
   const lo2 = Math.min(lo, hi), hi2 = Math.max(lo, hi);
   const shown = (v: number): number => r4((g.abs ? Math.abs(v) : g.flip ? -v : v) * u.scale);
   const value = sp && sp.value !== null && live ? shown(sp.value) : null;
+  // a null detector says which side of balance it is on: the signed reading and which way to slide the jockey (found by moving the jockey a tenth of a millimetre on a copy of the board)
+  let signed: number | null = null, slide: 'left' | 'right' | 'on' | null = null;
+  if (g.abs && sp && sp.value !== null && live) {
+    signed = r4(sp.value * u.scale);
+    const half = Math.abs(hi2 - lo2) * u.scale / 2 || Infinity;
+    if (Math.abs(signed) <= half) slide = 'on';
+    else {
+      const wire = tk.board.parts.find((p) => p.fixed && getDef(p.partId)?.kind === 'SLIDEWIRE'), probe = spec.kind === 'level' ? spec.probe : '';
+      if (wire && probe) {
+        const base = wire.pos ?? 0.5, alt = base + 0.0001 <= 1 ? base + 0.0001 : base - 0.0001;
+        const i0 = probeOn(tk.board, def, tk)(probe), i1 = probeOn({ ...tk.board, parts: tk.board.parts.map((p) => (p === wire ? { ...p, pos: alt } : p)) }, def, tk)(probe);
+        if (i0 !== null && i1 !== null && i1 !== i0) slide = (-i0 / ((i1 - i0) / (alt - base))) * 1 > 0 ? 'right' : 'left';
+      }
+    }
+  }
   const band = g.abs ? { lo: 0, hi: r4(Math.max(Math.abs(lo2), Math.abs(hi2)) * u.scale) } : { lo: r4(Math.max(0, lo2) * u.scale), hi: r4(Math.min(hi2, 1e6) * u.scale) };
   return {
     target: {
@@ -156,7 +171,7 @@ export function scopeTarget(s: NodeState, tk: TicketState, def: LevelDef, sol: S
       // on the connector's pad OR on any other pad of the same node (a clip on R3's top leg is on A as much as a clip on the brass pad)
       clipped: !!c && (() => { const conn = liveRig(tk, def).conn, want = conn.nodeOfPad(c.pad); return tk.board.probes.some((p) => p.ch === 1 && ((p.pad[0] === c.pad[0] && p.pad[1] === c.pad[1]) || (want >= 0 && conn.nodeOfPad(p.pad) === want))); })(),
     },
-    gauge: { value, unit: u.display, text: value === null ? '' : `${value} ${u.display}`, inBand: value !== null && value >= band.lo && value <= band.hi, v: value === null ? [] : Array.from({ length: 256 }, () => value) },
+    gauge: { value, signed, slide, signedText: signed === null ? '' : `${signed > 0 ? '+' : signed < 0 ? '-' : ''}${Math.abs(signed)} ${u.display}`, slideText: slide === null ? '' : say(`gauge.slide.${slide}`), unit: u.display, text: value === null ? '' : `${value} ${u.display}`, inBand: value !== null && value >= band.lo && value <= band.hi, v: value === null ? [] : Array.from({ length: 256 }, () => value) },
     lock, lockSpecs,
   };
 }
