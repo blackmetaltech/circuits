@@ -221,7 +221,7 @@ func _tin() -> void:
 	var tape := Rect2(c.x - rad * 0.8, c.y + rad * 0.55, rad * 1.6, 36)
 	S.paper(self, tape, -3.0, Color("#e9dfae"))
 	var s := wallet_text if wallet_text != "" else ("%d coins" % wallet if wallet != 1 else "1 coin")
-	S.text(self, S.hand(), s, Vector2(c.x - S.tw(S.hand(), s, 20) * 0.5, c.y + rad * 0.55 + 6), 20, S.INK)
+	S.text(self, S.hand(), s, Vector2(c.x - S.tw(S.hand(), s, 20) * 0.5, tape.position.y + 26), 20, S.INK)
 	if hover == "tin": draw_arc(c, rad + 3, 0, TAU, 40, Color("#ffd98a", 0.8), 3.0)
 
 ## ------------------------------------------------------------------------------------------------------------------ shoebox (the bin)

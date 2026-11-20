@@ -8,5 +8,5 @@ sizes=(1920x1080 1280x800)
 [[ -n ${CB_PHONE:-} ]] && sizes+=(2424x1080)
 for res in $sizes; do
   W=${res%x*}; H=${res#*x}
-  CB_SHOTS=1 CB_NOSAVE=1 CB_UNLOCK=1 CB_SHOT_DIR=$OUT timeout 300 xvfb-run -a -s "-screen 0 ${W}x${H}x24" godot --path $PROJ --rendering-driver opengl3 --resolution $res 2>&1 | grep -E "^shot|ERROR|SCRIPT" 
+  CB_SHOTS=1 CB_NOSAVE=1 CB_UNLOCK=1 CB_SHOT_DIR=$OUT timeout 540 xvfb-run -a -s "-screen 0 ${W}x${H}x24" godot --path $PROJ --rendering-driver opengl3 --resolution $res 2>&1 | grep -E "^shot|^data|ERROR|SCRIPT"
 done

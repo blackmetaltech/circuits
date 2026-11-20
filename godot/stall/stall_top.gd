@@ -55,10 +55,26 @@ func _draw() -> void:
 	if toast_age < 3.5: _toast()
 
 func _cable(c: Dictionary) -> void:
-	var pts := S.cable(self, c.a, c.b, 46.0, c.col, 7.0)
 	var clip: Vector2 = c.b
+	if c.has("via"): _routed(c)   # around the outside of the board, over the top edge, and down to the clip
+	else: S.cable(self, c.a, c.b, 46.0, c.col, 7.0)
 	S.rr(self, Rect2(clip + Vector2(-16, -10), Vector2(32, 20)), 5, Color("#14161a")); S.rr(self, Rect2(clip + Vector2(-13, -8), Vector2(26, 16)), 4, c.col.lightened(0.05))
 	draw_line(clip + Vector2(-16, -4), clip + Vector2(-26, -8), Color("#9aa0a8"), 3.0); draw_line(clip + Vector2(-16, 4), clip + Vector2(-26, 8), Color("#9aa0a8"), 3.0)
+
+## A cable through waypoints with rounded corners (quadratic beziers between the segment midpoints).
+func _routed(c: Dictionary) -> void:
+	var wp: Array = [c.a]; wp.append_array(c.via); wp.append(c.b)
+	var pts := PackedVector2Array([wp[0]])
+	for i in range(1, wp.size() - 1):
+		var p0: Vector2 = (wp[i - 1] as Vector2) if i == 1 else ((wp[i - 1] as Vector2).lerp(wp[i], 0.5))
+		var p2: Vector2 = (wp[i + 1] as Vector2) if i == wp.size() - 2 else ((wp[i] as Vector2).lerp(wp[i + 1], 0.5))
+		for k in range(0, 9):
+			var u := float(k) / 8.0
+			pts.append(p0.lerp(wp[i], u).lerp((wp[i] as Vector2).lerp(p2, u), u))
+	pts.append(wp[wp.size() - 1])
+	draw_polyline(pts.duplicate(), Color(0, 0, 0, 0.35), 9.0, true)
+	draw_polyline(pts.duplicate(), (c.col as Color).darkened(0.35), 8.0, true)
+	draw_polyline(pts, c.col, 7.0, true)
 
 func _scope_lead() -> void:
 	S.cable(self, scope_lead.from, scope_lead.to, 60.0, Color("#2a2d33"), 4.0)

@@ -99,9 +99,10 @@ func _s_hot_resistor() -> void:
 		_w([19, 2], [17, 2]); _w([13, 2], [9, 2]); _w([9, 8], [19, 8])
 	await _wait(0.3); bk.set_power(true)
 	var t0 := Time.get_ticks_msec()
-	while bk.hot_k() < (0.8 if eng else 0.62) and bk.smoked.is_empty() and Time.get_ticks_msec() - t0 < 20000: await _wait(0.1)
+	while bk.hot_k() < (0.8 if eng else 0.62) and bk.smoked.is_empty() and Time.get_ticks_msec() - t0 < 30000: await get_tree().process_frame
+	if eng: bk.set_running(false)   # hold the engine's clock at the glowing moment (the resistor is "hot", not yet smoked)
 	if not eng: bk.thermal_speed = 0.5
-	await _wait(0.25); await _shot("hot_resistor")
+	await _wait(0.35); await _shot("hot_resistor")
 
 func _s_dmm_probing() -> void:
 	var bk = sc.backend
@@ -116,7 +117,7 @@ func _s_dmm_probing() -> void:
 		_w([19, 2], [18, 2]); _w([14, 2], [14, 8]); _w([14, 8], [19, 8])
 		await _wait(0.3); bk.set_power(true)
 		bk.set_probe("red", [19, 2]); bk.set_probe("black", [19, 8]); bk.set_dial("V")
-	await _wait(2.2); await _shot("dmm_probing")
+	await _wait(0.9 if eng else 2.2); await _shot("dmm_probing")
 
 func _s_notebook() -> void:
 	sc.start_ticket("1-1"); _build_torch(0.0); await _wait(0.3)

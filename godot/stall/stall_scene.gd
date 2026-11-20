@@ -127,7 +127,7 @@ func start_ticket(id: String) -> void:
 		top.say("That ticket is still locked: pass the one before it first."); if phase != "bench": go_map()
 		return
 	phase = "bench"; window.dusk = 0.0; window.rain = id == "1-3" or id == "1-4"
-	drag.clear(); rot = 0; locked_at = -1.0; _lock_seq = -1.0
+	drag.clear(); rot = 0; locked_at = -1.0; _lock_seq = -1.0; top.toast_age = 9.0
 	_ticket_view()
 	bubble_until = t + 9.0; top.bubble = str(backend.ticket.ask); top.bubble_alpha = 0.0
 	if not backend.ENGINE: dmm.set_mode("V"); backend.set_dial("V")
@@ -490,7 +490,12 @@ func _sync_views(dt: float) -> void:
 		for c in cn:
 			if c.role in ["supply", "ground"]:
 				var pad := Vector2(c.pad[0], c.pad[1]); var clip := pad_screen(pad) + Vector2(36, 0)
-				top.cables.append({"a": _supply_port("red" if c.role == "supply" else "black"), "b": clip, "col": Color("#c8352a") if c.role == "supply" else Color("#202226")})
+				var lane := 0.0 if c.role == "supply" else 1.0
+				var pt := _supply_port("red" if c.role == "supply" else "black")
+				var gx := board_rect.end.x + 22.0 + (scope.position.x - board_rect.end.x - 60.0) * 0.5 - 14.0 * lane   # the gap between the board and the scope
+				var ty := board_rect.position.y + 10.0 + 12.0 * lane
+				top.cables.append({"a": pt, "b": clip, "col": Color("#c8352a") if c.role == "supply" else Color("#202226"),
+					"via": [Vector2(pt.x, pt.y + 26.0 + 10.0 * lane), Vector2(gx, pt.y + 26.0 + 10.0 * lane), Vector2(gx, ty), Vector2(clip.x, ty)]})
 	top.leads = []
 	for w in ["red", "black"]:
 		var tip := _probe_tip(w)
