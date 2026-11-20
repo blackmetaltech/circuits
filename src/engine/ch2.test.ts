@@ -103,7 +103,7 @@ describe('2-2 Cable Fault', () => {
   /** The metre bridge with a box plug R: balance at l = R L / (R + X) from end A. */
   const wireWith = (e: Engine<NodeState>, r: number) => {
     ok(e, 'placePart', 'res-box', r, 'plug', 3, 5, 0, false); ok(e, 'placePart', 'galvanometer', null, '100ohm', 13, 8, 0, false);
-    for (const w of [[[2, 14], [2, 12]], [[22, 12], [22, 14]], [[3, 5], [2, 5], [2, 12]], [[7, 5], [11, 5]], [[17, 5], [22, 5], [22, 12]], [[11, 5], [11, 8], [13, 8]], [[19, 8], [19, 10], [12, 10]]]) ok(e, 'addWire', w);
+    for (const w of [[[2, 2], [2, 11]], [[22, 11], [22, 2]], [[3, 5], [3, 11], [2, 11]], [[7, 5], [11, 5]], [[17, 5], [20, 5], [20, 11], [22, 11]], [[11, 5], [11, 8], [13, 8]], [[19, 8], [19, 10], [12, 10], [12, 9]]]) ok(e, 'addWire', w);
   };
   it('the ref (R 5 ohm, balance at l = 40.0 cm, X = 7.5 ohm, d = 75.0 m) passes with 2 stars: the needle is on zero and the answer is exact', () => {
     const e = ref(); const b = bench(e);
@@ -124,7 +124,7 @@ describe('2-2 Cable Fault', () => {
   });
   it('a wrongly wired bridge never nulls: the needle deflects one way whatever the jockey does', () => {
     const e = open('2-2', ['1-4', '2-1']); ok(e, 'placePart', 'res-box', 5, 'plug', 3, 5, 0, false); ok(e, 'placePart', 'galvanometer', null, '100ohm', 13, 8, 0, false);
-    for (const w of [[[2, 14], [2, 12]], [[22, 12], [22, 14]], [[3, 5], [2, 5], [2, 12]], [[7, 5], [11, 5]], [[17, 5], [22, 5], [22, 12]], [[11, 5], [11, 8], [13, 8]], [[19, 8], [22, 8], [22, 12]]]) ok(e, 'addWire', w);   // galvanometer from C to end B, not to the jockey
+    for (const w of [[[2, 2], [2, 11]], [[22, 11], [22, 2]], [[3, 5], [3, 11], [2, 11]], [[7, 5], [11, 5]], [[17, 5], [20, 5], [20, 11], [22, 11]], [[11, 5], [11, 8], [13, 8]], [[19, 8], [22, 8], [22, 11]]]) ok(e, 'addWire', w);   // galvanometer from C to end B, not to the jockey
     powerUp(e); const signs = new Set<number>();
     for (let mm = 0; mm <= 1000; mm += 50) { ok(e, 'setJockey', 'f3', mm); ok(e, 'advance', 1); const u = galvo(e).uA; expect(Math.abs(u), `at ${mm} mm`).toBeGreaterThan(10); signs.add(Math.sign(u)); }
     expect(signs.size).toBe(1); ok(e, 'predict', 'dist', 75); const b = bench(e); expect(b.pass).toBe(false); expect(spec(b, 'ig').pass).toBe(false); expect(texts(b)).toMatch(/wired wrongly/);
@@ -155,15 +155,15 @@ describe('2-2 Cable Fault', () => {
     const e = open('2-2', ['1-4', '2-1']); const act = () => q(e, 'coach').active;
     expect(act()).toBe('galvo'); ok(e, 'placePart', 'galvanometer', null, '100ohm', 13, 8, 0, false); expect(act()).toBe('box');
     ok(e, 'placePart', 'res-box', 5, 'plug', 3, 5, 0, false); expect(act()).toBe('wire'); expect(q(e, 'coach').anchor).toMatchObject({ target: 'part', partId: 'cable-loop', pad: [11, 5] });
-    for (const w of [[[2, 14], [2, 12]], [[3, 5], [2, 5], [2, 12]], [[7, 5], [11, 5]], [[17, 5], [22, 5], [22, 12]], [[11, 5], [11, 8], [13, 8]], [[19, 8], [19, 10], [12, 10]]]) ok(e, 'addWire', w);
-    expect(act()).toBe('ground'); ok(e, 'addWire', [[22, 12], [22, 14]]); expect(act()).toBe('power');
+    for (const w of [[[2, 2], [2, 11]], [[3, 5], [3, 11], [2, 11]], [[7, 5], [11, 5]], [[17, 5], [20, 5], [20, 11], [22, 11]], [[11, 5], [11, 8], [13, 8]], [[19, 8], [19, 10], [12, 10], [12, 9]]]) ok(e, 'addWire', w);
+    expect(act()).toBe('ground'); ok(e, 'addWire', [[22, 11], [22, 2]]); expect(act()).toBe('power');
     ok(e, 'power', true); expect(act()).toBe('null'); expect(q(e, 'coach').anchor.target).toBe('jockey');
     ok(e, 'setJockey', 'f3', 400); expect(act()).toBe('answer'); ok(e, 'predict', 'dist', 75); expect(act()).toBe('run-bench');
     ok(e, 'runBench'); expect(act()).toBe('done'); expect(q(e, 'coach').text).toMatch(/Foreman Dunn/);
   });
   it('the slide wire is a fixed part with the jockey terminal on its own pad; the jockey moves in 0.1 mm steps between 0 and 1000 mm', () => {
     const e = open('2-2', ['1-4', '2-1']); const w = q(e, 'bench').parts.find((p: any) => p.partId === 'slidewire-m');
-    expect(w).toMatchObject({ fixed: true, kind: 'SLIDEWIRE', pos: null, pins: [{ name: 'A', pad: [2, 12] }, { name: 'J', pad: [12, 10] }, { name: 'B', pad: [22, 12] }] });
+    expect(w).toMatchObject({ fixed: true, kind: 'SLIDEWIRE', pos: null, pins: [{ name: 'A', pad: [2, 11] }, { name: 'J', pad: [12, 9] }, { name: 'B', pad: [22, 11] }] });
     ok(e, 'setJockey', 'f3', 333.33); expect(q(e, 'bench').parts.find((p: any) => p.uid === 'f3').pos).toBeCloseTo(0.3333, 9); expect(bad(e, 'setJockey', 'f3', 1200)).toMatch(/0 to 1000 mm/);
     expect(bad(e, 'deletePart', 'f3')).toMatch(/part of the ticket/);
   });
@@ -178,42 +178,42 @@ describe('2-3 Black Box', () => {
     wires.push([[x - 6 + 4, 2], [14, 2]]); void wires; supply(e, v); return x;
   };
   it('the ref (8.00 V + 1.1 kohm + 33 ohm = 1133 ohm) passes all four loads with 2 stars; the worst error is 0.3 %', () => {
-    const e = open('2-3', ['1-4', '2-1']); runRef(e, '2-3'); ok(e, 'dmmLead', 'red', [20, 12]); ok(e, 'dmmLead', 'black', [14, 8]);
+    const e = open('2-3', ['1-4', '2-1']); runRef(e, '2-3'); ok(e, 'dmmLead', 'red', [2, 12]); ok(e, 'dmmLead', 'black', [14, 8]);
     const b = bench(e); expect(b.pass).toBe(true); expect(b.stars).toBe(2); expect(b.metrics.parts).toBe(2); expect(spec(b, 'match').margin).toBeGreaterThan(0.01);   // volts: 2 % of 0.647 V less the 0.3 % gap
     expect(b.pay).toBe(700 + 2 * 200);
   });
   it('the sealed box: open-circuit 8.000 V and short-circuit 7.04 mA on the meter (Voc / Isc = 1136.7 + the meter\'s 0.1 ohm)', () => {
     const e = open('2-3', ['1-4', '2-1']); powerUp(e);
-    ok(e, 'dmmLead', 'red', [20, 12]); ok(e, 'dmmLead', 'black', [14, 8]); expect(q(e, 'dmm')).toMatchObject({ mode: 'dcv', valid: true }); expect(q(e, 'dmm').value).toBeCloseTo(8.0, 3);
+    ok(e, 'dmmLead', 'red', [2, 12]); ok(e, 'dmmLead', 'black', [14, 8]); expect(q(e, 'dmm')).toMatchObject({ mode: 'dcv', valid: true }); expect(q(e, 'dmm').value).toBeCloseTo(8.0, 3);
     ok(e, 'dmmDial', 'dca'); ok(e, 'advance', 1); expect(q(e, 'dmm').display).toMatchObject({ unit: 'mA' }); expect(q(e, 'dmm').display.value).toBeCloseTo(7.0375, 3);
     const rth = 8.0 / (q(e, 'dmm').value as number); expect(rth).toBeGreaterThan(1130); expect(rth).toBeLessThan(1140);
   });
   it('matching only the open-circuit voltage passes "open" and fails the loaded tests: 8.00 V straight to OUT gives 7.27 V where the box gives 0.647 V at 100 ohm', () => {
     const e = open('2-3', ['1-4', '2-1']); ok(e, 'placePart', 'res-cf', 10, '0.25W', 4, 2, 0, false); ok(e, 'addWire', [[2, 2], [4, 2]]); ok(e, 'addWire', [[8, 2], [14, 2]]); supply(e, 8);
-    ok(e, 'dmmLead', 'red', [20, 12]); ok(e, 'dmmLead', 'black', [14, 8]); const b = bench(e);
+    ok(e, 'dmmLead', 'red', [2, 12]); ok(e, 'dmmLead', 'black', [14, 8]); const b = bench(e);
     expect(b.pass).toBe(false); const conds = b.failures.map((f: any) => f.vars.cond); expect(conds).toEqual(expect.arrayContaining(['100 ohm load', '1 kilohm load', '10 kilohm load'])); expect(conds).not.toContain('open circuit');
     expect(b.failures[0].text).toMatch(/100 ohm load on OUT your replacement gave 7\.27 V, the sealed box 0\.647 V/); expect(b.failures[0].text).toMatch(/series resistance is too small/);
   });
   it('too much series resistance sags too far and the text says so; the wrong supply voltage fails "open" first', () => {
-    const e = open('2-3', ['1-4', '2-1']); runRef(e, '2-3'); ok(e, 'setValue', 'p1', 2200); ok(e, 'dmmLead', 'red', [20, 12]); ok(e, 'dmmLead', 'black', [14, 8]);
+    const e = open('2-3', ['1-4', '2-1']); runRef(e, '2-3'); ok(e, 'setValue', 'p1', 2200); ok(e, 'dmmLead', 'red', [2, 12]); ok(e, 'dmmLead', 'black', [14, 8]);
     const b = bench(e); expect(b.pass).toBe(false); expect(texts(b)).toMatch(/sags more under load/); expect(texts(b)).toMatch(/series resistance is too big/);
-    const f = open('2-3', ['1-4', '2-1']); runRef(f, '2-3'); supply(f, 6); ok(f, 'dmmLead', 'red', [20, 12]); ok(f, 'dmmLead', 'black', [14, 8]);
+    const f = open('2-3', ['1-4', '2-1']); runRef(f, '2-3'); supply(f, 6); ok(f, 'dmmLead', 'red', [2, 12]); ok(f, 'dmmLead', 'black', [14, 8]);
     const c = bench(f); expect(c.failures.some((x: any) => x.vars.cond === 'open circuit')).toBe(true); expect(texts(c)).toMatch(/Set the bench supply to the open-circuit voltage/);
   });
   it('one part is enough (7.90 V + 1.1 kohm: worst error 1.8 %), so the reference is not the minimum: the parts par is 2', () => {
     const e = open('2-3', ['1-4', '2-1']); ok(e, 'placePart', 'res-cf', 1100, '0.25W', 4, 2, 0, false); ok(e, 'addWire', [[2, 2], [4, 2]]); ok(e, 'addWire', [[8, 2], [14, 2]]); supply(e, 7.9);
-    ok(e, 'dmmLead', 'red', [20, 12]); ok(e, 'dmmLead', 'black', [14, 8]); const b = bench(e); expect(b.pass).toBe(true); expect(b.metrics.parts).toBe(1); expect(b.stars).toBe(2);
+    ok(e, 'dmmLead', 'red', [2, 12]); ok(e, 'dmmLead', 'black', [14, 8]); const b = bench(e); expect(b.pass).toBe(true); expect(b.metrics.parts).toBe(1); expect(b.stars).toBe(2);
   });
   it('the bench will not run until the meter has been on the box (measure it first), and the trimmer is a value from a list of ten', () => {
     const e = open('2-3', ['1-4', '2-1']); runRef(e, '2-3'); const r = e.act('runBench', [true]); expect(r.ok).toBe(false); expect(r.message).toMatch(/Measure the sealed box first/);
-    ok(e, 'dmmLead', 'red', [20, 12]); ok(e, 'dmmLead', 'black', [14, 8]); expect(e.act('runBench', [true]).ok).toBe(true);
+    ok(e, 'dmmLead', 'red', [2, 12]); ok(e, 'dmmLead', 'black', [14, 8]); expect(e.act('runBench', [true]).ok).toBe(true);
     const tri = q(e, 'ticketCard').shoebox.find((f: any) => f.partId === 'trimmer'); expect(tri.values).toEqual([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]); expect(tri.max).toBe(1);
     const res = q(e, 'ticketCard').shoebox.find((f: any) => f.partId === 'res-cf'); expect(res.values).toContain(1100); expect(res.values).toContain(33); expect(res.values[0]).toBe(10);
   });
   it('the box hides its numbers: the bench and the card show no EMF or resistance, the Learner box has no rating to read, and the coach walks measure, supply, build, wire, bench', () => {
     const e = open('2-3', ['1-4', '2-1']); const dump = JSON.stringify([q(e, 'bench'), q(e, 'ticketCard')]); expect(dump).not.toMatch(/1136|8\.000|"emf"/);
     const act = () => q(e, 'coach').active; expect(act()).toBe('power'); ok(e, 'power', true); expect(act()).toBe('voc'); expect(q(e, 'coach').anchor.target).toBe('dmm');
-    ok(e, 'dmmLead', 'red', [20, 12]); ok(e, 'dmmLead', 'black', [14, 8]); expect(act()).toBe('supply'); expect(q(e, 'coach').anchor.target).toBe('supplyv'); expect(q(e, 'coach').text).toMatch(/Optional: turn the dial to mA/);
+    ok(e, 'dmmLead', 'red', [2, 12]); ok(e, 'dmmLead', 'black', [14, 8]); expect(act()).toBe('supply'); expect(q(e, 'coach').anchor.target).toBe('supplyv'); expect(q(e, 'coach').text).toMatch(/Optional: Turn the dial to mA/);
     supply(e, 8); expect(act()).toBe('place'); runRef(e, '2-3'); expect(act()).toBe('run-bench'); ok(e, 'runBench'); expect(act()).toBe('done'); expect(q(e, 'coach').text).toMatch(/Tomo/);
   });
   it('Engineer seeds the box (4-12 V behind 300-3000 ohm) and the supply moves in 10 mV steps', () => {
@@ -226,8 +226,8 @@ describe('2-3 Black Box', () => {
 describe('2-4 EB: Slide-wire Potentiometer', () => {
   const build = (rh: number, jock = 750) => {
     const e = open('2-4', ['1-4', '2-1', '2-2']);
-    ok(e, 'placePart', 'rheostat', rh, 'ideal', 6, 14, 0, false); ok(e, 'placePart', 'galvanometer', null, '100ohm', 12, 7, 0, false);
-    for (const w of [[[16, 14], [10, 14]], [[6, 14], [2, 14], [2, 12]], [[22, 12], [22, 14]], [[4, 5], [2, 5], [2, 12]], [[10, 5], [10, 7], [12, 7]], [[18, 7], [18, 10], [12, 10]]]) ok(e, 'addWire', w);
+    ok(e, 'placePart', 'rheostat', rh, 'ideal', 6, 2, 0, false); ok(e, 'placePart', 'galvanometer', null, '100ohm', 12, 7, 0, false);
+    for (const w of [[[16, 2], [10, 2]], [[6, 2], [2, 2], [2, 11]], [[22, 11], [22, 2]], [[4, 5], [3, 5], [3, 11], [2, 11]], [[10, 5], [10, 7], [12, 7]], [[18, 7], [18, 10], [12, 10], [12, 9]]]) ok(e, 'addWire', w);
     ok(e, 'setJockey', 'f3', jock); return e;
   };
   const predict = (e: Engine<NodeState>, g = 0.02, emf = 1.5, r = 0.5) => { ok(e, 'predict', 'pgrad', g); ok(e, 'predict', 'pemf', emf); ok(e, 'predict', 'pr', r); };
@@ -257,8 +257,8 @@ describe('2-4 EB: Slide-wire Potentiometer', () => {
   it('the test cell on the wrong end fails the balance, and a missing prediction refuses the bench', () => {
     const e = open('2-4', ['1-4', '2-1', '2-2']); runRef(e, '2-4'); const s2 = st(e).ticket!; s2.predictions = {};
     const b = bench(e); expect(b.pass).toBe(false); expect(b.failures.map((f: any) => f.key)).toContain('bench.predict.missing'); expect(texts(b)).toMatch(/not entered a prediction|have not entered/i);
-    const w = open('2-4', ['1-4', '2-1', '2-2']); ok(w, 'placePart', 'rheostat', 10, 'ideal', 6, 14, 0, false); ok(w, 'placePart', 'galvanometer', null, '100ohm', 12, 7, 0, false);
-    for (const p of [[[16, 14], [10, 14]], [[6, 14], [2, 14], [2, 12]], [[22, 12], [22, 14]], [[4, 5], [4, 9], [22, 9], [22, 12]], [[10, 5], [10, 7], [12, 7]], [[18, 7], [18, 10], [12, 10]]]) { const r = w.act('addWire', [p]); if (!r.ok) throw new Error(r.message); }
+    const w = open('2-4', ['1-4', '2-1', '2-2']); ok(w, 'placePart', 'rheostat', 10, 'ideal', 6, 2, 0, false); ok(w, 'placePart', 'galvanometer', null, '100ohm', 12, 7, 0, false);
+    for (const p of [[[16, 2], [10, 2]], [[6, 2], [2, 2], [2, 11]], [[22, 11], [22, 2]], [[4, 5], [4, 8], [22, 8], [22, 11]], [[10, 5], [10, 7], [12, 7]], [[18, 7], [18, 10], [12, 10], [12, 9]]]) { const r = w.act('addWire', [p]); if (!r.ok) throw new Error(r.message); }
     predict(w); ok(w, 'setJockey', 'f3', 750); expect(bench(w).pass).toBe(false);
   });
   it('a prediction off by more than 5 % still passes the build with ONE star: the gradient written as 2 V per cm', () => {

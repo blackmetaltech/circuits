@@ -190,7 +190,7 @@ func _map(a: float) -> void:
 	var note := "Wren left me the stall, a scope, a shoebox and this notebook. Customers come to the counter with something dead. Fix it, don't burn it.\n\nPin a ticket, build, power on, and watch the band."
 	if map_chapter == 2: note = map_blurb + "\n\nA voltage divider is only as good as what hangs on it. A bridge asks nothing of the cable but a balance. Measure first, then build."
 	S.text(self, f, note, lp + Vector2(0, 124), 24, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, half - 130)
-	var dc := r.position + Vector2(half * 0.5, r.size.y - 190)
+	var dc := r.position + Vector2(half * 0.5 + 170.0, r.size.y - 190)
 	if map_chapter == 2: _doodle_divider(dc)
 	else: _doodle_led(dc)
 	S.text(self, f, ("in the tin:  %s" % wallet_text) if wallet_text != "" else ("coins in the tin:  %d" % wallet), r.position + Vector2(56, r.size.y - 60), 28, S.INK)
@@ -362,7 +362,7 @@ func _predict(a: float) -> void:
 	# the problem, as printed on the exam card: its words, and (right) its figure
 	S.text(self, f, str(coach_ticket.get("brief", "")), q.position + Vector2(36, 106), 19, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, col_w)
 	if wide:
-		var fr := Rect2(q.position.x + q.size.x * 0.52, q.position.y + 96, q.size.x * 0.44, q.size.y - 262.0)
+		var fr := Rect2(q.position.x + q.size.x * 0.52, q.position.y + 96, q.size.x * 0.44, q.size.y - (296.0 if S.handheld else 262.0))   # (a handheld's 16 px marking text needs one more line)
 		S.rr_line(self, fr, 6, Color(S.INK, 0.35), 2.0)
 		S.text(self, f, "Fig. 1", fr.position + Vector2(10, 22), 16, Color(S.INK, 0.6))
 		var pot := str(fig.get("kind", "node")) == "pot"
@@ -371,6 +371,10 @@ func _predict(a: float) -> void:
 		if star_rule != "": S.text(self, f, "Marking: " + star_rule, Vector2(fr.position.x, fr.end.y + 24), 15, Color(S.INK_RED, 0.9), HORIZONTAL_ALIGNMENT_LEFT, fr.size.x)
 	var brief_h := S.wrapped_h(f, str(coach_ticket.get("brief", "")), 19, col_w)
 	var y := maxf(q.position.y + (q.size.y * 0.5 - 40.0 if wide else 200.0), q.position.y + 106.0 + brief_h + 30.0)   # the first question starts under however long the problem is
+	var need := 0.0
+	for pf0 in pred_fields: need += S.wrapped_h(f, str(pf0.name), 19, col_w) + 78.0
+	var gap_k := clampf((q.end.y - (44.0 if wide else 96.0) - y) / maxf(need, 1.0), 0.72, 1.0)   # a handheld's bigger text leaves less room: squeeze the rows a little so the buttons never sit on the last question
+	if gap_k < 1.0: y = maxf(q.position.y + 106.0 + brief_h + 22.0, y - (1.0 - gap_k) * 60.0)
 	for i in pred_fields.size():
 		var pf: Dictionary = pred_fields[i]
 		S.text(self, f, str(pf.name), Vector2(q.position.x + 36, y), 19, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, col_w)
@@ -387,11 +391,12 @@ func _predict(a: float) -> void:
 		if cur and fmod(t, 1.0) < 0.6: draw_rect(Rect2(box.position.x + 16 + S.tw(S.mono(), txt, 30), box.position.y + 10, 3, 30), S.INK, true)
 		S.text(self, f, str(pf.unit), box.position + Vector2(box.size.x + 12, 36), 28, S.INK)
 		if pf.get("done", false): S.text(self, f, "recorded", box.position + Vector2(box.size.x + 52, 36), 18, S.INK_RED)
-		y += lh + 78.0
-	var ok_r := Rect2(q.position.x + 36, q.end.y - 78, 200, 50)
+		y += (lh + 78.0) * gap_k
+	var bx0 := q.position.x + (q.size.x * 0.52 if wide else 36.0)   # a wide slip keeps its buttons under the figure, so the questions can use the whole left column
+	var ok_r := Rect2(bx0, q.end.y - 78, 200, 50)
 	var oh := _btn(Rect2(r.get_center() + ok_r.position, ok_r.size), "pred_submit")
 	S.rr(self, ok_r, 25, S.INK if oh else Color(S.INK, 0.85)); S.text(self, f, "lock in", ok_r.position + Vector2(46, 36), 30, S.PAPER)
-	var cl := Rect2(q.position.x + 262, q.end.y - 78, 150, 50)
+	var cl := Rect2(bx0 + 226.0, q.end.y - 78, 150, 50)
 	var ch := _btn(Rect2(r.get_center() + cl.position, cl.size), "pred_close")
 	S.rr_line(self, cl, 25, Color(S.INK, 0.7 if ch else 0.4), 2.0); S.text(self, f, "later", cl.position + Vector2(44, 36), 26, S.INK)
 	var hint := "type digits (+/- flips the sign), Tab switches line, Enter locks in.  \"later\" keeps the slip on the bench."

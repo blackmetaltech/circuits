@@ -37,9 +37,9 @@ func port(which: String) -> Vector2:
 	if kind == "bench": return Vector2(60, 18) if which == "red" else Vector2(120, 18)
 	return Vector2(52, 20) if which == "red" else Vector2(104, 20)
 
-const V_MINUS := Rect2(24, 112, 64, 46)
-const V_STEP := Rect2(96, 112, 100, 46)
-const V_PLUS := Rect2(204, 112, 64, 46)
+const V_MINUS := Rect2(24, 112, 62, 46)
+const V_STEP := Rect2(92, 112, 116, 46)
+const V_PLUS := Rect2(214, 112, 62, 46)
 ## The voltage keys of an adjustable bench supply: "v-" | "v+" | "vstep" | "" (a generous 8 design px around each, so a finger finds them).
 func hit_vadj(p: Vector2) -> String:
 	if kind != "bench" or not adjustable: return ""
@@ -167,8 +167,9 @@ func _bench_adjustable(_rr: Rect2) -> void:
 		S.rr(self, rc, 8, Color("#1b1d21")); S.rr(self, rc.grow(-3), 6, Color("#2c2f35"))
 		S.text(self, S.mono(), str(k[1]), rc.position + Vector2(rc.size.x * 0.5 - 10, rc.size.y * 0.5 + 13), 40, Color("#ffd98a"))
 	S.rr(self, V_STEP, 8, Color("#1b1d21")); S.rr(self, V_STEP.grow(-3), 6, Color("#2c2f35"))
-	var st := "step %s V" % EngineBench._g(STEPS[clampi(step_i, 0, 2)])
-	S.text(self, S.hand(), st, V_STEP.position + Vector2(V_STEP.size.x * 0.5 - S.tw(S.hand(), st, 18) * 0.5, 30), 18, Color("#d8d4c4"))
+	var st := "\u00b1%s V" % EngineBench._g(STEPS[clampi(step_i, 0, 2)])
+	var sf := maxi(24, int(ceilf(float(S.min_font) / 0.8)))   # the supply is drawn at 0.8: a handheld still gets 16 screen px
+	S.text(self, S.mono(), st, V_STEP.position + Vector2(V_STEP.size.x * 0.5 - S.tw(S.mono(), st, sf) * 0.5, V_STEP.size.y * 0.5 + sf * 0.33), sf, Color("#d8d4c4"))
 	for c in [Vector2(14, 20), Vector2(386, 20)]: S.screw(self, c, 5.0, c.x * 0.1)
 	for i in 2:
 		var c := Vector2(60 + i * 60, 28); var col := Color("#b2261c") if i == 0 else Color("#1a1a1c")

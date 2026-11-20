@@ -463,7 +463,7 @@ func _scene_part(p: Dictionary) -> Dictionary:
 	return {"uid": str(p.uid), "partId": pid, "value": p.get("value", null), "label": label, "tag": tag, "kind": kind, "x": int(p.x), "y": int(p.y), "rot": int(p.rot),
 		"flip": bool(p.get("flip", false)), "fixed": bool(p.get("fixed", false)), "variant": variant, "pins": pins, "pin_labels": pin_labels, "smoked": bool(p.get("smoked", false)), "name": str(p.get("name", "")),
 		"pos": p.get("pos", null), "pos_text": ("%.2f cm" % (float(p.pos) * 100.0)) if kind == "SLIDE" and p.get("pos", null) != null else ("50.00 cm" if kind == "SLIDE" else ""),
-		"step_text": "step %s mm" % _g(jockey_step_mm()) if kind == "SLIDE" else ""}
+		"step_text": "\u00b1%s mm" % _g(jockey_step_mm()) if kind == "SLIDE" else ""}
 
 func _multi_rating(pid: String) -> bool:
 	for fam in card.get("shoebox", []): if str(fam.partId) == pid and (fam.variants as Array).size() > 1: return true
@@ -716,11 +716,11 @@ const REFS := {
 const REFS_CH2 := {
 	"2-1": {"parts": [["res-cf", 15000, "0.25W", 4, 2, 0], ["res-cf", 82000, "0.25W", 8, 4, 1]], "wires": [[[2, 2], [4, 2]], [[8, 2], [14, 2]], [[8, 4], [8, 2]], [[8, 8], [14, 8]]], "clip": [14, 2]},
 	"2-2": {"parts": [["res-box", 5, "plug", 3, 5, 0], ["galvanometer", null, "100ohm", 13, 8, 0]],
-		"wires": [[[2, 14], [2, 12]], [[22, 12], [22, 14]], [[3, 5], [2, 5], [2, 12]], [[7, 5], [11, 5]], [[17, 5], [22, 5], [22, 12]], [[11, 5], [11, 8], [13, 8]], [[19, 8], [19, 10], [12, 10]]],
+		"wires": [[[2, 2], [2, 11]], [[22, 11], [22, 2]], [[3, 5], [3, 11], [2, 11]], [[7, 5], [11, 5]], [[17, 5], [20, 5], [20, 11], [22, 11]], [[11, 5], [11, 8], [13, 8]], [[19, 8], [19, 10], [12, 10], [12, 9]]],
 		"jockey": 400.0, "pred": {"dist": 75.0}},
-	"2-3": {"parts": [["res-cf", 1100, "0.25W", 4, 2, 0], ["res-cf", 33, "0.25W", 9, 2, 0]], "wires": [[[2, 2], [4, 2]], [[8, 2], [9, 2]], [[13, 2], [14, 2]]], "supply": 8.0, "leads": [[20, 12], [14, 8]]},
-	"2-4": {"parts": [["rheostat", 10, "ideal", 6, 14, 0], ["galvanometer", null, "100ohm", 12, 7, 0]],
-		"wires": [[[16, 14], [10, 14]], [[6, 14], [2, 14], [2, 12]], [[22, 12], [22, 14]], [[4, 5], [2, 5], [2, 12]], [[10, 5], [10, 7], [12, 7]], [[18, 7], [18, 10], [12, 10]]],
+	"2-3": {"parts": [["res-cf", 1100, "0.25W", 4, 2, 0], ["res-cf", 33, "0.25W", 9, 2, 0]], "wires": [[[2, 2], [4, 2]], [[8, 2], [9, 2]], [[13, 2], [14, 2]]], "supply": 8.0, "leads": [[2, 12], [14, 8]]},
+	"2-4": {"parts": [["rheostat", 10, "ideal", 6, 2, 0], ["galvanometer", null, "100ohm", 12, 7, 0]],
+		"wires": [[[16, 2], [10, 2]], [[6, 2], [2, 2], [2, 11]], [[22, 11], [22, 2]], [[4, 5], [3, 5], [3, 11], [2, 11]], [[10, 5], [10, 7], [12, 7]], [[18, 7], [18, 10], [12, 10], [12, 9]]],
 		"jockey": 750.0, "pred": {"pgrad": 0.02, "pemf": 1.5, "pr": 0.5}},
 }
 

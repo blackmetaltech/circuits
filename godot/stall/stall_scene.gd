@@ -117,7 +117,9 @@ func _screen_env() -> void:   # CB_SCREEN=title|map|bench ; CB_TICKET=1-3 (QA ho
 			if OS.get_environment("CB_REF") == "1" and backend.ENGINE:   # QA hook: the ticket's reference design is already built (and its predictions entered)
 				backend.build_ref(str(backend.ticket.id)); pages.show_page(""); _lay_key = ""
 				if OS.get_environment("CB_POWER") == "1": backend.set_power(true)
-		"map": go_map()
+		"map":
+			if OS.get_environment("CB_CHAPTER") != "": map_chapter = int(OS.get_environment("CB_CHAPTER"))
+			go_map()
 		"notebook": start_ticket(tk if tk != "" else "1-1"); pages.show_page("notebook")
 		"settings": pages.show_page("settings")
 		_: go_title()

@@ -138,7 +138,7 @@ static func _norm_part(p: Dictionary) -> Dictionary:
 		for a in pins: local_pins.append(a - Vector2(x, y))
 	var val = p.get("value", null)
 	var label := str(p.get("label", ""))
-	if label == "":
+	if label == "" and not p.has("label"):
 		if val != null: label = format_value(float(val), kind)
 		elif BAT_LABEL.has(pid): label = BAT_LABEL[pid]
 		else: label = pid.to_upper()

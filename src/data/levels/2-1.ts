@@ -21,7 +21,7 @@ export const L2_1: LevelDef = {
   },
   fixed: [{ uid: 'f1', partId: 'adc-in', value: null, variant: '10k', x: 14, y: 2, rot: 1, flip: false, fixed: true }],
   supplies: [{ id: 'psu', kind: 'bench', plus: 'IN', minus: 'GND' }],
-  instruments: { supply: { v: 9, ilim: 0.5 }, scope: { timePerDiv: 1e-3, voltsPerDiv: [1, 1] } },
+  instruments: { supply: { v: 9, ilim: 0.5 }, scope: { timePerDiv: 1e-3, voltsPerDiv: [0.8, 1] } },
   bin: [{ partId: 'res-cf', values: eseries('E12', 1e3, 1e5), variants: ['0.25W'] }],
   constraints: { maxParts: 4 },
   bench: {

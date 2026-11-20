@@ -4,6 +4,7 @@ extends RefCounted
 ## slide wire with its jockey, the sealed module, a resistance-box plug, the rheostat and the trimmer. Same contract as PartArt: local frame, origin = pin 1's pad,
 ## pitch `p` px per pad; `sh` = draw the drop shadow silhouette only. Nothing here computes a number: the needle, the jockey position and its reading come from the engine.
 
+const SS = preload("res://stall/stall_style.gd")
 const SILVER := Color(0.78, 0.8, 0.84)
 const SHADOW := Color(0, 0, 0, 0.38)
 
@@ -35,7 +36,7 @@ static func adc_chip(ci: CanvasItem, lp: Array, p: float, sh: bool) -> void:
 ## 2-2: the cable under the lane as a reel: coils of black cable on an orange drum, the two ends coming out to the legs.
 static func cable_reel(ci: CanvasItem, lp: Array, p: float, sh: bool) -> void:
 	var a: Vector2 = lp[0] * p; var b: Vector2 = lp[1] * p; var mid := (a + b) * 0.5
-	var rad := (b - a).length() * 0.36
+	var rad := (b - a).length() * 0.25
 	var inward: Vector2 = ((b - a) * 0.5).normalized()
 	PartArt._leads(ci, [lp[0], lp[1]], p, [lp[0] + inward * 1.1, lp[1] - inward * 1.1])
 	ci.draw_circle(mid, rad, _c(Color(0.95, 0.5, 0.12), sh))
@@ -67,11 +68,11 @@ static func dry_cell(ci: CanvasItem, lp: Array, p: float, sh: bool) -> void:
 static func galvo(ci: CanvasItem, lp: Array, p: float, sh: bool, needle: float) -> void:
 	var a: Vector2 = lp[0] * p; var b: Vector2 = lp[1] * p; var mid := (a + b) * 0.5
 	PartArt._leads(ci, lp, p, [lp[0] + Vector2(0.8, 0), lp[1] - Vector2(0.8, 0)])
-	var cs := Rect2(a.x + p * 0.7, -p * 1.7, (b.x - a.x) - p * 1.4, p * 3.3)
+	var cs := Rect2(a.x + p * 0.7, -p * 1.45, (b.x - a.x) - p * 1.4, p * 2.9)
 	PartArt.rrect(ci, cs, p * 0.3, _c(Color("#2d4036"), sh))
 	if sh: return
 	PartArt.rrect(ci, cs.grow(-p * 0.1), p * 0.24, Color("#3b5547"))
-	var c := Vector2(mid.x, cs.position.y + p * 1.35); var rd := minf(cs.size.x * 0.44, p * 1.25)
+	var c := Vector2(mid.x, cs.position.y + p * 1.2); var rd := minf(cs.size.x * 0.44, p * 1.1)
 	ci.draw_circle(c, rd + p * 0.14, Color("#c5a24f")); ci.draw_circle(c, rd, Color("#f3ecd2"))
 	var fs := int(clampf(p * 0.3, 8.0, 15.0))
 	for k in range(-5, 6):
@@ -88,7 +89,7 @@ static func galvo(ci: CanvasItem, lp: Array, p: float, sh: bool, needle: float) 
 	ci.draw_circle(pv, p * 0.13, Color(0.15, 0.15, 0.17))
 	ci.draw_arc(c, rd, PI * 1.1, PI * 1.5, 10, Color(1, 1, 1, 0.35), p * 0.07)
 	for i in 2:
-		var tc := Vector2(cs.position.x + p * (0.5 if i == 0 else cs.size.x / p - 0.5), cs.end.y - p * 0.38)
+		var tc := Vector2(cs.position.x + p * (0.5 if i == 0 else cs.size.x / p - 0.5), cs.end.y - p * 0.34)
 		ci.draw_circle(tc, p * 0.3, Color(0.1, 0.1, 0.12)); ci.draw_circle(tc, p * 0.22, Color("#b2261c") if i == 0 else Color("#1a1a1c")); ci.draw_circle(tc, p * 0.1, Color("#d0b25a"))
 
 ## The metre slide wire (fixed on the bench): wooden board, a metre rule under a resistance wire, brass binding posts at A and B, the sliding jockey (a brass block with a knife
@@ -137,15 +138,16 @@ static func slide(ci: CanvasItem, part: Dictionary, lp: Array, p: float, sh: boo
 		var kr := Rect2(p * float(k[1]), p * 2.3, p * (float(k[2]) - float(k[1])), p * 1.3)
 		PartArt.rrect(ci, kr, p * 0.2, Color("#1b1d21")); PartArt.rrect(ci, kr.grow(-p * 0.07), p * 0.16, Color("#383c44"))
 		var lab := str(k[0]) if str(k[0]) != "" else str(part.get("step_text", "step"))
-		var f2 := int(clampf(p * (0.9 if str(k[0]) != "" else 0.38), 10.0, 40.0))
+		var f2 := maxi(int(clampf(p * (0.9 if str(k[0]) != "" else 0.4), 10.0, 40.0)), SS.min_font if str(k[0]) == "" else 0)
 		var tw2 := ThemeDB.fallback_font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1.0, f2).x
 		_txt(ci, lab, kr.get_center() + Vector2(-tw2 * 0.5, f2 * 0.33), f2, Color("#ffd98a"))
-	var txt := str(part.get("pos_text", ""))
-	if txt != "":
-		var tw := ThemeDB.fallback_font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs + 3).x
-		var chip := Rect2(Vector2(clampf(jx - tw * 0.5 - 5.0, A.x, B.x - tw - 10.0), p * 1.95), Vector2(tw + 10.0, fs + 9.0))
-		PartArt.rrect(ci, chip, 6.0, Color(0.05, 0.06, 0.08, 0.88))
-		_txt(ci, txt, chip.position + Vector2(5.0, fs + 3.0), fs + 3, Color("#ffd98a"))
+	var txt := "l = %s" % str(part.get("pos_text", ""))
+	if str(part.get("pos_text", "")) != "":   # the reading, in a fixed chip to the right of the keys (never hidden by the jockey or the keys)
+		var ff := maxi(fs + 4, SS.min_font)
+		var tw := ThemeDB.fallback_font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1.0, ff).x
+		var chip := Rect2(Vector2(p * 14.6, p * 2.3), Vector2(tw + 14.0, ff + 12.0))
+		PartArt.rrect(ci, chip, 7.0, Color(0.05, 0.06, 0.08, 0.9))
+		_txt(ci, txt, chip.position + Vector2(7.0, ff + 3.0), ff, Color("#ffd98a"))
 
 ## 2-3: the sealed module, a black potted block with a paper seal and a question mark; its two terminals are the legs.
 static func sealed(ci: CanvasItem, lp: Array, p: float, sh: bool) -> void:

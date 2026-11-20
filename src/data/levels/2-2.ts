@@ -19,15 +19,15 @@ export const L2_2: LevelDef = {
   id: '2-2', chapter: 2, titleKey: 'ticket.2-2.title', briefKey: 'ticket.2-2.brief', customer: 'cablecrew', teaches: ['wheatstone', 'metre-bridge', 'null-method', 'balance-ratio'],
   board: {
     w: 24, h: 16,
-    connectors: [{ id: 'GND', pad: [22, 14], role: 'ground' }],
+    connectors: [{ id: 'GND', pad: [22, 2], role: 'ground' }],
   },
   fixed: [
-    { uid: 'f1', partId: 'cell-2v', value: null, variant: '2V', x: 2, y: 14, rot: 0, flip: false, fixed: true },
+    { uid: 'f1', partId: 'cell-2v', value: null, variant: '2V', x: 2, y: 2, rot: 0, flip: false, fixed: true },
     { uid: 'f2', partId: 'cable-loop', value: null, variant: 'loop', x: 11, y: 5, rot: 0, flip: false, fixed: true },
-    { uid: 'f3', partId: 'slidewire-m', value: null, variant: '100cm', x: 2, y: 12, rot: 0, flip: false, fixed: true },
+    { uid: 'f3', partId: 'slidewire-m', value: null, variant: '100cm', x: 2, y: 11, rot: 0, flip: false, fixed: true },
   ],
-  // the cell's minus end is soldered to the GND pad (the lesson is the bridge, not that wire)
-  fixedWires: [[[8, 14], [22, 14]]],
+  // the cell's minus end is soldered to the GND pad along the top of the board (the lesson is the bridge, not that wire)
+  fixedWires: [[[8, 2], [22, 2]]],
   supplies: [],
   instruments: { scope: { timePerDiv: 1e-3, voltsPerDiv: [1, 1] } },
   bin: [
@@ -59,8 +59,8 @@ export const L2_2: LevelDef = {
       { partId: 'galvanometer', value: null, variant: '100ohm', x: 13, y: 8, rot: 0, flip: false },
     ],
     wires: [
-      [[2, 14], [2, 12]], [[22, 12], [22, 14]], [[3, 5], [2, 5], [2, 12]], [[7, 5], [11, 5]], [[17, 5], [22, 5], [22, 12]],
-      [[11, 5], [11, 8], [13, 8]], [[19, 8], [19, 10], [12, 10]],
+      [[2, 2], [2, 11]], [[22, 11], [22, 2]], [[3, 5], [3, 11], [2, 11]], [[7, 5], [11, 5]], [[17, 5], [20, 5], [20, 11], [22, 11]],
+      [[11, 5], [11, 8], [13, 8]], [[19, 8], [19, 10], [12, 10], [12, 9]],
     ],
     jockeys: { f3: 400 },
     predictions: { dist: 75 },

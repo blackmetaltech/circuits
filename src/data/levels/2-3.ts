@@ -19,12 +19,12 @@ export const L2_3: LevelDef = {
   board: {
     w: 24, h: 16,
     connectors: [
-      { id: 'IN', pad: [2, 2], role: 'source' }, { id: 'OUT', pad: [14, 2], role: 'load' }, { id: 'GND', pad: [14, 8], role: 'ground' }, { id: 'BOX', pad: [20, 12], role: 'probe' },
+      { id: 'IN', pad: [2, 2], role: 'source' }, { id: 'OUT', pad: [14, 2], role: 'load' }, { id: 'GND', pad: [14, 8], role: 'ground' }, { id: 'BOX', pad: [2, 12], role: 'probe' },
     ],
   },
-  // the sealed module stands at the lower right: its OUT terminal is the BOX pad (20, 12), its ground terminal (14, 12) is soldered to the GND pad above it
-  fixed: [{ uid: 'f1', partId: 'blackbox', value: null, variant: 'sealed', x: 20, y: 12, rot: 2, flip: false, fixed: true }],
-  fixedWires: [[[14, 12], [14, 8]]],
+  // the sealed module stands at the lower left: its OUT terminal is the BOX pad (2, 12), its ground terminal (8, 12) is soldered to the GND pad
+  fixed: [{ uid: 'f1', partId: 'blackbox', value: null, variant: 'sealed', x: 2, y: 12, rot: 0, flip: false, fixed: true }],
+  fixedWires: [[[8, 12], [8, 8], [14, 8]]],
   supplies: [{ id: 'psu', kind: 'bench', plus: 'IN', minus: 'GND' }],
   instruments: { supply: { v: 5, ilim: 0.5 }, scope: { timePerDiv: 1e-3, voltsPerDiv: [2, 1] } },
   bin: [

@@ -113,8 +113,8 @@ static func _draw_pot(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, ask
 	_wire(ci, [P.call(176, 98), P.call(190, 98), P.call(190, 150)], ink, w)
 	S.text(ci, f, "%s \u03a9 (shunt)" % EngineBench._g(float(pot.get("shunt", 4.5))), P.call(100, 78), fs, ink)
 	if not small:
-		S.text(ci, f, "balances at %s cm, open circuit" % EngineBench._g(float(pot.get("l1Cm", 75)), 4), P.call(210, 214), fs, Color(ink, 0.85))
-		S.text(ci, f, "and at %s cm with the shunt on" % EngineBench._g(float(pot.get("l2Cm", 67.5)), 4), P.call(210, 236), fs, Color(ink, 0.85))
+		S.text(ci, f, "open: %s cm" % EngineBench._g(float(pot.get("l1Cm", 75)), 4), P.call(304, 176), fs, Color(ink, 0.9))
+		S.text(ci, f, "shunt: %s cm" % EngineBench._g(float(pot.get("l2Cm", 67.5)), 4), P.call(304, 202), fs, Color(ink, 0.9))
 		if not asks.is_empty(): S.text(ci, f, "find:  " + "   ".join(asks), P.call(70, 30), fs, S.INK_RED)
 
 ## A cell symbol: a long thin plate (+, left) and a short fat plate (-, right), centred on `c` (the left plate sits at c, the right plate 14 design px to its right).

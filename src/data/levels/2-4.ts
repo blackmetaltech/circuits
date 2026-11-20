@@ -13,12 +13,12 @@ export const L2_4: LevelDef = {
   id: '2-4', chapter: 2, titleKey: 'ticket.2-4.title', briefKey: 'ticket.2-4.brief', customer: 'exam', teaches: ['potentiometer', 'potential-gradient', 'internal-resistance', 'null-method'],
   board: {
     w: 24, h: 16,
-    connectors: [{ id: 'GND', pad: [22, 14], role: 'ground' }],
+    connectors: [{ id: 'GND', pad: [22, 2], role: 'ground' }],
   },
   fixed: [
-    { uid: 'f1', partId: 'ideal-vsource', value: 4, variant: 'ideal', x: 16, y: 14, rot: 0, flip: false, fixed: true },
+    { uid: 'f1', partId: 'ideal-vsource', value: 4, variant: 'ideal', x: 16, y: 2, rot: 0, flip: false, fixed: true },
     { uid: 'f2', partId: 'cell-test', value: null, variant: '1.5V', x: 4, y: 5, rot: 0, flip: false, fixed: true },
-    { uid: 'f3', partId: 'slidewire-m', value: null, variant: '100cm', x: 2, y: 12, rot: 0, flip: false, fixed: true },
+    { uid: 'f3', partId: 'slidewire-m', value: null, variant: '100cm', x: 2, y: 11, rot: 0, flip: false, fixed: true },
   ],
   supplies: [],
   instruments: { scope: { timePerDiv: 1e-3, voltsPerDiv: [0.5, 1] } },
@@ -51,11 +51,11 @@ export const L2_4: LevelDef = {
   hints: { nudge: 'ticket.2-4.hint.nudge' },
   ref: {
     parts: [
-      { partId: 'rheostat', value: 10, variant: 'ideal', x: 6, y: 14, rot: 0, flip: false },
+      { partId: 'rheostat', value: 10, variant: 'ideal', x: 6, y: 2, rot: 0, flip: false },
       { partId: 'galvanometer', value: null, variant: '100ohm', x: 12, y: 7, rot: 0, flip: false },
     ],
     wires: [
-      [[16, 14], [10, 14]], [[6, 14], [2, 14], [2, 12]], [[22, 12], [22, 14]], [[4, 5], [2, 5], [2, 12]], [[10, 5], [10, 7], [12, 7]], [[18, 7], [18, 10], [12, 10]],
+      [[16, 2], [10, 2]], [[6, 2], [2, 2], [2, 11]], [[22, 11], [22, 2]], [[4, 5], [3, 5], [3, 11], [2, 11]], [[10, 5], [10, 7], [12, 7]], [[18, 7], [18, 10], [12, 10], [12, 9]],
     ],
     jockeys: { f3: 750 },
     predictions: { pgrad: 0.02, pemf: 1.5, pr: 0.5 },
