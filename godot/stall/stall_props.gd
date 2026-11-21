@@ -416,16 +416,46 @@ func _draw_rows(ci: Control) -> void:
 		if it.kind == "LED": org.x += 14.0
 		PartArt.draw(ci, pd, org + (Vector2(0, -2.0) if hov else Vector2.ZERO), pp, {"lit": 0.0, "smoked": false})
 		if a < 1.0: S.rr(ci, cell, 8, Color(0.12, 0.09, 0.06, 0.7))
-		# the label: value and watt rating together on one line (never overlapping the price), price and stock under it
-		var lab: String = it.label if it.tag == "" or it.kind == "BAT" else "%s %s" % [it.label, it.tag]
-		var lx := cell.position.x + 96.0
-		var tag := Rect2(lx - 6.0, cell.position.y + 5.0, cell.end.x - lx - 2.0, 33.0)
+		# the label: value and watt rating together on one line (never overlapping the price), price and stock under it; a name that is too wide steps down in size, then uses its short form
+		var lx := cell.position.x + LABEL_X
+		var tag := Rect2(lx - 6.0, cell.position.y + 5.0, cell.end.x - lx + 4.0, 33.0)
+		var fit := label_fit(it, tag.size.x - 14.0)
 		S.paper(ci, tag, 0.0, Color("#efe5c8"))
-		S.text(ci, S.hand(), lab, Vector2(lx, tag.position.y + 25.0), 22, S.INK)
+		S.text(ci, S.hand(), str(fit.text), Vector2(lx, tag.position.y + 25.0), int(fit.size), S.INK)
 		var pt: String = str(it.get("price_text", ""))
 		if int(it.get("left", -1)) >= 0: pt = ("%s   x%d left" % [pt, int(it.left)]).strip_edges()
 		if pt != "": S.text(ci, S.hand(), pt, Vector2(lx, cell.end.y - 7.0), 18, Color("#e9dfc4", 0.9))
 	_scroll_cues(ci, Rect2(Vector2.ZERO, inner.size), n)
+
+const LABEL_X := 84.0
+const LABEL_SIZE := 22
+const LABEL_FLOOR := 18
+
+## The text a shoebox row prints: the value and rating, stepped down from 22 px to 18 px, then the part's short name. {text, size, fits}. `avail` is the tag's text width.
+func label_fit(it: Dictionary, avail: float) -> Dictionary:
+	var lab: String = it.label if it.tag == "" or it.kind == "BAT" else "%s %s" % [it.label, it.tag]
+	var f := S.hand()
+	for cand in [lab, short_name(lab)]:
+		var sz := LABEL_SIZE
+		while sz >= LABEL_FLOOR:
+			if S.tw(f, cand, sz) <= avail: return {"text": cand, "size": sz, "fits": true}
+			sz -= 1
+	var sh := short_name(lab)
+	return {"text": sh, "size": LABEL_FLOOR, "fits": false}
+
+## Short display names for parts whose catalogue name does not fit a shoebox row.
+const SHORT := {
+	"1N4148 signal diode diode": "1N4148 diode", "1N4007 rectifier diode": "1N4007 diode", "1N4733A Zener 5.1 V": "1N4733A 5.1 V",
+	"BZX55C5V1 Zener 5.1 V": "BZX55C5V1", "Ideal Zener, 6 V ideal Zener": "Ideal Zener 6 V", "LM317 adjustable regulator": "LM317 adj. reg.",
+}
+static func short_name(s: String) -> String: return SHORT.get(s, s)
+
+## The tin's rectangle and the coin total's tape (the tape hangs below the tin's centre).
+func tin_rect_full() -> Rect2:
+	var r := _r("tin"); return r.grow(3.0)
+func tin_text_rect() -> Rect2:
+	var r := _r("tin"); var c := r.get_center(); var rad := r.size.x * 0.5
+	return Rect2(c.x - rad * 0.8, c.y + rad * 0.55, rad * 1.6, 36.0)
 
 ## Scrolling you can see: a dark fade where more parts hide and a track with a thumb on the right edge (drag the tray, use the wheel, or swipe).
 func _scroll_cues(ci: Control, inner: Rect2, n: int) -> void:

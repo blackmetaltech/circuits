@@ -573,6 +573,7 @@ func _run() -> void:
 	ok(_build("1-1"), "replay: the torch is built again")
 	_rocker(); _clock(6.0, func(): return bk.passed)
 	ok(bk.passed and bk.wallet_minor == w_before, "replay: it passes again and pays nothing twice (wallet %s)" % bk.wallet_text)
+	ok(StallTop.longest_lines <= 8, "no message needs more than two pages on a 1280x800 handheld (%d lines: %s)" % [StallTop.longest_lines, StallTop.longest.left(90)])
 	ok(trap.count == 0, "zero script errors in the whole run (%d: %s)" % [trap.count, str(trap.lines.slice(0, 3))])
 	print("\n%d checks, %d failed" % [checks, fails])
 	quit(1 if fails > 0 else 0)

@@ -158,7 +158,15 @@ func start_ticket(id: String) -> void:
 	if backend.ENGINE and backend.safety_pending(): pages.safety = backend.mains; pages.show_page("safety")   # a mains ticket opens with the safety card, before anything else
 	elif backend.ENGINE and bool(backend.ticket.get("eb", false)) and not backend.predictions_done(): open_predict()
 
+## The part of the 24 x 16 board each small ticket uses (x0, y0, x1 - x0, y1 - y0 in pads; the reference design, its connectors and a margin): the board view zooms to it, so the working area is big on screen.
+## A ticket not listed shows the whole board. tests/layout_flow.gd checks every reference design and connector lies inside its view.
+const BOARD_VIEW := {
+	"1-1": Rect2(0, 0, 15, 8), "1-2": Rect2(0, 0, 22, 8), "1-3": Rect2(0, 0, 17, 10), "1-4": Rect2(0, 0, 15, 8),
+	"2-1": Rect2(0, 0, 17, 10), "3-1": Rect2(0, 0, 17, 10), "3-3": Rect2(0, 0, 15, 10),
+}
+
 func _ticket_view() -> void:   # push the open ticket onto the instruments and props
+	bench.set_view(BOARD_VIEW.get(str(backend.ticket.get("id", "")), Rect2()))
 	if backend.ticket.is_empty(): return
 	props.mood = "idle"; props.customer = str(backend.ticket.customer); props.gadget = str(backend.ticket.gadget); props.bin_scroll = 0.0
 	props.exam_fig = backend.ticket.figure if bool(backend.ticket.get("eb", false)) and backend.ticket.get("figure", null) is Dictionary else {}
@@ -426,7 +434,7 @@ func _layout() -> void:
 	var k := float(get_window().size.x) / maxf(W, 1.0)
 	var lay := OS.get_environment("CB_LAYOUT")   # handheld | desktop force a layout (tests, QA); otherwise it follows the window
 	handheld = lay == "handheld" or (lay != "desktop" and k < 0.8)
-	S.handheld = handheld; S.min_font = int(ceilf(16.0 / maxf(k, 0.3))) if handheld else 0; scr_k = k
+	S.handheld = handheld; S.min_font = 16 if lay == "desktop" else int(ceilf(16.0 / maxf(k, 0.3))); scr_k = k   # no text under 16 screen px on any window (a 1080p desktop included)
 	var dy := maxf(0.0, H - 1080.0)
 	phone = W / maxf(H, 1.0) > 2.0
 	var sill := 182.0 + dy * 0.05
@@ -441,48 +449,41 @@ func _layout() -> void:
 	scope.scale = Vector2.ONE; scope.position = Vector2(sc_x, 190.0 + dy * 0.05)
 	var sup_x := rx; var dmm_x := rx + 340.0
 	if phone: dmm_x = W - 96.0 - 270.0; sup_x = dmm_x - 340.0
-	# chapter 4's chits carry longer specs (and a mains chit the red ribbon): the paper grows to hold every line and the instruments under it step down, so words never spill onto a meter
+	# a chit carries as many lines as its spec has: the paper grows to hold every line (any chapter) and the instruments under it step down, so words never spill onto a meter
 	var mains_t: bool = backend.ENGINE and not backend.mains.is_empty()
-	var ch4: bool = backend.ENGINE and not backend.ticket.is_empty() and int(backend.ticket.get("chapter", 0)) == 4
 	var chit_w := (190.0 if not handheld else 270.0) + (54.0 if mains_t else 0.0)   # a mains chit is wider (the ribbon runs on one line) but stops short of the scope's input jack
 	var chit_base := 186.0 if not handheld else 242.0
 	var chit_h := chit_base
-	if ch4: chit_h = maxf(chit_base, _chit_need(chit_w, mains_t))
-	var chit_dy := 28.0 if mains_t else 0.0   # below the scope's CH2 readout and its CH1 AC/DC label
-	var ms := minf(chit_h - chit_base + chit_dy, 72.0 + dy * 0.6)   # (a taller window has the room for more)
+	var chit_dy := 24.0 if mains_t else 0.0   # below the scope's CH2 readout and its CH1 AC/DC label
+	var ms_cap := 64.0 + dy * 0.4   # how far the instruments under the chit may step down: the tin and its coin total must still fit under GO (a taller window has the room for more)
+	top.chit_pay = true
+	if backend.ENGINE and not backend.ticket.is_empty():
+		chit_h = maxf(chit_base, StallTop.chit_need(backend.ticket, chit_w, true))
+		if chit_h - chit_base + chit_dy > ms_cap:   # too long with the fee line: drop it from the paper (the notebook's page keeps it)
+			top.chit_pay = false; chit_h = maxf(chit_base, StallTop.chit_need(backend.ticket, chit_w, false))
+	var ms := minf(chit_h - chit_base + chit_dy, ms_cap)
 	var low := 650.0 + dy * 0.6 + ms
 	supply.scale = Vector2(0.8, 0.8); supply.position = Vector2(sup_x, low + 12.0)
 	dmm.scale = Vector2(0.8, 0.8); dmm.position = Vector2(dmm_x, low)
-	L.tin = Rect2(maxf(sup_x + 20.0, 1306.0), 880 + dy * 0.8 + ms, 124, 124)   # right of the exam / crew slip (1094..1290): the tin never covers it
-	L.customer = Rect2(780, 765 + dy, 300, 270)
-	L.bubble = Rect2(880, 678 + dy, 270, 112)   # above the customer's head (over the board's empty lower rows), never over the slip beside her
+	# the tin's coin total hangs 132 px below the tin's top edge: keep all of it inside the window (and the tin right of the exam / crew slip, 1094..1290)
+	L.tin = Rect2(maxf(sup_x + 20.0, 1306.0), minf(880 + dy * 0.8 + ms, H - 16.0 - 132.0), 124, 124)
+	L.customer = Rect2(780, 858 + dy, 300, 270)   # behind the counter: head and shoulders show, and the band above her head is free for her speech bubble
 	L.next = Rect2(1306, 1000 + dy, 220, 50)
 	L.exam = Rect2(1094, 816 + dy, 196, 224)   # the exam problem card (exam tickets) or the crew's slip (2-2): it stays on the bench after "later"
-	L.chit = Rect2(sc_x + 404.0, 190.0 + dy * 0.05 + 266.0, 190, 186) if not handheld else Rect2(sc_x + 340.0, 190.0 + dy * 0.05 + 270.0, 270, 242)
-	if ch4: L.chit = Rect2(sc_x + 594.0 - chit_w, 190.0 + dy * 0.05 + (266.0 if not handheld else 270.0) + chit_dy, chit_w, chit_h)   # handheld: a bigger chit for 16 px text
+	L.chit = Rect2(sc_x + 594.0 - chit_w, 190.0 + dy * 0.05 + (266.0 if not handheld else 270.0) + chit_dy, chit_w, chit_h)   # handheld: a bigger chit for 16 px text
 	L.slip = Rect2(318, 870 + dy, 420, 160)
 	L.probe_rest = {"red": Vector2(dmm_x - 52, 968 + dy * 0.8 + ms), "black": Vector2(dmm_x - 112, 998 + dy * 0.8 + ms), "ch1": Vector2(sc_x - 22.0, 700.0 + dy * 0.6)}
-	L.bench = Rect2(sup_x + 4.0, low + 160.0, 250.0, 60.0)
+	L.bench = Rect2(sup_x + 4.0, low + 152.0, 250.0, 60.0)
 	var bx0 := 372.0; var bx1 := (rx - 44.0) if not phone else (sup_x - 30.0)
 	var region := Rect2(bx0, sill + 38.0, bx1 - bx0, 800 + dy * 0.45 - sill - 38.0)
 	board_rect = Rect2(region.position, Vector2(region.size.x, region.size.y * DEPTH))
 	var vsz := Vector2i(maxi(64, int(board_rect.size.x)), maxi(64, int(board_rect.size.y / DEPTH)))
 	if vp.size != vsz: vp.size = vsz
 	tex.position = board_rect.position; tex.size = board_rect.size
+	# the speech bubble sits centred above her head, in the band between the board and her head: it covers no control, instrument or pad
+	L.bubble = Rect2(772, L.customer.position.y + 34.0 - 100.0, 312, 100)
 	props.L = L; top.L = L
 	window.gear_hover = hover == "gear"
-
-## The height a chapter 4 chit needs (the flow of StallTop._chit: ribbon, ticket line, title, customer, rule, the spec's wrapped lines).
-func _chit_need(width: float, mains_t: bool) -> float:
-	var f := S.hand(); var inner := width - 28.0
-	var y := 14.0 + float(maxi(15, S.min_font)) + 12.0
-	if mains_t:
-		var rf := maxi(12, S.min_font)
-		y += S.wrapped_h(f, str(backend.mains.get("ribbon", "")), rf, inner) + 10.0 + 12.0
-	y += float(maxi(28, S.min_font)) + 8.0 + float(maxi(18, S.min_font)) + 6.0 + 10.0
-	var ssz := maxi(16, S.min_font)
-	y += float(ssz) + 8.0 + S.wrapped_h(f, str(backend.ticket.get("spec", "")), 16, inner) - float(ssz)
-	return y + 18.0
 
 func _board_poly(grow: float) -> PackedVector2Array:
 	var r := board_rect.grow(grow); var ts := TOP_SCALE
@@ -509,7 +510,7 @@ func _draw() -> void:   # the bench itself: static, redrawn on resize only
 		var k := float(gj) / 12.0
 		draw_line(mp[0].lerp(mp[3], k), mp[1].lerp(mp[2], k), Color(1, 1, 1, 0.07), 1.5)
 	S.text(self, S.hand(), "STALL 14  ·  LANTERN LANE", Vector2(board_rect.position.x + 12, board_rect.position.y - 16), 18, Color(1, 1, 1, 0.22))
-	S.keyline(self, _hint_text(), Vector2(board_rect.position.x + 12, board_rect.end.y + 40), 17, Color(1, 1, 1, 0.34))
+	if not handheld: S.keyline(self, _hint_text(), Vector2(board_rect.position.x + 290, board_rect.position.y - 16), 16, Color(1, 1, 1, 0.34))   # (a handheld has no keys to name)
 	# solder stains and flux marks, a burn ring, a screw
 	var rng := RandomNumberGenerator.new(); rng.seed = 31
 	for i in 22:
@@ -527,9 +528,9 @@ func _draw() -> void:   # the bench itself: static, redrawn on resize only
 
 ## The line under the board; keys are in [brackets] and drawn as key caps. Tickets with a slide wire add what the wire's parts do.
 func _hint_text() -> String:
-	var base := "drag a part in  ·  drag leg to leg to wire  ·  right-click removes  ·  [Ctrl+Z] undoes  ·  [R] turns"
-	if backend != null and backend.ENGINE and scope.is_trace(): return "drag a part in  ·  drag leg to leg to wire  ·  right-click removes  ·  [Ctrl+Z] undoes  ·  [,] [.] set the sweep"
-	if backend != null and backend.ENGINE and not backend.slide_part().is_empty(): return "drag from A, B, J to wire  ·  drag the jockey to slide  ·  [Ctrl+Z] undoes"
+	var base := "drag parts in · leg to leg to wire · right-click removes · [Ctrl+Z] undoes · [R] turns"
+	if backend != null and backend.ENGINE and scope.is_trace(): return "drag parts in · leg to leg to wire · right-click removes · [Ctrl+Z] undoes · [,] [.] sweep"
+	if backend != null and backend.ENGINE and not backend.slide_part().is_empty(): return "drag from A, B, J to wire · drag the jockey to slide · [Ctrl+Z] undoes"
 	return base
 
 ## ------------------------------------------------------------------------------------------------------------------ geometry
@@ -1169,7 +1170,7 @@ func _scroll_box(rows: float) -> void:   # a wheel notch is one row, never past 
 	props.bin_scroll = clampf(props.bin_scroll + rows, 0.0, StallProps.max_scroll(props.box_inner(), props.items.size()))
 
 func _wheel(sp: Vector2, dir: int) -> void:
-	if S.handheld and top.toast_age < top.toast_dur and top.toast_rect.has_point(sp): top.toast_scroll = maxi(0, top.toast_scroll - dir); return   # the docked message card scrolls
+	if S.handheld and top.toast_age < top.toast_dur and top.toast_rect.has_point(sp): top.toast_manual = true; top.toast_scroll = clampi(top.toast_scroll - dir, 0, top.dock_pages() - 1); return   # the docked message card scrolls
 	var h := _where(sp)
 	if h == "box" or (L.box as Rect2).has_point(sp): _fling = 0.0; _scroll_box(-float(dir) * WHEEL_ROWS)
 	elif h == "dial": backend.set_dial(DmmView.MODES[clampi(DmmView.MODES.find(backend.dial) + dir, 0, DmmView.MODES.size() - 1)]); sfx.play("tick")

@@ -177,13 +177,19 @@ func _margins() -> Vector4:   # left, top, right, bottom of the free area (app b
 	else: bottom = dock + 8.0
 	return Vector4(left, bar + 10.0, cover + 14.0, bottom)
 
+## The part of the board the ticket uses, in pads (x0, y0, x1 - x0, y1 - y0): the view is zoomed to it (plus a margin), so a small ticket's parts and labels are large. Empty = the whole board.
+var view := Rect2()
+func set_view(v: Rect2) -> void:
+	if view != v: view = v; _layout_key = ""
+
 func _relayout() -> void:
 	var mg := _margins(); var m := _m()
 	var top := mg.y + (30.0 if ((stall != "" or not card.is_empty()) and not embedded) else 0.0)
 	var area := Rect2(mg.x, top, size.x - mg.x - mg.z, size.y - top - mg.w)
-	var gw := float(m.w - 1) + 2.0 * 1.3 + 0.8; var gh := float(m.h - 1) + 2.0 * 1.3 + 0.8
-	p = clampf(minf(area.size.x / gw, area.size.y / gh), 6.0, 56.0) * zoom
-	org = area.get_center() - Vector2(m.w - 1, m.h - 1) * p * 0.5
+	var v := view if view.size != Vector2.ZERO else Rect2(0, 0, m.w - 1, m.h - 1)
+	var gw := v.size.x + 2.0 * 1.3 + 0.8; var gh := v.size.y + 2.0 * 1.3 + 0.8
+	p = clampf(minf(area.size.x / gw, area.size.y / gh), 6.0, 56.0 if view.size == Vector2.ZERO else 72.0) * zoom
+	org = area.get_center() - (v.position + v.size * 0.5) * p
 	board_rect = Rect2(org - Vector2(1.3, 1.3) * p, Vector2(m.w - 1 + 2.6, m.h - 1 + 2.6) * p)
 	_parts_dirty = true
 

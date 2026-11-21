@@ -381,6 +381,7 @@ func _run() -> void:
 	ok(not bk.passed and not bk.predictions_done() and sc.pages.mode == "predict", "retry: the stamp is off and the predict slip is open again")
 
 	print("== no script errors")
+	ok(StallTop.longest_lines <= 8, "no message needs more than two pages on a 1280x800 handheld (%d lines: %s)" % [StallTop.longest_lines, StallTop.longest.left(90)])
 	ok(trap.count == 0, "the run logged no engine or script errors (%d: %s)" % [trap.count, str(trap.lines)])
 	print("\n%d checks, %d failed" % [checks, fails])
 	quit(1 if fails > 0 else 0)

@@ -14,6 +14,7 @@ var leads: Array = []             ## [{from: Vector2 (socket), tip: Vector2, col
 var scope_lead: Dictionary = {}   ## {from, to}
 var held: Dictionary = {}         ## {part: Dictionary, pos: Vector2, p: float} icon following the pointer off the board
 var tag: Dictionary = {}          ## hover readout {text, pos}
+var chit_pay := true             ## the fee line fits on the paper (the scene hides it when the paper would have to grow past what the instruments under it allow; the notebook has it)
 var slip_text := ""
 var slip_step := ""
 var arrow_to := Vector2.ZERO
@@ -36,12 +37,25 @@ func _ready() -> void:
 
 func _process(dt: float) -> void:
 	t += dt; toast_age += dt
-	if S.handheld and toast_age < toast_dur and toast_rect.size != Vector2.ZERO: toast_scroll = maxi(toast_scroll, int(toast_age / 3.0))   # long cards page on by themselves
+	if S.handheld and toast_age < 90.0 and toast != "" and not toast_quick:   # long cards page on by themselves (4.5 s a page) and stay up long enough to read every page
+		var np := dock_pages()
+		toast_dur = maxf(toast_dur, float(np) * DOCK_PAGE_S + 1.5)
+		if not toast_manual: toast_scroll = mini(np - 1, int(toast_age / DOCK_PAGE_S))
 	if slip_text != _last_slip: _last_slip = slip_text; _arrow_k = 0.0   # a new step: the pen draws the arrow again
 	_arrow_k = minf(1.0, _arrow_k + dt * 1.6)
 	queue_redraw()
 
-func say(s: String) -> void: toast = s; toast_scroll = 0; toast_bench = false; toast_quick = false; toast_age = 0.0; toast_dur = clampf(3.5 + float(s.length()) * 0.045, 3.5, 11.0)   # a long sentence stays long enough to read
+## The longest message any run has shown, measured the way a 1280x800 handheld draws it (24 design px, DOCK_W wide): the flows assert it needs two pages or fewer.
+static var longest := ""
+static var longest_lines := 0
+static func handheld_lines(text: String) -> int:
+	var tp := TextParagraph.new(); tp.add_string(text, S.hand(), 24); tp.width = 880.0 - 60.0
+	return tp.get_line_count()
+
+func say(s: String) -> void:
+	var nl := handheld_lines(s)
+	if nl > longest_lines: longest_lines = nl; longest = s
+	toast = s; toast_scroll = 0; toast_manual = false; toast_bench = false; toast_quick = false; toast_age = 0.0; toast_dur = clampf(3.5 + float(s.length()) * 0.045, 3.5, 11.0)   # a long sentence stays long enough to read
 
 ## The bench's verdict on the board: shown like any note, but any edit of the board takes it down (it would be stale).
 func say_bench(s: String) -> void:
@@ -127,6 +141,37 @@ func _held() -> void:
 	draw_circle(o + Vector2(0, 22), 0.0, Color.BLACK)
 	PartArt.draw(self, pd, o - Vector2(p * 1.0, 0), p, {"lit": 0.0, "smoked": false})
 
+const CH_ID := 16        ## chit text sizes in design px: every line is 16 px or more at 1080p, and S.min_font lifts them to 16 screen px on a handheld
+const CH_SPEC := 18
+const CH_PAY := 16
+const CH_RIB := 16
+
+## The title and customer sizes of a chit: a long title shrinks (never under 16) to fit the width instead of running into the price.
+static func _chit_sizes(tk: Dictionary, inner: float) -> Dictionary:
+	var f := S.hand()
+	var tsz := 28
+	while tsz > 18 and S.tw(f, str(tk.get("title", "")), tsz) > inner: tsz -= 2
+	var csz := 18
+	while csz > 16 and S.tw(f, "for %s" % str(tk.get("customer", "")), csz) > inner: csz -= 1
+	return {"t": maxi(tsz, S.min_font), "c": maxi(csz, S.min_font)}
+
+## The height a chit needs: the same flow as _chit (ribbon, ticket line, title, customer, rule, the spec's wrapped lines, the fee line), so the paper grows to hold every line.
+static func chit_need(tk: Dictionary, width: float, with_pay := true) -> float:
+	var f := S.hand(); var inner := width - 28.0
+	var sz := _chit_sizes(tk, inner)
+	var y := 14.0 + float(maxi(CH_ID, S.min_font)) + 12.0
+	var mains = tk.get("mains", {})
+	if mains is Dictionary and not (mains as Dictionary).is_empty():
+		y += S.wrapped_h(f, str((mains as Dictionary).get("ribbon", "")), CH_RIB, inner) + 10.0 + 12.0
+	y += float(sz.t) + 8.0 + float(sz.c) + 6.0 + 10.0
+	var ssz := maxi(CH_SPEC, S.min_font)
+	y += float(ssz) + 8.0 + S.wrapped_h(f, str(tk.get("spec", "")), CH_SPEC, inner) - float(ssz)
+	var pay := str(tk.get("pay_text", ""))
+	if pay != "" and with_pay:
+		var psz := maxi(CH_PAY, S.min_font)
+		y += float(psz) + 10.0 + S.wrapped_h(f, pay, CH_PAY, inner) - float(psz)
+	return y + 12.0
+
 func _chit() -> void:
 	var r: Rect2 = L.get("chit", Rect2())
 	if ticket.is_empty() or r.size == Vector2.ZERO: return
@@ -137,41 +182,35 @@ func _chit() -> void:
 	var f := S.hand(); var inner := r.size.x - 28.0
 	var fee: String = str(ticket.get("price_text", "")) if str(ticket.get("price_text", "")) != "" else "%d coins" % int(ticket.get("price", 0))
 	# a flowing layout: every line sits under the one above, whatever the text size (handheld grows the text to 16 screen px)
-	var y := q.position.y + 14.0 + float(maxi(15, S.min_font)) + 12.0
+	var y := q.position.y + 14.0 + float(maxi(CH_ID, S.min_font)) + 12.0
 	var mains = ticket.get("mains", {})
 	if mains is Dictionary and not (mains as Dictionary).is_empty():   # a mains ticket: the red ribbon, "simulated mains: do not try this at home", across the top of the card
 		var rib := str((mains as Dictionary).get("ribbon", ""))
-		var rf := maxi(12, S.min_font)
-		var rh := S.wrapped_h(f, rib, rf, inner) + 10.0
+		var rf := maxi(CH_RIB, S.min_font)
+		var rh := S.wrapped_h(f, rib, CH_RIB, inner) + 10.0
 		draw_rect(Rect2(q.position.x, q.position.y + 22.0, r.size.x, rh), Color("#b3261c"), true)
-		S.text(self, f, rib, Vector2(q.position.x + 14, q.position.y + 22.0 + float(rf) + 3.0), rf, Color("#fff4dc"), HORIZONTAL_ALIGNMENT_LEFT, inner)
+		S.text(self, f, rib, Vector2(q.position.x + 14, q.position.y + 22.0 + float(rf) + 3.0), CH_RIB, Color("#fff4dc"), HORIZONTAL_ALIGNMENT_LEFT, inner)
 		y += rh + 12.0
-	S.text(self, f, "TICKET %s%s" % [str(ticket.get("id", "")), "  EB" if bool(ticket.get("eb", false)) else ""], Vector2(q.position.x + 14, y), 15, S.INK_RED)
+	var sz := _chit_sizes(ticket, inner)
+	S.text(self, f, "TICKET %s%s" % [str(ticket.get("id", "")), "  EB" if bool(ticket.get("eb", false)) else ""], Vector2(q.position.x + 14, y), CH_ID, S.INK_RED)
 	S.text(self, f, fee, Vector2(q.position.x + r.size.x - 14 - S.tw(f, fee, 17), y), 17, Color(S.INK, 0.8))
-	var tsz := 28   # a long title shrinks to fit the chit instead of running into the price
-	while tsz > 16 and S.tw(f, str(ticket.get("title", "")), tsz) > inner: tsz -= 2
-	tsz = maxi(tsz, S.min_font)
-	y += float(tsz) + 8.0
-	S.text(self, f, str(ticket.get("title", "")), Vector2(q.position.x + 14, y), tsz, S.INK)
-	var csz := 18
-	while csz > 12 and S.tw(f, "for %s" % str(ticket.get("customer", "")), csz) > inner: csz -= 1
-	csz = maxi(csz, S.min_font)
-	y += float(csz) + 6.0
-	S.text(self, f, "for %s" % str(ticket.get("customer", "")), Vector2(q.position.x + 14, y), csz, Color(S.INK, 0.8))
+	y += float(sz.t) + 8.0
+	S.text(self, f, str(ticket.get("title", "")), Vector2(q.position.x + 14, y), int(sz.t), S.INK)
+	y += float(sz.c) + 6.0
+	S.text(self, f, "for %s" % str(ticket.get("customer", "")), Vector2(q.position.x + 14, y), int(sz.c), Color(S.INK, 0.8))
 	y += 10.0
 	draw_line(Vector2(q.position.x + 12, y), Vector2(q.position.x + r.size.x - 12, y), Color(S.INK, 0.25), 1.5)
 	var spec := str(ticket.get("spec", ""))
-	var ssz := maxi(16, S.min_font)
+	var ssz := maxi(CH_SPEC, S.min_font)
 	y += float(ssz) + 8.0
-	S.text(self, f, spec, Vector2(q.position.x + 14, y), 16, S.INK, HORIZONTAL_ALIGNMENT_LEFT, inner)
-	y += S.wrapped_h(f, spec, 16, inner) - float(ssz)
+	S.text(self, f, spec, Vector2(q.position.x + 14, y), CH_SPEC, S.INK, HORIZONTAL_ALIGNMENT_LEFT, inner)
+	y += S.wrapped_h(f, spec, CH_SPEC, inner) - float(ssz)
 	var pay := str(ticket.get("pay_text", ""))
-	var psz := maxi(13, S.min_font)
-	var pay_h := S.wrapped_h(f, pay, 13, inner)
-	# the fee line only when it fits on the paper (a handheld's 16 px text is bigger) and only while the stamp is not on the chit: text is never clipped, never stamped over
-	if pay != "" and not locked and y + 10.0 + float(psz) + pay_h - float(psz) <= q.end.y - 6.0:
+	var psz := maxi(CH_PAY, S.min_font)
+	# the fee line: the paper is sized to hold it; while the FIXED stamp is on the chit the stamp takes its place (text is never stamped over)
+	if pay != "" and chit_pay and not locked:
 		y += float(psz) + 10.0
-		S.text(self, f, pay, Vector2(q.position.x + 14, y), 13, Color(S.INK, 0.7), HORIZONTAL_ALIGNMENT_LEFT, inner)
+		S.text(self, f, pay, Vector2(q.position.x + 14, y), CH_PAY, Color(S.INK, 0.7), HORIZONTAL_ALIGNMENT_LEFT, inner)
 	if locked:   # a rubber stamp: it sits below the last line of text (and may hang over the paper's edge), never on the words
 		var top_y := minf(maxf(y + 12.0, q.end.y - 46.0), q.end.y - 26.0)   # below the words when there is room, but always on the paper (never drifting onto the instrument below)
 		draw_set_transform(c + Vector2(r.size.x * 0.5 - 62.0, top_y + 22.0), deg_to_rad(-8.0), Vector2.ONE)
@@ -200,19 +239,26 @@ func _slip() -> void:
 			var pulse := 0.5 + 0.5 * sin(t * 4.0)
 			draw_arc(arrow_to, 22.0 + 4.0 * pulse, 0.0, TAU, 24, Color("#ffd98a", 0.6 * pulse + 0.2), 3.0)
 
+const BUB_FS := 20
+## Where the speech bubble is drawn (grown UP to hold its sentence); the tail reaches 30 px left of it and 6 px below it, which is included.
+func bubble_rect() -> Rect2:
+	var q: Rect2 = L.get("bubble", Rect2())
+	if bubble == "" or q.size == Vector2.ZERO: return Rect2()
+	var need := S.wrapped_h(S.hand(), bubble, BUB_FS, q.size.x - 28.0) + 26.0
+	return Rect2(q.position.x, q.end.y - need, q.size.x, need)   # sized to its sentence (grows up from the bottom edge, above her head)
+
 func _bubble() -> void:
 	var r: Rect2 = L.get("bubble", Rect2())
 	if bubble == "" or r.size == Vector2.ZERO: return
 	var a := bubble_alpha
 	modulate = Color(1, 1, 1, 1)
-	var q := r
-	var need := S.wrapped_h(S.hand(), bubble, 22, q.size.x - 32.0) + 30.0   # the bubble grows UP to hold the whole sentence (a bigger handheld font wraps to more lines): never clipped
-	if need > q.size.y: q = Rect2(q.position.x, q.end.y - need, q.size.x, need)
+	var q := bubble_rect()
 	S.shadow(self, q, 22, Vector2(5, 7), 0.3 * a)
 	S.rr(self, q, 22, Color(0.98, 0.96, 0.9, a)); S.rr_line(self, q, 22, Color(S.INK, 0.5 * a), 2.0)
-	var tail := PackedVector2Array([Vector2(q.position.x + 6, q.end.y - 22), Vector2(q.position.x - 30, q.end.y + 6), Vector2(q.position.x + 30, q.end.y - 4)])
+	var cx := q.get_center().x   # the tail drops straight down to her head
+	var tail := PackedVector2Array([Vector2(cx - 18, q.end.y - 4), Vector2(cx + 18, q.end.y - 4), Vector2(cx - 2, q.end.y + 12)])
 	draw_colored_polygon(tail, Color(0.98, 0.96, 0.9, a))
-	S.text(self, S.hand(), bubble, q.position + Vector2(16, 36), 22, Color(S.INK, a), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 32)
+	S.text(self, S.hand(), bubble, q.position + Vector2(14, 14.0 + float(maxi(BUB_FS, S.min_font))), BUB_FS, Color(S.INK, a), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 28)
 
 func _tag() -> void:
 	var s: String = tag.text; var p: Vector2 = tag.pos
@@ -235,25 +281,33 @@ func _toast() -> void:
 	S.paper(self, r, -0.6, Color(0.97, 0.93, 0.8, a))
 	S.text(self, S.hand(), toast, r.position + Vector2(20, 31), 22, Color(S.INK, a), HORIZONTAL_ALIGNMENT_LEFT, 620.0)
 
-## Handheld: a long message card docks in the window strip above the bench (smaller type, a few lines, scrolling by itself or with the wheel) instead of lying over the board.
-var toast_scroll := 0                       ## first visible line (wheel over the card, or by itself every few seconds)
+## Handheld: a long message card docks in the window strip above the bench (wide, four lines a page, paging by itself or with the wheel) instead of lying over the board.
+## The card is as tall as its text (up to four lines); the page counter has a row of its own under the text.
+const DOCK_W := 880.0                       ## card width in design px (a 1280-px handheld shows it 590 px wide)
+const DOCK_LINES := 4                       ## lines a page: the card ends above the board's top edge
+const DOCK_PAGE_S := 4.5                    ## seconds a page stays before the next one
+var toast_scroll := 0                       ## the page shown
+var toast_manual := false                   ## the wheel was used: stop paging by itself
 var toast_rect := Rect2()                   ## where the docked card is (the scene sends the wheel here)
-func toast_lines() -> int:
-	var tp := TextParagraph.new(); tp.add_string(toast, S.hand(), maxi(18, S.min_font)); tp.width = 600.0
-	return tp.get_line_count()
+func _dock_para() -> TextParagraph:
+	var tp := TextParagraph.new(); tp.add_string(toast, S.hand(), maxi(18, S.min_font)); tp.width = DOCK_W - 60.0
+	return tp
+func toast_lines() -> int: return _dock_para().get_line_count()
+func dock_pages() -> int: return maxi(1, int(ceilf(float(toast_lines()) / float(DOCK_LINES))))
 
 func _toast_dock(a: float) -> void:
 	var sz := maxi(18, S.min_font)
-	var tp := TextParagraph.new(); tp.add_string(toast, S.hand(), sz); tp.width = 600.0
+	var tp := _dock_para()
 	var n := tp.get_line_count(); var lh := S.hand().get_height(sz)
-	var per := maxi(2, int(floorf((170.0 - 22.0) / lh)))
-	var first := clampi(toast_scroll, 0, maxi(0, n - per))
-	var shown := mini(n - first, per)
-	var r := Rect2(size.x * 0.5 - 330.0, 8.0, 660.0, float(shown) * lh + 22.0 + (14.0 if n > per else 0.0))
+	var pages := maxi(1, int(ceilf(float(n) / float(DOCK_LINES))))
+	var page := clampi(toast_scroll, 0, pages - 1)
+	var first := page * DOCK_LINES
+	var shown := mini(n - first, DOCK_LINES)
+	var r := Rect2(size.x * 0.5 - DOCK_W * 0.5, 8.0, DOCK_W, float(shown) * lh + 22.0 + (26.0 if pages > 1 else 0.0))
 	toast_rect = r
 	S.paper(self, r, -0.4, Color(0.97, 0.93, 0.8, a))
 	for i in shown: tp.draw_line(get_canvas_item(), r.position + Vector2(30, 10 + float(i) * lh), first + i, Color(S.INK, a))
-	if n > per: S.text(self, S.mono(), "%d / %d  (wheel scrolls)" % [first + 1, maxi(1, n - per + 1)], r.position + Vector2(r.size.x - 210.0, r.size.y - 4.0), 12, Color(S.INK, 0.55 * a))
+	if pages > 1: S.text(self, S.mono(), "%d / %d" % [page + 1, pages], Vector2(r.end.x - 30.0 - S.tw(S.mono(), "%d / %d" % [page + 1, pages], 16), r.end.y - 8.0), 16, Color(S.INK, 0.6 * a))
 
 ## The folded scope drawer on phones: a peek strip with a mini trace, the amber/green band and the LOCK lamp, always in view.
 func _peek() -> void:
