@@ -1,5 +1,5 @@
 {
-  "device": "Pixel 9a (58071XEBF2C14D), nodejs-mobile 18 in-process, debug APK, GA-2 spike",
+  "device": "Pixel 9a, nodejs-mobile 18 in-process, debug APK, GA-2 spike",
   "date": "2026-11-10",
   "session": "680 s spike run, k=333 (one 1/30 s live frame at dt 0.1 ms), thermal status 0 at start and end (LITTLE 77 C both)",
   "desktopNode": "v26.8.1 (GA-1 run)",
