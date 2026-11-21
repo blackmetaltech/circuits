@@ -25,14 +25,20 @@ const IMPLICIT_SPEC: Record<string, string> = { ratings: 'bench.spec.ratings' };
 export const hiddenOverrides = (def: LevelDef, tk: TicketState): RigOverride[] =>
   (def.hidden ?? []).filter((h) => tk.hidden[h.id] !== undefined).map((h) => ({ target: h.target, key: h.key, value: tk.hidden[h.id]! }));
 
+/** The overrides of the live switches (chapter 4: the mains tolerance, the load): each selector's current position is a bench condition's `set`. */
+export const selectorOverrides = (def: LevelDef, tk: TicketState): RigOverride[] =>
+  (def.selectors ?? []).flatMap((sd) => (sd.options[tk.sel?.[sd.id] ?? sd.initial]?.set ?? []).map((o) => ({ target: o.target, key: o.key, value: o.value })));
+
 /** The live circuit: board + bench sources + scope probes + DMM + hidden parameters + smoked parts. */
 export function liveRig(tk: TicketState, def: LevelDef): Rig {
   const rig = buildRig({
     board: tk.board, getDef, supplies: def.supplies, supply: tk.instruments.supply, gen: tk.instruments.gen,
-    overrides: hiddenOverrides(def, tk), smoked: tk.live.smoked, ambientC: def.bench.ambientC, instruments: true,
+    overrides: [...hiddenOverrides(def, tk), ...selectorOverrides(def, tk)], smoked: tk.live.smoked, ambientC: def.bench.ambientC, instruments: true, regTau: def.bench.regTau,
   });
   // a built-in clamp (3-3's coil current): CH1 shows the trace's own probe whether or not the clip is on the board
   if (def.trace?.mode === 'auto' && rig.circuit) { const r = rig.resolve(def.trace.probe); if (r !== null) rig.scope = [r, rig.scope[1]]; }
+  // chapter 4: the isolated transformer's secondary is CH2 (a built-in differential probe)
+  if (def.trace?.second && rig.circuit) { const r = rig.resolve(def.trace.second.probe); if (r !== null) rig.scope = [rig.scope[0], r]; }
   return rig;
 }
 
@@ -42,12 +48,12 @@ export function liveCfg(tk: TicketState, def: LevelDef): LiveCfg {
   const tpd = tk.instruments.scope.timePerDiv ?? newScope().timePerDiv, oneShot = !!def.trace;
   const frameSim = oneShot ? (10 * tpd) / SWEEP_FRAMES : def.live.frameSim;
   return {
-    frameSim, h: oneShot ? frameSim / SWEEP_STEPS : def.live.h, thermalSpeed: def.live.thermalSpeed, ambientC: def.bench.ambientC,
+    frameSim, h: oneShot ? (def.trace?.h ?? frameSim / SWEEP_STEPS) : def.live.h, thermalSpeed: def.live.thermalSpeed, ambientC: def.bench.ambientC,
     xCap: LIVE_X_CAP, histCap: LIVE_HIST_CAP, scopeCap: SCOPE_POINTS_CAP, timePerDiv: tpd, ic: def.bench.ic === 'op' ? 'op' : 'zero', oneShot,
   };
 }
 /** What a single sweep depends on: change any of it and the trace starts again from power-on. */
-export const sweepKey = (tk: TicketState): string => hashOf({ p: tk.board.parts, w: tk.board.wires, pr: tk.board.probes, t: tk.instruments.scope.timePerDiv, v: tk.instruments.supply.v });
+export const sweepKey = (tk: TicketState): string => hashOf({ p: tk.board.parts, w: tk.board.wires, pr: tk.board.probes, t: tk.instruments.scope.timePerDiv, v: tk.instruments.supply.v, s: tk.sel });
 
 /** Run the pure bench for the open ticket (all conditions) and fold in cost / parts / power / area and the stars. */
 /** A rating violation or smoke from the bench is shown as the explainable cause with the player's own numbers when the ratings check has one. */
@@ -116,7 +122,7 @@ export function evalHint(e: HintExpr, probe: (p: string) => number | null): numb
   return e.op === 'add' ? a + b : e.op === 'sub' ? a - b : e.op === 'mul' ? a * b : b === 0 ? null : a / b;
 }
 export function probeOn(board: Board, def: LevelDef, tk: TicketState | null): (p: string) => number | null {
-  const rig = buildRig({ board: { ...board, probes: [], meter: { mode: 'off', pads: [] } }, getDef, supplies: def.supplies, supply: tk?.instruments.supply ?? { v: 0, ilim: 0.1 }, gen: tk?.instruments.gen ?? { shape: 'sine', f: 1000, vpp: 1, offset: 0 }, overrides: tk ? hiddenOverrides(def, tk) : [], ambientC: def.bench.ambientC });
+  const rig = buildRig({ board: { ...board, probes: [], meter: { mode: 'off', pads: [] } }, getDef, supplies: def.supplies, supply: tk?.instruments.supply ?? { v: 0, ilim: 0.1 }, gen: tk?.instruments.gen ?? { shape: 'sine', f: 1000, vpp: 1, offset: 0 }, overrides: tk ? [...hiddenOverrides(def, tk), ...selectorOverrides(def, tk)] : [], ambientC: def.bench.ambientC, regTau: def.bench.regTau });
   const ckt = rig.circuit;
   let x: Float64Array | null | undefined;
   return (p) => {

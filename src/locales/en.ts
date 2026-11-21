@@ -5,11 +5,13 @@
 import { partsEn } from './parts.en';
 import { simEn } from './sim.en';
 import { ch3En } from './ch3.en';
+import { ch4En } from './ch4.en';
 
 export const en: Record<string, string> = {
   ...partsEn,
   ...simEn,
   ...ch3En,
+  ...ch4En,
   // log lines
   'log.start': '{mentor} left you {stall} on {lane}. The bench is yours: open a ticket to begin.',
   // ticket actions

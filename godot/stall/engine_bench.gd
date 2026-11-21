@@ -28,11 +28,16 @@ const FLAVOUR := {
 	"3-2": {"gadget": "arcade", "ask": "My button counts one press as ten.", "thanks": "One press, one press. The game is fair again."},
 	"3-3": {"gadget": "relay", "ask": "My relay is too slow to pull in.", "thanks": "Click, right on time. The valves are in step."},
 	"3-4": {"gadget": "exam", "ask": "Predict first, then probe.", "thanks": "The numbers agree!"},
+	"4-1": {"gadget": "wallwart", "ask": "My adapter hums and the radio crackles.", "thanks": "Quiet at last. Thank you!"},
+	"4-2": {"gadget": "radio", "ask": "My radio needs a steady 5 volts.", "thanks": "Clear as a bell, rain or shine."},
+	"4-3": {"gadget": "printer", "ask": "The regulator is cooking my printer board.", "thanks": "Cool and steady. Print away."},
+	"4-4": {"gadget": "bench", "ask": "A 3.3 V supply for your own bench.", "thanks": "3.3 volts, steady at every load."},
+	"4-5": {"gadget": "exam", "ask": "Predict first, then probe.", "thanks": "The numbers agree!"},
 }
-const CHAPTER_TICKETS := {1: ["1-1", "1-2", "1-3", "1-4", "1-5"], 2: ["2-1", "2-2", "2-3", "2-4"], 3: ["3-1", "3-2", "3-3", "3-4"]}
-const ALL_TICKETS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4"]
+const CHAPTER_TICKETS := {1: ["1-1", "1-2", "1-3", "1-4", "1-5"], 2: ["2-1", "2-2", "2-3", "2-4"], 3: ["3-1", "3-2", "3-3", "3-4"], 4: ["4-1", "4-2", "4-3", "4-4", "4-5"]}
+const ALL_TICKETS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4", "4-1", "4-2", "4-3", "4-4", "4-5"]
 ## The parts of chapter 2 that read better with a word under the value in the shoebox (presentation only).
-const PART_TAG := {"res-box": "box plug", "trimmer": "trimmer", "rheostat": "rheostat", "cap-cer": "ceramic", "cap-ideal": "exact", "1n4148": "diode"}
+const PART_TAG := {"res-box": "box plug", "trimmer": "trimmer", "rheostat": "rheostat", "cap-cer": "ceramic", "cap-ideal": "exact", "1n4148": "diode", "zener-6v-ideal": "ideal Zener"}
 const DIAL_ENGINE := {"OFF": "off", "V": "dcv", "mA": "dca", "Ω": "ohm"}
 const DIAL_LABEL := {"off": "OFF", "dcv": "V", "dca": "mA", "ohm": "Ω"}
 
@@ -73,6 +78,10 @@ var _bench_key := ""
 var _was_lock := false
 var _all_parts: Array = []
 var _smoke_seen := {}
+var selectors: Array = []                 ## the ticket's live switches [{id, label, options:[text], index}] (chapter 4: mains tolerance, load)
+var mains: Dictionary = {}                ## ticketCard().mains: the safety card, the ribbon, the keep-out and isolation words (empty off a mains ticket)
+var camera := false                       ## the thermal camera overlay (chapter 4)
+var camera_ok := false                    ## the ticket offers it
 var _coach_max := 0                       ## the furthest coach step reached on this attempt (a step number that falls back is said out loud)
 
 func _init(b = null) -> void:
@@ -135,6 +144,7 @@ func progress(chapter := 1) -> Dictionary:
 
 func _load_ticket() -> void:
 	card = _q("ticketCard")
+	mains = card.get("mains", {}) if card.get("mains", null) is Dictionary else {}   # (before the supply is described: a mains ticket's supply is the isolation transformer)
 	_refresh_board()
 	var sc = _q("scope", [1])
 	scope_q = sc if sc is Dictionary else {}
@@ -156,16 +166,24 @@ func _load_ticket() -> void:
 	ticket["answers"] = card.get("answers", [])
 	ticket["chapter"] = int(card.get("chapter", 1))
 	ticket["scope"] = scope_view
+	mains = card.get("mains", {}) if card.get("mains", null) is Dictionary else {}
+	camera_ok = bool(card.get("camera", false)); camera = false
+	ticket["mains"] = mains
 	_exam_hide()
 	_rebuild_model()
 
 func _supply_info() -> Dictionary:
 	var ins: Dictionary = bench_q.get("instruments", {})
+	if not mains.is_empty(): return {"kind": "mains", "label": "isolation transformer", "volts": float(mains.get("vrms", 230.0)), "tired": false, "adjustable": false}
 	var rails: Array = []
 	for sd in card.get("supplies", []): if str(sd.get("kind", "")) == "bench" and sd.get("fixed", null) != null: rails.append({"name": "%s rail" % str(sd.plus), "volts": float(sd.fixed)})
 	if rails.size() >= 2: return {"kind": "sources", "label": "bench rails", "volts": 0.0, "tired": false, "sources": rails, "title": "BENCH RAILS  (always on)", "note": "wire V12 or V24 to the coil"}
 	var sup = ins.get("supply", null)
-	if sup is Dictionary: return {"kind": "bench", "label": "%s V supply" % String.num(float(sup.v), 2).trim_suffix(".0").trim_suffix(".00"), "volts": float(sup.v), "tired": false, "adjustable": str(card.get("id", "")) == "2-3"}
+	if sup is Dictionary:
+		var fixed = null
+		for sd in card.get("supplies", []): if str(sd.get("kind", "")) == "bench" and sd.get("fixed", null) != null: fixed = float(sd.fixed)
+		var vv := float(sup.v) if fixed == null else float(fixed)
+		return {"kind": "bench", "label": "%s V supply" % String.num(vv, 2).trim_suffix(".0").trim_suffix(".00"), "volts": vv, "tired": false, "adjustable": str(card.get("id", "")) == "2-3"}
 	for p in _all_parts:
 		if str(p.partId).begins_with("bat-pp3"):
 			var tired: bool = str(p.partId).ends_with("tired") or str(p.get("variant", "")) == "tired"
@@ -208,7 +226,8 @@ func _scope_setup(tg: Dictionary) -> void:
 		var clip0 = tg.get("clip", null)
 		scope_view = {"unit": str(tg.get("unit", "V")), "lo": 0.0, "hi": _n(tg.get("vdiv", 1.0)) * 7.0, "vdiv": _n(tg.get("vdiv", 1.0)), "label": str(tg.get("label", "")), "mode": "trace", "scale": _n(tg.get("scale", 1.0)),
 			"clip_pad": (clip0.pad if clip0 is Dictionary else null), "clip_name": (str(clip0.connector) if clip0 is Dictionary else ""), "clipped": bool(tg.get("clipped", false)), "attached": bool(tg.get("clipped", false)),
-			"value": 0.0, "text": "", "name": str(tg.get("name", "")), "nogauge": false, "hidden": false, "times": tg.get("times", []), "tpd": _n(tg.get("timePerDiv", 0.2)), "trace": {}, "sweep_text": "", "vmul": 1.0}
+			"value": 0.0, "text": "", "name": str(tg.get("name", "")), "nogauge": false, "hidden": false, "times": tg.get("times", []), "tpd": _n(tg.get("timePerDiv", 0.2)), "trace": {}, "sweep_text": "", "vmul": 1.0,
+			"second": (tg.second as Dictionary).get("label", "") if tg.get("second", null) is Dictionary else "", "vdivs": tg.get("vdivs", []), "vdiv_i": 0, "ac_avail": bool(tg.get("ac", false)), "ac_on": false, "acBand": _n(tg.get("acBand", 1.0), 1.0)}
 		return
 	var mode := str(tg.get("mode", "gauge")); var unit := str(tg.get("unit", ""))
 	var lo := _n(tg.get("lo", 0.0)); var hi := _n(tg.get("hi", 1.0))
@@ -240,6 +259,9 @@ func bin() -> Array:
 				var label := str(fam.name)
 				if v != null: label = NodeApi.format_value(float(v), "R" if kind == "R" else kind)
 				elif kind == "LED": label = "red LED"
+				elif kind == "REG" and str(fam.partId) == "lm7805":   # the four 7805s differ by their heatsink: the row says which one it is
+					var sink := str(va.id).get_slice("-", 1) if str(va.id).contains("-") else ""
+					label = "7805 bare" if sink == "" else "7805 +%s C/W" % sink
 				var tag := _watt_tag(float(va.ratings.P)) if (kind == "R" and va.ratings.has("P") and str(va.id) != "ideal" and not PART_TAG.has(str(fam.partId))) else str(PART_TAG.get(str(fam.partId), ""))
 				if kind == "CE": tag = _volt_tag(str(va.id))
 				if kind == "METER": kind = "GALVO"
@@ -471,6 +493,7 @@ func _refresh_board() -> void:
 		var path: Array = []
 		for q in w.path: path.append([int(q[0]), int(q[1])])
 		wires.append({"wid": str(w.wid), "a": path[0], "b": path[path.size() - 1], "path": path, "fixed": bool(w.get("fixed", false))})
+	selectors = bench_q.get("selectors", []) if bench_q.get("selectors", null) is Array else []
 	var ins: Dictionary = bench_q.get("instruments", {})
 	var sc: Dictionary = ins.get("scope", {}) if ins.get("scope", null) is Dictionary else {}
 	probes.ch1 = null
@@ -488,6 +511,7 @@ func _scene_part(p: Dictionary) -> Dictionary:
 	elif kind == "MISC" or pid.begins_with("ideal-vsource"): kind = "BAT"
 	elif kind == "METER": kind = "GALVO"
 	elif kind == "SLIDEWIRE": kind = "SLIDE"
+	elif kind == "Z" or kind == "SCHOTTKY": kind = "D"
 	var pins: Array = []
 	var pin_labels: Array = []
 	for q in p.pins:
@@ -502,6 +526,12 @@ func _scene_part(p: Dictionary) -> Dictionary:
 	elif pid == "logic-in": label = "logic in 1 M"
 	elif pid == "cap-charged": label = "4 µF, 100 V"
 	elif kind == "RELAY": label = "relay"
+	elif pid == "load-cc": label = "load"
+	elif kind == "XFMR": label = "12 V"
+	elif kind == "REG": label = "7805" if pid == "lm7805" else "LM317"
+	elif kind == "D" and pid == "1n4007": label = "1N4007"
+	elif kind == "D" and pid == "1n4148": label = "1N4148"
+	elif kind == "D" and (pid.begins_with("1n47") or pid.begins_with("bzx") or pid.begins_with("zener")): label = "Zener"
 	elif kind == "LOAD": label = str(p.get("name", "Heater"))
 	elif kind == "BOXED": label = "sealed box"
 	elif kind == "GALVO": label = "galvanometer"
@@ -591,6 +621,31 @@ func set_time_div(dir: int) -> Dictionary:
 		_bench_key = ""; hold = 0.0
 		_refresh_board(); _refresh_live(); _rebuild_model()
 	return {"ok": bool(r.get("ok", false)), "msg": str(r.get("message", "")), "tpd": float(times[nxt])}
+
+## Chapter 4: move one of the ticket's live switches (mains tolerance, load). The engine restarts the live circuit; the formal bench still runs every condition.
+func set_selector(id: String, index: int) -> Dictionary:
+	var r := _act("setSelector", [id, index])
+	if r.get("ok", false):
+		_bench_key = ""; hold = 0.0; locked = false; _was_lock = false
+		_refresh_board(); _refresh_live(); _rebuild_model()
+		ticket["supply"] = _supply_info()
+	return {"ok": bool(r.get("ok", false)), "msg": str(r.get("message", ""))}
+
+## The safety card of a mains ticket has been read (the engine unlocks power and the bench).
+func read_safety() -> void:
+	_act("readSafety"); card = _q("ticketCard"); mains = card.get("mains", {}) if card.get("mains", null) is Dictionary else {}; ticket["mains"] = mains
+	_refresh_board(); _rebuild_model()
+
+func safety_pending() -> bool: return not mains.is_empty() and not bool(mains.get("safetyRead", false))
+
+## The scope's VOLTS knob when the ticket gives a list of settings (4-1: 5, 2, 1, 0.5, 0.2 V per division) and its AC coupling key.
+func set_volts_div(dir: int) -> void:
+	var vd: Array = scope_view.get("vdivs", [])
+	if vd.is_empty(): return
+	var i := clampi(int(scope_view.get("vdiv_i", 0)) + dir, 0, vd.size() - 1)
+	scope_view["vdiv_i"] = i; scope_view["vdiv"] = float(vd[i]); scope_view["vmul"] = 1.0
+func toggle_ac() -> void:
+	if bool(scope_view.get("ac_avail", false)): scope_view["ac_on"] = not bool(scope_view.get("ac_on", false))
 
 ## DmmView reading: {text, unit, mode} straight from the engine LCD.
 func dmm() -> Dictionary:
@@ -755,7 +810,7 @@ func _rebuild_model() -> void:
 	var sets: Array = []
 	for n in frame.get("nodes", []): sets.append({"v": float(n.v), "pads": n.pads})
 	var cur_w := {}; var cur_p := {}; var spd_w := {}; var spd_p := {}; var rat := {}; var temps_m := {}; var smoked_l: Array = []
-	var heat := {}; var led := {}; var galvo := {}; var cap_bulge := {}; var cap_level := {}; var relay_m := {}
+	var heat := {}; var led := {}; var galvo := {}; var cap_bulge := {}; var cap_level := {}; var relay_m := {}; var reg_m := {}
 	for w in frame.get("wires", []): cur_w[str(w.wid)] = float(w.i); spd_w[str(w.wid)] = float(w.speed)
 	for p in frame.get("parts", []):
 		var uid := str(p.uid)
@@ -771,6 +826,7 @@ func _rebuild_model() -> void:
 			var cv := _n(p.cap.get("v", 0.0)); var vr := _n(p.cap.get("vrated", 0.0)); var vf := _n(p.cap.get("vfull", 0.0))
 			cap_bulge[uid] = clampf(-cv / 3.0, 0.0, 1.0) if cv < -0.2 else (clampf((cv / vr - 0.85) / 0.35, 0.0, 1.0) if vr > 0.0 else 0.0)
 			cap_level[uid] = clampf(cv / vf, 0.0, 1.0) if vf > 0.0 else 0.0
+		if p.has("reg"): reg_m[uid] = {"off": bool(p.reg.get("off", false)), "tj": _n(p.reg.get("tj", 25.0))}
 		if p.has("relay"): relay_m[uid] = {"operated": bool(p.relay.get("operated", false)), "mA": _n(p.relay.get("mA", 0.0))}
 	for e in frame.get("events", []): smoked_l.append(str(e.part))
 	var vmin := _n(frame.get("vmin", 0.0)); var vmax := _n(frame.get("vmax", 1.0))
@@ -781,7 +837,7 @@ func _rebuild_model() -> void:
 	var norm := {}
 	for n in frame.get("nodes", []):
 		for q in n.pads: norm["%d,%d" % [int(q[0]), int(q[1])]] = float(n.norm)
-	m["crossings"] = bench_q.get("crossings", []); m["joins"] = bench_q.get("joins", []); m["marks"] = bench_q.get("marks", []); m["slots"] = bench_q.get("slots", []); m["dangling"] = dangling; m["norm"] = norm; m["wire_speed"] = spd_w; m["part_speed"] = spd_p; m["heat"] = heat; m["led"] = led; m["galvo"] = galvo; m["cap_bulge"] = cap_bulge; m["cap_level"] = cap_level; m["relay"] = relay_m; m["contacts"] = frame.get("contacts", [])
+	m["crossings"] = bench_q.get("crossings", []); m["joins"] = bench_q.get("joins", []); m["marks"] = bench_q.get("marks", []); m["slots"] = bench_q.get("slots", []); m["dangling"] = dangling; m["norm"] = norm; m["wire_speed"] = spd_w; m["part_speed"] = spd_p; m["heat"] = heat; m["led"] = led; m["galvo"] = galvo; m["cap_bulge"] = cap_bulge; m["cap_level"] = cap_level; m["relay"] = relay_m; m["contacts"] = frame.get("contacts", []); m["keepout"] = bench_q.get("keepOut", []); m["regs"] = reg_m; m["camera"] = camera and camera_ok; m["mains"] = not mains.is_empty()
 	model = m
 
 ## ------------------------------------------------------------------------------------------------------------------ test helpers
@@ -818,9 +874,23 @@ const REFS_CH3 := {
 		"pred": {"pq": 180.0, "pu": 9.9, "pv": 40.0, "pl": 12.0}},
 }
 
+const REFS_CH4 := {
+	"4-1": {"parts": [["1n4007", null, "DO41", 14, 2, 0], ["1n4007", null, "DO41", 14, 6, 0], ["1n4007", null, "DO41", 18, 10, 2], ["1n4007", null, "DO41", 18, 13, 2], ["cap-el", 1000e-6, "25V", 20, 6, 1]],
+		"wires": [[[12, 2], [14, 2]], [[12, 6], [14, 6]], [[18, 2], [20, 2]], [[20, 2], [22, 2]], [[18, 6], [18, 2]], [[12, 2], [11, 2], [11, 10], [14, 10]], [[12, 6], [12, 13], [14, 13]],
+			[[18, 10], [18, 13]], [[18, 13], [18, 14], [22, 14]], [[20, 6], [20, 2]], [[20, 8], [20, 13], [18, 13]]], "clip": [22, 2]},
+	"4-2": {"parts": [["res-cf", 180, "1W", 4, 2, 0], ["1n4733a", null, "DO41", 12, 8, 3]],
+		"wires": [[[2, 2], [4, 2]], [[8, 2], [12, 2]], [[12, 2], [22, 2]], [[12, 4], [12, 2]], [[12, 8], [12, 14], [22, 14]]], "clip": [22, 2]},
+	"4-3": {"parts": [["res-ww5", 10, "5W", 4, 2, 0], ["lm7805", null, "TO220-15", 10, 6, 0]],
+		"wires": [[[2, 2], [4, 2]], [[8, 2], [10, 2], [10, 6]], [[12, 6], [12, 14], [22, 14]], [[14, 6], [14, 2], [22, 2]]], "clip": [22, 2]},
+	"4-4": {"parts": [["lm317", null, "TO220", 10, 8, 0], ["res-cf", 240, "0.25W", 12, 12, 0], ["res-cf", 390, "0.25W", 4, 12, 0]],
+		"wires": [[[2, 2], [14, 2], [14, 8]], [[12, 8], [12, 4], [20, 4], [20, 2], [22, 2]], [[10, 8], [8, 8], [8, 12]], [[10, 8], [10, 12], [12, 12]], [[16, 12], [16, 10], [12, 10], [12, 8]], [[4, 12], [4, 14], [22, 14]]], "clip": [22, 2]},
+	"4-5": {"parts": [["res-exact", 300, "ideal", 4, 2, 0], ["zener-6v-ideal", null, "ideal", 12, 6, 3]],
+		"wires": [[[2, 2], [4, 2]], [[8, 2], [10, 2]], [[10, 2], [12, 2]], [[12, 6], [12, 12], [10, 12]]], "pred": {"piz": 14.0, "prl": 333.33, "ppz": 120.0}},
+}
+
 ## Build the reference design for the open ticket straight through the engine (no UI). Returns true when every step was accepted.
 func build_ref(id: String) -> bool:
-	var R: Dictionary = REFS.get(id, REFS_CH2.get(id, REFS_CH3.get(id, {})))
+	var R: Dictionary = REFS.get(id, REFS_CH2.get(id, REFS_CH3.get(id, REFS_CH4.get(id, {}))))
 	if R.is_empty(): return false
 	var ok := true
 	if R.has("pred"): for k in R.pred: ok = predict(str(k), float(R.pred[k])).ok and ok
@@ -838,6 +908,7 @@ func unlock_through(id: String) -> void:
 	for tk in ALL_TICKETS:
 		if tk == id: break
 		if not open_ticket(tk): continue
+		if safety_pending(): read_safety()
 		build_ref(tk); set_power(true)
 		for i in 3: step(FRAME_DT * 1.01)
 		_act("runBench")

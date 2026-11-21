@@ -143,7 +143,7 @@ function newton(ws: TranWork, gmin: number, tNew: number, lambda: number, method
     ws: { ctx, solver: ws.solver, xNew },
     extra: equil ? (c: StampCtx) => equilibrate(c) : undefined,
   };
-  const r = solveNewton(ckt, x, rescue ? { ...opts, noiseFloor: 1e-12 } : opts);
+  const r = solveNewton(ckt, x, rescue ? { ...opts, noiseFloor: 1e-10, abstol: 1e-9 } : opts);
   x.set(r.x);
   if (r.ok) return { ok: true, iters: r.iterations, failure: null };
   if (r.reason === 'singular') return { ok: false, iters: r.iterations, failure: explainSingular(ckt, ctx.A, r.badColumn) };

@@ -229,6 +229,60 @@ function explainChapter3(f: BenchFailure, ctx: ExplainContext): Explained | null
   }
   return null;
 }
+
+// ---------------------------------------------------------------- chapter 4
+const condNum = (cond: string, re: RegExp): number | null => { const m = re.exec(cond); return m ? Number(m[1]) : null; };
+/** Chapter 4 failures in plain words: the rectifier (4-1), the Zener shunt (4-2), the regulator (4-3) and the LM317 (4-4). Null when the failure is not one of theirs. */
+function explainChapter4(f: BenchFailure, ctx: ExplainContext): Explained | null {
+  const mode = ctx.miss?.mode, v = f.vars, num = (k: string): number => Number(v[k]), again = (ctx.prior ?? 0) >= 1, id = String(v.id ?? ''), cond = String(v.cond ?? '');
+  const condText = cond === '' || cond === 'nominal' ? '' : `, in the ${cond} test`, value = num('value');
+  if (mode === 'rectifier' && ctx.rect && (f.key === 'bench.metric.fail' || f.key === 'bench.metric.nan')) {
+    const r = ctx.rect, mains = condNum(cond, /(\d+) V/) ?? 230, half = r.nDiodes < 4, t = half ? 20 : 10;
+    if (id === 'ripple' && r.c > 0) {
+      const dv = (r.i * t * 1e-3) / r.c, vars: Vars = { ripple: sig(value, 3), lim: sig(num('hi'), 2), cond: condText, C: si(r.c, 'F'), iMA: sig(r.i * 1000, 3), t, q: sig(r.i * t * 1e3, 3), dv: sig(dv, 2), cNeed: si((r.i * t * 1e-3) / num('hi'), 'F') };
+      const RIPPLE_KEYS = { first: { half: 'explain.rect.ripple.first.half', bridge: 'explain.rect.ripple.first.bridge' }, again: { half: 'explain.rect.ripple.again.half', bridge: 'explain.rect.ripple.again.bridge' } } as const;   // literal keys so the locale guards can see them
+      return { key: RIPPLE_KEYS[again ? 'again' : 'first'][half ? 'half' : 'bridge'], vars };
+    }
+    if (id === 'mean') {
+      const vrms = (12 * mains) / 230, pk = vrms * 1.414, drops = half ? 0.8 : 1.6, vars: Vars = { value: Number.isFinite(value) ? sig(value, 3) : 0, lim: sig(num('lo'), 3), cond: condText, pk: sig(pk, 3), vrms: sig(vrms, 3), nDrops: half ? 1 : 2, top: sig(pk - drops, 3) };
+      return { key: value < 2 ? 'explain.rect.mean.dead' : 'explain.rect.mean.low', vars };
+    }
+  }
+  if (mode === 'rectifier' && ctx.rect && f.key === 'rating.diode.current') return { key: 'explain.diode.current.rect', vars: { part: String(v.part), value: sig(num('value'), 3), limit: sig(num('limit'), 3) } };
+  if (mode === 'rectifier' && f.key === 'rating.diode.peak') return { key: 'explain.diode.peak', vars: { part: String(v.part), value: sig(num('value'), 3), limit: sig(num('limit'), 3), avg: sig(num('avg'), 2), iMA: sig((ctx.rect?.i ?? 0.1) * 1000, 3) } };
+  if (mode === 'rectifier' && f.key === 'smoke.thermal' && ctx.miss?.kinds?.[String(v.part)] === 'XFMR') return { key: 'explain.xfmr.hot', vars: { part: String(v.part), p: sig(num('P'), 3), v: 17, r: 1.5, i: sig(17 / 1.5, 2) } };
+  if (mode === 'zener' && ctx.zener && f.key === 'bench.level.fail' && id === 'vout') {
+    const z = ctx.zener, vin = condNum(cond, /^(\d+) V/) ?? 13, il = /30 mA/.test(cond) ? 0.03 : 0, iR = (vin - z.vz) / z.r;
+    if (value > num('hi')) {
+      const iz = (vin - value) / z.r - il, vars: Vars = { cond, value: sig(value, 3), hi: sig(num('hi'), 4), iz: sig(iz * 1000, 3), slope: sig(z.slope, 2), vin, vz: z.vz, R: si(z.r, 'Ω'), iR: sig(iR * 1000, 3), rise: sig(value - z.vz, 2) };
+      return { key: again ? 'explain.zener.high.again' : 'explain.zener.high.first', vars };
+    }
+    const iTot = Math.max(0, (vin - Math.max(value, 0)) / z.r), iz = Math.max(0, iTot - il), vars: Vars = { cond, value: sig(Math.max(value, 0), 3), lo: sig(num('lo'), 4), hi: sig(num('hi'), 4), vdrop: sig(vin - Math.max(value, 0), 3), iz: sig(iz * 1000, 3), iTot: sig(iTot * 1000, 3), vin, vz: z.vz, R: si(z.r, 'Ω'), iR: sig(iR * 1000, 3), iL: sig(il * 1000, 3), sag: sig(Math.max(0, (z.izt - (iR - il)) * z.slope), 2) };
+    return { key: again ? 'explain.zener.drop.again' : 'explain.zener.drop.first', vars };
+  }
+  if (mode === 'zener' && ctx.zener && f.key === 'rating.zener.power') {
+    const z = ctx.zener;
+    return { key: 'explain.zener.hot', vars: { part: String(v.part), value: sig(num('value'), 3), limit: sig(num('limit'), 3), vin: 17, vz: z.vz, iR: sig(((17 - z.vz) / z.r) * 1000, 3) } };
+  }
+  if (mode === 'regulator' && ctx.reg) {
+    const g = ctx.reg, i = condNum(cond, /^([\d.]+) A/) ?? 0.5, vinChip = g.vrail - i * g.rpre, p = (vinChip - g.vout) * i, tj = g.ta + p * g.theta;
+    if (f.key === 'rating.thermal.tj') return { key: 'explain.reg.tj', vars: { part: String(v.part), p: sig(p, 3), vin: sig(vinChip, 3), vout: g.vout, i, ta: g.ta, theta: sig(g.theta, 3), tj: sig(tj, 3), tTarget: g.tjMax, thetaNeeded: sig((g.tjMax - g.ta) / p, 3) } };
+    if (id === 'vmin' && (f.key === 'bench.metric.fail' || f.key === 'bench.metric.nan')) {
+      if (vinChip < g.vout + 2) return { key: 'explain.reg.dropout', vars: { value: sig(Math.max(value, 0), 3), rpre: si(g.rpre, 'Ω'), i, vinChip: sig(vinChip, 3), vdrop: sig(i * g.rpre, 3) } };
+      return { key: 'explain.reg.shut', vars: { value: sig(Math.max(value, 0), 3), tShut: 150, tBack: 135, vin: sig(vinChip, 3), vout: g.vout, i, p: sig(p, 3), ta: g.ta, theta: sig(g.theta, 3), tj: sig(tj, 3) } };
+    }
+  }
+  if (mode === 'lm317' && ctx.lm317 && f.key === 'bench.level.fail' && id === 'vout') {
+    const { r1, r2 } = ctx.lm317, vf = 1.25 * (1 + r2 / r1) + 50e-6 * r2;
+    if (Math.abs(vf - 3.3) / 3.3 > 0.01 && !(value > vf * 1.05)) {   // (an output far above what the formula gives is the minimum load, whichever resistors)
+      const r2need = (3.3 - 1.25) / (1.25 / r1 + 50e-6);
+      return { key: again ? 'explain.lm317.formula.again' : 'explain.lm317.formula', vars: { value: sig(value, 4), cond: condText, lo: sig(num('lo'), 4), hi: sig(num('hi'), 4), r1: si(r1, 'Ω'), r2: si(r2, 'Ω'), vf: sig(vf, 4), vout: 3.3, r2need: si(r2need, 'Ω'), off: sig(Math.abs(vf - 3.3) / 0.033, 2), iadjV: sig(50e-6 * r2, 2) } };
+    }
+    const iDiv = (1.25 / r1) * 1000;
+    return { key: 'explain.lm317.minload', vars: { value: sig(value, 4), cond: condText, iDiv: sig(iDiv, 2), iExtra: sig(Math.max(0, 3.5 - iDiv), 2) } };
+  }
+  return null;
+}
 export function explainFloatingGate(a: { part: string; rPull?: number }): Explained {
   return { key: 'explain.floatingGate', vars: { ...pn(a.part), rPull: si(a.rPull ?? 100e3, 'Ω') } };
 }
@@ -310,6 +364,11 @@ export interface ExplainContext {
   /** Chapter 3: the RC filter on the board (3-1, 3-2) and the coil (3-3). */
   rc?: RcCtx;
   coil?: CoilCtx;
+  /** Chapter 4: the rectifier (4-1), the Zener shunt (4-2), the regulator (4-3) and the LM317 (4-4) as the player built them. */
+  rect?: { c: number; i: number; nDiodes: number };
+  zener?: { r: number; vz: number; slope: number; izt: number };
+  reg?: { rpre: number; vrail: number; vout: number; theta: number; ta: number; tjMax: number };
+  lm317?: { r1: number; r2: number };
   /** How many failures the player already had on this ticket (the first burn teaches the cause, a repeat gives the worked formula). */
   prior?: number;
 }
@@ -329,6 +388,7 @@ function named(e: Explained, ctx: ExplainContext): Explained {
 function explainRaw(f: BenchFailure, ctx: ExplainContext): Explained {
   const v = f.vars, part = String(v.part ?? '');
   const num = (k: string): number => Number(v[k]);
+  const e4 = explainChapter4(f, ctx); if (e4) return e4;
   switch (f.key) {
     case 'rating.resistor.power': case 'smoke.resistor': {
       const r = ctx.resistance?.[part];
@@ -336,7 +396,11 @@ function explainRaw(f: BenchFailure, ctx: ExplainContext): Explained {
       const p = num('value' in v ? 'value' : 'P'), rated = num('limit' in v ? 'limit' : 'Prated');
       return explainResistorPower({ part, v: Math.sqrt(p * r), r, p, rated });
     }
-    case 'rating.cap.voltage': if (ctx.electrolytic?.includes(part)) return explainElecOvervoltage({ part, v: num('value'), vRated: num('limit') }); break;
+    case 'rating.cap.voltage': if (ctx.electrolytic?.includes(part)) {
+      const vv = num('value'), lim = num('limit');
+      if (vv <= lim * 1.2) return { key: ctx.miss?.mode === 'rectifier' ? 'explain.cap.overrating' : 'explain.cap.overrating.plain', vars: { ...pn(part), v: sig(vv), vRated: sig(lim), vVent: sig(lim * 1.2), vPick: firstAtLeast(CAP_VOLTAGES, vv * VOLTAGE_MARGIN) } };   // over its rating but not yet venting
+      return explainElecOvervoltage({ part, v: vv, vRated: lim });
+    } break;
     case 'smoke.cap.over': if (ctx.electrolytic?.includes(part)) return explainElecOvervoltage({ part, v: num('v'), vRated: num('vrated') }); break;
     case 'rating.cap.reverse': case 'smoke.cap.reverse': return explainElecReversed({ part, v: num('v') });
     case 'rating.led.current': case 'smoke.led.die': {

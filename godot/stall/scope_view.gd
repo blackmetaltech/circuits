@@ -50,7 +50,14 @@ func _ready() -> void:
 	set_process(true)
 
 func _y_of(v: float) -> float:
+	if is_trace() and bool(sc.get("ac_on", false)):   # AC coupling (chapter 4): the mean is taken away, the trace sits on the middle line, and 0.2 V per division shows the ripple
+		var dcv = (sc.get("trace", {}) as Dictionary).get("dc", null)
+		return SCREEN.position.y + 4.0 * DIV - ((v - (0.0 if dcv == null else float(dcv))) / (float(sc.get("vdiv", 4.0)) * float(sc.get("vmul", 1.0)))) * DIV
 	return SCREEN.end.y - DIV - (v / (float(sc.get("vdiv", 4.0)) * float(sc.get("vmul", 1.0)))) * DIV
+
+## The amber second channel (4-1's transformer secondary) always reads 10 V per division about the middle line.
+const CH2_VDIV := 10.0
+func _y2(v: float) -> float: return SCREEN.position.y + 4.0 * DIV - (v / CH2_VDIV) * DIV
 
 ## Seconds the full screen spans (10 divisions) at the engine's time knob, and the x of a time on the screen.
 func _span() -> float: return maxf(10.0 * float(sc.get("tpd", 0.2)), 1e-9)
@@ -95,6 +102,10 @@ func turn(i: int, d: float) -> void:
 
 ## The VOLTS knob of a time trace: x1, x2, x5, x0.5 ... the vertical scale only (a picture of the same samples).
 func volts_step(dir: int) -> void:
+	var vd: Array = sc.get("vdivs", [])
+	if not vd.is_empty():   # the ticket's own list (4-1: 5, 2, 1, 0.5, 0.2 V per division); a click goes finer, a right click coarser
+		var j := clampi(int(sc.get("vdiv_i", 0)) + dir, 0, vd.size() - 1)
+		sc["vdiv_i"] = j; sc["vdiv"] = float(vd[j]); sc["vmul"] = 1.0; _knob_ang[0] += float(dir) * 0.5; return
 	var opts := [0.5, 1.0, 2.0, 5.0]
 	var cur := float(sc.get("vmul", 1.0)); var i := 1
 	for k in opts.size(): if is_equal_approx(float(opts[k]), cur): i = k
@@ -134,8 +145,21 @@ func _draw() -> void:
 	_panel()
 
 ## Chapter 3: the amber target is a tube in time and voltage (the engine's `scope().trace.tube`): an amber ribbon around the ideal curve, or the allowed windows a signal has to stay in. It turns green when the engine says LOCK.
+## AC coupled: the target is the ripple allowance, a band of acBand volts peak to peak about the middle line.
+func _ac_back() -> void:
+	var half := float(sc.get("acBand", 1.0)) * 0.5
+	var col := S.PHOS if locked else S.AMBER
+	var y1 := _y_of(half + _dc()); var y0 := _y_of(-half + _dc())
+	draw_rect(Rect2(SCREEN.position.x, clampf(y1, SCREEN.position.y, SCREEN.end.y), SCREEN.size.x, clampf(y0, SCREEN.position.y, SCREEN.end.y) - clampf(y1, SCREEN.position.y, SCREEN.end.y)), Color(col, 0.2), true)
+	for yy in [y1, y0]: if yy > SCREEN.position.y and yy < SCREEN.end.y: draw_line(Vector2(SCREEN.position.x, yy), Vector2(SCREEN.end.x, yy), Color(col, 0.8), 1.5)
+	S.text(self, S.mono(), "AC  ripple band %s Vpp" % EngineBench._g(float(sc.get("acBand", 1.0))), Vector2(SCREEN.position.x + 6.0, SCREEN.position.y + 14.0), 11, Color(0.55, 1.0, 0.65, 0.7))
+func _dc() -> float:
+	var dcv = (sc.get("trace", {}) as Dictionary).get("dc", null)
+	return 0.0 if dcv == null else float(dcv)
+
 func _tube_back() -> void:
 	var tr: Dictionary = sc.get("trace", {}) as Dictionary
+	if bool(sc.get("ac_on", false)) and not bool(sc.get("hidden", false)): _ac_back(); return
 	var tube: Dictionary = tr.get("tube", {}) as Dictionary
 	if tube.is_empty() or bool(sc.get("hidden", false)): return
 	var col := S.PHOS if locked else S.AMBER
@@ -210,15 +234,19 @@ func _panel() -> void:
 	if live and attached and slide != "":
 		txt = "<< slide left" if slide == "left" else (("slide right >>") if slide == "right" else ("NO BALANCE: check wiring" if slide == "dead" else "on balance"))
 		S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 11 if slide == "dead" else 14, Color("#ff9d6a") if slide == "dead" else Color(vc, 0.95 if slide != "on" else 0.6))
-	else: S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14, Color(vc, 0.55))
+	else: S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14 if (String(txt).length() <= 9 or not trace_mode) else 11, Color(vc, 0.55))   # "SPEC NOT MET" / "OUT OF TUBE" must stop before the V/DIV setting beside it
 	S.text(self, S.mono(), rd, Vector2(px + 10, 242), 20 if rd.length() < 11 else 15, Color(vc, 0.9 if (live and attached) else 0.3))
 	if trace_mode:
 		var hf := 1.2 if S.handheld else 1.0   # handheld: the sweep and volts settings are the ones a player reads, so they get bigger
 		S.text(self, S.mono(), "%s/DIV" % tfmt(float(sc.get("tpd", 0.2))), Vector2(px + 84 - (14 if S.handheld else 0), 211 if S.handheld else 206), int(13 * (1.2 if S.handheld else 1.0)), Color(vc, 0.85))
 		S.text(self, S.mono(), "%s%s/DIV" % [_fmt(float(sc.get("vdiv", 4.0)) * float(sc.get("vmul", 1.0))), unit], Vector2(px + 98 + (6 if S.handheld else 0), 242 if S.handheld else 222), int(11 * hf), Color(vc, 0.6))
 	else: S.text(self, S.mono(), "%s/DIV" % _fmt(float(sc.get("vdiv", 4.0))), Vector2(px + 98, 206), 12, Color(vc, 0.4))
+	if trace_mode and str(sc.get("second", "")) != "":
+		S.text(self, S.mono(), "CH2 %s  %d V/DIV" % [str(sc.get("second", "")), int(CH2_VDIV)], Vector2(px + 10, 266), 12, Color("#FFB547", 0.85))
+	if trace_mode and bool(sc.get("ac_avail", false)):
+		S.text(self, S.mono(), "CH1 AC" if bool(sc.get("ac_on", false)) else "CH1 DC", Vector2(px + 10, 284), 12, Color(vc, 0.9 if bool(sc.get("ac_on", false)) else 0.5))
 	# knobs
-	var kc := knob_centres(); var names := ["VOLTS", "TIME", "LEVEL", "FOCUS"]
+	var kc := knob_centres(); var names := ["VOLTS", "TIME", "AC / DC" if (trace_mode and bool(sc.get("ac_avail", false))) else "LEVEL", "FOCUS"]
 	for i in kc.size():
 		var hov := i == hover_knob
 		if hov: S.glow(self, kc[i], 46.0, Color("#ffd98a", 0.16))
@@ -231,7 +259,7 @@ func _panel() -> void:
 		# the setting itself is on the VFD ("200 ms/DIV"); on a handheld the knob carries only its name, big enough to read (about 12 screen px at this scale)
 		if not S.handheld:
 			if is_trace() and i == 1: nm = "TIME  %s" % tfmt(float(sc.get("tpd", 0.2)))
-			elif is_trace() and i == 0: nm = "VOLTS  x%s" % _fmt(float(sc.get("vmul", 1.0)))
+			elif is_trace() and i == 0: nm = ("VOLTS  %s" % _fmt(float(sc.get("vdiv", 1.0)))) if not (sc.get("vdivs", []) as Array).is_empty() else "VOLTS  x%s" % _fmt(float(sc.get("vmul", 1.0)))
 		var kfs := 19 if S.handheld else 12
 		S.text(self, S.hand(), nm, kc[i] + Vector2(-S.tw(S.hand(), nm, kfs) * 0.5, 40 if not S.handheld else 44), kfs, Color("#e8e0c8"))
 	# CH1 BNC and the power lamp
@@ -281,6 +309,12 @@ func _draw_trace(ci: Control) -> void:
 	if n < 256: S.glow(ci, head, 28.0, Color(0.6, 1.0, 0.6, 0.65 * a))   # still forming: the beam's head
 	else: S.glow(ci, head, 12.0, Color(0.6, 1.0, 0.6, 0.25 * a))
 	_mark63(ci, trd)
+	var v2: Array = trd.get("v2", [])
+	if str(sc.get("second", "")) != "" and v2.size() > 1:   # CH2: the transformer's secondary, amber
+		var p2 := PackedVector2Array()
+		for k in v2.size(): p2.append(Vector2(SCREEN.position.x + float(k) / 255.0 * SCREEN.size.x, clampf(_y2(float(v2[k])), SCREEN.position.y - 4.0, SCREEN.end.y + 4.0)))
+		var am := Color("#FFB547")
+		ci.draw_polyline(p2, Color(am, 0.10 * a), 8.0, true); ci.draw_polyline(p2, Color(1.0, 0.92, 0.7, 0.9 * a), 1.6, true)
 	if not sc.is_empty() and not bool(sc.get("hidden", false)):
 		var col := S.PHOS if locked else S.AMBER
 		S.glow(ci, SCREEN.get_center(), 200.0, Color(col, 0.05 + (0.14 * _lock_flash if locked else 0.0)))

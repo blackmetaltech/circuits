@@ -30,7 +30,9 @@ var tickets: Array = []                   ## [{id,title,customer,spec,price,open
 var map_chapter := 1                      ## which chapter's page the map shows
 var map_title := ""                       ## the engine's chapter title and blurb
 var map_blurb := ""
-var chapter_open: Array = [true, false, false]   ## per chapter: has a ticket that is not locked
+var chapter_open: Array = [true, false, false, false]
+var safety: Dictionary = {}                ## the mains safety card (engine ticketCard().mains): title, Wren's lines, button, firstView
+var safety_t := 0.0                        ## seconds the card has been open (the first view cannot be dismissed before it has been on the desk long enough to read)   ## per chapter: has a ticket that is not locked
 var pred_head := ""                        ## the slip's title line ("2-4 Exam: ... · predict first" or "Cable Fault · the crew's slip")
 var coach_ticket: Dictionary = {}
 var coach_steps: Array = []
@@ -52,11 +54,13 @@ func _ready() -> void:
 func show_page(m: String) -> void:
 	if m != mode: open_t = 0.0
 	if m == "title" and mode != "title": _intro = 0.0
+	if m == "safety" and mode != "safety": safety_t = 0.0
 	mode = m; mouse_filter = Control.MOUSE_FILTER_STOP if m != "" else Control.MOUSE_FILTER_IGNORE
 	queue_redraw()
 
 func _process(dt: float) -> void:
 	t += dt; _intro += dt; open_t = minf(1.0, open_t + dt * 4.0)
+	if mode == "safety": safety_t += dt
 	if mode != "": queue_redraw()
 
 func _gui_input(e: InputEvent) -> void:
@@ -65,10 +69,11 @@ func _gui_input(e: InputEvent) -> void:
 	if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
 		for b in _buttons:
 			if (b.rect as Rect2).has_point(e.position): act.emit(b.id, b.get("arg", "")); accept_event(); return
+		if mode == "safety": accept_event(); return   # the safety card is not closed by clicking around it, nor by Esc: only its own button
 		if mode == "notebook" and _book.has_point(e.position): accept_event(); return   # reading, not closing: only the X, Esc, a click outside the book or the footer buttons close it
 		if mode == "notebook" or mode == "settings": act.emit("close", "")
 		accept_event()
-	elif e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_RIGHT and mode != "title": act.emit("close", ""); accept_event()
+	elif e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_RIGHT and mode != "title" and mode != "safety": act.emit("close", ""); accept_event()
 	elif e is InputEventMouseButton and e.pressed and mode == "notebook" and (e.button_index == MOUSE_BUTTON_WHEEL_DOWN or e.button_index == MOUSE_BUTTON_WHEEL_UP):
 		codex_i = clampi(codex_i + (1 if e.button_index == MOUSE_BUTTON_WHEEL_DOWN else -1), 0, CoachData.CODEX.size() - 1); accept_event()
 
@@ -88,6 +93,7 @@ func _draw() -> void:
 		"settings": _settings(a)
 		"predict": _predict(a)
 		"debrief": _debrief(a)
+		"safety": _safety(a)
 
 ## ------------------------------------------------------------------------------------------------------------------ title
 
@@ -191,10 +197,12 @@ func _map(a: float) -> void:
 	var note := "Wren left me the stall, a scope, a shoebox and this notebook. Customers come to the counter with something dead. Fix it, don't burn it.\n\nPin a ticket, build, power on, and watch the band."
 	if map_chapter == 2: note = map_blurb + "\n\nA voltage divider is only as good as what hangs on it. A bridge asks nothing of the cable but a balance. Measure first, then build."
 	elif map_chapter == 3: note = map_blurb + "\n\nNothing here settles at once. A capacitor fills at a pace set by R times C, and a coil rises at L over R: watch the curve form, and keep it inside the amber tube."
+	elif map_chapter == 4: note = map_blurb + "\n\nThe rain is loud on the awnings tonight. Volts you can feel are volts you respect: on the mains tickets the bench is simulated and the dangerous side is fenced off in red."
 	S.text(self, f, note, lp + Vector2(0, 124), 24, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, half - 130)
 	var dc := r.position + Vector2(half * 0.5 + 170.0, r.size.y - 190)
 	if map_chapter == 2: _doodle_divider(dc)
 	elif map_chapter == 3: _doodle_rc(dc)
+	elif map_chapter == 4: _doodle_rectifier(dc)
 	else: _doodle_led(dc)
 	S.text(self, f, ("in the tin:  %s" % wallet_text) if wallet_text != "" else ("coins in the tin:  %d" % wallet), r.position + Vector2(56, r.size.y - 60), 28, S.INK)
 	# the chits, pinned on the right page
@@ -217,7 +225,8 @@ func _map(a: float) -> void:
 		S.pin(self, q.position + Vector2(q.size.x * 0.5, 12), Color("#d23a2e") if open else Color("#7a7f86"))
 		S.text(self, f, "%s%s" % [str(tk.id), "  EB" if bool(tk.get("eb", false)) else ""], q.position + Vector2(14, 48), 18, S.INK_RED)
 		var tsz := 32   # a long title shrinks to fit the chit instead of running into the corner tags
-		while tsz > 18 and S.tw(f, str(tk.title), tsz) > q.size.x - 28.0: tsz -= 2
+		var tw_max: float = q.size.x - 28.0 - (140.0 if tk.done else 0.0)   # a FIXED stamp sits at the right: the title stops before it
+		while tsz > 18 and S.tw(f, str(tk.title), tsz) > tw_max: tsz -= 2
 		S.text(self, f, str(tk.title), q.position + Vector2(14, 84), tsz, S.INK if open else Color(S.INK, 0.5))
 		S.text(self, f, "for %s" % str(tk.customer), q.position + Vector2(14, 112), 20, Color(S.INK, 0.8 if open else 0.4))
 		if not S.handheld: S.text(self, f, str(tk.spec), q.position + Vector2(14, 130), 16, Color(S.INK, 0.9 if open else 0.4), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 26)   # (handheld: the spec is on the ticket chit; here the text is big instead)
@@ -225,7 +234,7 @@ func _map(a: float) -> void:
 		var hb := 46.0 if S.handheld else 38.0   # the 'best cost' / replay line sits this far above the bottom edge
 		if open and pay != "": S.text(self, f, pay, q.position + Vector2(14, q.size.y - 14), 14, Color(S.INK, 0.6))
 		var fee: String = str(tk.get("price_text", "")) if str(tk.get("price_text", "")) != "" else "%d coins" % int(tk.price)
-		S.text(self, f, fee, q.position + Vector2(q.size.x - 20 - S.tw(f, fee, 17), 48), 17, Color(S.INK, 0.7))
+		if not tk.done: S.text(self, f, fee, q.position + Vector2(q.size.x - 20 - S.tw(f, fee, 17), 48), 17, Color(S.INK, 0.7))   # (a fixed chit's fee is on its 'fee + per new star' line; the stamp sits here)
 		if int(tk.get("stars", 0)) > 0 or tk.done:
 			var smax := int(tk.get("stars_max", 2)); var got := int(tk.get("stars", 0))
 			S.text(self, f, "*".repeat(got) + ".".repeat(maxi(0, smax - got)), q.position + Vector2(118, 52), 30, S.INK_RED)
@@ -244,11 +253,11 @@ func _map(a: float) -> void:
 	S.text(self, f, "*  met the spec", Vector2(lx0, ly0 + 26), 18, Color(S.INK, 0.8))
 	S.text(self, f, "**  and under the cost par", Vector2(lx0, ly0 + 50), 18, Color(S.INK, 0.8))
 	S.text(self, f, "***  an exam: every prediction within 1 %", Vector2(lx0, ly0 + 74), 18, Color(S.INK, 0.8))
-	for ci in 3:   # the chapters: tabs on the page's right edge (a page nobody has opened yet is dim)
+	for ci in 4:   # the chapters: tabs on the page's right edge (a page nobody has opened yet is dim)
 		var tr := Rect2(r.end.x - 22, r.position.y + 60 + ci * 66, 44, 56)
 		var chv := _btn(tr, "chapter", str(ci + 1))
 		var curc := ci + 1 == map_chapter; var openc: bool = ci < chapter_open.size() and bool(chapter_open[ci])
-		S.rr(self, tr, 8, [Color("#d9663f"), Color("#4a7fb5"), Color("#6aa05a")][ci].lightened(0.15 if chv or curc else -0.12).darkened(0.0 if openc else 0.35))
+		S.rr(self, tr, 8, [Color("#d9663f"), Color("#4a7fb5"), Color("#6aa05a"), Color("#8c6ab5")][ci].lightened(0.15 if chv or curc else -0.12).darkened(0.0 if openc else 0.35))
 		S.text(self, f, str(ci + 1), tr.position + Vector2(24, 36), 26, Color("#fff8e0", 1.0 if openc else 0.55))
 	# back to the title
 	var br := Rect2(r.end.x - 230, r.end.y - 62, 190, 44)
@@ -271,6 +280,19 @@ func _doodle_rc(dc: Vector2) -> void:
 	var y63 := o.y - 118.0 * 0.632; var x1 := o.x + 45.0
 	draw_dashed_line(Vector2(o.x, y63), Vector2(x1, y63), ink, 2.0, 6.0); draw_dashed_line(Vector2(x1, y63), Vector2(x1, o.y), ink, 2.0, 6.0)
 	S.text(self, S.hand(), "63 %", Vector2(o.x - 54, y63 + 8), 20, S.INK_RED); S.text(self, S.hand(), "RC", Vector2(x1 - 12, o.y + 24), 20, S.INK_RED)
+
+## Chapter 4's doodle: a sine, a diode, and the smoothed hump the capacitor makes of it.
+func _doodle_rectifier(dc: Vector2) -> void:
+	var ink := Color(S.INK, 0.8); var o := dc + Vector2(-110, 30)
+	var pts := PackedVector2Array()
+	for i in 41: var x := float(i) / 40.0; pts.append(o + Vector2(x * 96.0, -34.0 * sin(x * TAU * 1.5)))
+	draw_polyline(pts, ink, 3.0, true)
+	var d := dc + Vector2(14, 30)
+	draw_line(d + Vector2(-26, 0), d + Vector2(-12, 0), ink, 3.0); draw_colored_polygon(PackedVector2Array([d + Vector2(-12, -16), d + Vector2(-12, 16), d + Vector2(12, 0)]), Color(S.INK, 0.8)); draw_line(d + Vector2(12, -16), d + Vector2(12, 16), ink, 4.0); draw_line(d + Vector2(12, 0), d + Vector2(26, 0), ink, 3.0)
+	var q := PackedVector2Array(); var base := dc + Vector2(60, 40)
+	for i in 41: var x := float(i) / 40.0; var ph := fposmod(x * 3.0, 1.0); q.append(base + Vector2(x * 96.0, -44.0 + 14.0 * ph - (0.0 if ph < 0.35 else 0.0)))
+	draw_polyline(q, S.AMBER.darkened(0.1), 4.0, true)
+	S.text(self, S.hand(), "~", o + Vector2(36, 34), 26, S.INK_RED); S.text(self, S.hand(), "ripple", base + Vector2(10, 38), 20, S.INK_RED)
 
 func _doodle_divider(dc: Vector2) -> void:
 	var ink := Color(S.INK, 0.8)
@@ -381,7 +403,8 @@ func _predict(a: float) -> void:
 		S.text(self, f, "Fig. 1", fr.position + Vector2(10, 22), 16, Color(S.INK, 0.6))
 		var pot := str(fig.get("kind", "node")) == "pot"
 		var caps := str(fig.get("kind", "node")) == "caps"
-		ExamFigure.draw(self, fr.grow(-10), fig, S.INK, ["Q, U", "V, energy lost"] if caps else (["gradient, EMF, r"] if pot else ["V(%s)" % str(fig.get("node", "A")), "I(E2)"]))
+		var zen := str(fig.get("kind", "node")) == "zener"
+		ExamFigure.draw(self, fr.grow(-10), fig, S.INK, ["Q, U", "V, energy lost"] if caps else (["gradient, EMF, r"] if pot else (["Iz", "RL(min)", "Pz"] if zen else ["V(%s)" % str(fig.get("node", "A")), "I(E2)"])))
 		S.text(self, f, "exact capacitors, ideal source" if caps else ("ideal driver cell, exact rheostat" if pot else "ideal sources, exact resistors"), Vector2(fr.position.x + 10, fr.end.y - 8), 14, Color(S.INK, 0.5))
 		if star_rule != "": S.text(self, f, "Marking: " + star_rule, Vector2(fr.position.x, fr.end.y + 24), 15, Color(S.INK_RED, 0.9), HORIZONTAL_ALIGNMENT_LEFT, fr.size.x)
 	var brief_h := S.wrapped_h(f, str(coach_ticket.get("brief", "")), 19, col_w)
@@ -426,7 +449,7 @@ func _stars_text(n: int, mx := 3) -> String: return "*".repeat(n) + ".".repeat(m
 func _debrief(a: float) -> void:
 	var w := size.x; var h := size.y; var f := S.hand()
 	draw_rect(Rect2(0, 0, w, h), Color(0.02, 0.01, 0.02, 0.5 * a), true)
-	var sz := Vector2(minf(1160.0, w - 24.0), minf(800.0, h - 24.0))
+	var sz := Vector2(minf(1160.0, w - 24.0), minf(800.0 if not S.handheld else 1000.0, h - 24.0))   # (a handheld's 16 px text is bigger: the marked slip may grow)
 	var r := Rect2(w * 0.5 - sz.x * 0.5, h * 0.5 - sz.y * 0.5 + (1.0 - a) * 24, sz.x, sz.y)
 	S.paper(self, r, -0.6, S.PAPER)
 	draw_set_transform(r.get_center(), deg_to_rad(-0.6), Vector2.ONE)
@@ -453,7 +476,7 @@ func _debrief(a: float) -> void:
 	if y + S.wrapped_h(f, str(coach_ticket.get("star_rule", "")), 16, lw) < q.end.y - 96.0: S.text(self, f, str(coach_ticket.get("star_rule", "")), Vector2(lx, y), 16, Color(S.INK, 0.6), HORIZONTAL_ALIGNMENT_LEFT, lw)   # (the buttons sit at the bottom: the marking rule gives way on a short page)
 	# right: the KCL working
 	var rx := q.position.x + half + 10.0; var rw := half - 46.0; var ry := q.position.y + 112.0
-	S.text(self, f, "The potentiometer, worked out" if str(d.get("node", "A")) == "wire" else ("The capacitor bank, worked out" if str(d.get("node", "A")) == "bank" else "KCL at node %s: currents in = currents out" % str(d.get("node", "A"))), Vector2(rx, ry), 24, S.INK_RED, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += 40.0
+	S.text(self, f, "The potentiometer, worked out" if str(d.get("node", "A")) == "wire" else ("The capacitor bank, worked out" if str(d.get("node", "A")) == "bank" else ("The Zener regulator, worked out" if str(d.get("node", "A")) == "zener" else "KCL at node %s: currents in = currents out" % str(d.get("node", "A")))), Vector2(rx, ry), 24, S.INK_RED, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += 40.0
 	# what fits above the buttons: the equation line and the closing remark go first when the (handheld's bigger) text would run off the paper
 	var avail := q.end.y - 96.0 - ry
 	var eq_h := S.wrapped_h(S.mono(), str(d.get("equation", "")), 20, rw) + 10.0
@@ -461,8 +484,9 @@ func _debrief(a: float) -> void:
 	for ln0 in d.get("working", []): work_h += S.wrapped_h(f, str(ln0), 18, rw) + 6.0
 	var cur_h := 0.0
 	for c0 in d.get("currents", []): cur_h += S.wrapped_h(f, str(c0.text), 18, rw) + 8.0
-	var show_eq := eq_h + work_h + 50.0 + cur_h <= avail
-	var show_cur := work_h + 50.0 + cur_h <= avail
+	var ans_h := 24.0 + S.wrapped_h(S.mono(), str(d.get("answer", "")), 26 if S.tw(S.mono(), str(d.get("answer", "")), 26) < rw else 20, rw) + 8.0
+	var show_eq := eq_h + work_h + ans_h + cur_h <= avail
+	var show_cur := work_h + ans_h + cur_h <= avail
 	if show_eq: S.text(self, S.mono(), str(d.get("equation", "")), Vector2(rx, ry), 20, S.INK, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += eq_h
 	for ln in d.get("working", []):
 		S.text(self, f, str(ln), Vector2(rx, ry), 18, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, rw); ry += S.wrapped_h(f, str(ln), 18, rw) + 6.0
@@ -482,6 +506,36 @@ func _debrief(a: float) -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 ## ------------------------------------------------------------------------------------------------------------------ settings
+
+## The mains safety card: Wren's hand on a card pinned in front of the bench. The first time it cannot be dismissed until it has been on the desk for six seconds (and then only by its button); later it can be closed at once.
+func _safety(a: float) -> void:
+	var w := size.x; var h := size.y; var f := S.hand()
+	draw_rect(Rect2(0, 0, w, h), Color(0.03, 0.02, 0.03, 0.62 * a), true)
+	var cw := minf(1000.0, w - 80.0)
+	var lines: Array = safety.get("lines", [])
+	var fs := maxi(24, S.min_font)
+	var body_h := 0.0
+	for ln in lines: body_h += S.wrapped_h(f, str(ln), fs, cw - 110.0) + 16.0
+	var ch := minf(h - 40.0, 150.0 + body_h + 110.0)
+	var r := Rect2(w * 0.5 - cw * 0.5, h * 0.5 - ch * 0.5 + (1.0 - a) * 24.0, cw, ch)
+	S.shadow(self, r, 12, Vector2(10, 16), 0.6 * a)
+	S.paper(self, r, -0.6, Color("#fbf3d8"))
+	draw_rect(Rect2(r.position.x + 20, r.position.y + 20, r.size.x - 40, 56), Color("#b3261c"), true)   # the red band: simulated mains
+	S.text(self, f, str(safety.get("ribbon", "")).to_upper(), r.position + Vector2(36, 58), 26, Color("#fff4dc"))
+	S.text(self, f, str(safety.get("title", "")), r.position + Vector2(40, 124), 42, S.INK)
+	var y := r.position.y + 176.0
+	for ln in lines:
+		S.text(self, f, str(ln), Vector2(r.position.x + 56, y), fs, S.INK, HORIZONTAL_ALIGNMENT_LEFT, cw - 110.0)
+		y += S.wrapped_h(f, str(ln), fs, cw - 110.0) + 16.0
+	var first := bool(safety.get("firstView", true))
+	var ready := (not first) or safety_t >= 6.0
+	var br := Rect2(r.end.x - 330.0, r.end.y - 78.0, 290.0, 54.0)
+	if ready:
+		var hv := _btn(br, "safety_ok")
+		S.rr(self, br, 10, Color("#2f6b3c") if hv else Color("#3f8a4f")); S.text(self, f, str(safety.get("button", "I have read it")), br.position + Vector2(24, 37), 28, Color("#f6fff0"))
+	else:
+		S.rr(self, br, 10, Color(0.5, 0.5, 0.5, 0.5)); S.text(self, f, "reading time... %d" % int(ceilf(6.0 - safety_t)), br.position + Vector2(24, 37), 26, Color(1, 1, 1, 0.8))
+	S.text(self, f, "mains safety and isolation  (Codex, page 24)", Vector2(r.position.x + 56, r.end.y - 44.0), 20, Color(S.INK, 0.6))
 
 func _settings(a: float) -> void:
 	var w := size.x; var h := size.y; var f := S.hand()

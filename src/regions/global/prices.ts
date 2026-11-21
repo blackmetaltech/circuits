@@ -26,7 +26,7 @@ export const PRICES_GLOBAL_CENTS: Record<string, number> = {
   '2n7000:TO92': 5, 'irlz44n:TO220': 50, 'irf540n:TO220': 45,
   // ICs (DESIGN §4.3 ~USD x100)
   'lm741:DIP8': 15, 'lm358:DIP8': 8, 'tl072:DIP8': 15, 'ne5532:DIP8': 25, 'mcp6002:DIP8': 20, 'lm393:DIP8': 8, 'ne555:DIP8': 10,
-  'lm7805:TO220': 15, 'lm317:TO220': 25,
+  'lm7805:TO220': 15, 'lm7805:TO220-25': 23, 'lm7805:TO220-15': 29, 'lm7805:TO220-8': 75, 'lm317:TO220': 25,
   // Misc (game values; no DESIGN price)
   'relay-12v:5A': 120, 'fuse:0.4A': 8, 'fuse:1A': 8, 'ntc-10k:B3950': 12, 'heater:12V': 100, 'speaker-8:8ohm': 80, 'piezo:buzzer': 60,
   'fan-dc:12V': 200, 'slidewire:100cm': 300, 'galvanometer:100ohm': 500,
@@ -34,6 +34,8 @@ export const PRICES_GLOBAL_CENTS: Record<string, number> = {
   'adc-in:10k': 100, 'cable-loop:loop': 100, 'cell-2v:2V': 150, 'cell-test:1.5V': 100, 'blackbox:sealed': 500, 'slidewire-m:100cm': 300, 'res-box:plug': 12, 'trimmer:0.5W': 25,
   // Chapter 3 fixtures (game values): the pre-charged capacitor of 3-4 is the customer's part, priced only so the Sandbox never shows a free part.
   'cap-charged:4uF-100V': 100, 'pullup-10k:10k': 20, 'logic-in:1M': 50,
+  // Chapter 4 fixtures (game values): the customer's constant-current load, priced only so the Sandbox never shows a free part.
+  'load-cc:cc': 50,
   // Batteries (game values)
   'bat-pp3:fresh': 100, 'bat-pp3-tired:tired': 100, 'bat-aa:fresh': 40, 'bat-cr2032:fresh': 30,
   // Textbook ideal parts (bat ideal-*, res-exact) are free: no entry.

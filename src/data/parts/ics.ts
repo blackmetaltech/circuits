@@ -96,7 +96,13 @@ export const ne555: PartDef = {
 /** LM7805 (LM340 family). The DESIGN deliberately uses thetaJA 54 C/W (TI application text, TO-220 NDE, free air without copper) over the JEDEC table value 23.9. */
 export const lm7805: PartDef = {
   id: 'lm7805', kind: 'REG', nameKey: 'part.lm7805.name', footprint: 'to220', pins: ['IN', 'GND', 'OUT'],
-  variants: [variant('TO220', { VinMax: 35, Iout: 1, VdoAt1A: 2 }, semiThermal(54, 150, TAU.to220Bare, { thetaJC: 4, heatsinkable: true }))],
+  variants: [
+    variant('TO220', { VinMax: 35, Iout: 1, VdoAt1A: 2 }, semiThermal(54, 150, TAU.to220Bare, { thetaJC: 4, heatsinkable: true })),
+    // the same chip with a clip-on heatsink: thetaJA = thetaJC 4 + pad thetaCS 0.5 + thetaSA of the sink (DESIGN §2.8 ticket 4-3: 25 / 15 / 8 C/W); the sink's big thermal mass makes tau longer
+    variant('TO220-25', { VinMax: 35, Iout: 1, VdoAt1A: 2, thetaSA: 25 }, semiThermal(29.5, 150, TAU.to220Sink, { thetaJC: 4, heatsinkable: true })),
+    variant('TO220-15', { VinMax: 35, Iout: 1, VdoAt1A: 2, thetaSA: 15 }, semiThermal(19.5, 150, TAU.to220Sink, { thetaJC: 4, heatsinkable: true })),
+    variant('TO220-8', { VinMax: 35, Iout: 1, VdoAt1A: 2, thetaSA: 8 }, semiThermal(12.5, 150, TAU.to220Sink, { thetaJC: 4, heatsinkable: true })),
+  ],
   model: { Vreg: 5.0, Vdo: 2.0, Isc: 2.1, IscPeak: 2.4, tShutdown: 150, tHyst: 15 },
   tolerance: { Vreg: 0.04 },
   source: {

@@ -188,6 +188,12 @@ const capacitor: Expander = (x) => {
   if (m.rbleed !== undefined) out.push(el(x, 'R', [x.nodes[0], x.nodes[1]], { r: m.rbleed }, 'bleed'));
   return out;
 };
+/** LOAD: a fixed resistive fixture (model.R), or a constant-current sink (model.cc: a `CCL` element from pin '+' to pin '-', current = the placed part's value or model.i; the rig gives it its switch-on ramp, `p.ton`). */
+const load: Expander = (x) => {
+  const m = modelOf(x);
+  if (m.cc !== undefined) return [el(x, 'CCL', [x.nodes[0], x.nodes[1]], { i: x.part.value ?? m.i, cc: 1, ton: m.ton ?? 0 })];
+  return resistor(x);
+};
 const inductor: Expander = (x) => [el(x, 'L', [x.nodes[0], x.nodes[1]], { l: x.part.value ?? x.def.model.l ?? x.def.model.L })];
 
 /** Diode family (D, LED, Z, SCHOTTKY): pins [A, K]; def.model keys Is / N / Rs / BV / Ibv / Nbv (any case) → device params (lower case);
@@ -231,7 +237,10 @@ const transformer: Expander = (x) => {
   const m = modelOf(x), n = x.part.value ?? m.primarynominal / m.secrms, p: Params = { n };
   if (m.rw !== undefined) p.rs = m.rw;
   if (m.lm !== undefined) p.lm = m.lm;
-  return [el(x, 'T', [pinNode(x, 'P1'), pinNode(x, 'P2'), pinNode(x, 'S1'), pinNode(x, 'S2')], p)];
+  const out = [el(x, 'T', [pinNode(x, 'P1'), pinNode(x, 'P2'), pinNode(x, 'S1'), pinNode(x, 'S2')], p)];
+  // model.Rins: the insulation between the windings and the core / earth (a real transformer's secondary is not infinitely floating): S2 to ground, which pins the secondary's common mode (a numerical reference, ohm)
+  if (m.rins !== undefined) out.push(el(x, 'R', [pinNode(x, 'S2'), 0], { r: m.rins }, 'ins'));
+  return out;
 };
 
 const variantOf = (x: ExpandCtx): PartDef['variants'][number] | undefined => x.def.variants.find((v) => v.id === x.part.variant) ?? x.def.variants[0];
@@ -275,7 +284,7 @@ export const EXPANDERS: Readonly<Partial<Record<PartKind, Expander>>> = Object.f
   NPN: bjt(1), PNP: bjt(-1), DARLINGTON: darlington, NMOS: mosfet,
   OPAMP: opamp, CMP: comparator, '555': timer555, REG: regulator, RELAY: relay, FUSE: fuse, NTC: ntc, SLIDEWIRE: slidewire,
   XFMR: transformer, D: diode, LED: diode, Z: diode, SCHOTTKY: diode,
-  C: capacitor, CE: capacitor, L: inductor, R: resistor, HEATER: resistor, LOAD: resistor, SPEAKER: resistor, MOTOR: resistor,
+  C: capacitor, CE: capacitor, L: inductor, R: resistor, HEATER: resistor, LOAD: load, SPEAKER: resistor, MOTOR: resistor,
   POT: (x) => {
     // wiper α ∈ [alphaMin, alphaMax] when the part model gives them (0.5 % end resistance: a 0 Ω exploit stops here, DESIGN §3.7)
     const R = resistance(x), m = modelOf(x), a = Math.min(m.alphamax ?? 1, Math.max(m.alphamin ?? 0, x.part.pos ?? 0.5));

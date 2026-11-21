@@ -66,7 +66,7 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
   for (const cond of plan.conditions) {
     const overrides: RigOverride[] = [...inp.hidden, ...(cond.set ?? [])];
     const ta = cond.ambientC ?? plan.ambientC;
-    const mk = (probeLoads: string[]) => buildRig({ board: inp.board, getDef: inp.getDef, supplies: inp.supplies, supply: inp.supply, gen: inp.gen, overrides, ambientC: ta, probeLoads, testLoads: plan.testLoads });
+    const mk = (probeLoads: string[]) => buildRig({ board: inp.board, getDef: inp.getDef, supplies: inp.supplies, supply: inp.supply, gen: inp.gen, overrides, ambientC: ta, probeLoads, testLoads: plan.testLoads, regTau: plan.regTau });
     const rig0 = mk([]);
     // resolve spec probes against the board; a spec whose part is not on the board fails with a teaching key
     const specs: BenchSpec[] = [], loads: string[] = [];
@@ -106,7 +106,7 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
     for (const id of psIds) full.push({ kind: 'level', id: `__ps:${id}`, probe: `p(${id})`, lo: -BIG, hi: BIG });
     const r = runBench(ckt, full, {
       h: plan.h, settle: plan.settle, window: plan.window, period: plan.period, measurePeriods: plan.measurePeriods, maxPeriods: plan.maxPeriods,
-      ic: plan.ic, ratings: (w) => { const rr = checkRatings(rig, rig.rated, w, { ta }); for (const c of rr.failures) causes.push({ key: c.key, vars: { ...c.vars, cond: cond.id } }); return { violations: rr.violations, smoked: rr.smoked }; }, maxFlops: inp.flopLimit ?? BENCH_FLOP_LIMIT, condition: cond.id,
+      ic: plan.ic, ratings: (w) => { const rr = checkRatings(rig, rig.rated, w, { ta, tjLimit: plan.tjLimit }); for (const c of rr.failures) causes.push({ key: c.key, vars: { ...c.vars, cond: cond.id } }); return { violations: rr.violations, smoked: rr.smoked }; }, maxFlops: inp.flopLimit ?? BENCH_FLOP_LIMIT, condition: cond.id,
     });
     conds++;
     // A voltage probe on an island that never reaches the GND connector can only read leakage (a few microvolts): say the real problem instead of a meaningless number.
@@ -137,5 +137,9 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
     powerSum += p;
   }
   const rows = specIds.map((id) => ({ id, pass: !failedIds.has(id), margin: marginOf.get(id) ?? (failedIds.has(id) ? -1 : 0) }));
-  return { pass: failures.length === 0, failures, rows, supplyPowerW: conds > 0 ? powerSum / conds : 0, smoked: smokedOut, causes, predictions, badSamples, values };
+  // one rating cause per part and rule: the WORST condition (the biggest value over its limit), so the words quote the same extreme the scope shows
+  const worst = new Map<string, number>();
+  causes.forEach((c, k) => { if (!c.key.startsWith('rating.')) return; const id = `${c.key}|${String(c.vars.part)}`, w = worst.get(id); const ratio = (x: number): number => Number(causes[x]!.vars.value) / Math.max(1e-12, Number(causes[x]!.vars.limit)); if (w === undefined || ratio(k) > ratio(w)) worst.set(id, k); });
+  const keep = causes.filter((c, k) => !c.key.startsWith('rating.') || worst.get(`${c.key}|${String(c.vars.part)}`) === k);
+  return { pass: failures.length === 0, failures, rows, supplyPowerW: conds > 0 ? powerSum / conds : 0, smoked: smokedOut, causes: keep, predictions, badSamples, values };
 }

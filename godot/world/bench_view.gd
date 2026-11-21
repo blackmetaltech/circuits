@@ -41,6 +41,7 @@ var title_mode := false
 var zoom := 1.0
 var electron_flow := false
 var show_ratings := true
+var keepout_text := "HIGH VOLTAGE"   ## the keep-out silkscreen (the engine gives the words: ticketCard().mains.keepOut)
 var embedded := false           ## true inside the stall: no walnut or captions, no margins; StallScene owns the bench around it
 var reduced_motion := false
 var cute := false               ## Cute mode: electron critters for the current dots, LED faces; charm encodes physics
@@ -316,7 +317,31 @@ func _draw() -> void:
 			draw_circle(c, pr, Color(0.62, 0.47, 0.18)); draw_circle(c, pr * 0.9, PAD_GOLD); draw_circle(c, hr, Color(0.03, 0.03, 0.04))
 	for cn in [br.position + Vector2(p * 0.45, p * 0.45), br.position + Vector2(br.size.x - p * 0.45, p * 0.45), br.position + Vector2(p * 0.45, br.size.y - p * 0.45), br.end - Vector2(p * 0.45, p * 0.45)]:
 		draw_circle(cn, p * 0.24, Color("#2a2d33")); draw_circle(cn, p * 0.15, WALNUT.darkened(0.5))   # mounting holes
+	for ko in m.get("keepout", []): _keepout(ko)
 	for c in m.connectors: _connector(c, m)
+
+## Chapter 4: the mains section of the board. A red hatched keep-out with the HIGH VOLTAGE silkscreen: nothing of the player's goes in there (the engine refuses it), and the transformer's primary and the L / N pads live inside.
+func _keepout(ko: Dictionary) -> void:
+	var r := Rect2(_px(Vector2(float(ko.x) - 0.5, float(ko.y) - 0.5)), Vector2(float(ko.w), float(ko.h)) * p)
+	draw_rect(r, Color(0.75, 0.08, 0.06, 0.20), true)
+	var step := p * 1.1; var d := -r.size.y
+	while d < r.size.x:
+		var a := Vector2(r.position.x + d, r.position.y); var b := Vector2(r.position.x + d + r.size.y, r.end.y)
+		if a.x < r.position.x: a = Vector2(r.position.x, r.position.y + (r.position.x - a.x))
+		if b.x > r.end.x: b = Vector2(r.end.x, r.end.y - (b.x - r.end.x))
+		if a.y <= r.end.y and b.y >= r.position.y and b.x >= a.x - 0.5: draw_line(a, b, Color(0.9, 0.12, 0.08, 0.55), maxf(2.0, p * 0.12))
+		d += step
+	for e in [[r.position, Vector2(r.end.x, r.position.y)], [Vector2(r.end.x, r.position.y), r.end], [r.end, Vector2(r.position.x, r.end.y)], [Vector2(r.position.x, r.end.y), r.position]]:
+		draw_line(e[0], e[1], Color(0.95, 0.15, 0.1, 0.95), maxf(3.0, p * 0.2))
+	var fs := maxi(int(clampf(p * 0.52, 13.0, 26.0)), SS.min_font)
+	var lab := str(keepout_text)
+	var tw := ThemeDB.fallback_font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
+	var tag := Rect2(Vector2(r.get_center().x - tw * 0.5 - p * 0.9, r.end.y - fs - p * 0.9), Vector2(tw + p * 1.8, fs + p * 0.5))
+	draw_rect(tag, Color(0.06, 0.02, 0.02, 0.88), true)
+	draw_string(ThemeDB.fallback_font, Vector2(tag.position.x + p * 1.1, tag.end.y - p * 0.18), lab, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, Color("#ffe27a"))
+	var tc := Vector2(tag.position.x + p * 0.45, tag.get_center().y)   # the warning triangle
+	draw_colored_polygon(PackedVector2Array([tc + Vector2(0, -p * 0.45), tc + Vector2(p * 0.5, p * 0.4), tc + Vector2(-p * 0.5, p * 0.4)]), Color("#ffd23a"))
+	draw_string(ThemeDB.fallback_font, tc + Vector2(-p * 0.1, p * 0.34), "!", HORIZONTAL_ALIGNMENT_LEFT, -1.0, maxi(int(p * 0.6), 10), Color(0.1, 0.06, 0.0))
 
 func _connector(c: Dictionary, m: Dictionary) -> void:   # the brass edge connector with its engraved name
 	var pos := _px(c.pad); var br := board_rect
@@ -466,10 +491,12 @@ func _draw_parts(ci: Control) -> void:
 			"hot": _heat_k(pt.uid, m) if live else 0.0, "needle": float(m.get("galvo", {}).get(pt.uid, 0.0)) if live else 0.0,
 			"bulge": float(m.get("cap_bulge", {}).get(pt.uid, 0.0)) if live else 0.0, "vent_t": float(_vent_t.get(pt.uid, 0.0)), "level": float(m.get("cap_level", {}).get(pt.uid, 1.0)) if live else 1.0,
 			"operated": bool(m.get("relay", {}).get(pt.uid, {}).get("operated", false)) if live else false, "click_t": float(_click_t.get(pt.uid, 9.0)),
-			"coil": clampf(float(m.get("relay", {}).get(pt.uid, {}).get("mA", 0.0)) / 60.0, 0.0, 1.5) if live else 0.0}
+			"coil": clampf(float(m.get("relay", {}).get(pt.uid, {}).get("mA", 0.0)) / 60.0, 0.0, 1.5) if live else 0.0,
+			"reg_off": bool(m.get("regs", {}).get(pt.uid, {}).get("off", false)) if live else false}
 		PartArt.draw(ci, pt, _px(Vector2(pt.x, pt.y)), p, st)
 	_draw_contacts(ci, m)
 	for pr in m.probes: _probe(ci, pr)
+	if bool(m.get("camera", false)): _draw_camera(ci, m, bounds)
 	# labels and rating bars
 	var fs := maxi(int(clampf(p * 0.42, 13.0, 24.0)), SS.min_font)
 	for pt in m.parts:
@@ -487,6 +514,26 @@ func _draw_parts(ci: Control) -> void:
 			ci.draw_rect(Rect2(bp, Vector2(bw, p * 0.13)), Color(0, 0, 0, 0.7))
 			var rc := Color("#3fd47a") if worst < 0.7 else (AMBER if worst < 0.95 else Color("#ff4a3a"))
 			ci.draw_rect(Rect2(bp, Vector2(bw * clampf(worst, 0.0, 1.0), p * 0.13)), rc)
+
+## Chapter 4: the thermal camera. The board goes dim and every part is washed in a false colour for its temperature (blue cold, through purple and orange, to white hot) with its degrees Celsius written on it. Engine numbers only.
+func _draw_camera(ci: Control, m: Dictionary, bounds: Dictionary) -> void:
+	ci.draw_rect(board_rect.grow(-p * 0.07), Color(0.02, 0.0, 0.12, 0.45), true)
+	var fs := maxi(int(clampf(p * 0.46, 13.0, 22.0)), SS.min_font)
+	for pt in m.parts:
+		if not bounds.has(pt.uid) or str(pt.kind) in ["BAT", "LOAD"] and str(pt.partId) != "load-cc": continue
+		var temp := float(m.temps.get(pt.uid, m.ambient))
+		var k := clampf((temp - 25.0) / 125.0, 0.0, 1.0)
+		var c := Color(0.12, 0.2, 0.75).lerp(Color(0.62, 0.15, 0.7), clampf(k * 3.0, 0.0, 1.0))
+		if k > 0.33: c = Color(0.62, 0.15, 0.7).lerp(Color(1.0, 0.5, 0.1), clampf((k - 0.33) * 3.0, 0.0, 1.0))
+		if k > 0.66: c = Color(1.0, 0.5, 0.1).lerp(Color(1.0, 0.97, 0.8), clampf((k - 0.66) * 3.0, 0.0, 1.0))
+		var b: Rect2 = (bounds[pt.uid] as Rect2).grow(p * 0.12)
+		PartArt.rrect(ci, b, p * 0.25, Color(c, 0.62));
+		if pt.partId == "load-cc" or (temp < 29.0 and not str(pt.kind) in ["REG", "XFMR", "D"]): continue
+		var lab := "%d\u00b0C" % int(round(temp))
+		var tw := ThemeDB.fallback_font.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
+		var at := Vector2(b.get_center().x - tw * 0.5, b.position.y - 3.0)
+		ci.draw_rect(Rect2(at + Vector2(-3, -fs), Vector2(tw + 6, fs + 4)), Color(0, 0, 0, 0.7), true)
+		ci.draw_string(ThemeDB.fallback_font, at, lab, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, Color("#ffe9a8"))
 
 ## What is joined and what only passes: where two wires cross they are NOT joined, so the later wire hops over the earlier one (a gap in the lower wire, an arch on the upper);
 ## where two or more wire ends meet on one pad they ARE joined, shown as a bright solder dot. The engine's `crossings` / `joins` say where; this only draws.

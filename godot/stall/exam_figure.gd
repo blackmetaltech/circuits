@@ -12,6 +12,7 @@ static func draw(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, asks: Ar
 	if fig.is_empty(): return
 	if str(fig.get("kind", "node")) == "pot": _draw_pot(ci, r, fig, ink, asks, small); return
 	if str(fig.get("kind", "node")) == "caps": _draw_caps(ci, r, fig, ink, asks, small); return
+	if str(fig.get("kind", "node")) == "zener": _draw_zener(ci, r, fig, ink, asks, small); return
 	var k := minf(r.size.x / DESIGN.x, r.size.y / DESIGN.y)
 	var o := r.position + (r.size - DESIGN * k) * 0.5
 	var P := func(x: float, y: float) -> Vector2: return o + Vector2(x, y) * k
@@ -168,6 +169,36 @@ static func _draw_caps(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, as
 	_wire(ci, [P.call(86, by2), P.call(300, by2)], ink, w)
 	_gnd(ci, P.call(193, by2), k, ink, w)
 	if not asks.is_empty() and not small: S.text(ci, f, "find:  " + "   ".join(asks), P.call(70, 20), fs, S.INK_RED)
+
+## The 4-5 figure: a source, Rs in series, the node M, and from M to ground a Zener (cathode up: the bar on the M side) in parallel with the load RL. All numbers are the engine's (figure.zener).
+static func _draw_zener(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, asks: Array, small: bool) -> void:
+	var z: Dictionary = fig.get("zener", {})
+	var k := minf(r.size.x / DESIGN.x, r.size.y / DESIGN.y)
+	var o := r.position + (r.size - DESIGN * k) * 0.5
+	var P := func(x: float, y: float) -> Vector2: return o + Vector2(x, y) * k
+	var w := maxf(1.6, 3.0 * k); var f := S.hand()
+	var fs := int(maxf(9.0, (22.0 if not small else 32.0) * k))
+	var ty := 120.0; var by := 330.0
+	_wire(ci, [P.call(56, by), P.call(56, 232)], ink, w)
+	ci.draw_line(P.call(44, 232), P.call(68, 232), ink, w * 1.8); ci.draw_line(P.call(36, 212), P.call(76, 212), ink, w)
+	_wire(ci, [P.call(56, 212), P.call(56, ty), P.call(110, ty)], ink, w)
+	S.text(ci, f, "%s V" % EngineBench._g(float(z.get("volts", 12))), P.call(68, 270), fs, ink)
+	_zig(ci, P.call(110, ty), P.call(200, ty), 9.0 * k, ink, w)
+	S.text(ci, f, "Rs = %s \u03a9" % EngineBench._g(float(z.get("rs", 300))), P.call(104, ty - 24), fs, ink)
+	_wire(ci, [P.call(200, ty), P.call(340, ty)], ink, w)
+	ci.draw_circle(P.call(240, ty), 6.0 * k + 1.0, ink); S.text(ci, f, "M pad", P.call(222, ty - 20), int(fs * 0.9), ink)   # the board's own pad name
+	# the Zener from M down to the rail: a triangle pointing UP the page toward M's bar (current flows from the rail up to M in reverse: the bar on M's side)
+	var zx := 240.0
+	_wire(ci, [P.call(zx, ty), P.call(zx, 196)], ink, w)
+	ci.draw_line(P.call(zx - 18, 196), P.call(zx + 18, 196), ink, w * 1.7); ci.draw_line(P.call(zx - 18, 196), P.call(zx - 26, 188), ink, w); ci.draw_line(P.call(zx + 18, 196), P.call(zx + 26, 204), ink, w)
+	ci.draw_colored_polygon(PackedVector2Array([P.call(zx - 18, 236), P.call(zx + 18, 236), P.call(zx, 200)]), ink)
+	_wire(ci, [P.call(zx, 236), P.call(zx, by)], ink, w)
+	S.text(ci, f, "Zener %s V" % EngineBench._g(float(z.get("vz", 6))), P.call(zx - 132, 222), fs, ink)   # left of the Zener: the load column stands to its right
+	S.text(ci, f, "Iz(min) %s mA" % EngineBench._g(float(z.get("izMin", 0.002)) * 1000.0), P.call(zx - 146, 248), int(fs * 0.85), ink)
+	_wire(ci, [P.call(340, ty), P.call(340, 190)], ink, w); _zig(ci, P.call(340, 190), P.call(340, 280), 9.0 * k, ink, w); _wire(ci, [P.call(340, 280), P.call(340, by)], ink, w)
+	S.text(ci, f, "RL =", P.call(352, 232), fs, ink); S.text(ci, f, "%s \u03a9" % EngineBench._g(float(z.get("rl", 1000))), P.call(352, 256), fs, ink)
+	_wire(ci, [P.call(56, by), P.call(340, by)], ink, w); _gnd(ci, P.call(200, by), k, ink, w)
+	if not asks.is_empty() and not small: S.text(ci, f, "find:  " + "   ".join(asks), P.call(40, 40), fs, S.INK_RED)
 
 ## A capacitor symbol (two plates) centred at `c`: horizontal flow (plates vertical) or vertical flow (plates horizontal); `c` is the first plate's centre, the second plate sits 14 design px further along the flow.
 static func _cap_h(ci: CanvasItem, c: Vector2, k: float, ink: Color, w: float) -> void:

@@ -14,6 +14,8 @@ var sources_title := "TEXTBOOK SOURCES  (ideal)"
 var sources_note := "wired by the ticket: just probe"
 var sources: Array = []            ## exam tickets: the ideal textbook sources fixed on the board [{name, volts}], listed on the panel instead of a battery
 var conditions: Array = []         ## the ticket's bench conditions (engine): [{id, set:[{target,key,value}], ambientC}], drawn as a tag when there are several
+var selectors: Array = []          ## chapter 4: the ticket's live switches [{id, label, options:[text], index}], drawn as rows of keys on the panel
+var isolation_text := "isolation transformer"
 var on := false
 var hover := false
 var volts := 9.0
@@ -50,6 +52,39 @@ func hit_vadj(p: Vector2) -> String:
 	return ""
 func v_step() -> float: return STEPS[clampi(step_i, 0, 2)]
 
+## The switch bank: each selector is a row of keys (a label, then one key per position). Returns the key rects [[sel_i, opt_i, Rect2]].
+func sel_rects() -> Array:
+	var out: Array = []
+	var n := selectors.size()
+	if n == 0: return out
+	var top := 112.0 if n == 1 else 104.0
+	for i in n:
+		var sd: Dictionary = selectors[i]; var opts: Array = sd.get("options", [])
+		var y := top + float(i) * 29.0
+		var x0 := 92.0; var w := (284.0 - x0) / float(maxi(opts.size(), 1))
+		for k in opts.size(): out.append([i, k, Rect2(x0 + float(k) * w, y, w - 4.0, 25.0)])
+	return out
+## "sel:<selector>:<position>" when a press lands on one of those keys, else "".
+func hit_sel(p: Vector2) -> String:
+	var g := 5.0 if not S.handheld else 12.0
+	for r in sel_rects(): if (r[2] as Rect2).grow(g).has_point(p): return "sel:%d:%d" % [int(r[0]), int(r[1])]
+	return ""
+func _selector_bank() -> void:
+	var rs := sel_rects()
+	var n := selectors.size()
+	var top := 112.0 if n == 1 else 104.0
+	for i in n:
+		var sd: Dictionary = selectors[i]
+		var lab := str(sd.get("label", ""))
+		S.text(self, S.mono(), lab, Vector2(26, top + float(i) * 29.0 + 19.0), 15, Color("#d8d4c4"))
+	for r in rs:
+		var rc: Rect2 = r[2]; var sd2: Dictionary = selectors[int(r[0])]
+		var on_k := int(sd2.get("index", 0)) == int(r[1])
+		S.rr(self, rc, 6, Color("#15161a")); S.rr(self, rc.grow(-2), 5, Color("#ffd98a") if on_k else Color("#2c2f35"))
+		var txt := str((sd2.get("options", []) as Array)[int(r[1])])
+		var fs := 15 if not S.handheld else 20
+		S.text(self, S.mono(), txt, rc.position + Vector2(rc.size.x * 0.5 - S.tw(S.mono(), txt, fs) * 0.5, rc.size.y * 0.5 + fs * 0.34), fs, Color("#15161a") if on_k else Color("#d8d4c4"))
+
 func hit_rocker(p: Vector2) -> bool: return ROCKER.grow(8.0 if not S.handheld else 20.0).has_point(p)   # handheld: 44+ screen px each way
 
 ## The terminals a meter lead can be dropped on (the snap studs of the holder, the binding posts of the bench supply): "red" is the + side, "black" the ground side.
@@ -61,7 +96,7 @@ func jack_pos(which: String) -> Vector2:
 const CELL := Rect2(24, 54, 250, 92)
 static func battery_text_rects() -> Array: return [Rect2(CELL.position + Vector2(22, 12), Vector2(72, 56)), Rect2(CELL.position + Vector2(22, 68), Vector2(84, 20))]
 static func cond_tag_rect(rows: int) -> Rect2: return Rect2(134, 52, 152, 32 + rows * 24)
-func has_jacks() -> bool: return kind != "sources"
+func has_jacks() -> bool: return kind != "sources" and kind != "mains"
 ## A generous target: 30 design pixels around the terminal ("" when none).
 func jack_at(p: Vector2) -> String:
 	if not has_jacks(): return ""
@@ -75,6 +110,7 @@ func _draw() -> void:
 	var rr := Rect2(0, 8, DESIGN.x, DESIGN.y - 14)
 	S.shadow(self, rr, 18, Vector2(8, 12), 0.5)
 	if kind == "bench": _bench(rr)
+	elif kind == "mains": _mains(rr)
 	elif kind == "sources": _sources(rr)
 	else: _holder(rr)
 	_rocker()
@@ -133,10 +169,27 @@ func _sources(rr: Rect2) -> void:
 		if on: S.glow(self, row.get_center(), 90.0, Color(1, 0.2, 0.1, 0.08))
 	S.text(self, S.hand(), sources_note, Vector2(26, 158), 14, Color("#b8b4a4"))
 
+## The isolation transformer of a mains ticket: a grey box with a warning plate, the simulated mains read-out (it follows the MAINS switch), the switch bank and the rocker. It is a visible bench object: the wall socket is behind it.
+func _mains(rr: Rect2) -> void:
+	S.rr(self, rr, 14, Color("#3b3e44")); S.rr(self, rr.grow(-3), 12, Color("#6a6f66"))
+	S.vgrad(self, Rect2(8, 12, 384, 50), Color(1, 1, 1, 0.12), Color(1, 1, 1, 0.0), 6)
+	for c in [Vector2(14, 20), Vector2(386, 20), Vector2(14, 156), Vector2(386, 156)]: S.screw(self, c, 5.0, c.x * 0.1)
+	var plate := Rect2(24, 22, 252, 28)
+	S.rr(self, plate, 5, Color("#e8c43a")); S.text(self, S.hand(), isolation_text.to_upper(), plate.position + Vector2(10, 20), 15, Color("#2a1d05"))
+	var disp := Rect2(24, 56, 116, 40)
+	S.rr(self, disp.grow(3), 6, Color("#15161a")); S.rr(self, disp, 4, Color("#150604"))
+	var txt := "%d V~" % int(round(volts))
+	for sd in selectors: if str(sd.get("id", "")) == "mains": txt = "%s~" % str((sd.options as Array)[int(sd.index)])
+	S.text(self, S.mono(), txt, disp.position + Vector2(8, 30), 26, Color(1.0, 0.28, 0.15, 1.0 if on else 0.3))
+	S.text(self, S.hand(), "simulated 50 Hz", Vector2(150, 78), 14, Color("#e8e4d0"))
+	S.text(self, S.hand(), "floating, no earth", Vector2(150, 94), 13, Color("#d8d4c4", 0.8))
+	_selector_bank()
+
 func _bench(rr: Rect2) -> void:
 	S.rr(self, rr, 14, Color("#3b3e44")); S.rr(self, rr.grow(-3), 12, Color("#585c64"))
 	S.vgrad(self, Rect2(8, 12, 384, 50), Color(1, 1, 1, 0.12), Color(1, 1, 1, 0.0), 6)
 	if adjustable: _bench_adjustable(rr); return
+	if not selectors.is_empty(): _bench_switched(rr); return
 	for c in [Vector2(14, 20), Vector2(386, 20), Vector2(14, 156), Vector2(386, 156)]: S.screw(self, c, 5.0, c.x * 0.1)
 	var disp := Rect2(160, 52, 120, 70)
 	S.rr(self, disp.grow(4), 6, Color("#15161a")); S.rr(self, disp, 4, Color("#150604"))
@@ -150,6 +203,24 @@ func _bench(rr: Rect2) -> void:
 	for i in 2:
 		var c := Vector2(60 + i * 60, 28); var col := Color("#b2261c") if i == 0 else Color("#1a1a1c")
 		draw_circle(c, 15, Color("#0a0a0c")); draw_circle(c, 12, col); draw_circle(c, 6, Color("#d0b25a"))
+	_jack_ring()
+
+## A fixed-rail bench supply with live switches (4-2 .. 4-4): the display on the left, the switch bank under it, no knob.
+func _bench_switched(_rr: Rect2) -> void:
+	for c in [Vector2(14, 20), Vector2(386, 20), Vector2(14, 156), Vector2(386, 156)]: S.screw(self, c, 5.0, c.x * 0.1)
+	var disp := Rect2(150, 30, 126, 60) if selectors.size() > 1 else Rect2(150, 36, 126, 64)
+	S.rr(self, disp.grow(4), 6, Color("#15161a")); S.rr(self, disp, 4, Color("#150604"))
+	var txt := "%.1f" % (volts if on else 0.0)
+	for sd in selectors: if str(sd.get("id", "")) == "input": txt = "%.1f" % (float(str((sd.options as Array)[int(sd.index)]).split(" ")[0]) if on else 0.0)
+	S.text(self, S.mono(), "88.8", disp.position + Vector2(8, 44), 44, Color(1, 0.2, 0.1, 0.10))
+	S.text(self, S.mono(), txt, disp.position + Vector2(disp.size.x - 28 - S.tw(S.mono(), txt, 44), 44), 44, Color(1.0, 0.28, 0.15, 1.0 if on else 0.25))
+	if on: S.glow(self, disp.get_center(), 90.0, Color(1, 0.2, 0.1, 0.16))
+	S.text(self, S.hand(), "V", disp.position + Vector2(disp.size.x - 22, 44), 16, Color(1, 0.4, 0.3, 0.7))
+	S.text(self, S.hand(), label, Vector2(26, 52), 15, Color("#d8d4c4"))
+	for i in 2:
+		var c := Vector2(60 + i * 60, 28); var col := Color("#b2261c") if i == 0 else Color("#1a1a1c")
+		draw_circle(c, 15, Color("#0a0a0c")); draw_circle(c, 12, col); draw_circle(c, 6, Color("#d0b25a"))
+	_selector_bank()
 	_jack_ring()
 
 ## The adjustable bench supply: the set voltage is always shown (two decimals), with [-] [step] [+] keys (the knob is decoration; the wheel and the up / down arrows work too).

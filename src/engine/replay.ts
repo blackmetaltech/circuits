@@ -16,6 +16,7 @@ export function refActions(def: LevelDef): Action[] {
   for (const [uid, mm] of Object.entries(def.ref.jockeys ?? {})) out.push({ name: 'setJockey', args: [uid, mm] });
   if (def.ref.supply) out.push({ name: 'setSupply', args: [def.ref.supply.v, def.ref.supply.ilim] });
   for (const [id, v] of Object.entries(def.ref.predictions ?? {})) out.push({ name: 'predict', args: [id, v] });
+  if (def.mains) out.push({ name: 'readSafety', args: [] });
   out.push({ name: 'power', args: [true] }, { name: 'advance', args: [4] }, { name: 'runBench' });
   return out;
 }

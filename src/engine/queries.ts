@@ -110,6 +110,28 @@ function explainCtx(tk: TicketState | null, def: LevelDef | undefined, prior = 0
       ctx.coil = { relay: relay.uid, rCoil: m.Rcoil ?? 200, lCoil: m.Lcoil ?? 0.1, iPull: m.Ipull ?? 0.04, rSeries: resistors.filter((p) => !p.fixed).reduce((a, p) => a + (p.value ?? 0), 0), vRail: wired.length > 0 ? Math.max(...wired.map((x) => (x as { fixed?: number }).fixed ?? 0)) : 0 };
     }
   }
+  // chapter 4: the rectifier, the Zener shunt, the regulator and the LM317 as built
+  if (def.explain === 'rectifier') {
+    const load = tk.board.parts.find((p) => p.fixed && getDef(p.partId)?.model.cc !== undefined);
+    ctx.rect = { c: tk.board.parts.filter((p) => getDef(p.partId)?.kind === 'CE' && p.value !== null).reduce((a, p) => a + (p.value ?? 0), 0), i: load?.value ?? 0.1, nDiodes: tk.board.parts.filter((p) => !p.fixed && getDef(p.partId)?.kind === 'D').length };
+  }
+  if (def.explain === 'zener') {
+    const z = tk.board.parts.find((p) => !p.fixed && getDef(p.partId)?.kind === 'Z'), zd = z ? getDef(z.partId) : undefined;
+    ctx.zener = { r: resistors.filter((p) => !p.fixed).reduce((a, p) => a + (p.value ?? 0), 0), vz: zd ? ((zd.variants[0]!.ratings.Vz ?? zd.model.BV ?? 5.1)) : 5.1, slope: zd?.model.Rs ?? 7, izt: zd?.model.Ibv ?? 0.005 };
+  }
+  if (def.explain === 'regulator') {
+    const reg = tk.board.parts.find((p) => !p.fixed && getDef(p.partId)?.kind === 'REG'), rd = reg ? getDef(reg.partId) : undefined, rv = rd ? (rd.variants.find((x) => x.id === reg!.variant) ?? rd.variants[0]!) : undefined;
+    ctx.reg = { rpre: resistors.filter((p) => !p.fixed).reduce((a, p) => a + (p.value ?? 0), 0), vrail: Math.max(0, ...def.supplies.map((x) => (x.kind === 'bench' ? x.fixed ?? 0 : 0))), vout: rd?.model.Vreg ?? 5, theta: rv?.thermal.thetaJA ?? 54, ta: def.bench.ambientC, tjMax: def.bench.tjLimit ?? 125 };
+  }
+  if (def.explain === 'lm317') {
+    const reg = tk.board.parts.find((p) => !p.fixed && getDef(p.partId)?.kind === 'REG');
+    if (reg) {
+      const nodes = rig.conn.pinNodes[reg.uid] ?? [], nAdj = nodes[0] ?? -1, nOut = nodes[1] ?? -1, nGnd = rig.conn.connectorNodes.GND ?? -1;
+      const between = (a: number, b: number): number => resistors.filter((p) => { const n = rig.conn.pinNodes[p.uid] ?? []; return (n[0] === a && n[1] === b) || (n[0] === b && n[1] === a); }).reduce((acc, p) => acc + (p.value ?? 0), 0);
+      const r1 = between(nAdj, nOut), r2 = between(nAdj, nGnd);
+      if (r1 > 0 && r2 > 0) ctx.lm317 = { r1, r2 };
+    }
+  }
   for (const p of tk.board.parts) {
     const d = getDef(p.partId); if (!d) continue;
     kinds[p.uid] = d.kind;
@@ -180,6 +202,11 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         answers: (def.answers ?? []).map((a) => ({ id: a.id, name: def.bench.names[a.id] ? t(def.bench.names[a.id]!) : '', unit: a.unit, entered: o.tk.predictions[a.id] ?? null, ...(def.nullCheck ? ((side) => ({ side, formula: balanceFormula(side) }))(rSide(o.tk.board, def, (uid, pin) => liveRig(o.tk, def).conn.pinNodes[uid]?.[pin] ?? -1)) : {}) })),
         specShort: def.specShort ? t(def.specShort) : '', gauge: def.gauge ?? null, supplies: def.supplies, chit: def.chit ?? null, ambientC: def.bench.ambientC, figure: def.figure ?? null,
         payText: payText(def, REGIONS.get(s.region)), starRule: def.eb ? starsRule() : '',
+        // chapter 4: the mains safety card (its words are Wren's), the live switches and the thermal camera
+        mains: def.mains ? { safetyRead: o.tk.safetyRead === true, firstView: !s.progress.codexSeen.includes('mains-safety'), vrms: (def.supplies.find((x) => x.kind === 'mains') as { vrms: number } | undefined)?.vrms ?? 0, hz: (def.supplies.find((x) => x.kind === 'mains') as { f: number } | undefined)?.f ?? 0,
+          ribbon: t('safety.ribbon'), title: t('safety.card.title'), lines: [t('safety.card.1'), t('safety.card.2'), t('safety.card.3'), t('safety.card.4', { mentor })], button: t('safety.card.button'), keepOut: t('safety.keepout'), isolation: t('safety.isolation') } : null,
+        selectors: (def.selectors ?? []).map((sd) => ({ id: sd.id, label: t(sd.labelKey), options: sd.options.map((x) => t(x.labelKey)), index: o.tk.sel?.[sd.id] ?? sd.initial })),
+        camera: def.chapter === 4,
       };
     },
     /** The board with part names, rotated pin pads and ratings, probes and meter. */

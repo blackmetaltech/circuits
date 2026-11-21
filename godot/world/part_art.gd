@@ -84,7 +84,10 @@ static func _body(ci: CanvasItem, part: Dictionary, p: float, st: Dictionary, sh
 				"cap-charged": PartArt3.charged_cap(ci, lp, p, sh, float(st.get("level", 1.0)))
 				_: _ceramic(ci, part, p, sh, smoked)
 		"RELAY": PartArt3.relay(ci, p, sh, bool(st.get("operated", false)), float(st.get("coil", 0.0)), float(st.get("click_t", 9.0)), smoked)
-		"D": _diode(ci, p, sh, smoked)
+		"D":
+			_diode(ci, p, sh, smoked)
+			if not sh and (str(part.partId).begins_with("1n47") or str(part.partId).begins_with("bzx") or str(part.partId).begins_with("zener")): PartArt4.zener_bar(ci, p)
+		"REG": PartArt4.regulator(ci, lp, p, sh, str(part.get("variant", "")), float(st.get("hot", 0.0)), bool(st.get("reg_off", false)), smoked, str(part.get("label", "")))
 		"NPN", "PNP": _bjt(ci, lp, p, sh, smoked)
 		"XFMR": _xfmr(ci, p, sh)
 		"BAT":
@@ -98,6 +101,7 @@ static func _body(ci: CanvasItem, part: Dictionary, p: float, st: Dictionary, sh
 				"cable-loop": PartArt2.cable_reel(ci, lp, p, sh)
 				"pullup-10k": PartArt3.pullup(ci, lp, p, sh)
 				"logic-in": PartArt3.logic_in(ci, lp, p, sh)
+				"load-cc": PartArt4.cc_load(ci, lp, p, sh)
 				_: _load(ci, lp, p, sh, float(st.get("hot", 0.0)))
 		"GALVO": PartArt2.galvo(ci, lp, p, sh, float(st.get("needle", 0.0)))
 		"SLIDE": PartArt2.slide(ci, part, lp, p, sh)

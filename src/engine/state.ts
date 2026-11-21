@@ -166,6 +166,10 @@ export interface TicketState {
   /** The player has put the meter leads on the board (both) or clipped the scope at least once on this ticket. */
   probed?: boolean;
   tolerance: { done: number; total: number; failures: number } | null;
+  /** Chapter 4: the position of each live switch (mains tolerance, load) by selector id; absent = the ticket's initial positions. */
+  sel?: Record<string, number>;
+  /** Chapter 4: the player has read the mains safety card of this ticket (it opens first, and cannot be skipped on the first view). */
+  safetyRead?: boolean;
 }
 
 export interface NodeProgress {

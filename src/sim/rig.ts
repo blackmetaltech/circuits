@@ -38,6 +38,8 @@ export interface RigInput {
   probeLoads?: readonly string[];
   /** Bench-only resistors between two nodes (level `bench.testLoads`); an override whose target is the load's id sets its `r`. */
   testLoads?: readonly { id: string; a: string; b: string; r: number }[];
+  /** Chapter 4: seconds of the compressed thermal clock of a bare TO-220 regulator (see BenchPlan.regTau); absent = the real 60 s. */
+  regTau?: number;
 }
 
 export interface Rig {
@@ -63,6 +65,11 @@ const TOKEN = /@([a-z0-9-]+)#(\d+)(?:\.(\+|-|[A-Za-z0-9]+))?/g;
 
 export const PROBE_RIN = 10e6;
 export const DMM_BURDEN = 0.1;
+/** Insulation resistance of the isolation transformer: the only thing that ties the floating mains to ground (a numerical reference, ohm). */
+export const MAINS_ISO = 1e8;
+const SQRT2 = Math.sqrt(2);
+/** The constant-current load's switch-on: 0 until `ton`, a 1 ms ramp to its current (a pure function of the element's parameters, so a condition that sets `i` moves it). */
+export const ccWave = (i: number, ton: number): Wave => (i > 0 ? pwl([[0, 0], [ton, 0], [ton + 1e-3, i]]) : pwl([[0, 0]]));
 const INST = (id: string): Record<string, number> => INSTRUMENTS.find((i) => i.id === id)!.model;
 
 export function genWave(g: RigGen): Wave {
@@ -138,6 +145,11 @@ export function buildRig(inp: RigInput): Rig {
     const a = connNode(s.plus), b = connNode(s.minus);
     if (a < 0 || b < 0) continue;
     if (s.kind === 'bench') { add({ id: s.id, kind: 'BENCH', owner: s.id, nodes: [a, b], p: { v: s.fixed ?? inp.supply.v, ilim: inp.supply.ilim } }); sources.push(s.id); }
+    else if (s.kind === 'mains') {
+      add({ id: s.id, kind: 'V', owner: s.id, nodes: [a, b], p: { v: 0, vrms: s.vrms, f: s.f }, wave: sine(s.vrms * SQRT2, s.f) });
+      add({ id: `${s.id}.iso`, kind: 'R', owner: s.id, nodes: [b, 0], p: { r: MAINS_ISO } });
+      sources.push(s.id);
+    }
     else if (s.kind === 'contact') add({ id: s.id, kind: 'SWT', owner: s.id, nodes: [a, b], p: { ron: s.ron ?? 0.05, roff: 1e9, pattern: 0 }, wave: contactWave(s, 0) });
     else {
       const mid = nodeNames.length; nodeNames.push(`${s.id}#o`);
@@ -148,6 +160,13 @@ export function buildRig(inp: RigInput): Rig {
   }
   // overrides targeting a bench source (conditions such as "12 V supply") apply to the injected element too
   for (const o of inp.overrides ?? []) for (const e of elements) if (e.owner === o.target && (e.kind === 'BENCH' || e.kind === 'V' || e.kind === 'SWT')) e.p[o.key] = o.value;
+  // the mains' voltage and frequency are picked by the condition / selector (`vrms`, `f`)
+  for (const e of elements) if (e.kind === 'V' && e.p.vrms !== undefined && e.wave?.k === 'sine') e.wave = sine(e.p.vrms * SQRT2, e.p.f ?? e.wave.f);
+  // the constant-current loads switch on after `ton`; the regulator's thermal clock runs on game time (4-3) and knows the ambient it sits in
+  for (const e of elements) {
+    if (e.kind === 'CCL' && e.p.cc === 1) e.wave = ccWave(e.p.i, e.p.ton ?? 0);
+    if (e.kind === 'REG') { e.p.ta = inp.ambientC ?? 25; if (inp.regTau !== undefined) e.p.tau = (inp.regTau * e.p.tau) / 60; }
+  }
   // a contact's bounce pattern is picked by the condition (`key: 'pattern'`)
   for (const e of elements) if (e.kind === 'SWT') { const sd = inp.supplies.find((x) => x.id === e.owner); if (sd && sd.kind === 'contact') e.wave = contactWave(sd, Math.round(e.p.pattern ?? 0)); }
 

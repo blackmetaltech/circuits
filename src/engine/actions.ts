@@ -487,11 +487,28 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
 
     // ---- live
     power: (s, on: unknown) => {
-      const { tk } = open(s, defs);
+      const { tk, def } = open(s, defs);
       if (typeof on !== 'boolean') refuseKey('err.arg.bool', { name: 'on' });
+      if (on === true && def.mains === true && !tk.safetyRead) refuseKey('safety.unread');
       tk.live.powered = on as boolean; tk.instruments.supply.on = on as boolean; tk.instruments.gen.on = on as boolean;
       delete tk.live.paused; resetLive(tk.live);
       return ok(say(on ? 'power.on' : 'power.off'));
+    },
+    /** Chapter 4: move one of the ticket's live switches (the mains tolerance, the load) to position `index`. The live circuit starts again from power-on; the bench still runs every condition. */
+    setSelector: (s, id: unknown, index: unknown) => {
+      const { tk, def } = open(s, defs), sid = str(id, 'id'), sd = (def.selectors ?? []).find((x) => x.id === sid);
+      if (!sd) refuseKey('err.selector.unknown', { id: sid, known: (def.selectors ?? []).map((x) => x.id).join(', ') || '-' });
+      const i = int(index, 'index');
+      if (i < 0 || i >= sd!.options.length) refuseKey('err.selector.range', { id: sid, max: sd!.options.length - 1 });
+      (tk.sel ??= {})[sid] = i; touch(tk); resetLive(tk.live);
+      return ok(say('selector.set', { id: sid, label: t(sd!.options[i]!.labelKey) }), { id: sid, index: i });
+    },
+    /** The mains safety card has been read (it must be, once, before the first mains ticket opens its bench). */
+    readSafety: (s) => {
+      const { tk, def } = open(s, defs);
+      if (def.mains !== true) refuseKey('err.safety.none', { id: def.id });
+      tk.safetyRead = true; (s.progress.codexSeen.includes('mains-safety') || s.progress.codexSeen.push('mains-safety'));
+      return ok(say('safety.read'));
     },
     /** Run or pause the sim (the UI's run/pause button): while paused, `advance` does nothing. Powering on or off resumes. */
     setRunning: (s, on: unknown) => {
@@ -527,6 +544,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
     /** The formal test. `coached` = the player's own bench button: a ticket whose lesson is measuring (measureFirst) refuses until the meter or scope has been used. */
     runBench: (s, coached?: unknown) => {
       const { tk, def } = open(s, defs);
+      if (def.mains === true && !tk.safetyRead) refuseKey('safety.unread');
       if (coached === true && def.measureFirst && !tk.probed) refuseKey(def.measureFirstKey ?? 'bench.measureFirst');
       // the player's own bench button with the power switch OFF: switch it on (the click and the toast say so) rather than testing a dark bench
       const autoPower = coached === true && !tk.live.powered;

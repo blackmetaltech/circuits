@@ -132,7 +132,7 @@ function liveSpecs(sol: Sol, def: LevelDef): { id: string; value: number | null;
   return out;
 }
 
-const CHAPTER: Record<number, { title: string; blurb: string }> = { 1: { title: 'chapter.1.title', blurb: 'chapter.1.blurb' }, 2: { title: 'chapter.2.title', blurb: 'chapter.2.blurb' }, 3: { title: 'chapter.3.title', blurb: 'chapter.3.blurb' } };
+const CHAPTER: Record<number, { title: string; blurb: string }> = { 1: { title: 'chapter.1.title', blurb: 'chapter.1.blurb' }, 2: { title: 'chapter.2.title', blurb: 'chapter.2.blurb' }, 3: { title: 'chapter.3.title', blurb: 'chapter.3.blurb' }, 4: { title: 'chapter.4.title', blurb: 'chapter.4.blurb' } };
 const GAUGE_UNIT: Record<string, { display: string; scale: number }> = { A: { display: 'mA', scale: 1000 }, uA: { display: 'µA', scale: 1e6 }, V: { display: 'V', scale: 1 }, W: { display: 'W', scale: 1 } };
 
 /** The scope's target band and lock for the open ticket (null when the ticket has no gauge). */
@@ -219,6 +219,8 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
           scope: def.instruments.scope || s.mode === 'sandbox' ? { timePerDiv: ins.scope.timePerDiv, voltsPerDiv: ins.scope.voltsPerDiv, trigger: ins.scope.trigger, probes: b.probes.map((p) => ({ ch: p.ch, pad: p.pad })) } : null,
           dmm: { mode: b.meter.mode, label: modeLabel(b.meter.mode), red: b.meter.red ?? b.meter.pads[0] ?? null, black: b.meter.black ?? b.meter.pads[1] ?? null },
         },
+        selectors: (def.selectors ?? []).map((sd) => ({ id: sd.id, label: t(sd.labelKey), options: sd.options.map((x) => t(x.labelKey)), index: tk.sel?.[sd.id] ?? sd.initial })),
+        keepOut: b.keepOut ?? [],
         status: tk.live.status, issues: tk.live.issues.map((i) => ({ key: i.key, text: text(i) })), boardErrors: rig.errors.map((e) => ({ key: e.key, text: text(e) })),
         dangling: danglingEnds(b).map((e) => ({ wid: e.wid, pad: e.pad, text: say('wire.dangling', { pad: `${e.pad[0]},${e.pad[1]}` }) })),
         openPins: openPins(b).map((e) => ({ uid: e.uid, pin: e.pin, pad: e.pad })),
@@ -249,6 +251,10 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
         if (d.kind === 'RELAY') {   // the armature: pulled in (the contacts have switched) and the coil current, from the saved solution
           const ce = sol?.ckt.elements.find((x) => (x.el.owner || x.el.id) === p.uid);
           Object.assign(o2, { relay: { operated: !!ce && (sol!.state[ce.so + 2] ?? 0) >= 0.5 && tk.live.powered, coil: sig(c?.pins[0]?.i ?? 0, 5), mA: r4((c?.pins[0]?.i ?? 0) * 1000) } });
+        }
+        if (d.kind === 'REG') {   // the regulator's thermal shutdown latch (running / shut down), from the saved solution: the output goes dead while it is off
+          const ce = sol?.ckt.elements.find((x) => (x.el.owner || x.el.id) === p.uid && x.el.kind === 'REG');
+          Object.assign(o2, { reg: { off: !!ce && tk.live.powered && (sol!.state[ce.so + 1] ?? 0) >= 0.5, tj: h?.temp ?? th.ambient, shut: ce?.el.p.tshut ?? 150 } });
         }
         if (d.kind === 'C' || d.kind === 'CE') {   // a capacitor: the voltage it holds and its charge, for the swelling top and the readout
           const ce = sol?.ckt.elements.find((x) => (x.el.owner || x.el.id) === p.uid && x.el.kind === 'C');

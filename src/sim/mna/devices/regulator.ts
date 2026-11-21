@@ -64,6 +64,14 @@ export const REG: Device = {
     rowOf(nout, -1, r.ip + r.iqo, r.dip.vin + r.dqo.vin, r.dip.vref + r.dqo.vref, r.dip.vout + r.dqo.vout);
     rowOf(nref, -1, r.iqg, r.dqg.vin, r.dqg.vref, 0);
   },
+  /** A node driven by a saturated pass element (2 A into a load with no slope) gives Newton nothing to hold on to: it may move OUT by at most 2 V per iteration (the whole step is scaled, like the diode's limiter). */
+  limit(e, xNew, xOld) {
+    const k = e.nodes[2]; if (k < 0) return false;
+    const d = Math.abs(xNew[k] - xOld[k]); if (!(d > 2)) return false;
+    const a = 2 / d;
+    for (let i = 0; i < xNew.length; i++) xNew[i] = xOld[i] + a * (xNew[i] - xOld[i]);
+    return true;
+  },
   update(e, x, state, _m, h) { if (e.el.p.thermal) state[e.so] = rise(e, x, state, h); },
   eventValue(e, x, state, h) {
     const p = e.el.p;

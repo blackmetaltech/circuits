@@ -35,7 +35,7 @@ const PART_TABLE := [
 	["res-", "R", "axial2"], ["pot-", "POT", "pot3"], ["led-", "LED", "radial2"], ["cap-el", "CE", "radial2"], ["cap-", "C", "axial2"],
 	["1n", "D", "axial2"], ["bzx", "D", "axial2"], ["bridge", "BRIDGE", ""], ["xfmr", "XFMR", "xfmr4"], ["2n3906", "PNP", "to92"],
 	["2n", "NPN", "to92"], ["bc", "NPN", "to92"], ["tip", "NPN", "to220"], ["bat-", "BAT", "block2"], ["sw-", "SW", ""], ["fuse", "FUSE", "block2"],
-	["inst-probe", "PROBE", ""],
+	["inst-probe", "PROBE", ""], ["lm7805", "REG", "to220"], ["lm317", "REG", "to220"], ["load-cc", "LOAD", "block2"], ["zener-", "D", "axial2"],
 	["rheostat", "R", "axial2"], ["trimmer", "R", "axial2"], ["galvanometer", "GALVO", "block2"], ["slidewire", "SLIDE", "slide3"], ["blackbox", "BOXED", "block2"],
 	["adc-in", "LOAD", "block2"], ["cable-loop", "LOAD", "block2"], ["pullup-", "LOAD", "block2"], ["logic-in", "LOAD", "block2"], ["relay-", "RELAY", "relay5"], ["cell-", "BAT", "block2"],
 ]
