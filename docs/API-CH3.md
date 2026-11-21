@@ -44,3 +44,9 @@ Code-drawn objects (`godot/world/part_art3.gd`): the electrolytic with its strip
 the arcade button (stands on the board between SW and GND, goes down with the engine's contact) and the knife switch of 3-4. The scope has a time-trace mode (`scope_view.gd`): the engine's samples as phosphor with a fading ghost of the last sweep, the amber tube (green on LOCK),
 red samples outside it, the time axis, TIME knob (click / wheel / `,` `.` keys) and VOLTS knob (the vertical scale only). The supply panel lists 3-3's two rails; the codex has nine new pages (capacitance, series and parallel, the time constant, the charging curve, the probe as a circuit part,
 electrolytics, filtering a bounce, a coil's time constant, energy); the notebook has chapter tab 3 with its doodle; the customer's line follows the passed state (the ask until the bench passes, then the thanks quoting the measured value).
+
+## Round C3-1 (play-test) additions
+
+- `scope().trace.mark63` on RC / LR tickets (`TraceDef.mark63`): `{level, final, t}` = 63.2 % of the circuit's final value (display units), that final value, and when the sweep crosses it (s, `null` until it does). The scope draws a dashed level and a time cursor.
+- 3-2's "never crossed" explainers (`explain.debounce.nopress`, `.norelease`) quote the scope's own sweep (`DebCtx`: start level, lowest during the press, level at the release, highest after it); before a sweep has run they use the exact RC response of the same circuit. The release path through the 10 k pull-up is named.
+- 3-3 explainers and the pass note teach tau = L / R.

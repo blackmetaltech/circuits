@@ -46,3 +46,9 @@ the sealed module, resistance-box plug, rheostat, trimmer. The bench supply grow
 - `scope().gauge` on a null detector: `signed`, `signedText` ("+4.395 µA"), `slide` (`left | right | on`, found by moving the jockey 0.1 mm on a copy of the board) and `slideText`.
 - `bench()`: `marks` (`[{pad, text}]`: A, J, B on the slide wire, C at the 2-2 junction) and `slots` (`[{id, partId, a, b, text, filled}]`: where the plug / rheostat / galvanometer go).
 - `BenchResult.measured` changed the saved state, so the golden trajectories were regenerated deliberately.
+
+## Round C3-1 (play-test) additions
+
+- Wires join only at their two ends. `bench()` adds `crossings: [{pad, a, b}]` (wire interiors passing over each other: NOT joined, drawn as hop-overs) and `joins: [{pad, n}]` (two or more wire ends, or three things, on one pad: drawn as a solder dot). `addWire` / `wire` replies mention a crossing, a run alongside, or a join in plain words and return `crossings`, `alongside`, `joins`.
+- `LevelDef.nullCheck` (2-2, 2-4): `{wire, faults[]}`. The bench sweeps the jockey on a copy of the board; no sign change of the gauge probe = no balance: the bench fails with `bench.bridge.dead` (how it reads + the first unmet wiring fault), the ig row fails, `scope().gauge` has `slide: 'dead'`, `dead`, `deadText` and the scope never locks; the coach text becomes the same diagnosis.
+- `ticketCard().answers[]` gains `side` (`left | right`: where the plug R is wired) and `formula` for the slip. `bench.answer.fail` names the side and uses the matching formula and ratio.
