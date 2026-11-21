@@ -53,6 +53,7 @@ export const L3_3: LevelDef = {
     equation: { key: 'ticket.3-3.hint.equation', vars: { rCoil: 200, lCoil: 0.1, iPull: 0.04, tMax: 0.0004 } },
   },
   trace: {
+    mark63: true,
     probe: 'i(@relay-12v#1)', mode: 'auto', unit: 'mA', scale: 1000, vdiv: 10, label: 'COIL', times: [0.05 * ms, 0.1 * ms, 0.2 * ms, 0.5 * ms, 1 * ms],
     tube: { kind: 'windows', windows: [{ t0: 0, t1: 0.4 * ms, lo: -1, hi: 0.066 }, { t0: 0.4 * ms, t1: 0.1, lo: 0.04, hi: 0.066 }] },
     lockSpecs: ['tpull', 'isteady'],

@@ -160,6 +160,8 @@ export interface TraceDef {
   times: number[];
   /** Short readout label ("OUT", "COIL"). */
   label: string;
+  /** RC / LR tickets: the scope draws a dashed level at 63.2 % of the final value (one time constant) and, once the sweep is in, a cursor at the time the trace crosses it. */
+  mark63?: boolean;
 }
 
 export interface LevelDef {

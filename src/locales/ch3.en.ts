@@ -49,7 +49,7 @@ export const ch3En: Record<string, string> = {
   'coach.3-3.s2': 'Switch the bench on.',
   'coach.3-3.s3': 'Watch the coil current on the scope: it has to climb past the 40 mA line by 0.4 ms and settle under 66 mA. The relay clicks when it pulls in.',
   'coach.3-3.s4': 'Run the bench.',
-  'coach.3-3.s5': "{customer}'s valves are on time.",
+  'coach.3-3.s5': "{customer}'s valves are on time. The lesson: tau = L / R. A bigger series R makes the current rise faster (tau shrinks), but it needs more volts to push the same final current, I = V / R. That is why the 24 V rail with a resistor beats 12 V alone.",
   // 3-4 EB: Capacitor Bank
   'ticket.3-4.title': 'Exam: Capacitor Bank',
   'ticket.3-4.brief': 'Card (a): a 2 µF capacitor in series with a 3 µF and a 6 µF in parallel, across 110 V. Find the charge and the total energy stored. Card (b): a 4 µF capacitor charged to 100 V is connected to an uncharged 6 µF. Find the final voltage and the energy lost. Predict first, then build both cards on the board and let the bench measure them.',

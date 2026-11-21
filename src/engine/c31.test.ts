@@ -133,3 +133,37 @@ describe('3-2 the "never crossed" text agrees with the scope trace and explains 
     expect(t).toMatch(/pull-up/); expect(t).toMatch(/\(1 kΩ \+ 10 kΩ\) x 10 µF = 110 ms/);
   });
 });
+
+// ---------------------------------------------------------------- 3-3: L / R teaching in the feedback
+describe('3-3 the feedback teaches tau = L / R', () => {
+  it('a slow build (12 V alone) says tau = L / R and the volts trade-off; the pass note repeats it', () => {
+    const e = open('3-3', ['1-4', '2-3', '3-1']);
+    for (const a of refActions(def('3-3')).filter((x) => !['runBench', 'power', 'advance'].includes(x.name))) ok(e, a.name, ...(a.args ?? []));
+    expect(q(e, 'coach').text).not.toMatch(/tau = L \/ R/);
+    ok(e, 'power', true); ok(e, 'advance', 3); ok(e, 'runBench'); expect(q(e, 'benchResult').pass).toBe(true);
+    expect(q(e, 'coach').text).toMatch(/tau = L \/ R/); expect(q(e, 'coach').text).toMatch(/more volts/);
+  });
+  it('the slow explainers (first miss and repeat) carry the trade-off', () => {
+    const slow = () => { const e = open('3-3', ['1-4', '2-3', '3-1']); ok(e, 'addWire', [[2, 2], [12, 2], [12, 4]]); return e; };   // 12 V alone
+    const e = slow(); const b1 = bench(e); expect(b1.pass).toBe(false);
+    expect(b1.failures.map((f: any) => f.text).join(' ')).toMatch(/tau = L \/ R: a bigger R makes the current rise faster, but needs more volts/);
+    const b2 = bench(e); expect(b2.failures.map((f: any) => f.text).join(' ')).toMatch(/Remember tau = L \/ R: a bigger R makes the current rise faster/);
+  });
+});
+
+// ---------------------------------------------------------------- scope: the 63 % marker
+describe('scope 63 % marker on RC / LR tickets', () => {
+  it('3-1: dashed level 6.32 V and the crossing time once the sweep has the point (about 1.00 s for the ref)', () => {
+    const e = open('3-1', ['1-4', '2-3']); for (const a of refActions(def('3-1')).filter((x) => !['runBench', 'power', 'advance'].includes(x.name))) ok(e, a.name, ...(a.args ?? []));
+    ok(e, 'attachProbe', 1, [14, 2]); ok(e, 'power', true); for (let i = 0; i < 104; i += 8) ok(e, 'advance', 8);
+    const m = q(e, 'scope').trace.mark63; expect(m.level).toBeCloseTo(6.32, 1); expect(m.final).toBeCloseTo(10, 1); expect(m.t).toBeGreaterThan(0.95); expect(m.t).toBeLessThan(1.05);
+  });
+  it('3-3: 63 % of the steady coil current (60 mA -> 37.9 mA), crossing a little before the 40 mA pull-in', () => {
+    const e = open('3-3', ['1-4', '2-3', '3-1']); for (const a of refActions(def('3-3')).filter((x) => !['runBench', 'power', 'advance'].includes(x.name))) ok(e, a.name, ...(a.args ?? []));
+    ok(e, 'power', true); for (let i = 0; i < 104; i += 8) ok(e, 'advance', 8);
+    const m = q(e, 'scope').trace.mark63; expect(m.final).toBeCloseTo(60, 0); expect(m.level).toBeCloseTo(37.9, 0); expect(m.t).toBeGreaterThan(0); expect(m.t).toBeLessThan(0.0004);
+  });
+  it('3-2 (a bounce filter) has none', () => {
+    const e = open('3-2', ['1-4', '2-3', '3-1']); expect(q(e, 'scope').trace.mark63).toBeNull();
+  });
+});

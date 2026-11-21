@@ -47,6 +47,7 @@ export const L3_1: LevelDef = {
     equation: { key: 'ticket.3-1.hint.equation', vars: { tau: 1, vSrc: 10, level: 6.32 } },
   },
   trace: {
+    mark63: true,
     probe: 'v(out)', mode: 'clip', clip: 'OUT', unit: 'V', scale: 1, vdiv: 2, label: 'OUT', times: [0.05, 0.1, 0.2, 0.5, 1],
     tube: { kind: 'exp', v0: 0, vInf: 10, tau: 1, dv: 0.1, dt: 0.05 }, lockSpecs: ['tcross'],
   },

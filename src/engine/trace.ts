@@ -5,10 +5,11 @@ import type { LevelDef, TubeDef } from '../data/levels/types';
 import { SCOPE_SCREEN_POINTS } from '../sim/live';
 import { measure } from '../sim/bench/measure';
 import { sig } from '../sim/explain';
-import { liveRig } from './ticket-run';
+import { liveRig, probeOn } from './ticket-run';
 import { say } from './text';
 import type { TicketState } from './state';
 import { t } from '../i18n';
+import { hashOf } from '@core/kit/hash';
 
 const r4 = (x: number): number => (Number.isFinite(x) ? Math.round(x * 1e4) / 1e4 : 0);
 const WINDOW_EPS = 1e-12;
@@ -34,8 +35,11 @@ export interface TraceView {
   inTube: boolean; specsOk: boolean;
   /** The specs that do not hold on the sweep yet (ids), for the readout. */
   specsFail: string[];
+  /** RC / LR tickets: one time constant. `level` = 63.2 % of the circuit's final value (display units, the dashed line); `t` = when the trace crosses it (s, null until it does); `final` = the final value. */
+  mark63: { level: number; final: number; t: number | null } | null;
 }
 
+let finalCache: { key: string; fin: number | null } | null = null;
 /** The whole trace picture of the open ticket (null when the ticket has no time trace). */
 export function traceView(tk: TicketState, def: LevelDef): TraceView | null {
   const tr = def.trace; if (!tr) return null;
@@ -56,7 +60,20 @@ export function traceView(tk: TicketState, def: LevelDef): TraceView | null {
     }
   }
   const tube: TraceView['tube'] = tr.tube.kind === 'exp' ? { kind: 'exp', lo, hi } : { kind: 'windows', windows: tr.tube.windows.map((w) => ({ t0: w.t0, t1: w.t1, lo: r4(Math.max(w.lo, -1e6) * tr.scale), hi: r4(Math.min(w.hi, 1e6) * tr.scale) })) };
-  return { v: ys.map((y) => r4(y * tr.scale)), t0: sc.t0, dt, progress: Math.min(1, ys.length / n), complete, bad, tube, inTube: bad.length === 0, specsOk: complete && specsFail.length === 0, specsFail };
+  // 63.2 % of the FINAL value of this circuit (found on a copy: the capacitor open / the coil a short), and where the sweep crosses it
+  let mark63: TraceView['mark63'] = null;
+  if (tr.mark63) {
+    const key = hashOf({ id: def.id, p: tk.board.parts, w: tk.board.wires, v: tk.instruments.supply.v, h: tk.hidden });
+    if (finalCache?.key !== key) finalCache = { key, fin: probeOn(tk.board, def, tk)(tr.probe) };
+    const fin = finalCache.fin;
+    if (fin !== null && Number.isFinite(fin) && Math.abs(fin) > 0) {
+      const lvl = 0.632 * fin;
+      let tc: number | null = null;
+      for (let k = 1; k < ys.length && tc === null; k++) { const a = ys[k - 1]!, b = ys[k]!; if ((a - lvl) * (b - lvl) <= 0 && a !== b) tc = ts[k - 1]! + ((lvl - a) / (b - a)) * dt; }
+      mark63 = { level: r4(lvl * tr.scale), final: r4(fin * tr.scale), t: tc === null ? null : Math.round(tc * 1e9) / 1e9 };
+    }
+  }
+  return { v: ys.map((y) => r4(y * tr.scale)), t0: sc.t0, dt, progress: Math.min(1, ys.length / n), complete, bad, tube, inTube: bad.length === 0, specsOk: complete && specsFail.length === 0, specsFail, mark63 };
 }
 
 /** `scope().target / gauge / lock` for a ticket with a time trace. */
