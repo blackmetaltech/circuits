@@ -2,7 +2,23 @@
 
 All notable changes to CIRCUITS (called NODE until v0.1.0). The release workflow publishes the section whose heading contains `[x.y.z]`.
 
-## [0.1.0] - unreleased
+## [0.1.0] - 2026-11-22 · "Four chapters on Lantern Lane"
+The first release: the stall, the circuit engine and chapters 1 to 4 (18 tickets). The game was called NODE until this release.
+
+### Added
+- Chapters 1 to 4: First Light, Divide & Measure, Charge, Mains & Rectifiers (Wall Wart, Zener Shunt, Hot Regulator, Bench Supply, Exam: Zener Regulator), with a mains safety card, an isolation transformer, a thermal camera and heatsink variants.
+- `godot/tests/layout_flow.gd`: a layout audit of all 18 tickets at 1920x1080 and 1280x800 (bubble clear of GO, instruments, tin, exam card and perfboard; chit paper holds its text; coin total inside the window; shoebox names fit; reference designs on screen).
+- `godot/tests/save_migrate_flow.gd` and `SaveMigrate`: a save folder from the NODE era is carried over on first start.
+- `CB_SMOKE=1` headless check (title, then ticket 1-1: prints SMOKE OK); `scripts/release-local.sh`; the release workflow skips publishing when a release for the tag already exists.
+- The version (v0.1.0) is shown on the title screen.
+
+### Changed
+- Renamed NODE to CIRCUITS: neon title sign, Godot project name and window title, package name, export presets, app id `in.ixaxaar.cobanana.circuits`, README, docs, site. The repo slug `node-circuits` (engine id, saves, QA harness) and the local folder keep the old name for now.
+- Layout: long messages on a handheld are a wide four-line card with its page counter in its own row (none needs more than two pages); the speech bubble sits above the customer's head in a band that touches nothing; the customer sits lower; the coin total stays inside the window; the key hints moved to the top of the board (desktop only); the board view zooms to the used region on seven small tickets; every chit grows to hold its spec (fee line dropped when it would not fit); no text under 16 px on screen; shoebox names step down in size, then use a short name.
+- The V+ and GND brass bars on one row no longer cover each other's engraved names.
+- The FIXED stamp hangs below the last line instead of over it.
+
+### Fixed (play-test rounds before the release)
 ### Play-test round C3-1 (diploma student, chapters 2 and 3)
 - Wires (rule unchanged and now shown): a wire joins ONLY at its two ends. A wire passing over or alongside another never joins it. `bench()` carries `crossings` (hop-overs, drawn as an arch over a gap) and `joins` (two or more ends on one hole: a silver solder dot); `addWire` / `wire` say "passes over another one: they do NOT touch", "runs alongside", "two wires end on the same hole: joined". Tests: `src/engine/c31.test.ts`.
 - 2-2 / 2-4 null detectors (`LevelDef.nullCheck`, `src/engine/nullcheck.ts`): the jockey is swept on a copy of the board; a bench pass needs a REAL sign change of the galvanometer current. A dead bridge (zero everywhere, or one sign everywhere) fails with "The bridge has no balance ..." plus the likely miswiring (cell not across A-B, galvanometer not on the jockey / C); `scope().gauge` gets `slide: 'dead'`, `deadText`, and LOCK stays off; the coach says the same. "Balances at l" is only printed when a null exists. The slip's formula (`ticketCard().answers[].formula`) and the failure working follow the side R is wired on (`X = R (100 - l) / l` or `X = R l / (100 - l)`).
@@ -40,5 +56,11 @@ All notable changes to CIRCUITS (called NODE until v0.1.0). The release workflow
 - Coach names a burnt part; measuring steps are optional (1-1, 1-2, 1-3, 1-5) or required (1-4: the bench says "Measure it first"). FIXED tickets reopen to replay; the chit explains the payout. Shoebox scroll arrows. Title spacing. Script errors on the empty-ticket title/notebook path are gone (boot_flow test with an error trap).
 ### Added
 - Project scaffolded from cobanana-core: engine, Godot front-end, CI, Android build.
+
 ### Known gaps
-- Everything game-specific.
+- Saves: a NODE-era save folder is copied to the new name on first start (nothing deleted); a copy that already exists is never overwritten.
+- After Ctrl+Z of a burn the coach goes back to "flip the power switch" instead of staying on "add a limiting part".
+- A very fast press-move-release (one frame) can drop a part drag; slow drags work. Seen under heavy load only.
+- The scope lead and supply cable can lie across the chit text; a long coach slip (six lines) covers the bottom board rows; map chit text is under 16 px.
+- No phone build, no gamepad pass, nobody has listened to the audio, no Windows or macOS build was run. Tolerance star not built. Chapter 4 has had no fresh tester.
+

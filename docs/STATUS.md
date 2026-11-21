@@ -70,3 +70,6 @@ Open: the `na` (120 V / 60 Hz) ref of 4-1 (680 uF) needs a region-aware level; t
 a rating explainer quotes the WORST condition (the number the scope shows), not the first one; the 4-1 chit and the instruments under it step down so no spec line spills onto a meter (chapter 4 chits only; the chapter 1-3 chits still run long); a map chit's FIXED stamp no longer covers its title or fee;
 the four LM7805s in the shoebox are named by their heatsink; the 4-5 slip no longer prints "V(M) I(E2)" or overlaps its labels; the marked slip grows on a handheld; the scope's "SPEC NOT MET" no longer runs into the volts-per-division setting.
 Honest limits: on a 1280x800 handheld the long first-miss explanation of 4-1's 680 uF build runs to four pages of the top slip (the page counter sits over its last line); the 1080 desktop layout leaves the 4-1 chit touching the top edge of the multimeter; the 4-4 naive 2.4 k / 3.9 k build shows the formula (Iadj term) first because it also misses the band at 10 mA, the minimum-load text is for the no-load condition.
+
+## 2026-11-22 v0.1.0
+Renamed to CIRCUITS; layout fix round (layout_flow); release v0.1.0 (Linux x86_64) via scripts/release-local.sh. See CHANGELOG.md and docs/CRITIQUE-0.1.md for what was not checked.
