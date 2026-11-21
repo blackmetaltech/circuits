@@ -17,7 +17,7 @@ import { boardMetrics } from './metrics';
 import { refBoard } from './tickets';
 import { getDef } from './board';
 import type { HintExpr } from '../data/levels/types';
-import { bridgeFault, rSide, refs, scanBridge, type BridgeScan } from './bridge';
+import { bridgeFault, rSide, refs, scanBridge, type BridgeScan } from './nullcheck';
 
 /** Names of the specs every ticket has implicitly (the always-on ratings check). */
 const IMPLICIT_SPEC: Record<string, string> = { ratings: 'bench.spec.ratings' };

@@ -31,7 +31,7 @@ describe('wires join only at their ends (crossings, runs alongside, T-junctions)
     const e = open('2-2', P22);
     ok(e, 'addWire', [[4, 3], [4, 9]]);
     const r = ok(e, 'addWire', [[2, 6], [8, 6]]);
-    expect(r.message).toMatch(/passes over w1 at pad 4,6: they do NOT touch/);
+    expect(r.message).toMatch(/passes over another one: they do NOT touch there/);
     expect(nodeOf(e, [4, 3])).not.toBe(nodeOf(e, [2, 6]));
     expect(nodeOf(e, [4, 3])).toBe(nodeOf(e, [4, 9]));
     expect(q(e, 'bench').crossings).toEqual([{ pad: [4, 6], a: 'w1', b: 'w2' }]);
@@ -40,7 +40,7 @@ describe('wires join only at their ends (crossings, runs alongside, T-junctions)
     const e = open('2-2', P22);
     ok(e, 'addWire', [[4, 3], [4, 9]]);
     const r = ok(e, 'addWire', [[2, 6], [4, 6], [4, 8], [7, 8]]);
-    expect(r.message).toMatch(/runs alongside w1 for 2 pad\(s\): they do NOT touch/);
+    expect(r.message).toMatch(/runs alongside another for a stretch: they do NOT touch/);
     expect(nodeOf(e, [2, 6])).not.toBe(nodeOf(e, [4, 3]));
     expect(nodeOf(e, [7, 8])).not.toBe(nodeOf(e, [4, 9]));
   });
@@ -54,7 +54,7 @@ describe('wires join only at their ends (crossings, runs alongside, T-junctions)
     const e = open('2-2', P22);
     ok(e, 'addWire', [[4, 3], [4, 9]]);
     const r = ok(e, 'addWire', [[4, 9], [8, 9]]);
-    expect(r.message).toMatch(/w2 and w1 both end on pad 4,9: those two wires ARE joined there/);
+    expect(r.message).toMatch(/Two wires end on the same hole: those two wires ARE joined there/);
     expect(nodeOf(e, [8, 9])).toBe(nodeOf(e, [4, 3]));
     expect(q(e, 'bench').joins).toEqual([{ pad: [4, 9], n: 2 }]);
   });

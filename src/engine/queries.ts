@@ -26,7 +26,7 @@ import { partPrice } from './metrics';
 import { FAILURE_LOG_CAP, SCOPE_POINTS_CAP, UNDO_CAP, type NodeState, type TicketState } from './state';
 import { isUnlocked, levelDefOf } from './tickets';
 import { liveRig } from './ticket-run';
-import { balanceFormula, rSide } from './bridge';
+import { balanceFormula, rSide } from './nullcheck';
 import { say } from './text';
 import { buildDebrief, starsRule } from './debrief';
 import { makeUiQueries, scopeTarget, shoebox } from './ui';
@@ -61,8 +61,8 @@ function debounceTrace(tk: TicketState, def: LevelDef, r: number, c: number, vSr
     const press = seg(k.press, k.release), rel = seg(k.release, sc.t0 + (sc.ch1.length - 1) * sc.dt);
     if (press.length > 0 && rel.length > 0) return { vStart: sc.ch1[Math.max(0, at(k.press) - 1)]!, vLow: Math.min(...press), vAtRelease: sc.ch1[at(k.release)]!, vHigh: Math.max(...rel), tPress: k.press, tRelease: k.release, rPull, fromScope: true };
   }
-  const end = 0.1, dtl = k.release - k.press, vRel = vSrc * Math.exp(-dtl / (r * c));
-  return { vStart: vSrc, vLow: vRel, vAtRelease: vRel, vHigh: vSrc - (vSrc - vRel) * Math.exp(-(end - k.release) / ((r + rPull) * c)), tPress: k.press, tRelease: k.release, rPull, fromScope: false };
+  const end = 0.1, dtl = k.release - k.press, vRel = vSrc * dmath.exp(-dtl / (r * c));
+  return { vStart: vSrc, vLow: vRel, vAtRelease: vRel, vHigh: vSrc - (vSrc - vRel) * dmath.exp(-(end - k.release) / ((r + rPull) * c)), tPress: k.press, tRelease: k.release, rPull, fromScope: false };
 }
 function explainCtx(tk: TicketState | null, def: LevelDef | undefined, prior = 0): ExplainContext {
   const kinds: Record<string, string> = {};
