@@ -86,12 +86,13 @@ describe('T device: transient', () => {
 });
 
 describe('catalogue part xfmr-12 expander (game-defined fixture)', () => {
-  it('expands to one T element: n = 230/12, rs = 1.5 (secondary), lm = 10, pins P1 P2 S1 S2 in order', () => {
+  it('expands to a T element (n = 230/12, rs = 1.5 on the secondary, no magnetising inductance, pins P1 P2 S1 S2 in order) and the 100 Mohm insulation from S2 to ground', () => {
     const def = partById('xfmr-12');
     const els = EXPANDERS.XFMR!({ part: { uid: 'p1', partId: 'xfmr-12' } as never, def, nodes: [1, 2, 3, 4] });
-    expect(els).toHaveLength(1);
+    expect(els).toHaveLength(2);
     expect(els[0]).toMatchObject({ id: 'p1', kind: 'T', owner: 'p1', nodes: [1, 2, 3, 4] });
-    near(els[0].p.n, 230 / 12, 1e-12); expect(els[0].p.rs).toBe(1.5); expect(els[0].p.lm).toBe(10);
+    near(els[0].p.n, 230 / 12, 1e-12); expect(els[0].p.rs).toBe(1.5); expect(els[0].p.lm).toBeUndefined();
+    expect(els[1]).toMatchObject({ id: 'p1.ins', kind: 'R', owner: 'p1', nodes: [4, 0], p: { r: 1e8 } });
   });
   it('loaded at nominal mains the secondary is about 12 V rms minus the winding drop (AC)', () => {
     const n = 230 / 12;

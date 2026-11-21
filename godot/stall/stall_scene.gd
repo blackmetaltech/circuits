@@ -678,9 +678,10 @@ func _sync_views(dt: float) -> void:
 	scope.hold = clampf(backend.hold / backend.LOCK_HOLD, 0.0, 1.0); scope.smoked = not backend.smoked.is_empty()
 	scope.attached = bool(backend.scope_view.get("attached", true)); scope.clip_name = str(backend.scope_view.get("clip_name", "")); scope.reading = str(backend.scope_view.get("text", "")); scope.slide = str(backend.scope_view.get("slide", ""))
 	supply.on = backend.powered; supply.hover = hover == "rocker"
-	supply.selectors = backend.selectors   # the live switches follow the engine's positions
-	top.cam_rect = Rect2(board_rect.end.x - 214.0, board_rect.position.y - 44.0, 200.0, 36.0) if backend.camera_ok and phase == "bench" else Rect2()
-	top.cam_on = backend.camera
+	if backend.ENGINE:
+		supply.selectors = backend.selectors   # the live switches follow the engine's positions
+		top.cam_rect = Rect2(board_rect.end.x - 214.0, board_rect.position.y - 44.0, 200.0, 36.0) if backend.camera_ok and phase == "bench" else Rect2()
+		top.cam_on = backend.camera
 	if supply.adjustable: supply.volts = backend.supply_volts()
 	if drag.get("kind", "") != "probe": supply.jack_glow = ""
 	dmm.set_mode(backend.dial); dmm.reading = backend.dmm(); dmm.hover_dial = hover == "dial"
@@ -999,7 +1000,7 @@ func _press(sp: Vector2) -> void:
 			return
 	if hover.begins_with("sel:"):
 		var pr := hover.split(":"); var sd: Dictionary = backend.selectors[int(pr[1])]
-		var r := backend.set_selector(str(sd.id), int(pr[2]))
+		var r: Dictionary = backend.set_selector(str(sd.id), int(pr[2]))
 		if bool(r.get("ok", false)): supply.selectors = backend.selectors; sfx.play("click", 0.6); scope.live = backend.powered
 		return
 	if hover.begins_with("probe_"):
@@ -1118,7 +1119,7 @@ func _release(sp: Vector2) -> void:
 ## The scope's knobs of a time trace: TIME (knob 1) steps the sweep length (the engine restarts the sweep and redraws the tube), VOLTS (knob 0) the vertical scale; other knobs only turn.
 ## The thermal camera (chapter 4): a false-colour overlay with the degrees on every hot part (key T or the chip above the board).
 func _toggle_camera() -> void:
-	if not backend.camera_ok: return
+	if not backend.ENGINE or not backend.camera_ok: return
 	backend.camera = not backend.camera; backend._rebuild_model(); sfx.play("click", 0.6)
 	top.say_quick("Thermal camera %s." % ("on: colours are the engine's temperatures" if backend.camera else "off"))
 

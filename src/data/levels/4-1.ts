@@ -48,7 +48,7 @@ export const L4_1: LevelDef = {
       cond('230 V, no load', 230, 0), cond('207 V, no load', 207, 0), cond('253 V, no load', 253, 0),
     ],
     specs: [
-      { kind: 'metric', id: 'ripple', probe: 'v(out)', metric: 'vpp', lo: 0, hi: 1.0 },
+      { kind: 'metric', id: 'ripple', probe: 'v(out)', metric: 'vpp', lo: -1, hi: 1.0 },
       { kind: 'metric', id: 'mean', probe: 'v(out)', metric: 'mean', lo: 12.0, hi: 1e3 },
       { kind: 'rating', id: 'ratings' },
     ],

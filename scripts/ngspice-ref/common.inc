@@ -20,7 +20,7 @@
 .model DLEDRED D(IS=1.19e-17 N=2.0 RS=9.9 CJO=0 TT=0 BV=1e30 IBV=1e-3 NBV=1)
 * 1N4733A-style 5.1 V Zener: BV 5.1, IBV 49 mA (Izt), Rs = Zzt 7 ohm - Nbv*Vt/Izt (0.53) = 6.47 ohm.
 * Is 1e-14 and N 1 are ESTIMATES (DESIGN gives only BV, Ibv, Rs for Zeners).
-.model DZ5V1 D(IS=1e-14 N=1 RS=6.47 CJO=0 TT=0 BV=5.1 IBV=49m NBV=1)
+.model DZ5V1 D(IS=1e-14 N=1 RS=6.47 CJO=0 TT=0 BV=4.783 IBV=49m NBV=1)
 * 2N7000 body diode (separate explicit D, source -> drain): Is 1e-13, N 1, Rs 0.5 are ESTIMATES (DESIGN 3.3 says only "Shockley").
 .model DBODY D(IS=1e-13 N=1 RS=0.5 CJO=0 TT=0 BV=1e30 IBV=1e-3 NBV=1)
 

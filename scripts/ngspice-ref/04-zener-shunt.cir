@@ -2,7 +2,7 @@
 * Analysis : DC sweep, Vin 0 to 20 V in 50 mV steps (401 rows).
 * Outputs  : 04-zener-shunt.csv = vin_V, v_out_V, i_in_A (current from Vin through R into the Zener).
 * NODE circuit: Vin -> R 220 -> node out; Zener (cathode = out, anode = gnd), no load.
-* Parameters: Zener Is 1e-14 (estimate) N 1 Rs 6.47 BV 5.1 IBV 49 mA NBV 1 (breakdown I = -Ibv*exp(-(Vd+BV)/(NBV*Vt))).
+* Parameters: Zener Is 1e-14 (estimate) N 1 Rs 6.47 BV 4.783 IBV 49 mA (Vz 5.1 V minus Izt x Rs at the 49 mA test current) NBV 1 (breakdown I = -Ibv*exp(-(Vd+BV)/(NBV*Vt))).
 *             ngspice shifts its internal breakdown knee so the current is exactly IBV at Vd = -BV: same law as DESIGN 3.3.
 .include common.inc
 Vin in 0 0

@@ -223,7 +223,7 @@ describe('every part a DESIGN bin names exists (ch1 + 4-1)', () => {
     has('1n4007'); has('1n4148');
     vals('cap-el', [220e-6, 330e-6, 470e-6, 680e-6, 1000e-6, 1500e-6, 2200e-6, 3300e-6, 4700e-6]); variants('cap-el', ['10V', '16V', '25V', '35V']);
     const x = partById('xfmr-12');
-    expect(x.model).toMatchObject({ secRms: 12, Rw: 1.5, Lm: 10, VA: 6, primaryNominal: 230 });
+    expect(x.model).toMatchObject({ secRms: 12, Rw: 1.5, Rins: 1e8, VA: 6, primaryNominal: 230 });
   });
 });
 

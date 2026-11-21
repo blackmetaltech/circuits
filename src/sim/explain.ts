@@ -243,7 +243,7 @@ function explainChapter4(f: BenchFailure, ctx: ExplainContext): Explained | null
       return { key: `explain.rect.ripple.${again ? 'again' : 'first'}.${half ? 'half' : 'bridge'}`, vars };
     }
     if (id === 'mean') {
-      const vrms = (12 * mains) / 230, pk = vrms * 1.414, drops = half ? 0.8 : 1.6, vars: Vars = { value: Number.isFinite(value) ? sig(value, 3) : 0, lim: sig(num('lo'), 3), cond: condText, pk: sig(pk, 3), vrms: sig(vrms, 3), nDrops: half ? 'one diode' : 'two diodes', top: sig(pk - drops, 3) };
+      const vrms = (12 * mains) / 230, pk = vrms * 1.414, drops = half ? 0.8 : 1.6, vars: Vars = { value: Number.isFinite(value) ? sig(value, 3) : 0, lim: sig(num('lo'), 3), cond: condText, pk: sig(pk, 3), vrms: sig(vrms, 3), nDrops: half ? 1 : 2, top: sig(pk - drops, 3) };
       return { key: value < 2 ? 'explain.rect.mean.dead' : 'explain.rect.mean.low', vars };
     }
   }
@@ -273,7 +273,7 @@ function explainChapter4(f: BenchFailure, ctx: ExplainContext): Explained | null
   }
   if (mode === 'lm317' && ctx.lm317 && f.key === 'bench.level.fail' && id === 'vout') {
     const { r1, r2 } = ctx.lm317, vf = 1.25 * (1 + r2 / r1) + 50e-6 * r2;
-    if (Math.abs(vf - 3.3) / 3.3 > 0.01) {
+    if (Math.abs(vf - 3.3) / 3.3 > 0.01 && !(value > vf * 1.05)) {   // (an output far above what the formula gives is the minimum load, whichever resistors)
       const r2need = (3.3 - 1.25) / (1.25 / r1 + 50e-6);
       return { key: again ? 'explain.lm317.formula.again' : 'explain.lm317.formula', vars: { value: sig(value, 4), cond: condText, lo: sig(num('lo'), 4), hi: sig(num('hi'), 4), r1: si(r1, 'Ω'), r2: si(r2, 'Ω'), vf: sig(vf, 4), vout: 3.3, r2need: si(r2need, 'Ω'), off: sig(Math.abs(vf - 3.3) / 0.033, 2), iadjV: sig(50e-6 * r2, 2) } };
     }
