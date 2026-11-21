@@ -268,6 +268,12 @@ func _run() -> void:
 	ok(str(sc.props.exam_fig.get("kind", "")) == "caps" and not str(sc.pages.pred_head).is_empty(), "the figure is the two capacitor cards")
 	ok(str(bk.ticket.spec).begins_with("predict first"), "no numbers on the chit before the predictions (%s)" % str(bk.ticket.spec))
 	await _frames(3)
+	# fast typing: every press lands, even keys the platform flags as auto-repeat or sends without a unicode ("9.9" once came out as "9.")
+	for ch in "9.9":
+		var ke := InputEventKey.new(); ke.pressed = true; ke.echo = true; ke.keycode = OS.find_keycode_from_string(ch) if ch != "." else KEY_PERIOD; ke.unicode = 0
+		sc._unhandled_key_input(ke)
+	ok(str(sc.pages.pred_fields[0].text) == "9.9", "fast typing keeps every key, echo flagged and unicode-less (%s)" % str(sc.pages.pred_fields[0].text))
+	_key(KEY_BACKSPACE)
 	_type("185"); _key(KEY_TAB); _type("9.9"); _key(KEY_TAB); _type("40"); _key(KEY_TAB); _type("20"); _key(KEY_ENTER); await _frames(2)
 	ok(bk.predictions_done() and sc.pages.mode == "", "the four predictions are locked in")
 	ok(_build("3-4"), "the reference bank is built by pointer")

@@ -234,6 +234,29 @@ func _run() -> void:
 	await create_timer(0.9).timeout
 	ok(sc.props.mood == "joy" and sc.done.get("2-2", false), "the crew digs at your mark: 2-2 is fixed")
 
+	print("== 2-2 play-test C3-1: what is joined, and a bridge with no balance")
+	await _start("2-2")
+	# two wires crossing are NOT joined: the engine says so in the toast and reports the crossing for the hop-over art
+	_drag_wire([4, 3], [4, 9]); _drag_wire([2, 6], [8, 6]); await _frames(2)
+	ok(sc.top.toast.contains("do NOT touch") and (bk.bench_q.get("crossings", []) as Array).size() == 1, "two crossing wires: the toast says they do NOT touch and the engine reports one crossing (%s)" % sc.top.toast.left(60))
+	ok((sc.bench.model.get("crossings", []) as Array).size() == 1, "the crossing reaches the drawing model (hop-over art)")
+	# a fresh board: the bridge without its ground wire (the cell is not across A-B) reads zero everywhere
+	await _start("2-2")
+	_drag_part("galvanometer", null, "100ohm", 13, 8, 0); _drag_part("res-box", 5, "plug", 3, 5, 0)
+	for w in EngineBench.REFS_CH2["2-2"].wires:
+		var wp: Array = w
+		if wp[0] == [22, 11] and wp[wp.size() - 1] == [22, 2]: continue   # B to GND is missing
+		_drag_wire(wp[0], wp[wp.size() - 1])
+	_rocker(); _clock(0.5); bk.set_jockey(400.0); _clock(0.4)
+	ok(str(bk.scope_q.get("gauge", {}).get("slide", "")) == "dead" or sc.scope.slide == "dead", "the scope says there is no balance (slide: %s)" % sc.scope.slide)
+	ok(not bk.locked, "a dead bridge never locks, even with the needle near zero")
+	ok(bk.coach_view().text.contains("no balance"), "Wren says so: %s" % str(bk.coach_view().text).left(70))
+	bk.predict("dist", 75.0); await _frames(1)
+	sc.run_bench(); await _frames(2)
+	ok(evlog.has("bench_failed") and sc.top.toast.contains("no balance") and not sc.top.toast.contains("balances"), "the bench names the dead bridge instead of 'balances at l': %s" % sc.top.toast.left(90))
+	ok(sc.top.toast.contains("cell is not across"), "and the likely miswiring")
+	ok(str(bk.ticket.answers[0].get("formula", "")) == "X = R (100 - l) / l", "the slip formula follows the wiring (R on the left)")
+
 	print("== 2-3 Black Box")
 	await _start("2-3")
 	ok(sc.supply.adjustable and sc.supply.kind == "bench" and absf(sc.supply.volts - 5.0) < 0.01, "the bench supply has voltage keys and starts at 5.00 V")
