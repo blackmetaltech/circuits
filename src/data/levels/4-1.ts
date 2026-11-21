@@ -67,7 +67,7 @@ export const L4_1: LevelDef = {
   },
   trace: {
     probe: 'v(out)', mode: 'clip', clip: 'OUT', unit: 'V', scale: 1, vdiv: 5, label: 'OUT', times: [0.02, 0.05], h: 1e-4,
-    second: { probe: 'v(@xfmr-12#1.S1,@xfmr-12#1.S2)', label: 'SEC' }, settleFrom: 0.12, vdivs: [5, 2, 1, 0.5, 0.2], ac: true,
+    second: { probe: 'v(@xfmr-12#1.S1,@xfmr-12#1.S2)', label: 'SEC' }, settleFrom: 0.12, vdivs: [5, 2, 1, 0.5, 0.2], ac: true, acBand: 1.0,
     tube: { kind: 'windows', windows: [{ t0: 0.12, t1: 1, lo: 11.5, hi: 18.5 }] }, lockSpecs: ['ripple', 'mean'],
   },
   ref: {

@@ -63,7 +63,7 @@ var _flow_log: Array = []
 var hover_wire := ""                 ## wid of the wire under the pointer (highlighted; right-click removes it)
 var map_chapter := 1                 ## the chapter whose notebook page the map shows
 const CONN_NAME := {"VP": "battery + (V+)", "GND": "GND", "IN": "IN", "OUT": "OUT", "BOX": "BOX terminal"}
-const CODEX_AT := {"1-1": 0, "1-2": 1, "1-3": 3, "1-4": 4, "1-5": 6, "2-1": 9, "2-2": 11, "2-3": 10, "2-4": 13, "3-1": 16, "3-2": 20, "3-3": 21, "3-4": 15}   ## the notebook opens on the page that belongs to the ticket
+const CODEX_AT := {"1-1": 0, "1-2": 1, "1-3": 3, "1-4": 4, "1-5": 6, "2-1": 9, "2-2": 11, "2-3": 10, "2-4": 13, "3-1": 16, "3-2": 20, "3-3": 21, "3-4": 15, "4-1": 27, "4-2": 29, "4-3": 30, "4-4": 31, "4-5": 29}   ## the notebook opens on the page that belongs to the ticket
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -145,7 +145,7 @@ func start_ticket(id: String) -> void:
 		top.say("That ticket is still locked: pass the one before it first."); if phase != "bench": go_map()
 		return
 	top.toast_age = 99.0; top.toast_bench = false   # a message from the last ticket is not about this one
-	phase = "bench"; window.dusk = 0.0; window.rain = id == "1-3" or id == "1-4"
+	phase = "bench"; window.dusk = 0.0; window.rain = id == "1-3" or id == "1-4" or id.begins_with("4-")   # rain on the awnings in chapter 4 (DESIGN §5.1)
 	pages.codex_i = CODEX_AT.get(id, 0)   # the notebook opens on the page that belongs to this ticket
 	map_chapter = int(id.substr(0, 1)) if id.length() > 1 and id.substr(0, 1).is_valid_int() else 1
 	drag.clear(); probe_jack = {"red": "", "black": ""}; rot = 0; locked_at = -1.0; _lock_seq = -1.0
@@ -155,7 +155,8 @@ func start_ticket(id: String) -> void:
 	if not backend.ENGINE: dmm.set_mode("V"); backend.set_dial("V")
 	_lay_key = ""; _sync(); pages.show_page("")
 	props.notebook_flag = true
-	if backend.ENGINE and bool(backend.ticket.get("eb", false)) and not backend.predictions_done(): open_predict()
+	if backend.ENGINE and backend.safety_pending(): pages.safety = backend.mains; pages.show_page("safety")   # a mains ticket opens with the safety card, before anything else
+	elif backend.ENGINE and bool(backend.ticket.get("eb", false)) and not backend.predictions_done(): open_predict()
 
 func _ticket_view() -> void:   # push the open ticket onto the instruments and props
 	if backend.ticket.is_empty(): return
@@ -169,6 +170,8 @@ func _ticket_view() -> void:   # push the open ticket onto the instruments and p
 	supply.adjustable = bool(sp.get("adjustable", false)); supply.step_i = 0
 	supply.sources_title = str(sp.get("title", "TEXTBOOK SOURCES  (ideal)")); supply.sources_note = str(sp.get("note", "wired by the ticket: just probe"))
 	supply.conditions = backend.ticket.get("conditions", []) if backend.ENGINE else []
+	supply.selectors = backend.selectors if backend.ENGINE else []
+	if backend.ENGINE and not backend.mains.is_empty(): supply.isolation_text = str(backend.mains.get("isolation", "isolation transformer")); bench.keepout_text = str(backend.mains.get("keepOut", "HIGH VOLTAGE"))
 
 ## Props that depend on the open ticket's kind: the crew's slip of a ticket that asks for a worked-out number (2-2).
 func _chapter_view() -> void:
@@ -183,7 +186,7 @@ func _refresh_pages() -> void:
 		var pg: Dictionary = backend.progress(map_chapter)
 		pages.tickets = pg.tickets; pages.wallet = int(pg.wallet); pages.wallet_text = str(pg.wallet_text)
 		pages.map_chapter = map_chapter; pages.map_title = str(pg.title); pages.map_blurb = str(pg.blurb)
-		pages.chapter_open = [true, _chapter_unlocked(2), _chapter_unlocked(3)]
+		pages.chapter_open = [true, _chapter_unlocked(2), _chapter_unlocked(3), _chapter_unlocked(4)]
 		for tk in pg.tickets: done[str(tk.id)] = bool(tk.done)
 		pages.coach_ticket = backend.ticket; return
 	var prev_done := true
@@ -210,6 +213,7 @@ func _on_page(id: String, arg: String) -> void:
 		"pred_submit": _submit_predictions()
 		"pred_close": pages.show_page("")
 		"pred_sign": _toggle_sign(int(arg))
+		"safety_ok": backend.read_safety(); pages.show_page(""); top.say("Safety card read. The bench is yours; the red fence stays closed.")
 		"debrief_close": pages.show_page("")
 		"debrief_retry": retry_exam()
 		"settings": pages.show_page("settings")
@@ -674,6 +678,9 @@ func _sync_views(dt: float) -> void:
 	scope.hold = clampf(backend.hold / backend.LOCK_HOLD, 0.0, 1.0); scope.smoked = not backend.smoked.is_empty()
 	scope.attached = bool(backend.scope_view.get("attached", true)); scope.clip_name = str(backend.scope_view.get("clip_name", "")); scope.reading = str(backend.scope_view.get("text", "")); scope.slide = str(backend.scope_view.get("slide", ""))
 	supply.on = backend.powered; supply.hover = hover == "rocker"
+	supply.selectors = backend.selectors   # the live switches follow the engine's positions
+	top.cam_rect = Rect2(board_rect.end.x - 214.0, board_rect.position.y - 44.0, 200.0, 36.0) if backend.camera_ok and phase == "bench" else Rect2()
+	top.cam_on = backend.camera
 	if supply.adjustable: supply.volts = backend.supply_volts()
 	if drag.get("kind", "") != "probe": supply.jack_glow = ""
 	dmm.set_mode(backend.dial); dmm.reading = backend.dmm(); dmm.hover_dial = hover == "dial"
@@ -900,10 +907,12 @@ func _unhandled_key_input(e: InputEvent) -> void:
 			elif pages.mode == "predict": pages.show_page("")
 			elif pages.mode == "debrief": pages.show_page("")
 			elif pages.mode == "map": pages.show_page("title"); phase = "title"
-		KEY_N: if phase == "bench": pages.show_page("notebook" if pages.mode == "" else "")
-		KEY_F1: pages.show_page("settings")
+		KEY_N: if phase == "bench" and pages.mode != "safety": pages.show_page("notebook" if pages.mode == "" else "")
+		KEY_F1: if pages.mode != "safety": pages.show_page("settings")
 		KEY_C: _on_page("toggle:cute", "")
 		KEY_TAB: if phone: scope_open = not scope_open
+		KEY_T: if phase == "bench" and pages.mode == "": _toggle_camera()
+		KEY_A: if phase == "bench" and pages.mode == "" and scope.is_trace() and bool(scope.sc.get("ac_avail", false)): backend.toggle_ac(); top.say_quick("CH1 is %s coupled." % ("AC" if bool(scope.sc.get("ac_on", false)) else "DC"))
 		KEY_COMMA: if phase == "bench" and pages.mode == "": _scope_knob(1, -1)
 		KEY_PERIOD: if phase == "bench" and pages.mode == "": _scope_knob(1, 1)
 
@@ -911,6 +920,10 @@ func _where(sp: Vector2) -> String:
 	if (window.gear_rect()).has_point(sp): return "gear"
 	if _tip_hit(sp) != "": return "probe_" + _tip_hit(sp)
 	if supply.hit_rocker((sp - supply.position) / supply.scale.x) and Rect2(supply.position, supply.size * supply.scale.x).has_point(sp): return "rocker"
+	if not supply.selectors.is_empty() and Rect2(supply.position, supply.size * supply.scale.x).has_point(sp):
+		var sk := supply.hit_sel((sp - supply.position) / supply.scale.x)
+		if sk != "": return sk
+	if top.cam_rect.size != Vector2.ZERO and top.cam_rect.has_point(sp): return "cam"
 	if supply.adjustable and Rect2(supply.position, supply.size * supply.scale.x).has_point(sp):
 		var vk := supply.hit_vadj((sp - supply.position) / supply.scale.x)
 		if vk != "": return vk
@@ -975,11 +988,20 @@ func _press(sp: Vector2) -> void:
 		"v-", "v+": _bump_supply(1.0 if hover == "v+" else -1.0); sfx.play("tick"); return
 		"vstep": supply.step_i = (supply.step_i + 1) % 3; sfx.play("tick"); return
 		"bench": run_bench(); return
+		"cam": _toggle_camera(); return
 		"dial":
 			backend.set_dial(dmm.dial_click((sp - dmm.position) / dmm.scale.x)); sfx.play("tick"); return
 		"scope": if phone: scope_open = not scope_open; return
 		"peek": scope_open = not scope_open; return
 		"knob0", "knob1": _scope_knob(int(hover.substr(4)), 1); return
+		"knob2":
+			if scope.is_trace() and bool(scope.sc.get("ac_avail", false)): backend.toggle_ac(); sfx.play("click", 0.6); top.say_quick("CH1 is %s coupled." % ("AC" if bool(scope.sc.get("ac_on", false)) else "DC"))
+			return
+	if hover.begins_with("sel:"):
+		var pr := hover.split(":"); var sd: Dictionary = backend.selectors[int(pr[1])]
+		var r := backend.set_selector(str(sd.id), int(pr[2]))
+		if bool(r.get("ok", false)): supply.selectors = backend.selectors; sfx.play("click", 0.6); scope.live = backend.powered
+		return
 	if hover.begins_with("probe_"):
 		var w := hover.substr(6); drag = {"kind": "probe", "which": w, "pos": sp}; backend.set_probe(w, null); probe_jack[w] = ""; return
 	if hover == "box":
@@ -1094,6 +1116,12 @@ func _release(sp: Vector2) -> void:
 			elif sn.x >= 0: sfx.play("tick")
 
 ## The scope's knobs of a time trace: TIME (knob 1) steps the sweep length (the engine restarts the sweep and redraws the tube), VOLTS (knob 0) the vertical scale; other knobs only turn.
+## The thermal camera (chapter 4): a false-colour overlay with the degrees on every hot part (key T or the chip above the board).
+func _toggle_camera() -> void:
+	if not backend.camera_ok: return
+	backend.camera = not backend.camera; backend._rebuild_model(); sfx.play("click", 0.6)
+	top.say_quick("Thermal camera %s." % ("on: colours are the engine's temperatures" if backend.camera else "off"))
+
 func _scope_knob(i: int, dir: int) -> void:
 	scope.turn(i, float(dir))
 	if not backend.ENGINE or not scope.is_trace(): return

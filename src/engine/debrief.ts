@@ -69,9 +69,22 @@ function buildCapsDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: 
   return { node: 'bank', equation: say('debrief.caps.equation'), working, answer: say('debrief.caps.answer', { q: num(q), u: num(u), v: num(v2), loss: num(loss) }), currents: [], rows: full, starsText, ...retryOf(built, stars) };
 }
 
+/** The 4-5 slip: the Zener card worked out from the printed problem (the current through Rs, the split between load and Zener, the smallest load, the no-load power), the predictions graded, and the reality check with a real Zener's slope. */
+function buildZenerDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: number, built: boolean): Debrief {
+  const z = f.zener!, i = ((z.volts - z.vz) / z.rs) * 1000, il = (z.vz / z.rl) * 1000, iz = i - il, imax = i - z.izMin * 1000, rl = z.vz / (imax / 1000), pz = z.vz * i;
+  const working = [
+    say('debrief.zener.i', { i: num(i) }), say('debrief.zener.iz', { il: num(il), i: num(i), iz: num(iz) }), say('debrief.zener.rl', { i: num(i), imax: num(imax), rl: num(rl) }),
+    say('debrief.zener.pz', { i: num(i), pz: num(pz) }), say('debrief.zener.real', { di: num(imax), dv: num(7 * imax / 1000) }),
+  ];
+  const full = rows.map((x) => ({ ...x, ok: x.grade !== 'miss' }));
+  const starsText = say(!built ? 'debrief.stars.fail' : stars >= 3 ? 'debrief.stars.3' : stars === 2 ? 'debrief.stars.2' : 'debrief.stars.1.zener');
+  return { node: 'zener', equation: say('debrief.zener.equation'), working, answer: say('debrief.zener.answer', { iz: num(iz), rl: num(rl), pz: num(pz) }), currents: [], rows: full, starsText, ...retryOf(built, stars) };
+}
+
 export function buildDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: number, built: boolean, measured?: Record<string, number>): Debrief {
   if (f.kind === 'pot' && f.pot) return buildPotDebrief(f, rows, stars, built);
   if (f.kind === 'caps' && f.caps) return buildCapsDebrief(f, rows, stars, built, measured);
+  if (f.kind === 'zener' && f.zener) return buildZenerDebrief(f, rows, stars, built);
   const { a, into } = solveFigure(f), n = f.node;
   const eq = f.sources.map((s) => `(${num(s.volts)} − ${n})/${num(s.r.ohm)}`).join(' + ') + ` = ${n}/${num(f.load.ohm)}`;
   const mult = f.sources.every((s) => Number.isInteger(s.r.ohm)) && Number.isInteger(f.load.ohm) ? leastCommon([...f.sources.map((s) => s.r.ohm), f.load.ohm]) : 0;

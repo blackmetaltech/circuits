@@ -164,7 +164,7 @@ export function buildRig(inp: RigInput): Rig {
   for (const e of elements) if (e.kind === 'V' && e.p.vrms !== undefined && e.wave?.k === 'sine') e.wave = sine(e.p.vrms * SQRT2, e.p.f ?? e.wave.f);
   // the constant-current loads switch on after `ton`; the regulator's thermal clock runs on game time (4-3) and knows the ambient it sits in
   for (const e of elements) {
-    if (e.kind === 'I' && e.p.cc === 1) e.wave = ccWave(e.p.i, e.p.ton ?? 0);
+    if (e.kind === 'CCL' && e.p.cc === 1) e.wave = ccWave(e.p.i, e.p.ton ?? 0);
     if (e.kind === 'REG') { e.p.ta = inp.ambientC ?? 25; if (inp.regTau !== undefined) e.p.tau = (inp.regTau * e.p.tau) / 60; }
   }
   // a contact's bounce pattern is picked by the condition (`key: 'pattern'`)

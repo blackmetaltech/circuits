@@ -97,7 +97,7 @@ export function traceTarget(tk: TicketState, def: LevelDef): Record<string, unkn
       spec: tr.lockSpecs[0] ?? '', name: tr.lockSpecs[0] && def.bench.names[tr.lockSpecs[0]] ? t(def.bench.names[tr.lockSpecs[0]]!) : '', quantity: tr.unit, unit: tr.unit, scale: tr.scale, lo: 0, hi: r4(tr.vdiv * 7),
       mode: 'trace', clip: c ? { connector: c.id, pad: c.pad } : null, clipped, vdiv: tr.vdiv, label: tr.label,
       times: tr.times, timePerDiv: tk.instruments.scope.timePerDiv,
-      ...(tr.second ? { second: { label: tr.second.label } } : {}), ...(tr.vdivs ? { vdivs: tr.vdivs } : {}), ...(tr.ac ? { ac: true } : {}),
+      ...(tr.second ? { second: { label: tr.second.label } } : {}), ...(tr.vdivs ? { vdivs: tr.vdivs } : {}), ...(tr.ac ? { ac: true, acBand: tr.acBand ?? 1 } : {}),
     },
     gauge: { value: live && last !== null ? last : null, text: live && last !== null ? `${sig(last, 4)} ${tr.unit}` : '', unit: tr.unit, inBand: view.inTube },
     trace: view, lock, lockSpecs: Object.fromEntries(tr.lockSpecs.map((id) => [id, !view.specsFail.includes(id) && view.complete])),

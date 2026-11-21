@@ -60,12 +60,12 @@ function zener(id: string, vz: number, izt: number, zzt: number, rs: number, izm
   return {
     id, kind: 'Z', nameKey: `part.${id}.name`, footprint: 'axial2', pins: ['A', 'K'],
     variants: [variant('DO41', { Vz: vz, Izt: izt, Zzt: zzt, Pd: 1.3, IZM: izm }, semiThermal(110, 175, TAU.do41))],
-    model: { BV: vz, Ibv: izt, Rs: rs, Nbv: 1 },
+    model: { BV: Math.round((vz - izt * rs) * 1e4) / 1e4, Ibv: izt, Rs: rs, Nbv: 1 },   // BV is the junction's breakdown voltage; the series Rs adds Izt x Rs on top, so the terminal voltage at Izt is Vz (ticket 4-2 found the model 0.3 V high without this)
     tolerance: { BV: 0.05 },
     source: {
       doc: 'Vishay 1N4728A to 1N4761A Zener Diodes, doc 85816 Rev 2.7 (07-Nov-2024)',
       url: `${VISHAY}/85816/1n4728a.pdf`, accessed: ACCESSED,
-      note: `Verified: Vz ${vz} V at Izt ${izt * 1000} mA, Zzt ${zzt} ohm, Ptot 1300 mW, RthJA 110 K/W, Tj 175 C, tolerance +-5 % (A suffix). Rs ${rs} ohm = Zzt - Vt/Izt (a fit to Zzt, per DESIGN). Forward Is/N intentionally absent (not a datasheet item). ` + TAU_R,
+      note: `Verified: Vz ${vz} V at Izt ${izt * 1000} mA, Zzt ${zzt} ohm, Ptot 1300 mW, RthJA 110 K/W, Tj 175 C, tolerance +-5 % (A suffix). Rs ${rs} ohm = Zzt - Vt/Izt (a fit to Zzt, per DESIGN); model BV = Vz - Izt x Rs so that the terminal voltage at Izt is exactly Vz. Forward Is/N intentionally absent (not a datasheet item). ` + TAU_R,
     },
     verified: true, scope: 'campaign', simplifications: ['part.simplify.zener-model'],
   };
@@ -77,7 +77,7 @@ export const d1n4728a = zener('1n4728a', 3.3, 0.076, 10, 9.66, 0.276);
 export const dBzx55: PartDef = {
   id: 'bzx55c5v1', kind: 'Z', nameKey: 'part.bzx55c5v1.name', footprint: 'axial2', pins: ['A', 'K'],
   variants: [variant('DO35', { Vz: 5.1, Izt: 0.005, Pd: 0.5, rzjMax: 35 }, semiThermal(300, 175, TAU.do35))],
-  model: { BV: 5.1, Ibv: 0.005, Rs: 25, Nbv: 1 },
+  model: { BV: 4.975, Ibv: 0.005, Rs: 25, Nbv: 1 },
   tolerance: { BV: [4.8 / 5.1 - 1, 5.4 / 5.1 - 1] },
   source: {
     doc: 'Vishay BZX55 series Zener diodes, doc 85604 (BZX55C5V1 row: Vz 4.8/5.1/5.4 V at 5 mA, rzj < 35 ohm, RthJA 300 K/W, Ptot 500 mW, Tj 175 C)',

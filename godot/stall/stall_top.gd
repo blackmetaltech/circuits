@@ -54,11 +54,21 @@ func edited() -> void:
 ## A short confirmation that fades fast and looks like the hover readout, not like a note from Wren.
 func say_quick(s: String) -> void: toast = s; toast_quick = true; toast_age = 0.0; toast_dur = 2.0
 
+var cam_rect := Rect2()   ## the thermal camera chip above the board (chapter 4); empty off a chapter-4 bench
+var cam_on := false
+func _cam_chip() -> void:
+	if cam_rect.size == Vector2.ZERO: return
+	S.rr(self, cam_rect, 8, Color("#1b1d21")); S.rr(self, cam_rect.grow(-3), 6, Color("#ff9d4a") if cam_on else Color("#2c2f35"))
+	var fs := maxi(16, S.min_font)
+	var txt := "THERMAL CAM  [T]" if not S.handheld else "THERMAL CAM"
+	S.text(self, S.mono(), txt, cam_rect.position + Vector2(cam_rect.size.x * 0.5 - S.tw(S.mono(), txt, fs) * 0.5, cam_rect.size.y * 0.5 + fs * 0.34), fs, Color("#15161a") if cam_on else Color("#e8e0c8"))
+
 func slip_rect() -> Rect2: return L.get("slip", Rect2())
 
 func _draw() -> void:
 	if L.is_empty(): return
 	for c in cables: _cable(c)
+	_cam_chip()
 	if not scope_lead.is_empty(): _scope_lead()
 	if not peek.is_empty(): _peek()
 	else: _chit()
@@ -128,6 +138,14 @@ func _chit() -> void:
 	var fee: String = str(ticket.get("price_text", "")) if str(ticket.get("price_text", "")) != "" else "%d coins" % int(ticket.get("price", 0))
 	# a flowing layout: every line sits under the one above, whatever the text size (handheld grows the text to 16 screen px)
 	var y := q.position.y + 14.0 + float(maxi(15, S.min_font)) + 12.0
+	var mains = ticket.get("mains", {})
+	if mains is Dictionary and not (mains as Dictionary).is_empty():   # a mains ticket: the red ribbon, "simulated mains: do not try this at home", across the top of the card
+		var rib := str((mains as Dictionary).get("ribbon", ""))
+		var rf := maxi(12, S.min_font)
+		var rh := S.wrapped_h(f, rib, rf, inner) + 10.0
+		draw_rect(Rect2(q.position.x, q.position.y + 22.0, r.size.x, rh), Color("#b3261c"), true)
+		S.text(self, f, rib, Vector2(q.position.x + 14, q.position.y + 22.0 + float(rf) + 3.0), rf, Color("#fff4dc"), HORIZONTAL_ALIGNMENT_LEFT, inner)
+		y += rh + 12.0
 	S.text(self, f, "TICKET %s%s" % [str(ticket.get("id", "")), "  EB" if bool(ticket.get("eb", false)) else ""], Vector2(q.position.x + 14, y), 15, S.INK_RED)
 	S.text(self, f, fee, Vector2(q.position.x + r.size.x - 14 - S.tw(f, fee, 17), y), 17, Color(S.INK, 0.8))
 	var tsz := 28   # a long title shrinks to fit the chit instead of running into the price

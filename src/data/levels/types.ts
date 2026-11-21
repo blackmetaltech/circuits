@@ -188,6 +188,8 @@ export interface TraceDef {
   /** Chapter 4: the VOLTS knob steps through exactly this list (V per division), the first entry is the default; and CH1 may be AC coupled (the engine gives `trace.dc` so the ripple can be read at 0.2 V per division). */
   vdivs?: number[];
   ac?: boolean;
+  /** The ripple allowance (V peak to peak) the AC-coupled scope draws as its band about the middle line. */
+  acBand?: number;
   /** RC / LR tickets: the scope draws a dashed level at 63.2 % of the final value (one time constant) and, once the sweep is in, a cursor at the time the trace crosses it. */
   mark63?: boolean;
 }

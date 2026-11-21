@@ -1,10 +1,11 @@
 // Ticket 4-2 "Zener Shunt" (DESIGN §2.8 chapter 4). Iris's radio needs a 5.1 V rail from an unregulated 13 - 17 V supply: a series resistor from IN to OUT and a Zener from OUT to GND (cathode on OUT). The customer's radio is a constant-current load of 0 to 30 mA
 // (a constant-current stand-in for the radio's audio stage). OUT must stay inside 5.1 V +-5 % (4.845 - 5.355 V) for the input at 13 V and at 17 V and the load at 0 and at 30 mA (four conditions); no part may be over its rating.
-// Numbers (src/engine/ch4.test.ts against the solver): the ref 220 ohm 1 W + 1N4733A: OUT 5.09 - 5.19 V in all four tests (Iz 5.9 mA at 13 V / 30 mA, 54 mA at 17 V / no load, Pz 276 mW, P_R 0.64 W); R = 470 (too big) falls to about 4.7 V at 13 V / 30 mA
-// (Iz = 0); R = 100 puts the Zener at 119 mA and 0.6 W at 17 V / no load (rated 1.3 W, so it survives, but R itself makes 1.19 W: a 1 W resistor over its rating); a 1/4 W 220 ohm resistor smokes (0.64 W); the BZX55 with R = 220 reads 6.3 V at 17 V / no load
-// (its 25 ohm slope: 54 mA x 25 ohm is 1.2 V more than at its 5 mA test current).
+// Numbers (src/engine/ch4.test.ts against the solver): the ref 180 ohm 1 W + 1N4733A: OUT 4.88 - 5.21 V in all four tests (Iz 14.7 mA at 13 V / 30 mA, 66 mA at 17 V / no load, Pz 0.34 W, P_R 0.79 W); the design's 220 ohm reads 4.78 V at 13 V / 30 mA (see deviation 3);
+// R = 470 (too big) collapses at 13 V / 30 mA; R = 100 pushes OUT to 5.55 V and makes 1.36 W in a 1 W resistor; a 1/4 W 180 ohm resistor smokes (0.79 W); the BZX55 with R = 180 reads 6.6 V at 17 V / no load (its 25 ohm slope: 66 mA x 25 ohm).
 // DEVIATIONS from DESIGN (each documented; none changes the lesson):
 //  1. The radio is a constant-current load (the same fixture as chapter 4's other loads); DESIGN gives "loads 0 and 30 mA" and does not say what the load is.
+//  3. The design's R = 220 ohm (Rmax = (13 - 5.1) / (30 + 5 mA) = 226 ohm) assumes the Zener holds 5.1 V at its minimum current. A real 1N4733A (Zzt 7 ohm) reads only 4.78 V at 5.9 mA, under the 4.845 V band, so the ref is 180 ohm: Iz = 14.7 mA at 13 V / 30 mA,
+//     OUT 4.88 V. The catalogue Zener model was also corrected (BV = Vz - Izt x Rs: the terminal voltage at Izt is Vz; the first model read 0.3 V high).
 //  2. The bin offers E12 47 ohm - 1 kohm in 1/4, 1/2 and 1 W; the Zeners are the two of DESIGN (1N4733A, BZX55C5V1), one of each at most. Stars: head = cost, par = the ref (11 c).
 import { eseries } from '../eseries';
 import type { LevelDef } from './types';
@@ -54,10 +55,10 @@ export const L4_2: LevelDef = {
   },
   ref: {
     parts: [
-      { partId: 'res-cf', value: 220, variant: '1W', x: 4, y: 2, rot: 0, flip: false },
+      { partId: 'res-cf', value: 180, variant: '1W', x: 4, y: 2, rot: 0, flip: false },
       { partId: '1n4733a', value: null, variant: 'DO41', x: 12, y: 8, rot: 3, flip: false },
     ],
-    wires: [],
+    wires: [[[2, 2], [4, 2]], [[8, 2], [12, 2]], [[12, 2], [22, 2]], [[12, 4], [12, 2]], [[12, 8], [12, 14], [22, 14]]],
   },
   specShort: 'ticket.4-2.short',
   scope: 'must',

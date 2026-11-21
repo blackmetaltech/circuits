@@ -292,7 +292,7 @@ func _run() -> void:
 	print("== notebook, chapter map, codex, the customer's line")
 	sc.map_chapter = 3; sc._refresh_pages(); sc.go_map(); await _frames(3)
 	ok(sc.pages.tickets.map(func(t): return t.state) == ["done", "done", "done", "done"] or sc.pages.tickets.filter(func(t): return bool(t.done)).size() == 4, "all four chits are FIXED on the page")
-	ok(CoachData.CODEX.size() == 23 and str(CoachData.CODEX[14].title) == "Capacitance" and str(CoachData.CODEX[16].title) == "The time constant" and str(CoachData.CODEX[22].title) == "Energy in a capacitor", "the codex has the new pages: capacitance, series / parallel, the time constant, the curve, the probe, electrolytics, bounce, the coil, energy")
+	ok(CoachData.CODEX.size() >= 23 and str(CoachData.CODEX[14].title) == "Capacitance" and str(CoachData.CODEX[16].title) == "The time constant" and str(CoachData.CODEX[22].title) == "Energy in a capacitor", "the codex has the new pages: capacitance, series / parallel, the time constant, the curve, the probe, electrolytics, bounce, the coil, energy")
 	sc.start_ticket("3-2"); await _frames(2); sc.pages.show_page("notebook"); await _frames(3)
 	ok(sc.pages.codex_i == 20, "the notebook opens on the page that belongs to the ticket (filtering a bounce)")
 	sc.pages.show_page(""); await _frames(2)

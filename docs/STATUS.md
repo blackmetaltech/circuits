@@ -59,3 +59,8 @@ Open: the 2-4 reality check (driver cell with r = 0.3 ohm) is an engine test, no
 Tickets 3-1 Flash Timer, 3-2 Debounce, 3-3 Relay Pull-in, 3-4 EB Capacitor Bank: data in `src/data/levels/3-*.ts` (each header lists its numbers and deviations from DESIGN §2.8), contract in docs/API-CH3.md, tests `src/engine/ch3.test.ts` (27) and `godot/tests/ch3_engine_flow.gd`
 (every ticket through the UI with the reference designs and the naive fails, ErrorTrap zero). The scope is a time trace from power-on against an amber tube (`scope().trace`). Screens in docs/screens/ch3/.
 Open: the tolerance star (stars 3 on the build tickets) is still not built; 3-4's "vary R" reality check is the energy ledger, not a free resistor (see the 3-4 header); the cap-el values below 220 uF and the 6.3 V part are generic game values (CAMPAIGN_BLOCKERS); no phone (2424x1080) shots.
+
+## 2026-11-21 chapter 4 "Mains & Rectifiers" (engine + stall)
+Tickets 4-1 Wall Wart (simulated mains: safety card gate, isolation transformer, red keep-out), 4-2 Zener Shunt, 4-3 Hot Regulator (heatsink variants, shutdown cycling, thermal camera), 4-4 Bench Supply (LM317), 4-5 EB Zener Regulator: data in `src/data/levels/4-*.ts` (each header lists its numbers and deviations),
+contract in docs/API-CH4.md, tests `src/engine/ch4.test.ts` and `godot/tests/ch4_engine_flow.gd`. Screens in docs/screens/ch4/. Solver changes: tran rescue pass tolerances, REG Newton limiter, new CCL device; catalogue: Zener BV corrected, xfmr-12 without Lm.
+Open: the `na` (120 V / 60 Hz) ref of 4-1 (680 uF) needs a region-aware level; the 9 V transformer tap of 4-3 is not built; the tolerance star is still not built; no phone (2424x1080) shots.

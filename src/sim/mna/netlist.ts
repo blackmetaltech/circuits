@@ -188,10 +188,10 @@ const capacitor: Expander = (x) => {
   if (m.rbleed !== undefined) out.push(el(x, 'R', [x.nodes[0], x.nodes[1]], { r: m.rbleed }, 'bleed'));
   return out;
 };
-/** LOAD: a fixed resistive fixture (model.R), or a constant-current sink (model.cc: an `I` element from pin '+' to pin '-', current = the placed part's value or model.i; the rig gives it its switch-on ramp, `p.ton`). */
+/** LOAD: a fixed resistive fixture (model.R), or a constant-current sink (model.cc: a `CCL` element from pin '+' to pin '-', current = the placed part's value or model.i; the rig gives it its switch-on ramp, `p.ton`). */
 const load: Expander = (x) => {
   const m = modelOf(x);
-  if (m.cc !== undefined) return [el(x, 'I', [x.nodes[0], x.nodes[1]], { i: x.part.value ?? m.i, cc: 1, ton: m.ton ?? 0 })];
+  if (m.cc !== undefined) return [el(x, 'CCL', [x.nodes[0], x.nodes[1]], { i: x.part.value ?? m.i, cc: 1, ton: m.ton ?? 0 })];
   return resistor(x);
 };
 const inductor: Expander = (x) => [el(x, 'L', [x.nodes[0], x.nodes[1]], { l: x.part.value ?? x.def.model.l ?? x.def.model.L })];

@@ -30,7 +30,7 @@ export const L4_3: LevelDef = {
   ],
   constraints: { maxParts: 3 },
   bench: {
-    h: 2e-3, settle: 0.1, window: 3, ic: 'zero', ambientC: 40, regTau: 0.4, tjLimit: 125,
+    h: 2e-3, settle: 0.1, window: 3, ic: 'op', ambientC: 40, regTau: 0.4, tjLimit: 125,
     conditions: [{ id: '0.5 A', set: load(0.5) }, { id: '0.1 A', set: load(0.1) }],
     specs: [
       { kind: 'metric', id: 'vmin', probe: 'v(out)', metric: 'min', lo: 4.8, hi: 1e3 },
@@ -58,7 +58,7 @@ export const L4_3: LevelDef = {
       { partId: 'res-ww5', value: 10, variant: '5W', x: 4, y: 2, rot: 0, flip: false },
       { partId: 'lm7805', value: null, variant: 'TO220-15', x: 10, y: 6, rot: 0, flip: false },
     ],
-    wires: [],
+    wires: [[[2, 2], [4, 2]], [[8, 2], [10, 2], [10, 6]], [[12, 6], [12, 14], [22, 14]], [[14, 6], [14, 2], [22, 2]]],
   },
   specShort: 'ticket.4-3.short',
   scope: 'must',
