@@ -172,7 +172,10 @@ export function explainDividerFault(a: DividerFault & { lo: number; hi: number }
 }
 /** Chapter 3: what the player built as the explainers need it. `r` / `c`: the resistor and the capacitor of the RC filter (ohm, farad; 0 when absent), `rProbe`: the scope probe's resistance on the node,
  *  `vSrc`: the supply the RC is charged from, `level`: the crossing level of the spec. */
-export interface RcCtx { r: number; c: number; rProbe: number; vSrc: number; level: number; tLo: number; tHi: number }
+export interface RcCtx { r: number; c: number; rProbe: number; vSrc: number; level: number; tLo: number; tHi: number; deb?: DebCtx }
+/** 3-2: what OUT actually did, read from the trace the scope shows (or, before a sweep has run, the exact RC response): the level it started at, the lowest it got during the press
+ *  (and where it stood when the button was released), and the highest it got after the release. `rPull`: the pull-up that recharges the capacitor on release. `fromScope`: the numbers are the scope's samples. */
+export interface DebCtx { vStart: number; vLow: number; vAtRelease: number; vHigh: number; tPress: number; tRelease: number; rPull: number; fromScope: boolean }
 /** Chapter 3 ticket 3-3: the coil, the series resistor and the rail that is wired. */
 export interface CoilCtx { rCoil: number; rSeries: number; vRail: number; lCoil: number; iPull: number; relay: string }
 
@@ -196,6 +199,17 @@ function explainChapter3(f: BenchFailure, ctx: ExplainContext): Explained | null
   if (mode === 'debounce' && ctx.rc && ctx.rc.r > 0 && ctx.rc.c > 0) {
     const tau = ctx.rc.r * ctx.rc.c, metric = String(v.metric ?? ''), cond = String(v.cond ?? ''), value = num('value');
     const vars: Vars = { R: si(ctx.rc.r, 'Ω'), C: si(ctx.rc.c, 'F'), tau: si(tau, 's'), cond: cond === 'nominal' ? 'nominal' : cond, n: Number.isFinite(value) ? value : 0, t: Number.isFinite(value) ? si(value, 's') : 'never', lo: si(num('lo'), 's'), hi: si(num('hi'), 's') };
+    const d = ctx.rc.deb;
+    if (d) {
+      // what OUT really did, from the trace: press needs it to fall below 2.5 V, the release needs it to climb back above
+      Object.assign(vars, { vStart: sig(d.vStart, 3), vLow: sig(d.vLow, 3), vRel: sig(d.vAtRelease, 3), vHigh: sig(d.vHigh, 3), tauPress: si(tau, 's'), tauRel: si(ctx.rc.r * ctx.rc.c + d.rPull * ctx.rc.c, 's'), rPull: si(d.rPull, 'Ω'), rCharge: si(ctx.rc.r + d.rPull, 'Ω'), tHold: si(d.tRelease - d.tPress, 's'), pct: sig((d.vLow / Math.max(d.vStart, 1e-9)) * 100, 2) });
+      const never = f.key === 'bench.metric.nan' || (metric === 'crossingCount' && value === 0);
+      if (never || id === 'npress' || id === 'nrelease') {
+        const pressFail = d.vLow > ctx.rc.level, relFail = !pressFail && d.vHigh < ctx.rc.level;
+        if (pressFail && (never || id === 'npress')) return { key: 'explain.debounce.nopress', vars };
+        if (relFail && (never || id === 'nrelease')) return { key: 'explain.debounce.norelease', vars };
+      }
+    }
     if (f.key === 'bench.metric.nan' || (metric === 'crossingCount' && value === 0)) return { key: 'explain.debounce.none', vars };
     if (metric === 'crossingCount') return { key: 'explain.debounce.many', vars };
     if (metric === 'crossingTime') return { key: value > num('hi') ? 'explain.debounce.late' : 'explain.debounce.early', vars };

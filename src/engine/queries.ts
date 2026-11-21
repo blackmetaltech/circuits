@@ -7,7 +7,7 @@ import type { LevelDef } from '../data/levels/types';
 import type { Pad } from '../sim/board/types';
 import { pinPads } from '../sim/board/footprints';
 import { checkRatings, ratingProbes } from '../sim/ratings';
-import { explainFailure, si, sig, type ExplainContext, type LedLoop } from '../sim/explain';
+import { explainFailure, si, sig, type DebCtx, type ExplainContext, type LedLoop } from '../sim/explain';
 import { nameVars, partNames } from './names';
 import { elementPowers, thermalState } from '../sim/thermal';
 import { SCOPE_SCREEN_POINTS } from '../sim/live';
@@ -51,6 +51,19 @@ const PREDICT_GRADE: Record<string, string> = { exact: 'bench.predict.exact', cl
 const text = (f: { key: string; vars: Record<string, string | number> }): string => say(f.key, f.vars);
 
 /** Context the explainers need to put the player's own numbers in (resistances, electrolytics, supply and LED figures). */
+/** 3-2: what OUT did. From the scope's own sweep when it is complete (the same samples the player sees), otherwise the exact RC response of the same circuit. */
+function debounceTrace(tk: TicketState, def: LevelDef, r: number, c: number, vSrc: number): DebCtx | undefined {
+  const k = def.supplies.find((x) => x.kind === 'contact'); if (!k || k.press === undefined || k.release === undefined) return undefined;
+  const pull = tk.board.parts.find((p) => p.partId === 'pullup-10k'), rPull = pull ? (getDef(pull.partId)!.model.R ?? 10e3) : 10e3;
+  const sc = tk.live.scope, n = SCOPE_SCREEN_POINTS;
+  if (sc.dt > 0 && sc.ch1.length >= n) {
+    const at = (t: number): number => Math.max(0, Math.min(sc.ch1.length - 1, Math.round((t - sc.t0) / sc.dt))), seg = (a: number, b: number): number[] => sc.ch1.slice(at(a), at(b) + 1);
+    const press = seg(k.press, k.release), rel = seg(k.release, sc.t0 + (sc.ch1.length - 1) * sc.dt);
+    if (press.length > 0 && rel.length > 0) return { vStart: sc.ch1[Math.max(0, at(k.press) - 1)]!, vLow: Math.min(...press), vAtRelease: sc.ch1[at(k.release)]!, vHigh: Math.max(...rel), tPress: k.press, tRelease: k.release, rPull, fromScope: true };
+  }
+  const end = 0.1, dtl = k.release - k.press, vRel = vSrc * Math.exp(-dtl / (r * c));
+  return { vStart: vSrc, vLow: vRel, vAtRelease: vRel, vHigh: vSrc - (vSrc - vRel) * Math.exp(-(end - k.release) / ((r + rPull) * c)), tPress: k.press, tRelease: k.release, rPull, fromScope: false };
+}
 function explainCtx(tk: TicketState | null, def: LevelDef | undefined, prior = 0): ExplainContext {
   const kinds: Record<string, string> = {};
   const names: Record<string, string> = tk ? partNames(tk.board) : {};
@@ -86,6 +99,7 @@ function explainCtx(tk: TicketState | null, def: LevelDef | undefined, prior = 0
     const crossSpec = def.bench.specs.find((x) => x.kind === 'metric' && x.metric === 'crossingTime');
     const rr = res.reduce((a, p) => a + (p.value ?? 0), 0), cc = caps.reduce((a, p) => a + (p.value ?? 0), 0);
     if (crossSpec && crossSpec.kind === 'metric' && rr > 0 && cc > 0) ctx.rc = { r: rr, c: cc, rProbe: 10e6, vSrc: vSupply, level: crossSpec.params?.level ?? 0, tLo: crossSpec.lo, tHi: crossSpec.hi };
+    if (def.explain === 'debounce' && ctx.rc) ctx.rc.deb = debounceTrace(tk, def, rr, cc, vSupply);
   }
   if (def.explain === 'coil') {
     const relay = tk.board.parts.find((p) => getDef(p.partId)?.kind === 'RELAY');

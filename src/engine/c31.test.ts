@@ -105,3 +105,31 @@ describe('2-2 a bridge with no balance is diagnosed, never "balances at l"', () 
     const e = refExcept(() => false); expect(q(e, 'ticketCard').answers[0]).toMatchObject({ side: 'left', formula: 'X = R (100 - l) / l' });
   });
 });
+
+// ---------------------------------------------------------------- 3-2: the failure text is read from the trace the scope shows
+describe('3-2 the "never crossed" text agrees with the scope trace and explains the release path', () => {
+  const build = (r: number, c: number) => {
+    const e = open('3-2', ['1-4', '2-3', '3-1']);
+    ok(e, 'placePart', 'res-cf', r, '0.25W', 4, 8, 0, false); ok(e, 'placePart', 'cap-el', c, '16V', 14, 9, 1, false);
+    for (const w of [[[2, 8], [4, 8]], [[8, 8], [14, 8]], [[14, 8], [14, 9]], [[14, 11], [14, 13]]]) ok(e, 'addWire', w);
+    return e;
+  };
+  it('47 k + 4.7 uF: OUT visibly falls on the press, and the text quotes the level the scope trace reached (not "hardly moves")', () => {
+    const e = build(47e3, 4.7e-6); ok(e, 'attachProbe', 1, [14, 8]); ok(e, 'power', true);
+    for (let i = 0; i < 104; i += 8) ok(e, 'advance', 8);
+    const sc = q(e, 'scope'); expect(sc.trace.complete).toBe(true);
+    const dt = sc.trace.dt, lo = Math.min(...sc.trace.v.slice(Math.round(0.01 / dt), Math.round(0.05 / dt) + 1));
+    expect(lo).toBeLessThan(4.6); expect(lo).toBeGreaterThan(2.5);   // it falls, but not through 2.5 V
+    const b = bench(e); const t = texts(b);
+    expect(b.pass).toBe(false);
+    expect(t).toMatch(/never crossed 2\.5 V/); expect(t).not.toMatch(/hardly moves/);
+    const m = /only fell to ([\d.]+) V/.exec(t); expect(m, t).not.toBeNull(); expect(Number(m![1])).toBeCloseTo(lo, 1);
+    expect(t).toMatch(/Make R x C about 10 to 20 ms/);
+  });
+  it('with a smaller R x C that falls but cannot climb back, the release path through the 10 k pull-up is named', () => {
+    // 1 k + 10 uF: falls fast on the press; on the release it recharges through 1 k + 10 k, 110 ms: too slow to cross 2.5 V upward inside the window
+    const b = bench(build(1e3, 10e-6)); const t = texts(b);
+    expect(b.pass).toBe(false);
+    expect(t).toMatch(/pull-up/); expect(t).toMatch(/\(1 kΩ \+ 10 kΩ\) x 10 µF = 110 ms/);
+  });
+});

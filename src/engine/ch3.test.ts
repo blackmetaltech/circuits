@@ -152,7 +152,7 @@ describe('3-2 Debounce', () => {
   });
   it('the filter that is too weak lets the bounce through (13 crossings: 1 k + 10 nF), one far too strong never gets there (470 k + 1 uF), a slow one lands late (68 k + 680 nF: 47 ms), a quick one early (22 k + 220 nF: 14.4 ms)', () => {
     const weak = bench(build(1e3, 10e-9)); expect(weak.pass).toBe(false); expect(weak.measured.npress).toBeGreaterThan(5); expect(texts(weak)).toMatch(/crossed 2\.5 V \d+ times/); expect(texts(weak)).toMatch(/shorter than the 2 ms of chatter/);
-    const strong = bench(build(470e3, 1e-6, 'cap-el')); expect(strong.pass).toBe(false); expect(texts(strong)).toMatch(/never crossed 2\.5 V/); expect(texts(strong)).toMatch(/far too long/);
+    const strong = bench(build(470e3, 1e-6, 'cap-el')); expect(strong.pass).toBe(false); expect(texts(strong)).toMatch(/never crossed 2\.5 V/); expect(texts(strong)).toMatch(/only fell to 4\.\d+ V/);
     const late = bench(build(68e3, 680e-9)); expect(late.pass).toBe(false); expect(texts(late)).toMatch(/too long/);
     const early = bench(build(22e3, 220e-9)); expect(early.pass).toBe(false); expect(early.measured.npress).toBe(1); expect(texts(early)).toMatch(/before 15 ms|too quick/);
     expect(bench(build(100e3, 1e-6, 'cap-el')).pass).toBe(false);
