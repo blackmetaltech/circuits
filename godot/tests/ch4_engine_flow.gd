@@ -252,7 +252,6 @@ func _run() -> void:
 	_clock(6.0, func(): return bk.locked)
 	ok(bk.locked, "LOCK: OUT stays at 5 V")
 	_clock(5.0, func(): return bk.passed)
-	if not bk.passed: print("   (4-3 not passed after the hold: hold=%.2f locked=%s heating=%s toast=%s)" % [bk.hold, str(bk.locked), str(bk._any_heating()), sc.top.toast.left(200)]); print("   ", str(bk.frame.get("parts", []).map(func(p): return [p.uid, p.get("state", "")])))
 	ok(bk.passed and evlog.has("paid"), "the bench passes 0.1 A and 0.5 A at 40 degrees and pays")
 
 	print("== 4-4 Bench Supply")
@@ -267,7 +266,7 @@ func _run() -> void:
 	_drag_part("lm317", null, "TO220", 10, 8, 0); _drag_part("res-cf", 2400, "0.25W", 12, 12, 0); _drag_part("res-cf", 3900, "0.25W", 4, 12, 0)
 	for w in _ref("4-4").wires: _drag_wire((w as Array)[0], (w as Array)[(w as Array).size() - 1])
 	sc.run_bench(); await _frames(2)
-	ok(evlog.has("bench_failed") and (sc.top.toast.contains("3.5 mA") or sc.top.toast.contains("Vout = 1.25 x (1 + 3.9")) and _no_id(sc.top.toast), "NAIVE 2.4 k / 3.9 k: Vout is off the band (the first failing test explained with the live numbers): %s" % sc.top.toast.left(90))
+	ok(evlog.has("bench_failed") and (sc.top.toast.contains("3.5 mA") or sc.top.toast.contains("Vout = 1.25 x (1 + R2 / R1)")) and _no_id(sc.top.toast), "NAIVE 2.4 k / 3.9 k: Vout is off the band (a try after the pass, so the worked formula): %s" % sc.top.toast.left(90))
 
 	print("== 4-5 EB: Zener Regulator")
 	await _start("4-5")
