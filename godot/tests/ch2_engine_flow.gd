@@ -303,7 +303,7 @@ func _run() -> void:
 	print("== notebook, chapter map, codex")
 	sc.map_chapter = 2; sc._refresh_pages(); sc.go_map(); await _frames(3)
 	ok(sc.pages.tickets.map(func(t): return t.state) == ["done", "done", "done", "done"] or sc.pages.tickets.filter(func(t): return bool(t.done)).size() == 4, "all four chits are FIXED on the page")
-	ok(CoachData.CODEX.size() == 14 and str(CoachData.CODEX[10].title) == "Thevenin and Norton" and str(CoachData.CODEX[13].title) == "The potentiometer", "the codex has the new pages: divider + loading, Thevenin / Norton, bridge and null, potentiometer")
+	ok(CoachData.CODEX.size() >= 14 and str(CoachData.CODEX[10].title) == "Thevenin and Norton" and str(CoachData.CODEX[13].title) == "The potentiometer", "the codex has the new pages: divider + loading, Thevenin / Norton, bridge and null, potentiometer")
 	sc.start_ticket("2-3"); await _frames(2); sc.pages.show_page("notebook"); await _frames(3)
 	ok(sc.pages.codex_i == 10, "the notebook opens on the page that belongs to the ticket (Thevenin)")
 	sc.pages.show_page(""); await _frames(2)

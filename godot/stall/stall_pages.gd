@@ -380,8 +380,9 @@ func _predict(a: float) -> void:
 		S.rr_line(self, fr, 6, Color(S.INK, 0.35), 2.0)
 		S.text(self, f, "Fig. 1", fr.position + Vector2(10, 22), 16, Color(S.INK, 0.6))
 		var pot := str(fig.get("kind", "node")) == "pot"
-		ExamFigure.draw(self, fr.grow(-10), fig, S.INK, ["gradient, EMF, r"] if pot else ["V(%s)" % str(fig.get("node", "A")), "I(E2)"])
-		S.text(self, f, "ideal driver cell, exact rheostat" if pot else "ideal sources, exact resistors", Vector2(fr.position.x + 10, fr.end.y - 8), 14, Color(S.INK, 0.5))
+		var caps := str(fig.get("kind", "node")) == "caps"
+		ExamFigure.draw(self, fr.grow(-10), fig, S.INK, ["Q, U", "V, energy lost"] if caps else (["gradient, EMF, r"] if pot else ["V(%s)" % str(fig.get("node", "A")), "I(E2)"]))
+		S.text(self, f, "exact capacitors, ideal source" if caps else ("ideal driver cell, exact rheostat" if pot else "ideal sources, exact resistors"), Vector2(fr.position.x + 10, fr.end.y - 8), 14, Color(S.INK, 0.5))
 		if star_rule != "": S.text(self, f, "Marking: " + star_rule, Vector2(fr.position.x, fr.end.y + 24), 15, Color(S.INK_RED, 0.9), HORIZONTAL_ALIGNMENT_LEFT, fr.size.x)
 	var brief_h := S.wrapped_h(f, str(coach_ticket.get("brief", "")), 19, col_w)
 	var y := maxf(q.position.y + (q.size.y * 0.5 - 40.0 if wide else 200.0), q.position.y + 106.0 + brief_h + 30.0)   # the first question starts under however long the problem is
@@ -452,7 +453,7 @@ func _debrief(a: float) -> void:
 	S.text(self, f, str(coach_ticket.get("star_rule", "")), Vector2(lx, y), 16, Color(S.INK, 0.6), HORIZONTAL_ALIGNMENT_LEFT, lw)
 	# right: the KCL working
 	var rx := q.position.x + half + 10.0; var rw := half - 46.0; var ry := q.position.y + 112.0
-	S.text(self, f, "The potentiometer, worked out" if str(d.get("node", "A")) == "wire" else "KCL at node %s: currents in = currents out" % str(d.get("node", "A")), Vector2(rx, ry), 24, S.INK_RED, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += 40.0
+	S.text(self, f, "The potentiometer, worked out" if str(d.get("node", "A")) == "wire" else ("The capacitor bank, worked out" if str(d.get("node", "A")) == "bank" else "KCL at node %s: currents in = currents out" % str(d.get("node", "A"))), Vector2(rx, ry), 24, S.INK_RED, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += 40.0
 	# what fits above the buttons: the equation line and the closing remark go first when the (handheld's bigger) text would run off the paper
 	var avail := q.end.y - 96.0 - ry
 	var eq_h := S.wrapped_h(S.mono(), str(d.get("equation", "")), 20, rw) + 10.0

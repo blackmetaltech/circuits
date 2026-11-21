@@ -806,9 +806,18 @@ const REFS_CH2 := {
 		"jockey": 750.0, "pred": {"pgrad": 0.02, "pemf": 1.5, "pr": 0.5}},
 }
 
+const REFS_CH3 := {
+	"3-1": {"parts": [["cap-el", 100e-6, "16V", 14, 4, 1], ["res-cf", 10000, "0.25W", 4, 2, 0]], "wires": [[[2, 2], [4, 2]], [[8, 2], [14, 2]], [[14, 2], [14, 4]], [[14, 6], [14, 8]]], "clip": [14, 2]},
+	"3-2": {"parts": [["res-cf", 47000, "0.25W", 4, 8, 0], ["cap-cer", 330e-9, "50V", 14, 9, 1]], "wires": [[[2, 8], [4, 8]], [[8, 8], [14, 8]], [[14, 8], [14, 9]]], "clip": [14, 8]},
+	"3-3": {"parts": [["res-cf", 200, "1W", 6, 5, 0]], "wires": [[[2, 5], [6, 5]], [[10, 5], [16, 5], [16, 4]]]},
+	"3-4": {"parts": [["cap-ideal", 2e-6, "ideal", 4, 2, 0], ["cap-ideal", 3e-6, "ideal", 8, 4, 1], ["cap-ideal", 6e-6, "ideal", 10, 4, 1], ["cap-ideal", 6e-6, "ideal", 20, 4, 1]],
+		"wires": [[[2, 2], [4, 2]], [[8, 2], [8, 4]], [[8, 2], [10, 2], [10, 4]], [[8, 8], [8, 12], [10, 12]], [[10, 8], [10, 12]], [[20, 2], [20, 4]], [[20, 8], [20, 12], [10, 12]]],
+		"pred": {"pq": 180.0, "pu": 9.9, "pv": 40.0, "pl": 12.0}},
+}
+
 ## Build the reference design for the open ticket straight through the engine (no UI). Returns true when every step was accepted.
 func build_ref(id: String) -> bool:
-	var R: Dictionary = REFS.get(id, REFS_CH2.get(id, {}))
+	var R: Dictionary = REFS.get(id, REFS_CH2.get(id, REFS_CH3.get(id, {})))
 	if R.is_empty(): return false
 	var ok := true
 	if R.has("pred"): for k in R.pred: ok = predict(str(k), float(R.pred[k])).ok and ok

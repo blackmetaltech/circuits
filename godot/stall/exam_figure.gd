@@ -11,6 +11,7 @@ const DESIGN := Vector2(440, 400)
 static func draw(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, asks: Array = [], small := false) -> void:
 	if fig.is_empty(): return
 	if str(fig.get("kind", "node")) == "pot": _draw_pot(ci, r, fig, ink, asks, small); return
+	if str(fig.get("kind", "node")) == "caps": _draw_caps(ci, r, fig, ink, asks, small); return
 	var k := minf(r.size.x / DESIGN.x, r.size.y / DESIGN.y)
 	var o := r.position + (r.size - DESIGN * k) * 0.5
 	var P := func(x: float, y: float) -> Vector2: return o + Vector2(x, y) * k
@@ -118,6 +119,63 @@ static func _draw_pot(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, ask
 		if not asks.is_empty(): S.text(ci, f, "find:  " + "   ".join(asks), P.call(70, 30), fs, S.INK_RED)
 
 ## A cell symbol: a long thin plate (+, left) and a short fat plate (-, right), centred on `c` (the left plate sits at c, the right plate 14 design px to its right).
-static func _cell(ci: CanvasItem, c: Vector2, k: float, ink: Color, w: float) -> void:
+static func _cell(ci: CanvasItem, c: Vector2, k: float, ink: Color, w: float, vertical := false) -> void:
+	if vertical:   # plates horizontal: the long (+) plate on top, the short fat (-) plate below it
+		ci.draw_line(c + Vector2(-18.0 * k, 0), c + Vector2(18.0 * k, 0), ink, w); ci.draw_line(c + Vector2(-9.0 * k, 14.0 * k), c + Vector2(9.0 * k, 14.0 * k), ink, w * 1.9)
+		return
 	ci.draw_line(c + Vector2(0, -18.0 * k), c + Vector2(0, 18.0 * k), ink, w)
 	ci.draw_line(c + Vector2(14.0 * k, -9.0 * k), c + Vector2(14.0 * k, 9.0 * k), ink, w * 1.9)
+
+## The 3-4 figure, the way a textbook draws two capacitor cards: (a) a source across a capacitor in series with two in parallel; (b) a charged capacitor, a switch and an empty one.
+## All numbers are the engine's (figure.caps, microfarads and volts).
+static func _draw_caps(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, asks: Array, small: bool) -> void:
+	var cp: Dictionary = fig.get("caps", {})
+	var a: Dictionary = cp.get("a", {}); var b: Dictionary = cp.get("b", {})
+	var k := minf(r.size.x / DESIGN.x, r.size.y / DESIGN.y)
+	var o := r.position + (r.size - DESIGN * k) * 0.5
+	var P := func(x: float, y: float) -> Vector2: return o + Vector2(x, y) * k
+	var w := maxf(1.6, 3.0 * k)
+	var f := S.hand()
+	var fs := int(maxf(9.0, (20.0 if not small else 30.0) * k))
+	var uf := func(x: float) -> String: return "%s \u00b5F" % EngineBench._g(float(x))
+	# card (a): the source on the left, C1 along the top to the node M, then C2 and C3 side by side down to the ground rail
+	S.text(ci, f, "(a)", P.call(8, 40), int(fs * 1.3), S.INK_RED)
+	var ty := 56.0; var by := 168.0
+	_wire(ci, [P.call(52, by), P.call(52, 118)], ink, w); _cell(ci, P.call(40, 108), k, ink, w, true)
+	_wire(ci, [P.call(52, 92), P.call(52, ty), P.call(128, ty)], ink, w)
+	_cap_h(ci, P.call(128, ty), k, ink, w); _wire(ci, [P.call(142, ty), P.call(214, ty)], ink, w)
+	S.text(ci, f, uf.call(a.get("c1", 2)), P.call(102, ty - 26), fs, ink)
+	S.text(ci, f, "%s V" % EngineBench._g(float(a.get("volts", 110))), P.call(66, 118), fs, ink)
+	ci.draw_circle(P.call(214, ty), 5.0 * k + 1.0, ink); S.text(ci, f, "M", P.call(204, ty - 20), int(fs * 1.3), S.INK_RED)
+	_wire(ci, [P.call(214, ty), P.call(330, ty)], ink, w)
+	for i in 2:
+		var x := 254.0 + float(i) * 76.0
+		_wire(ci, [P.call(x, ty), P.call(x, 100)], ink, w); _cap_v(ci, P.call(x, 100), k, ink, w); _wire(ci, [P.call(x, 114), P.call(x, by)], ink, w)
+		S.text(ci, f, uf.call(a.get("c2", 3) if i == 0 else a.get("c3", 6)), P.call(x + 12, 112), fs, ink)
+	_wire(ci, [P.call(52, by), P.call(330, by)], ink, w)
+	_gnd(ci, P.call(190, by), k, ink, w)
+	# card (b): a charged capacitor, a switch, an empty one
+	S.text(ci, f, "(b)", P.call(8, 232), int(fs * 1.3), S.INK_RED)
+	var ty2 := 262.0; var by2 := 366.0
+	_wire(ci, [P.call(86, by2), P.call(86, 322)], ink, w); _cap_v(ci, P.call(86, 308), k, ink, w); _wire(ci, [P.call(86, 294), P.call(86, ty2), P.call(160, ty2)], ink, w)
+	S.text(ci, f, "+", P.call(96, 300), fs, ink)
+	S.text(ci, f, "%s, %s V" % [uf.call(b.get("c1", 4)), EngineBench._g(float(b.get("v1", 100)))], P.call(14, 346), fs, ink)
+	ci.draw_circle(P.call(160, ty2), 4.0 * k + 1.0, ink); ci.draw_circle(P.call(214, ty2), 4.0 * k + 1.0, ink)
+	ci.draw_line(P.call(160, ty2), P.call(206, ty2 - 28.0), ink, w)   # the switch blade, open
+	S.text(ci, f, "switch", P.call(150, ty2 - 36), fs, ink)
+	_wire(ci, [P.call(214, ty2), P.call(300, ty2), P.call(300, 308)], ink, w); _cap_v(ci, P.call(300, 308), k, ink, w); _wire(ci, [P.call(300, 322), P.call(300, by2)], ink, w)
+	S.text(ci, f, uf.call(b.get("c2", 6)), P.call(312, 330), fs, ink)
+	_wire(ci, [P.call(86, by2), P.call(300, by2)], ink, w)
+	_gnd(ci, P.call(193, by2), k, ink, w)
+	if not asks.is_empty() and not small: S.text(ci, f, "find:  " + "   ".join(asks), P.call(70, 20), fs, S.INK_RED)
+
+## A capacitor symbol (two plates) centred at `c`: horizontal flow (plates vertical) or vertical flow (plates horizontal); `c` is the first plate's centre, the second plate sits 14 design px further along the flow.
+static func _cap_h(ci: CanvasItem, c: Vector2, k: float, ink: Color, w: float) -> void:
+	ci.draw_line(c + Vector2(0, -16.0 * k), c + Vector2(0, 16.0 * k), ink, w * 1.6); ci.draw_line(c + Vector2(14.0 * k, -16.0 * k), c + Vector2(14.0 * k, 16.0 * k), ink, w * 1.6)
+static func _cap_v(ci: CanvasItem, c: Vector2, k: float, ink: Color, w: float) -> void:
+	ci.draw_line(c + Vector2(-16.0 * k, 0), c + Vector2(16.0 * k, 0), ink, w * 1.6); ci.draw_line(c + Vector2(-16.0 * k, 14.0 * k), c + Vector2(16.0 * k, 14.0 * k), ink, w * 1.6)
+static func _gnd(ci: CanvasItem, c: Vector2, k: float, ink: Color, w: float) -> void:
+	ci.draw_line(c, c + Vector2(0, 8.0 * k), ink, w)
+	for g in 3:
+		var hw := (18.0 - float(g) * 6.0) * k
+		ci.draw_line(c + Vector2(-hw, (8.0 + float(g) * 7.0) * k), c + Vector2(hw, (8.0 + float(g) * 7.0) * k), ink, w)

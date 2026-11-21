@@ -449,6 +449,9 @@ func _customer() -> void:
 		"cable": cloth = Color("#e8892a"); hair = Color("#2a2420"); skin = Color("#c98e5e"); kind = "hardhat"
 		"module": cloth = Color("#3a6f8f"); hair = Color("#14100d"); skin = Color("#b9784e"); kind = "glasses"
 		"station": cloth = Color("#5a8f4a"); hair = Color("#6b3a1e"); skin = Color("#f0bf94")
+		"flash": cloth = Color("#7a5cc0"); hair = Color("#2a1a12"); skin = Color("#e6b48a"); kind = "glasses"   # the camera shop
+		"arcade": cloth = Color("#d63d7a"); hair = Color("#1f1612"); skin = Color("#d9a073"); kind = "cap"     # the arcade repairman
+		"relay": cloth = Color("#3f8f5a"); hair = Color("#3a2a20"); skin = Color("#c98e5e"); kind = "straw"   # the greenhouse
 	match customer:
 		"Ash": cloth = Color("#e8c431"); hair = Color("#3a2a20"); kind = "helmet"
 		"Mr. Brook": cloth = Color("#4a6c7d"); hair = Color("#c9c9c9"); skin = Color("#c98e5e"); kind = "beard"
@@ -476,6 +479,9 @@ func _customer() -> void:
 			draw_arc(hc, 64, PI * 1.05, PI * 1.95, 20, Color("#2d6fb0"), 24.0); draw_rect(Rect2(hc.x - 28, hc.y - 34, 90, 12), Color("#245a92"), true)
 		"beard": draw_arc(hc + Vector2(0, 8), 56, 0.15, PI - 0.15, 16, hair, 34.0); draw_arc(hc, 64, PI * 1.1, PI * 1.9, 16, hair, 12.0)
 		"glasses": draw_arc(hc, 62, PI * 1.05, PI * 1.95, 16, hair, 22.0)
+		"straw":
+			draw_arc(hc, 62, PI * 1.05, PI * 1.95, 18, Color("#e6c46a"), 20.0); draw_line(hc + Vector2(-92, -52), hc + Vector2(92, -52), Color("#d4ae50"), 9.0)
+			draw_line(hc + Vector2(-60, -62), hc + Vector2(60, -62), Color("#a6542c"), 5.0)
 		_: draw_arc(hc, 62, PI * 1.05, PI * 1.95, 18, hair, 18.0); for i in 3: draw_line(hc + Vector2(-8 + i * 8, -60), hc + Vector2(-12 + i * 12, -78), hair, 6.0)
 	# face by mood
 	var ey := hc.y + 2.0
@@ -534,6 +540,20 @@ func _gadget(g: Vector2) -> void:
 			for k in 3: draw_arc(g + Vector2(0, -26), 31 - k * 5, 0.0, TAU, 20, Color("#33343a"), 2.0)
 			draw_line(g + Vector2(30, -8), g + Vector2(70, 6), Color("#1a1a1c"), 6.0)
 			if ok: draw_line(g + Vector2(-48, -70), g + Vector2(-20, -50), Color("#d23a2e"), 6.0); S.text(self, S.hand(), "X", g + Vector2(-66, -72), 26, Color("#d23a2e"))
+		"flash":   # a camera with a flash head: the ready lamp turns green when the timer is right
+			S.rr(self, Rect2(g.x - 52, g.y - 52, 104, 60), 9, Color("#2a2c32")); S.rr(self, Rect2(g.x - 48, g.y - 48, 96, 20), 6, Color("#c9ced4"))
+			draw_circle(g + Vector2(4, -20), 20, Color("#14161a")); draw_circle(g + Vector2(4, -20), 14, Color("#27406b")); draw_circle(g + Vector2(-2, -26), 4, Color(1, 1, 1, 0.5))
+			S.rr(self, Rect2(g.x - 30, g.y - 74, 44, 24), 5, Color("#e8e8e0")); draw_circle(g + Vector2(-38, -34), 5, Color("#48d36b") if ok else Color("#6a1a14"))
+			if ok: S.glow(self, g + Vector2(-8, -64), 90.0, Color(1, 0.97, 0.8, 0.55)); S.glow(self, g + Vector2(-38, -34), 22.0, Color(0.3, 1, 0.45, 0.6))
+		"arcade":   # an arcade panel with the big button
+			S.rr(self, Rect2(g.x - 52, g.y - 52, 104, 62), 8, Color("#1c1f4a")); draw_circle(g + Vector2(14, -22), 24, Color("#0c0d12")); draw_circle(g + Vector2(14, -24), 19, Color("#d8332a") if not ok else Color("#ff6a4a"))
+			draw_circle(g + Vector2(8, -32), 5, Color(1, 1, 1, 0.45)); draw_circle(g + Vector2(-30, -22), 9, Color("#2a2c33")); draw_line(g + Vector2(-30, -22), g + Vector2(-30, -44), Color("#c9ced4"), 4.0); draw_circle(g + Vector2(-30, -46), 7, Color("#f0c24a"))
+			S.text(self, S.mono(), "x1" if ok else "x10", g + Vector2(-44, 4), 14, Color("#7cff6b") if ok else Color("#ff7a5a"))
+		"relay":   # a relay in a clear box: its tongue is closed when the job is right
+			S.rr(self, Rect2(g.x - 40, g.y - 70, 80, 78), 8, Color("#2a5f9e")); S.rr(self, Rect2(g.x - 35, g.y - 65, 70, 68), 6, Color(0.62, 0.8, 0.95, 0.55))
+			for i in 9: draw_line(g + Vector2(-30, -58 + i * 6), g + Vector2(-6, -56 + i * 6), Color("#c47a2a"), 3.5)
+			draw_line(g + Vector2(30, -60), g + Vector2(16, -8 if not ok else -30), Color("#b8bcc4"), 5.0); draw_circle(g + Vector2(16, -8 if not ok else -30), 5, Color("#d9b24a"))
+			if ok: S.glow(self, g + Vector2(-18, -30), 50.0, Color(1, 0.6, 0.25, 0.35))
 		"module":   # a small sealed box with pins
 			S.rr(self, Rect2(g.x - 40, g.y - 62, 80, 62), 6, Color("#14151a")); S.rr(self, Rect2(g.x - 30, g.y - 50, 60, 26), 3, Color("#efe5c8"))
 			S.text(self, S.hand(), "SEALED", g + Vector2(-26, -30), 16, Color(0.55, 0.1, 0.08))

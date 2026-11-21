@@ -297,7 +297,7 @@ func run_bench() -> void:
 	if phase != "bench" or not backend.ENGINE or backend.ticket.is_empty(): return
 	if bool(backend.ticket.get("eb", false)) and not backend.predictions_done():
 		top.say("Predict first: enter your numbers on the exam slip, then bench it."); open_predict(); return
-	if backend.parts.filter(func(p): return not p.fixed).is_empty(): top.say("Build something first."); return
+	if backend.parts.filter(func(p): return not p.fixed).is_empty() and backend.wires.filter(func(w): return not bool(w.get("fixed", false))).is_empty(): top.say("Build something first."); return
 	if not bool(backend.ticket.get("eb", false)) and not backend.answers_done() and not backend.ticket.get("answers", []).is_empty():
 		top.say("Write your answer on the slip first, then bench it."); open_predict(); return
 	var cleaned: int = backend.clean_stray()
