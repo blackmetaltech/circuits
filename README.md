@@ -1,4 +1,4 @@
-# 🔌 NODE: a night-market electronics stall where real circuits are the rules
+# 🔌 CIRCUITS: a night-market electronics stall where real circuits are the rules
 
 **[Changelog](CHANGELOG.md)** · **[Design](docs/DESIGN.md)** · **[Status](docs/STATUS.md)**
 
