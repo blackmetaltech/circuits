@@ -440,12 +440,22 @@ func _debrief(a: float) -> void:
 	# right: the KCL working
 	var rx := q.position.x + half + 10.0; var rw := half - 46.0; var ry := q.position.y + 112.0
 	S.text(self, f, "The potentiometer, worked out" if str(d.get("node", "A")) == "wire" else "KCL at node %s: currents in = currents out" % str(d.get("node", "A")), Vector2(rx, ry), 24, S.INK_RED, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += 40.0
-	S.text(self, S.mono(), str(d.get("equation", "")), Vector2(rx, ry), 20, S.INK, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += S.wrapped_h(S.mono(), str(d.get("equation", "")), 20, rw) + 10.0
+	# what fits above the buttons: the equation line and the closing remark go first when the (handheld's bigger) text would run off the paper
+	var avail := q.end.y - 96.0 - ry
+	var eq_h := S.wrapped_h(S.mono(), str(d.get("equation", "")), 20, rw) + 10.0
+	var work_h := 0.0
+	for ln0 in d.get("working", []): work_h += S.wrapped_h(f, str(ln0), 18, rw) + 6.0
+	var cur_h := 0.0
+	for c0 in d.get("currents", []): cur_h += S.wrapped_h(f, str(c0.text), 18, rw) + 8.0
+	var show_eq := eq_h + work_h + 50.0 + cur_h <= avail
+	var show_cur := work_h + 50.0 + cur_h <= avail
+	if show_eq: S.text(self, S.mono(), str(d.get("equation", "")), Vector2(rx, ry), 20, S.INK, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += eq_h
 	for ln in d.get("working", []):
 		S.text(self, f, str(ln), Vector2(rx, ry), 18, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, rw); ry += S.wrapped_h(f, str(ln), 18, rw) + 6.0
 	S.text(self, S.mono(), str(d.get("answer", "")), Vector2(rx, ry + 8), 26, Color("#1d7a3a")); ry += 50.0
-	for c in d.get("currents", []):
-		S.text(self, f, str(c.text), Vector2(rx, ry), 18, S.INK, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += S.wrapped_h(f, str(c.text), 18, rw) + 8.0
+	if show_cur:
+		for c in d.get("currents", []):
+			S.text(self, f, str(c.text), Vector2(rx, ry), 18, S.INK, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += S.wrapped_h(f, str(c.text), 18, rw) + 8.0
 	var retry := bool(d.get("retry", false))
 	var ok_r := Rect2((q.end.x - 200.0) if retry else -80.0, q.end.y - 74, 160, 50)
 	var oh := _btn(Rect2(r.get_center() + ok_r.position, ok_r.size), "debrief_close")

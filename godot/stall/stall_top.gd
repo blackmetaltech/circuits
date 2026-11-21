@@ -36,11 +36,12 @@ func _ready() -> void:
 
 func _process(dt: float) -> void:
 	t += dt; toast_age += dt
+	if S.handheld and toast_age < toast_dur and toast_rect.size != Vector2.ZERO: toast_scroll = maxi(toast_scroll, int(toast_age / 3.0))   # long cards page on by themselves
 	if slip_text != _last_slip: _last_slip = slip_text; _arrow_k = 0.0   # a new step: the pen draws the arrow again
 	_arrow_k = minf(1.0, _arrow_k + dt * 1.6)
 	queue_redraw()
 
-func say(s: String) -> void: toast = s; toast_bench = false; toast_quick = false; toast_age = 0.0; toast_dur = clampf(3.5 + float(s.length()) * 0.045, 3.5, 11.0)   # a long sentence stays long enough to read
+func say(s: String) -> void: toast = s; toast_scroll = 0; toast_bench = false; toast_quick = false; toast_age = 0.0; toast_dur = clampf(3.5 + float(s.length()) * 0.045, 3.5, 11.0)   # a long sentence stays long enough to read
 
 ## The bench's verdict on the board: shown like any note, but any edit of the board takes it down (it would be stale).
 func say_bench(s: String) -> void:
@@ -147,12 +148,15 @@ func _chit() -> void:
 	S.text(self, f, spec, Vector2(q.position.x + 14, y), 16, S.INK, HORIZONTAL_ALIGNMENT_LEFT, inner)
 	y += S.wrapped_h(f, spec, 16, inner) - float(ssz)
 	var pay := str(ticket.get("pay_text", ""))
-	if pay != "":
-		var psz := maxi(13, S.min_font)
+	var psz := maxi(13, S.min_font)
+	var pay_h := S.wrapped_h(f, pay, 13, inner)
+	# the fee line only when it fits on the paper (a handheld's 16 px text is bigger) and only while the stamp is not on the chit: text is never clipped, never stamped over
+	if pay != "" and not locked and y + 10.0 + float(psz) + pay_h - float(psz) <= q.end.y - 6.0:
 		y += float(psz) + 10.0
 		S.text(self, f, pay, Vector2(q.position.x + 14, y), 13, Color(S.INK, 0.7), HORIZONTAL_ALIGNMENT_LEFT, inner)
-	if locked:   # a rubber stamp
-		draw_set_transform(c + (Vector2(28, 62) if not S.handheld else Vector2(62, 10)), deg_to_rad(-12.0), Vector2.ONE)
+	if locked:   # a rubber stamp: it sits below the last line of text (and may hang over the paper's edge), never on the words
+		var top_y := maxf(y + 12.0, q.end.y - 46.0)
+		draw_set_transform(c + Vector2(r.size.x * 0.5 - 76.0, top_y + 22.0), deg_to_rad(-8.0), Vector2.ONE)
 		S.rr_line(self, Rect2(-56, -20, 112, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5)
 		S.text(self, S.hand(), "FIXED", Vector2(-38, 10), 28, Color(0.1, 0.55, 0.2, 0.9))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
@@ -205,10 +209,31 @@ func _toast() -> void:
 		S.rr(self, q, 8, Color("#14161a", 0.88 * a)); S.rr_line(self, q, 8, Color(S.AMBER, 0.5 * a), 1.5)
 		S.text(self, S.mono(), toast, q.position + Vector2(13, 21), 18, Color(S.AMBER, a))
 		return
+	if S.handheld: _toast_dock(a); return
 	var th := S.wrapped_h(S.hand(), toast, 22, 620.0)
 	var r := Rect2(size.x * 0.5 - 330, 196, 660, maxf(46.0, th + 24.0))
 	S.paper(self, r, -0.6, Color(0.97, 0.93, 0.8, a))
 	S.text(self, S.hand(), toast, r.position + Vector2(20, 31), 22, Color(S.INK, a), HORIZONTAL_ALIGNMENT_LEFT, 620.0)
+
+## Handheld: a long message card docks in the window strip above the bench (smaller type, a few lines, scrolling by itself or with the wheel) instead of lying over the board.
+var toast_scroll := 0                       ## first visible line (wheel over the card, or by itself every few seconds)
+var toast_rect := Rect2()                   ## where the docked card is (the scene sends the wheel here)
+func toast_lines() -> int:
+	var tp := TextParagraph.new(); tp.add_string(toast, S.hand(), maxi(18, S.min_font)); tp.width = 600.0
+	return tp.get_line_count()
+
+func _toast_dock(a: float) -> void:
+	var sz := maxi(18, S.min_font)
+	var tp := TextParagraph.new(); tp.add_string(toast, S.hand(), sz); tp.width = 600.0
+	var n := tp.get_line_count(); var lh := S.hand().get_height(sz)
+	var per := maxi(2, int(floorf((170.0 - 22.0) / lh)))
+	var first := clampi(toast_scroll, 0, maxi(0, n - per))
+	var shown := mini(n - first, per)
+	var r := Rect2(size.x * 0.5 - 330.0, 8.0, 660.0, float(shown) * lh + 22.0 + (14.0 if n > per else 0.0))
+	toast_rect = r
+	S.paper(self, r, -0.4, Color(0.97, 0.93, 0.8, a))
+	for i in shown: tp.draw_line(get_canvas_item(), r.position + Vector2(30, 10 + float(i) * lh), first + i, Color(S.INK, a))
+	if n > per: S.text(self, S.mono(), "%d / %d  (wheel scrolls)" % [first + 1, maxi(1, n - per + 1)], r.position + Vector2(r.size.x - 210.0, r.size.y - 4.0), 12, Color(S.INK, 0.55 * a))
 
 ## The folded scope drawer on phones: a peek strip with a mini trace, the amber/green band and the LOCK lamp, always in view.
 func _peek() -> void:

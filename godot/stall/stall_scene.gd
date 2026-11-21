@@ -143,6 +143,7 @@ func start_ticket(id: String) -> void:
 	if not backend.open_ticket(id):   # the engine keeps a ticket locked until the one before it is passed
 		top.say("That ticket is still locked: pass the one before it first."); if phase != "bench": go_map()
 		return
+	top.toast_age = 99.0; top.toast_bench = false   # a message from the last ticket is not about this one
 	phase = "bench"; window.dusk = 0.0; window.rain = id == "1-3" or id == "1-4"
 	pages.codex_i = CODEX_AT.get(id, 0)   # the notebook opens on the page that belongs to this ticket
 	map_chapter = int(id.substr(0, 1)) if id.length() > 1 and id.substr(0, 1).is_valid_int() else 1
@@ -426,11 +427,11 @@ func _layout() -> void:
 	var low := 650.0 + dy * 0.6
 	supply.scale = Vector2(0.8, 0.8); supply.position = Vector2(sup_x, low + 12.0)
 	dmm.scale = Vector2(0.8, 0.8); dmm.position = Vector2(dmm_x, low)
-	L.tin = Rect2(sup_x + 20.0, 880 + dy * 0.8, 124, 124)
+	L.tin = Rect2(maxf(sup_x + 20.0, 1306.0), 880 + dy * 0.8, 124, 124)   # right of the exam / crew slip (1094..1290): the tin never covers it
 	L.customer = Rect2(780, 765 + dy, 300, 270)
-	L.bubble = Rect2(1060, 815 + dy, 250, 118)
-	L.next = Rect2(1070, 945 + dy, 220, 50)
-	L.exam = Rect2(1062, 816 + dy, 196, 224)   # the exam problem card (exam tickets) or the crew's slip (2-2): it stays on the bench after "later"
+	L.bubble = Rect2(880, 678 + dy, 270, 112)   # above the customer's head (over the board's empty lower rows), never over the slip beside her
+	L.next = Rect2(1306, 1000 + dy, 220, 50)
+	L.exam = Rect2(1094, 816 + dy, 196, 224)   # the exam problem card (exam tickets) or the crew's slip (2-2): it stays on the bench after "later"
 	L.chit = Rect2(sc_x + 404.0, 190.0 + dy * 0.05 + 258.0, 190, 190) if not handheld else Rect2(sc_x + 340.0, 190.0 + dy * 0.05 + 244.0, 270, 270)   # handheld: a bigger chit for 16 px text
 	L.slip = Rect2(318, 870 + dy, 420, 160)
 	L.probe_rest = {"red": Vector2(dmm_x - 52, 968 + dy * 0.8), "black": Vector2(dmm_x - 112, 998 + dy * 0.8), "ch1": Vector2(sc_x - 22.0, 700.0 + dy * 0.6)}
@@ -488,7 +489,7 @@ func _draw() -> void:   # the bench itself: static, redrawn on resize only
 ## The line under the board; keys are in [brackets] and drawn as key caps. Tickets with a slide wire add what the wire's parts do.
 func _hint_text() -> String:
 	var base := "drag a part in  ·  drag leg to leg to wire  ·  right-click removes  ·  [Ctrl+Z] undoes  ·  [R] turns"
-	if backend != null and backend.ENGINE and not backend.slide_part().is_empty(): return "drag A, B or J to wire  ·  drag the jockey, or click along the wire, to slide  ·  [Ctrl+Z] undoes"
+	if backend != null and backend.ENGINE and not backend.slide_part().is_empty(): return "drag from A, B, J to wire  ·  drag the jockey to slide  ·  [Ctrl+Z] undoes"
 	return base
 
 ## ------------------------------------------------------------------------------------------------------------------ geometry
@@ -1077,6 +1078,7 @@ func _scroll_box(rows: float) -> void:   # a wheel notch is one row, never past 
 	props.bin_scroll = clampf(props.bin_scroll + rows, 0.0, StallProps.max_scroll(props.box_inner(), props.items.size()))
 
 func _wheel(sp: Vector2, dir: int) -> void:
+	if S.handheld and top.toast_age < top.toast_dur and top.toast_rect.has_point(sp): top.toast_scroll = maxi(0, top.toast_scroll - dir); return   # the docked message card scrolls
 	var h := _where(sp)
 	if h == "box" or (L.box as Rect2).has_point(sp): _fling = 0.0; _scroll_box(-float(dir) * WHEEL_ROWS)
 	elif h == "dial": backend.set_dial(DmmView.MODES[clampi(DmmView.MODES.find(backend.dial) + dir, 0, DmmView.MODES.size() - 1)]); sfx.play("tick")
