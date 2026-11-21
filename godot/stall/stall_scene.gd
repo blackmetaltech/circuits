@@ -147,7 +147,7 @@ func start_ticket(id: String) -> void:
 	phase = "bench"; window.dusk = 0.0; window.rain = id == "1-3" or id == "1-4"
 	pages.codex_i = CODEX_AT.get(id, 0)   # the notebook opens on the page that belongs to this ticket
 	map_chapter = int(id.substr(0, 1)) if id.length() > 1 and id.substr(0, 1).is_valid_int() else 1
-	drag.clear(); probe_jack = {"red": "", "black": ""}; rot = 0; locked_at = -1.0; _lock_seq = -1.0; top.toast_age = 9.0
+	drag.clear(); probe_jack = {"red": "", "black": ""}; rot = 0; locked_at = -1.0; _lock_seq = -1.0
 	_ticket_view()
 	_chapter_view()
 	bubble_until = t + 9.0; top.bubble = str(backend.ticket.ask); top.bubble_alpha = 0.0

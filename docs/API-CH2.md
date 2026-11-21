@@ -36,3 +36,13 @@ Unlocking (`LevelDef.after`): an entry `a|b` is met by passing either. 2-1 needs
 
 Code-drawn objects (godot/world/part_art2.gd): the ADC chip, cable reel, dry cell, galvanometer (needle from `galvo.needle`), the metre slide wire (rule, constantan wire, posts A / B / J, jockey with its flag "40.00 cm" and a flexible lead, the `[-] [step] [+]` keys under the rule),
 the sealed module, resistance-box plug, rheostat, trimmer. The bench supply grows `[-] [step] [+]` keys, a two-decimal display and wheel / arrow-key control on 2-3. A foreman's slip on the bench takes the 2-2 distance. The notebook map has chapter tabs; the codex has pages for the divider, loading, Thevenin / Norton, the bridge, null methods and the potentiometer.
+
+## Round C2-1 (play-test) additions
+
+- `ticketCard()`: `examHidden` (an exam before its predictions are locked: level specs and targets are withheld), `sources` (`[{uid, partId, name, volts, hidden}]`; the test cell's `volts` is `null` while hidden). Coach text never quotes a balance length.
+- `benchResult()`: `measured` (what the bench measured per level spec, SI), `thanks` (the customer's thank-you quoting the measured value: 2-1 "Dead on: 3.306 volts." within 1 % of 3.30 V, otherwise "In the band: 3.358 volts."), `retry` (a pass under 3 stars on an exam); `debrief.retry` / `retryText`. The one-star text is per exam (2-4: V = k l, r = R (l1 / l2 - 1); 1-5: KCL).
+- Action `retryExam` clears the exam's predictions (the board stays) so it can be predicted and benched again.
+- 2-1 diagnoses a divider with no bottom resistor to GND (`explain.divider.floating | nobottom | notop`), naming OUT's real voltage.
+- `scope().gauge` on a null detector: `signed`, `signedText` ("+4.395 µA"), `slide` (`left | right | on`, found by moving the jockey 0.1 mm on a copy of the board) and `slideText`.
+- `bench()`: `marks` (`[{pad, text}]`: A, J, B on the slide wire, C at the 2-2 junction) and `slots` (`[{id, partId, a, b, text, filled}]`: where the plug / rheostat / galvanometer go).
+- `BenchResult.measured` changed the saved state, so the golden trajectories were regenerated deliberately.

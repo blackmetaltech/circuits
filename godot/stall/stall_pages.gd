@@ -350,7 +350,7 @@ func _predict(a: float) -> void:
 	draw_rect(Rect2(0, 0, w, h), Color(0.02, 0.01, 0.02, 0.45 * a), true)
 	var fig: Dictionary = coach_ticket.get("figure", {}) if coach_ticket.get("figure", null) is Dictionary else {}
 	var wide := not fig.is_empty()
-	var sz := Vector2(1120, 820) if wide else Vector2(720, 520)
+	var sz := Vector2(1120, 820) if wide else Vector2(720, 640 if S.handheld else 520)
 	sz = Vector2(minf(sz.x, w - 24.0), minf(sz.y, h - 24.0))
 	var r := Rect2(w * 0.5 - sz.x * 0.5, h * 0.5 - sz.y * 0.5 + (1.0 - a) * 24, sz.x, sz.y)
 	S.paper(self, r, -0.8, S.PAPER)
