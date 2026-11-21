@@ -625,7 +625,7 @@ func _draw_labels(ci: Control) -> void:
 		if s == "": continue
 		var wtx := f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
 		var pos: Vector2
-		if b.size.y > b.size.x * 1.4: pos = Vector2(b.end.x + 4.0, b.get_center().y + fs * 0.35)
+		if b.size.y > b.size.x * 1.4: pos = Vector2(b.end.x + 4.0, b.get_center().y + fs * 0.35) if str(pt.kind) != "CE" else Vector2(b.position.x - 4.0 - wtx, b.get_center().y + fs * 0.35)   # a standing electrolytic is labelled on its left (the scope's lead runs down its right)
 		else: pos = Vector2(b.get_center().x - wtx * 0.5, b.position.y - 4.0)
 		PartArt.rrect(ci, Rect2(pos + Vector2(-4.0, -fs - 1.0), Vector2(wtx + 8.0, fs + 7.0)), 5.0, Color(0.03, 0.035, 0.05, 0.72))
 		_txt(ci, s, pos, fs, Color(0.96, 0.95, 0.88))

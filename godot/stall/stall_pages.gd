@@ -466,7 +466,8 @@ func _debrief(a: float) -> void:
 	if show_eq: S.text(self, S.mono(), str(d.get("equation", "")), Vector2(rx, ry), 20, S.INK, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += eq_h
 	for ln in d.get("working", []):
 		S.text(self, f, str(ln), Vector2(rx, ry), 18, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, rw); ry += S.wrapped_h(f, str(ln), 18, rw) + 6.0
-	S.text(self, S.mono(), str(d.get("answer", "")), Vector2(rx, ry + 8), 26, Color("#1d7a3a")); ry += 50.0
+	var ans_fs := 26 if S.tw(S.mono(), str(d.get("answer", "")), 26) < rw else 20
+	S.text(self, S.mono(), str(d.get("answer", "")), Vector2(rx, ry + 8), ans_fs, Color("#1d7a3a"), HORIZONTAL_ALIGNMENT_LEFT, rw); ry += 24.0 + S.wrapped_h(S.mono(), str(d.get("answer", "")), ans_fs, rw)
 	if show_cur:
 		for c in d.get("currents", []):
 			S.text(self, f, str(c.text), Vector2(rx, ry), 18, S.INK, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += S.wrapped_h(f, str(c.text), 18, rw) + 8.0

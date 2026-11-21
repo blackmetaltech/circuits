@@ -21,13 +21,13 @@ export const L3_3: LevelDef = {
   board: {
     w: 24, h: 16,
     connectors: [
-      { id: 'V12', pad: [2, 2], role: 'source' }, { id: 'V24', pad: [2, 5], role: 'source' }, { id: 'COIL', pad: [16, 4], role: 'load' }, { id: 'GND', pad: [16, 8], role: 'ground' },
+      { id: 'V12', pad: [2, 2], role: 'source' }, { id: 'V24', pad: [2, 5], role: 'source' }, { id: 'COIL', pad: [12, 4], role: 'load' }, { id: 'GND', pad: [12, 8], role: 'ground' },
     ],
   },
-  // the relay is soldered on: coil pin C1 on the COIL pad, C2 on the GND pad; its contacts (COM, NO, NC) switch the customer's valve, which is not part of this puzzle
+  // the relay is soldered on: coil pin C1 wired to the COIL pad, C2 to the GND pad (fixed wires: the labels stay clear of the relay body); its contacts (COM, NO, NC) switch the customer's valve, which is not part of this puzzle
   fixed: [{ uid: 'f1', partId: 'relay-12v', value: null, variant: '5A', x: 16, y: 4, rot: 0, flip: false, fixed: true }],
   // the contact side is wired to GND (the valve it would switch is the customer's, not part of this puzzle); the coil's far end C2 is on the GND pad
-  fixedWires: [[[20, 4], [22, 4], [22, 10], [16, 10], [16, 8]]],
+  fixedWires: [[[12, 4], [16, 4]], [[12, 8], [16, 8]], [[20, 4], [22, 4], [22, 10], [12, 10], [12, 8]]],
   supplies: [
     { id: 'psu12', kind: 'bench', plus: 'V12', minus: 'GND', fixed: 12 },
     { id: 'psu24', kind: 'bench', plus: 'V24', minus: 'GND', fixed: 24 },
@@ -59,7 +59,7 @@ export const L3_3: LevelDef = {
   },
   ref: {
     parts: [{ partId: 'res-cf', value: 200, variant: '1W', x: 6, y: 5, rot: 0, flip: false }],
-    wires: [[[2, 5], [6, 5]], [[10, 5], [16, 5], [16, 4]]],
+    wires: [[[2, 5], [6, 5]], [[10, 5], [12, 5], [12, 4]]],
   },
   specShort: 'ticket.3-3.short',
   scope: 'must',
@@ -67,10 +67,10 @@ export const L3_3: LevelDef = {
   pay: { fee: 900, perStar: 200 },
   chit: { x: 0.3, y: 0.66 },
   coach: [
-    { id: 'rail', key: 'coach.3-3.s1', anchor: { target: 'part', partId: 'relay-12v', pin: 'C1' }, done: 'wired&joined:COIL' },
-    { id: 'power', key: 'coach.3-3.s2', anchor: { target: 'power' }, done: 'powered', when: 'wired' },
+    { id: 'rail', key: 'coach.3-3.s1', anchor: { target: 'part', partId: 'relay-12v', pin: 'C1' }, done: 'wired|link:V12~COIL|link:V24~COIL' },
+    { id: 'power', key: 'coach.3-3.s2', anchor: { target: 'power' }, done: 'powered', when: 'wired|link:V12~COIL|link:V24~COIL' },
     { id: 'watch', key: 'coach.3-3.s3', anchor: { target: 'scope' }, done: 'benched', when: 'powered&!smoked' },
-    { id: 'run-bench', key: 'coach.3-3.s4', anchor: { target: 'bench' }, done: 'benched', when: 'wired' },
+    { id: 'run-bench', key: 'coach.3-3.s4', anchor: { target: 'bench' }, done: 'benched', when: 'wired|link:V12~COIL|link:V24~COIL' },
     { id: 'done', key: 'coach.3-3.s5', anchor: { target: 'chit' }, done: '!passed', when: 'passed' },
   ],
 };

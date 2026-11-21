@@ -35,10 +35,10 @@ export const L3_2: LevelDef = {
   },
   fixed: [
     { uid: 'f1', partId: 'pullup-10k', value: null, variant: '10k', x: 2, y: 2, rot: 1, flip: false, fixed: true },
-    { uid: 'f2', partId: 'logic-in', value: null, variant: '1M', x: 18, y: 8, rot: 1, flip: false, fixed: true },
+    { uid: 'f2', partId: 'logic-in', value: null, variant: '1M', x: 20, y: 8, rot: 1, flip: false, fixed: true },
   ],
   // the logic input's ground end and the button's far side are soldered to the GND pad already (the lesson is the filter, not the ground wiring)
-  fixedWires: [[[18, 8], [14, 8]], [[18, 14], [14, 14], [14, 13]]],
+  fixedWires: [[[20, 8], [14, 8]], [[20, 14], [14, 14], [14, 13]]],
   supplies: [
     { id: 'psu', kind: 'bench', plus: 'VCC', minus: 'GND', fixed: 5 },
     { id: 'btn', kind: 'contact', plus: 'SW', minus: 'GND', press: PRESS, release: RELEASE, bounce: BOUNCE },

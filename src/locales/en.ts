@@ -216,6 +216,7 @@ export const en: Record<string, string> = {
   'pay.explain': 'fee {fee} + {perStar} per new star',
   'bench.measureFirst': "Measure it first: put the meter leads on the battery before you bench it. Read the open-circuit volts, then the volts with the load on. How far the voltage sags under load is the battery's own resistance, and finding that is the lesson here.",
   'coach.optional': 'Optional: {text}',
+  'coach.burned.cap': '{Part} vented: undo it (Ctrl+Z) or swap it for a fresh part, then check which way round it goes (the stripe is minus) and that its voltage rating is above what it sees.',
   'coach.burned': '{Part} burned: undo it (Ctrl+Z) or swap it for a fresh part, then think about what let too much current through.',
   'name.part.some': 'a part',
   'bench.spec.ratings': 'No part over its rating',

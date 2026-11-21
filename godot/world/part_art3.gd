@@ -92,7 +92,7 @@ static func charged_cap(ci: CanvasItem, lp: Array, p: float, sh: bool, level: fl
 
 ## The relay: a clear-lidded block, a copper coil on its bobbin, a hinged armature with a contact tip. `operated`: the armature is pulled in (the engine's RLY state); `glow` 0..1 coil warmth from the current.
 ## Local pins: C1 (0,0), C2 (0,4), COM (4,0), NO (4,2), NC (4,4).
-static func relay(ci: CanvasItem, p: float, sh: bool, operated: bool, glow: float, click_t: float) -> void:
+static func relay(ci: CanvasItem, p: float, sh: bool, operated: bool, glow: float, click_t: float, smoked := false) -> void:
 	PartArt._leads(ci, [Vector2(0, 0), Vector2(0, 4), Vector2(4, 0), Vector2(4, 2), Vector2(4, 4)], p, [Vector2(0.9, 0), Vector2(0.9, 4), Vector2(3.1, 0), Vector2(3.1, 2), Vector2(3.1, 4)])
 	var r := Rect2(0.8 * p, -0.7 * p, 2.4 * p, 5.4 * p)
 	PartArt.rrect(ci, r, p * 0.16, _c(Color("#2a5f9e"), sh))
@@ -116,6 +116,9 @@ static func relay(ci: CanvasItem, p: float, sh: bool, operated: bool, glow: floa
 	ci.draw_circle(tip, p * 0.16, Color("#d9b24a"))
 	for yy in [2.0, 3.9]: ci.draw_circle(Vector2(2.75 * p, yy * p), p * 0.12, Color(0.45, 0.46, 0.5))   # the NO and NC contact points
 	ci.draw_line(r.position + Vector2(p * 0.25, p * 0.2), Vector2(r.end.x - p * 0.25, r.position.y + p * 0.2), Color(1, 1, 1, 0.28), p * 0.07)
+	if smoked:   # the coil cooked: the lid is sooty and the winding is black
+		PartArt.rrect(ci, r.grow(-p * 0.1), p * 0.1, Color(0.04, 0.03, 0.03, 0.72))
+		PartArt.rrect(ci, Rect2(cx - p * 0.42, p * 0.15, p * 0.84, p * 3.7), p * 0.08, Color(0.02, 0.02, 0.02, 0.85))
 
 ## The 10 k pull-up as a fat chip resistor lying between its two pads (the board turns it vertical).
 static func pullup(ci: CanvasItem, lp: Array, p: float, sh: bool) -> void:

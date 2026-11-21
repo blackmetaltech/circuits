@@ -86,7 +86,8 @@ func knob_centres() -> Array: return [Vector2(452, 52), Vector2(534, 52), Vector
 
 func hit_knob(p: Vector2) -> int:
 	var k := knob_centres()
-	for i in k.size(): if p.distance_to(k[i]) < 30.0: return i
+	var reach := maxf(30.0, 24.0 / maxf(scale.x, 0.2)) if S.handheld else 30.0   # handheld: a 44+ screen px target whatever the scope's scale
+	for i in k.size(): if p.distance_to(k[i]) < reach: return i
 	return -1
 
 func turn(i: int, d: float) -> void:
@@ -138,7 +139,7 @@ func _tube_back() -> void:
 	var tube: Dictionary = tr.get("tube", {}) as Dictionary
 	if tube.is_empty() or bool(sc.get("hidden", false)): return
 	var col := S.PHOS if locked else S.AMBER
-	var a := 0.17 + (0.2 * _lock_flash if locked else 0.03 * (0.5 + 0.5 * sin(t * 3.0)))
+	var a := 0.26 + (0.2 * _lock_flash if locked else 0.04 * (0.5 + 0.5 * sin(t * 3.0)))
 	var clip := SCREEN
 	if str(tube.get("kind", "")) == "exp":
 		var lo: Array = tube.get("lo", []); var hi: Array = tube.get("hi", [])
@@ -151,7 +152,7 @@ func _tube_back() -> void:
 		var poly := PackedVector2Array(top)
 		for k in range(n - 1, -1, -1): poly.append(bot[k])
 		draw_colored_polygon(poly, Color(col, a))
-		draw_polyline(top, Color(col, 0.7), 1.5, true); draw_polyline(bot, Color(col, 0.7), 1.5, true)
+		draw_polyline(top, Color(col, 0.9), 2.2, true); draw_polyline(bot, Color(col, 0.9), 2.2, true)
 		var m := n - 1   # the target value at the end of the sweep, marked on the right edge
 		draw_line(Vector2(SCREEN.end.x - 6.0, bot[m].y), Vector2(SCREEN.end.x - 6.0, top[m].y), Color(col, 0.9), 2.5)
 	else:
@@ -212,7 +213,7 @@ func _panel() -> void:
 	else: S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14, Color(vc, 0.55))
 	S.text(self, S.mono(), rd, Vector2(px + 10, 242), 20 if rd.length() < 11 else 15, Color(vc, 0.9 if (live and attached) else 0.3))
 	if trace_mode:
-		S.text(self, S.mono(), "%s/DIV" % tfmt(float(sc.get("tpd", 0.2))), Vector2(px + 98, 206), 12, Color(vc, 0.85))
+		S.text(self, S.mono(), "%s/DIV" % tfmt(float(sc.get("tpd", 0.2))), Vector2(px + 84, 206), 13, Color(vc, 0.85))
 		S.text(self, S.mono(), "%s%s/DIV" % [_fmt(float(sc.get("vdiv", 4.0)) * float(sc.get("vmul", 1.0))), unit], Vector2(px + 98, 222), 11, Color(vc, 0.5))
 	else: S.text(self, S.mono(), "%s/DIV" % _fmt(float(sc.get("vdiv", 4.0))), Vector2(px + 98, 206), 12, Color(vc, 0.4))
 	# knobs
@@ -266,10 +267,12 @@ func _draw_trace(ci: Control) -> void:
 	var a := _warm
 	if pts.size() > 1:
 		ci.draw_polyline(pts, Color(tr, 0.10 * a), 10.0, true); ci.draw_polyline(pts, Color(tr, 0.22 * a), 5.0, true); ci.draw_polyline(pts, Color(0.8, 1.0, 0.75, 0.95 * a), 2.0, true)
-		# failing samples (outside the tube) in red, where they are
-		for k in (trd.get("bad", []) as Array):
-			var ki := int(k)
-			if ki >= 0 and ki < pts.size(): ci.draw_circle(pts[ki], 2.4, Color(1.0, 0.25, 0.2, 0.95))
+		# failing samples (outside the tube) in red, where they are: the line itself turns red there
+		var badk := {}
+		for k in (trd.get("bad", []) as Array): badk[int(k)] = true
+		for k in range(1, pts.size()):
+			if badk.has(k) or badk.has(k - 1):
+				ci.draw_line(pts[k - 1], pts[k], Color(1.0, 0.2, 0.15, 0.35 * a), 8.0); ci.draw_line(pts[k - 1], pts[k], Color(1.0, 0.45, 0.35, 0.95 * a), 2.6)
 	var head := pts[pts.size() - 1]
 	if n < 256: S.glow(ci, head, 28.0, Color(0.6, 1.0, 0.6, 0.65 * a))   # still forming: the beam's head
 	else: S.glow(ci, head, 12.0, Color(0.6, 1.0, 0.6, 0.25 * a))

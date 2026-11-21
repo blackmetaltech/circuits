@@ -185,8 +185,8 @@ describe('3-2 Debounce', () => {
 describe('3-3 Relay Pull-in', () => {
   const build = (rail: 'V12' | 'V24', r: number | null, w = '1W') => {
     const e = open('3-3', ['1-4', '2-3', '3-1']), y = rail === 'V12' ? 2 : 5;
-    if (r !== null) { ok(e, 'placePart', 'res-cf', r, w, 6, y, 0, false); ok(e, 'addWire', [[2, y], [6, y]]); ok(e, 'addWire', [[10, y], [16, y], [16, 4]]); }
-    else ok(e, 'addWire', [[2, y], [16, y], [16, 4]]);
+    if (r !== null) { ok(e, 'placePart', 'res-cf', r, w, 6, y, 0, false); ok(e, 'addWire', [[2, y], [6, y]]); ok(e, 'addWire', [[10, y], [12, y], [12, 4]]); }
+    else ok(e, 'addWire', [[2, y], [12, y], [12, 4]]);
     return e;
   };
   it('the ref (24 V + 200 ohm 1 W) pulls in at 0.275 ms with 60 mA steady and 2 stars; 24 V + 180 ohm gives 63.2 mA and 0.264 ms; 24 V + 270 ohm 51.1 mA and 0.326 ms', () => {

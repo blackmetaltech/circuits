@@ -54,3 +54,8 @@ Open: the 1-2 tired battery is shown and benched but cannot be switched live (th
 Tickets 2-1 Sensor Reference, 2-2 Cable Fault, 2-3 Black Box, 2-4 EB Slide-wire Potentiometer: data in `src/data/levels/2-*.ts` (each header lists its deviations from DESIGN §2.8), contract and what changed in docs/API-CH2.md,
 tests `src/engine/ch2.test.ts` (36) and `godot/tests/ch2_engine_flow.gd` (every ticket through the UI with the reference designs and the naive fails, ErrorTrap zero). Screens in docs/screens/ch2/.
 Open: the 2-4 reality check (driver cell with r = 0.3 ohm) is an engine test, not a UI action; Engineer's +-0.5 cm jockey reading resolution (2-2) and the 0.4 A meter fuse case (2-3) are not built (see the headers); the fixture bench (CB_FIXTURE=1) is chapter 1 only.
+
+## 2026-11-21 chapter 3 "Charge" (engine + stall)
+Tickets 3-1 Flash Timer, 3-2 Debounce, 3-3 Relay Pull-in, 3-4 EB Capacitor Bank: data in `src/data/levels/3-*.ts` (each header lists its numbers and deviations from DESIGN §2.8), contract in docs/API-CH3.md, tests `src/engine/ch3.test.ts` (27) and `godot/tests/ch3_engine_flow.gd`
+(every ticket through the UI with the reference designs and the naive fails, ErrorTrap zero). The scope is a time trace from power-on against an amber tube (`scope().trace`). Screens in docs/screens/ch3/.
+Open: the tolerance star (stars 3 on the build tickets) is still not built; 3-4's "vary R" reality check is the energy ledger, not a free resistor (see the 3-4 header); the cap-el values below 220 uF and the 6.3 V part are generic game values (CAMPAIGN_BLOCKERS); no phone (2424x1080) shots.

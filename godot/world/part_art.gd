@@ -83,7 +83,7 @@ static func _body(ci: CanvasItem, part: Dictionary, p: float, st: Dictionary, sh
 				"cap-ideal": PartArt3.ideal_cap(ci, p, sh)
 				"cap-charged": PartArt3.charged_cap(ci, lp, p, sh, float(st.get("level", 1.0)))
 				_: _ceramic(ci, part, p, sh, smoked)
-		"RELAY": PartArt3.relay(ci, p, sh, bool(st.get("operated", false)), float(st.get("coil", 0.0)), float(st.get("click_t", 9.0)))
+		"RELAY": PartArt3.relay(ci, p, sh, bool(st.get("operated", false)), float(st.get("coil", 0.0)), float(st.get("click_t", 9.0)), smoked)
 		"D": _diode(ci, p, sh, smoked)
 		"NPN", "PNP": _bjt(ci, lp, p, sh, smoked)
 		"XFMR": _xfmr(ci, p, sh)
@@ -273,5 +273,6 @@ static func screen_bounds(part: Dictionary, pin_px: Array, p: float) -> Rect2:
 	var pad := p * (0.9 if str(part.kind) != "XFMR" else 0.8)
 	if str(part.kind) in ["BAT", "GALVO", "BOXED"]: pad = p * 1.6
 	if str(part.partId) == "cap-charged": pad = p * 1.5
+	if str(part.kind) == "CE": pad = p * 1.25
 	if str(part.kind) == "SLIDE": pad = p * 1.2
 	return Rect2(mn - Vector2(pad, pad), (mx - mn) + Vector2(pad, pad) * 2.0)

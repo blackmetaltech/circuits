@@ -92,18 +92,18 @@ func _s32() -> void:
 func _s33() -> void:
 	await _open("3-3"); await _wait(1.0); await _shot("3-3_idle")
 	var bk = sc.backend
-	_w([2, 2], [16, 4]); bk.set_power(true)
+	_w([2, 2], [12, 4]); bk.set_power(true)
 	await _until(func(): return bool(bk.scope_view.trace.get("complete", false)), 10.0); await _wait(0.5); await _shot("3-3_slow")
 	sc.run_bench(); await _wait(0.8); await _shot("3-3_slow_fail")
 	await _open("3-3"); bk.build_ref("3-3"); sc.pages.show_page(""); sc._lay_key = ""; await _wait(0.4)
 	bk.set_power(true)
 	await _until(func(): return (bk.scope_view.trace.get("v", []) as Array).size() > 40, 10.0); await _shot("3-3_rising")
 	await _until(func(): return bk.locked, 14.0); await _wait(0.4); await _shot("3-3_ref")
-	await _open("3-3"); _w([2, 5], [16, 4]); bk.set_power(true)
+	await _open("3-3"); _w([2, 5], [12, 4]); bk.set_power(true)
 	await _until(func(): return not bk.smoked.is_empty(), 30.0); await _wait(0.6); await _shot("3-3_hot")
 
 func _s34() -> void:
-	await _open("3-4"); await _wait(0.8); await _shot("3-4_slip")
+	await _open("3-4"); sc.open_predict(); await _wait(0.8); await _shot("3-4_slip")
 	var bk = sc.backend
 	sc.pages.show_page(""); await _wait(0.4); await _shot("3-4_idle")
 	for fld in [["pq", 180.0], ["pu", 9.9], ["pv", 40.0], ["pl", 12.0]]: bk.predict(fld[0], fld[1])

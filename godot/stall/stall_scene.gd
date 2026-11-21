@@ -490,7 +490,7 @@ func _draw() -> void:   # the bench itself: static, redrawn on resize only
 ## The line under the board; keys are in [brackets] and drawn as key caps. Tickets with a slide wire add what the wire's parts do.
 func _hint_text() -> String:
 	var base := "drag a part in  ·  drag leg to leg to wire  ·  right-click removes  ·  [Ctrl+Z] undoes  ·  [R] turns"
-	if backend != null and backend.ENGINE and scope.is_trace(): return base + "  ·  [,] [.] or click the scope's TIME knob"
+	if backend != null and backend.ENGINE and scope.is_trace(): return "drag a part in  ·  drag leg to leg to wire  ·  right-click removes  ·  [Ctrl+Z] undoes  ·  [,] [.] set the sweep"
 	if backend != null and backend.ENGINE and not backend.slide_part().is_empty(): return "drag from A, B, J to wire  ·  drag the jockey to slide  ·  [Ctrl+Z] undoes"
 	return base
 

@@ -24,7 +24,7 @@ export const ch3En: Record<string, string> = {
   // 3-2 Debounce
   'ticket.3-2.title': 'Debounce',
   'ticket.3-2.brief': "{customer} repairs arcade machines. The big button's contact bounces: for about 2 ms after every press, and every release, it chatters open and shut, and the game reads a burst of presses. The logic input only asks whether OUT is above or below 2.5 V. Put a resistor from SW to OUT and a capacitor from OUT to GND, so OUT crosses 2.5 V exactly once on the press and once on the release, 5 to 20 ms after the contact first touches. The 10 kilohm pull-up on the board takes part in the release. {mentor}: a low-pass filter turns a burst of edges into one slow slope.",
-  'ticket.3-2.short': 'OUT crosses 2.5 V once per press and once per release, 5 to 20 ms late',
+  'ticket.3-2.short': 'one 2.5 V crossing per press and release, 5-20 ms late',
   'ticket.3-2.spec.press': 'On the press OUT falls through 2.5 V 5 to 20 ms after the button first touches, in every bounce pattern',
   'ticket.3-2.spec.release': 'On the release OUT rises through 2.5 V 5 to 20 ms after the button first lifts, in every bounce pattern',
   'ticket.3-2.spec.npress': 'OUT falls through 2.5 V exactly once on the press (no re-crossings)',
