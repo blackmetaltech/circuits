@@ -10,6 +10,7 @@ import { checkRatings } from './ratings';
 import { semiThermal, resistorThermal } from '../data/parts/util';
 import type { RatedPart, Window } from './thermal';
 import { simEn } from '../locales/sim.en';
+import { ch4En } from '../locales/ch4.en';
 import * as X from './explain';
 
 const i18n = createI18n({ en: simEn });
@@ -133,18 +134,20 @@ describe('failures from the solver and the topology check', () => {
 });
 
 describe('locales', () => {
-  const keys = Object.keys(simEn).filter((k) => k.startsWith('explain.'));
+  const all: Record<string, string> = { ...simEn, ...ch4En };   // chapter 4's explainers live with its own locale file
+  const keys = Object.keys(all).filter((k) => k.startsWith('explain.'));
   it('every explain.* key is produced by explain.ts and every key it produces exists', async () => {
     const { readFileSync } = await import('node:fs'); const { fileURLToPath } = await import('node:url');
     const src = readFileSync(fileURLToPath(new URL('./explain.ts', import.meta.url)), 'utf8');
-    const used = [...src.matchAll(/'(explain\.[A-Za-z.]+)'/g)].map((m) => m[1]);
+    const used = [...src.matchAll(/'(explain\.[A-Za-z0-9.]+)'/g)].map((m) => m[1]);
+    for (const a of ['first', 'again']) for (const b of ['bridge', 'half']) used.push(`explain.rect.ripple.${a}.${b}`);   // composed in explain.ts as explain.rect.ripple.<first|again>.<bridge|half>
     expect([...new Set(used)].sort()).toEqual([...keys].sort());
   });
   it('every explain.* string has plain-words text and balanced placeholders; checkLocales is clean', () => {
-    expect(keys.length).toBe(47);
-    expect(checkLocales({ en: simEn, fr: { ...simEn } }, 'en')).toEqual({ missing: [], extra: [], badPlaceholders: [] });
-    for (const k of keys) expect(simEn[k].match(/\{/g)?.length, k).toBe(simEn[k].match(/\}/g)?.length);
+    expect(keys.length).toBe(47 + Object.keys(ch4En).filter((k) => k.startsWith('explain.')).length);
+    expect(checkLocales({ en: all, fr: { ...all } }, 'en')).toEqual({ missing: [], extra: [], badPlaceholders: [] });
+    for (const k of keys) expect(all[k].match(/\{/g)?.length, k).toBe(all[k].match(/\}/g)?.length);
   });
-  it('the explainers name no currency, region or place', () => { for (const k of keys) expect(simEn[k], k).not.toMatch(/[$€£₹]/); });
+  it('the explainers name no currency, region or place', () => { for (const k of keys) expect(all[k], k).not.toMatch(/[$€£₹]/); });
   it('semiThermal fixture import is used (typecheck guard)', () => { expect(semiThermal(1, 100, 1).thetaJA).toBe(1); });
 });

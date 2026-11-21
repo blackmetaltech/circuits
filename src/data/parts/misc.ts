@@ -186,7 +186,7 @@ export const logicIn: PartDef = {
  *  selector may override it (key 'i'). It switches on 30 ms after power-on (so the capacitors charge first, as a real gadget's supply sequencing does) and takes its current within 1 ms. */
 export const loadCc: PartDef = {
   id: 'load-cc', kind: 'LOAD', nameKey: 'part.load-cc.name', footprint: 'block2', pins: ['+', '-'],
-  variants: [variant('cc', {}, FIXED_T)],
+  variants: [variant('cc', {}, { thetaJA: 1, tauS: 15, tMax: 1000, tFail: 2000 })],   // the customer's equipment is not a part under test: it never warms, warns or smokes (at 40 C/W a 2.5 W load read 'warm' on the 4-3 bench and held the auto-bench back)
   model: { cc: 1, i: 0.1, ton: 0.03 },
   source: { doc: FIX_DOC('a constant-current load: the equipment the repair is for (DESIGN §2.8 chapter 4: "constant-current load")'), gameFixture: true, note: FIX('The current is set by the ticket; it draws it whatever the voltage (a real gadget does not, below its minimum voltage).') + TAU_R },
   verified: false, scope: 'sandbox', simplifications: ['part.simplify.load-cc-fixture'],

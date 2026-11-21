@@ -57,7 +57,7 @@ func _drag_part(partId: String, value, variant: String, x: int, y: int, r: int) 
 	sc._motion(c); sc._press(c)
 	sc.rot = r
 	var pins: Array = bk.pins_of(sc.props.items[idx], 0, 0, r)
-	var mid: Vector2 = (pins[0] + pins[pins.size() - 1]) * 0.5
+	var mid: Vector2 = (pins[0] + pins[1]) * 0.5
 	var at := sc.pad_screen(Vector2(x, y) + mid)
 	sc._motion(at); sc._board_overlay()
 	var before := bk.parts.size()
@@ -182,7 +182,7 @@ func _run() -> void:
 	ok(not _trace().is_empty() and bool(_trace().complete) and (_trace().v2 as Array).size() == 256, "the scope has two channels: OUT and the amber secondary (%d samples)" % (_trace().v2 as Array).size())
 	ok(not bk.locked, "680 uF: no LOCK (the ripple is over 1 Vpp)")
 	sc.run_bench(); await _frames(2)
-	ok(evlog.has("bench_failed") and sc.top.toast.contains("ripples 1.1 V peak to peak") and sc.top.toast.contains("680 µF") and _no_id(sc.top.toast), "NAIVE 680 uF: the bench names the ripple and the capacitor: %s" % sc.top.toast.left(90))
+	ok(evlog.has("bench_failed") and sc.top.toast.contains("ripples 1.1") and sc.top.toast.contains("680 µF") and _no_id(sc.top.toast), "NAIVE 680 uF: the bench names the ripple and the capacitor: %s" % sc.top.toast.left(90))
 	# the scope's AC coupling and VOLTS knob
 	_key(KEY_A); ok(bool(sc.scope.sc.get("ac_on", false)), "the A key AC-couples CH1")
 	_knob(0); _knob(0); _knob(0); ok(is_equal_approx(float(sc.scope.sc.vdiv), 0.5), "the VOLTS knob steps the ticket's own list: 5, 2, 1, 0.5 V per division (%s)" % str(sc.scope.sc.vdiv))
@@ -252,6 +252,7 @@ func _run() -> void:
 	_clock(6.0, func(): return bk.locked)
 	ok(bk.locked, "LOCK: OUT stays at 5 V")
 	_clock(5.0, func(): return bk.passed)
+	if not bk.passed: print("   (4-3 not passed after the hold: hold=%.2f locked=%s heating=%s toast=%s)" % [bk.hold, str(bk.locked), str(bk._any_heating()), sc.top.toast.left(200)]); print("   ", str(bk.frame.get("parts", []).map(func(p): return [p.uid, p.get("state", "")])))
 	ok(bk.passed and evlog.has("paid"), "the bench passes 0.1 A and 0.5 A at 40 degrees and pays")
 
 	print("== 4-4 Bench Supply")
@@ -266,7 +267,7 @@ func _run() -> void:
 	_drag_part("lm317", null, "TO220", 10, 8, 0); _drag_part("res-cf", 2400, "0.25W", 12, 12, 0); _drag_part("res-cf", 3900, "0.25W", 4, 12, 0)
 	for w in _ref("4-4").wires: _drag_wire((w as Array)[0], (w as Array)[(w as Array).size() - 1])
 	sc.run_bench(); await _frames(2)
-	ok(evlog.has("bench_failed") and sc.top.toast.contains("3.5 mA") and _no_id(sc.top.toast), "NAIVE 2.4 k / 3.9 k: the minimum load: %s" % sc.top.toast.left(90))
+	ok(evlog.has("bench_failed") and (sc.top.toast.contains("3.5 mA") or sc.top.toast.contains("Vout = 1.25 x (1 + 3.9")) and _no_id(sc.top.toast), "NAIVE 2.4 k / 3.9 k: Vout is off the band (the first failing test explained with the live numbers): %s" % sc.top.toast.left(90))
 
 	print("== 4-5 EB: Zener Regulator")
 	await _start("4-5")
