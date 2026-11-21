@@ -101,9 +101,12 @@ func _crew_slip(r: Rect2) -> void:
 	var txt: String = "%s m" % EngineBench._g(float(entered), 6) if entered != null else "___ m"
 	S.text(self, S.mono(), txt, line.position + Vector2(10, 32), 26, S.INK)
 	var fml := str(a.get("formula", "X = R (100 - l) / l"))   # the engine's formula follows which side of the junction C the plug R is wired on
-	S.text(self, S.hand(), fml + ",", q.position + Vector2(12, 166), 16, Color(S.INK, 0.8))
-	S.text(self, S.hand(), "then 0.1 ohm per metre", q.position + Vector2(12, 186), 16, Color(S.INK, 0.8))
-	S.text(self, S.hand(), "tap: write the distance" if entered == null else "tap: change it", q.position + Vector2(12, q.size.y - 10), 15, Color(S.INK, 0.8))
+	if S.handheld:   # 16 screen px text is too wide for two fixed lines: one wrapped note, and the slip itself is the tap target
+		S.text(self, S.hand(), fml, Vector2(q.position.x + 12, q.position.y + 162), 16, Color(S.INK, 0.8), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 24)
+	else:
+		S.text(self, S.hand(), fml + ",", q.position + Vector2(12, 166), 16, Color(S.INK, 0.8))
+		S.text(self, S.hand(), "then 0.1 ohm per metre", q.position + Vector2(12, 186), 16, Color(S.INK, 0.8))
+		S.text(self, S.hand(), "tap: write the distance" if entered == null else "tap: change it", q.position + Vector2(12, q.size.y - 10), 15, Color(S.INK, 0.8))
 	if hv: S.rr_line(self, q.grow(3), 5, Color("#ffd98a", 0.9), 3.0)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 

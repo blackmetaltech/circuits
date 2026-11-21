@@ -213,8 +213,8 @@ func _panel() -> void:
 	else: S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14, Color(vc, 0.55))
 	S.text(self, S.mono(), rd, Vector2(px + 10, 242), 20 if rd.length() < 11 else 15, Color(vc, 0.9 if (live and attached) else 0.3))
 	if trace_mode:
-		var hf := 1.35 if S.handheld else 1.0   # handheld: the sweep and volts settings are the ones a player reads, so they get bigger
-		S.text(self, S.mono(), "%s/DIV" % tfmt(float(sc.get("tpd", 0.2))), Vector2(px + 84 - (14 if S.handheld else 0), 206), int(13 * hf), Color(vc, 0.85))
+		var hf := 1.2 if S.handheld else 1.0   # handheld: the sweep and volts settings are the ones a player reads, so they get bigger
+		S.text(self, S.mono(), "%s/DIV" % tfmt(float(sc.get("tpd", 0.2))), Vector2(px + 84 - (14 if S.handheld else 0), 211 if S.handheld else 206), int(13 * (1.2 if S.handheld else 1.0)), Color(vc, 0.85))
 		S.text(self, S.mono(), "%s%s/DIV" % [_fmt(float(sc.get("vdiv", 4.0)) * float(sc.get("vmul", 1.0))), unit], Vector2(px + 98 + (6 if S.handheld else 0), 242 if S.handheld else 222), int(11 * hf), Color(vc, 0.6))
 	else: S.text(self, S.mono(), "%s/DIV" % _fmt(float(sc.get("vdiv", 4.0))), Vector2(px + 98, 206), 12, Color(vc, 0.4))
 	# knobs
