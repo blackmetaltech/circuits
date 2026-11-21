@@ -240,7 +240,8 @@ function explainChapter4(f: BenchFailure, ctx: ExplainContext): Explained | null
     const r = ctx.rect, mains = condNum(cond, /(\d+) V/) ?? 230, half = r.nDiodes < 4, t = half ? 20 : 10;
     if (id === 'ripple' && r.c > 0) {
       const dv = (r.i * t * 1e-3) / r.c, vars: Vars = { ripple: sig(value, 3), lim: sig(num('hi'), 2), cond: condText, C: si(r.c, 'F'), iMA: sig(r.i * 1000, 3), t, q: sig(r.i * t * 1e3, 3), dv: sig(dv, 2), cNeed: si((r.i * t * 1e-3) / num('hi'), 'F') };
-      return { key: `explain.rect.ripple.${again ? 'again' : 'first'}.${half ? 'half' : 'bridge'}`, vars };
+      const RIPPLE_KEYS = { first: { half: 'explain.rect.ripple.first.half', bridge: 'explain.rect.ripple.first.bridge' }, again: { half: 'explain.rect.ripple.again.half', bridge: 'explain.rect.ripple.again.bridge' } } as const;   // literal keys so the locale guards can see them
+      return { key: RIPPLE_KEYS[again ? 'again' : 'first'][half ? 'half' : 'bridge'], vars };
     }
     if (id === 'mean') {
       const vrms = (12 * mains) / 230, pk = vrms * 1.414, drops = half ? 0.8 : 1.6, vars: Vars = { value: Number.isFinite(value) ? sig(value, 3) : 0, lim: sig(num('lo'), 3), cond: condText, pk: sig(pk, 3), vrms: sig(vrms, 3), nDrops: half ? 1 : 2, top: sig(pk - drops, 3) };
