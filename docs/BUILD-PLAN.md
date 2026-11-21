@@ -3,7 +3,7 @@
 > For the NODE build director (Opus, level 1). Implementation and serious testing go to Sonnet workers; volume work goes to Haiku.
 > Spec: `DESIGN.md` (authoritative, revised by the review). Review: `REVIEW.md`. Contract: `PROGRAM.md` (user decisions 1-5), `cobanana-core/CORE.md`,
 > `cobanana-scores/docs/API.md`.
-> Repo: `/home/ixaxaar/src/ORGS/cobanana/node-circuits` · title NODE · app id `in.ixaxaar.cobanana.node` · port 47904 · Xvfb :260-:279
+> Repo: this one · title NODE · app id `in.ixaxaar.cobanana.node` · port 47904 · Xvfb :260-:279
 > (desk testers a..h :261-:268, shot1 :270, ph :271, titles :272, tour :273) · phone `flock …/.locks/phone.lock`, pad `…/.locks/pad.lock`.
 
 ## Rules for every task

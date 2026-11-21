@@ -4,7 +4,7 @@
 set -u
 HERE=${0:A:h}; PROJ=${HERE:h}; OUT=${1:-$PROJ/../docs/screens/ch2}
 mkdir -p $OUT
-export XDG_DATA_HOME=${XDG_DATA_HOME:-/home/ixaxaar/src/ORGS/cobanana/.qa/node-circuits/g/data}
+export XDG_DATA_HOME=${XDG_DATA_HOME:-${TMPDIR:-/tmp}/circuits-shots/data}
 Xvfb :267 -screen 0 1920x1080x24 >/dev/null 2>&1 &
 XPID=$!
 sleep 2

@@ -11,7 +11,7 @@
 See docs/perf/pixel-factor.json + gatea-2026-11-10.log. Pass: 25k-step nonlinear bridge 78 ms (≤1.5 s), LU n48 0.051 ms (≤0.25),
 round trip p95 10.8 ms (≤20), no thermal slowdown in 11 min, fps p95 55-60 (marginal). FAIL: in-loop live-frame engine p95 6.4 ms
 (budget 4) although the isolated frame is 1.1 ms → investigate the live path (JSON of 2x512 floats, dispatch, GC; try k=100 and
-`thread=1` in user://spike.cfg) before M2-7. Session script: /home/ixaxaar/src/ORGS/cobanana/.qa/node-circuits/gatea.sh (run under
+`thread=1` in user://spike.cfg) before M2-7. Session script: kept outside the repo (run under
 phone.lock). Spike code (src/spike, godot/spike, spike queries in game.ts, _start_up hook in main.gd) is deleted after that re-check.
 
 ## In flight
