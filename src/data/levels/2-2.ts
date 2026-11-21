@@ -70,6 +70,11 @@ export const L2_2: LevelDef = {
   scope: 'must',
   after: ['2-1'],
   pay: { fee: 600, perStar: 200 },
+  nullCheck: { wire: 'f3', faults: [
+    { key: 'bridge.fault.cell', need: ['link:f1.+~f3.A', 'link:f3.B~GND'] },
+    { key: 'bridge.fault.galvoJ', need: ['shared:f3.J'] },
+    { key: 'bridge.fault.galvoC', need: ['shared:f2.1'] },
+  ] },
   gauge: { spec: 'ig', unit: 'uA', abs: true },
   chit: { x: 0.62, y: 0.3 },
   coach: [

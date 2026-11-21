@@ -26,6 +26,7 @@ import { partPrice } from './metrics';
 import { FAILURE_LOG_CAP, SCOPE_POINTS_CAP, UNDO_CAP, type NodeState, type TicketState } from './state';
 import { isUnlocked, levelDefOf } from './tickets';
 import { liveRig } from './ticket-run';
+import { balanceFormula, rSide } from './bridge';
 import { say } from './text';
 import { buildDebrief, starsRule } from './debrief';
 import { makeUiQueries, scopeTarget, shoebox } from './ui';
@@ -162,7 +163,7 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         conditions: def.bench.conditions.map((c) => ({ id: c.id, set: c.set ?? [], ambientC: c.ambientC ?? def.bench.ambientC })),
         targets: def.bench.specs.flatMap((x) => (x.kind === 'level' && !examHidden ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', lo: x.lo, hi: x.hi }] : [])),
         predictions: def.bench.specs.flatMap((x) => (x.kind === 'predict' ? [{ id: x.id, name: def.bench.names[x.id] ? t(def.bench.names[x.id]!) : '', unit: x.unit ?? (x.of.probe.trim().toLowerCase().startsWith('i(') ? 'A' : 'V'), entered: o.tk.predictions[x.id] ?? null }] : [])),
-        answers: (def.answers ?? []).map((a) => ({ id: a.id, name: def.bench.names[a.id] ? t(def.bench.names[a.id]!) : '', unit: a.unit, entered: o.tk.predictions[a.id] ?? null })),
+        answers: (def.answers ?? []).map((a) => ({ id: a.id, name: def.bench.names[a.id] ? t(def.bench.names[a.id]!) : '', unit: a.unit, entered: o.tk.predictions[a.id] ?? null, ...(def.nullCheck ? ((side) => ({ side, formula: balanceFormula(side) }))(rSide(o.tk.board, def, (uid, pin) => liveRig(o.tk, def).conn.pinNodes[uid]?.[pin] ?? -1)) : {}) })),
         specShort: def.specShort ? t(def.specShort) : '', gauge: def.gauge ?? null, supplies: def.supplies, chit: def.chit ?? null, ambientC: def.bench.ambientC, figure: def.figure ?? null,
         payText: payText(def, REGIONS.get(s.region)), starRule: def.eb ? starsRule() : '',
       };

@@ -18,9 +18,9 @@ import { allowedValues, allowedVariants, checkPartSpot, getDef, problem } from '
 import { partPrice } from './metrics';
 import type { NodeState, TicketState } from './state';
 import { isUnlocked, levelDefOf } from './tickets';
-import { liveRig, probeOn } from './ticket-run';
+import { bridgeScan, liveRig, probeOn } from './ticket-run';
 import { say } from './text';
-import { danglingEnds, openPins, pinLabel } from './touch';
+import { boardJunctions, danglingEnds, openPins, pinLabel } from './touch';
 import { capFirst, nameVars, partNames } from './names';
 import { traceTarget } from './trace';
 
@@ -143,7 +143,9 @@ export function scopeTarget(s: NodeState, tk: TicketState, def: LevelDef, sol: S
   const live = tk.live.powered && !!sol && tk.live.status !== 'noconv' && tk.live.smoked.length === 0;
   const lockSpecs: Record<string, boolean> = {};
   for (const x of specs) lockSpecs[x.id] = x.inBand;
-  const lock = live && specs.length > 0 && specs.every((x) => x.inBand);
+  // a null detector does not lock on a dead bridge (needle near zero by accident, no balance anywhere along the wire)
+  const dead = live && !!def.nullCheck && (() => { const b = bridgeScan(tk, def); return b !== null && !b.scan.hasNull ? b : null; })();
+  const lock = live && specs.length > 0 && specs.every((x) => x.inBand) && !dead;
   if (!g || !spec || spec.kind !== 'level') return { target: null, gauge: null, lock, lockSpecs };
   const u = GAUGE_UNIT[g.unit]!, c = g.clip ? tk.board.connectors.find((x) => x.id === g.clip) : undefined;
   const lo = g.flip ? -spec.hi : spec.lo, hi = g.flip ? -spec.lo : spec.hi;
@@ -151,11 +153,12 @@ export function scopeTarget(s: NodeState, tk: TicketState, def: LevelDef, sol: S
   const shown = (v: number): number => r4((g.abs ? Math.abs(v) : g.flip ? -v : v) * u.scale);
   const value = sp && sp.value !== null && live ? shown(sp.value) : null;
   // a null detector says which side of balance it is on: the signed reading and which way to slide the jockey (found by moving the jockey a tenth of a millimetre on a copy of the board)
-  let signed: number | null = null, slide: 'left' | 'right' | 'on' | null = null;
+  let signed: number | null = null, slide: 'left' | 'right' | 'on' | 'dead' | null = null;
   if (g.abs && sp && sp.value !== null && live) {
     signed = r4(sp.value * u.scale);
     const half = Math.abs(hi2 - lo2) * u.scale / 2 || Infinity;
-    if (Math.abs(signed) <= half) slide = 'on';
+    if (dead) slide = 'dead';
+    else if (Math.abs(signed) <= half) slide = 'on';
     else {
       const wire = tk.board.parts.find((p) => p.fixed && getDef(p.partId)?.kind === 'SLIDEWIRE'), probe = spec.kind === 'level' ? spec.probe : '';
       if (wire && probe) {
@@ -173,7 +176,7 @@ export function scopeTarget(s: NodeState, tk: TicketState, def: LevelDef, sol: S
       // on the connector's pad OR on any other pad of the same node (a clip on R3's top leg is on A as much as a clip on the brass pad)
       clipped: !!c && (() => { const conn = liveRig(tk, def).conn, want = conn.nodeOfPad(c.pad); return tk.board.probes.some((p) => p.ch === 1 && ((p.pad[0] === c.pad[0] && p.pad[1] === c.pad[1]) || (want >= 0 && conn.nodeOfPad(p.pad) === want))); })(),
     },
-    gauge: { value, signed, slide, signedText: signed === null ? '' : `${signed > 0 ? '+' : signed < 0 ? '-' : ''}${sig(Math.abs(signed), 4)} ${u.display}`, slideText: slide === null ? '' : say(slide === 'right' ? 'gauge.slide.right' : slide === 'left' ? 'gauge.slide.left' : 'gauge.slide.on'), unit: u.display, text: value === null ? '' : `${value} ${u.display}`, inBand: value !== null && value >= band.lo && value <= band.hi, v: value === null ? [] : Array.from({ length: 256 }, () => value) },
+    gauge: { value, signed, slide, signedText: signed === null ? '' : `${signed > 0 ? '+' : signed < 0 ? '-' : ''}${sig(Math.abs(signed), 4)} ${u.display}`, slideText: slide === null ? '' : say(slide === 'right' ? 'gauge.slide.right' : slide === 'left' ? 'gauge.slide.left' : slide === 'dead' ? 'gauge.slide.dead' : 'gauge.slide.on'), dead: !!dead, deadText: dead ? say('bench.bridge.dead', { how: say(dead.scan.kind === 'zero' ? 'bridge.dead.zero' : dead.scan.kind === 'pos' ? 'bridge.dead.pos' : 'bridge.dead.neg'), why: dead.fault || say('bridge.fault.generic') }) : '', unit: u.display, text: value === null ? '' : `${value} ${u.display}`, inBand: value !== null && value >= band.lo && value <= band.hi, v: value === null ? [] : Array.from({ length: 256 }, () => value) },
     lock, lockSpecs,
   };
 }
@@ -201,6 +204,8 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
           };
         }),
         wires: b.wires.map((w) => ({ wid: w.wid, path: w.path, fixed: w.fixed === true })),
+        // where wires pass over each other (hop-overs, NOT joined) and where two or more ends are soldered together (a dot): the drawing shows exactly what is connected
+        ...boardJunctions(b),
         // engraved on the board: the bridge's terminals (the slide wire's A, J, B and the junction C where the plug meets the cable) and the clear slots the parts go in
         marks: b.parts.flatMap((p) => {
           const d = getDef(p.partId)!, pads = pinPads(p, d);

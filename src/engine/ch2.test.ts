@@ -138,7 +138,7 @@ describe('2-2 Cable Fault', () => {
     const lo = ref(); ok(lo, 'predict', 'dist', 74.4); const a = bench(lo); expect(a.pass).toBe(true); expect(a.metrics.accuracy).toBe(8000); expect(a.stars).toBe(1);   // accuracy par is 3000 ppm
     const hi = ref(); ok(hi, 'predict', 'dist', 76); expect(bench(hi).pass).toBe(false);
     const none = open('2-2', ['1-4', '2-1']); runRef(none, '2-2'); const st2 = st(none).ticket!; delete st2.predictions.dist; expect(bench(none).failures.map((f: any) => f.text).join(' ')).toMatch(/Write your answer on the slip/);
-    expect(q(none, 'ticketCard').answers).toEqual([{ id: 'dist', name: 'Your distance to the fault within 1 % of the true one', unit: 'm', entered: null }]);
+    expect(q(none, 'ticketCard').answers).toEqual([{ id: 'dist', name: 'Your distance to the fault within 1 % of the true one', unit: 'm', entered: null, side: 'left', formula: 'X = R (100 - l) / l' }]);
   });
   it('another plug works too, as long as the null is found: R 10 ohm balances at 57.14 cm; R 1 ohm at 11.76 cm (near the end, the same null is 5x touchier in distance)', () => {
     for (const [r, l] of [[10, 571.4], [20, 727.3], [1, 117.6], [2, 210.5]] as [number, number][]) {

@@ -7,6 +7,7 @@ import { runTicketBench } from '../sim/bench/ticket';
 import { makeProbe } from '../sim/mna/tran';
 import { solveOp } from '../sim/mna/op';
 import { sig } from '../sim/explain';
+import { say } from './text';
 import { BENCH_FAILURE_CAP, SCOPE_POINTS_CAP, LIVE_HIST_CAP, LIVE_X_CAP, type BenchResult, type NodeState, type TicketState } from './state';
 import type { LiveCfg } from '../sim/live';
 import { newScope } from './state';
@@ -16,6 +17,7 @@ import { boardMetrics } from './metrics';
 import { refBoard } from './tickets';
 import { getDef } from './board';
 import type { HintExpr } from '../data/levels/types';
+import { bridgeFault, rSide, refs, scanBridge, type BridgeScan } from './bridge';
 
 /** Names of the specs every ticket has implicitly (the always-on ratings check). */
 const IMPLICIT_SPEC: Record<string, string> = { ratings: 'bench.spec.ratings' };
@@ -64,6 +66,14 @@ export function benchTicket(s: NodeState, def: LevelDef): { result: BenchResult;
   const metrics = boardMetrics(tk.board, REGIONS.get(s.region), out.supplyPowerW * 1e6);
   const failuresAll = [...out.failures], rowsAll = [...out.rows];
   let pass = out.pass;
+  // a null-detector ticket needs a REAL null: a bridge whose galvanometer never changes sign (cell not across A-B, C not joined to the jockey) can read about zero by accident
+  const sc = def.nullCheck ? bridgeScan(tk, def) : null, dead = !!sc && !sc.scan.hasNull;
+  if (sc && dead) {
+    pass = false;
+    const how = sc.scan.kind === 'zero' ? say('bridge.dead.zero') : say(sc.scan.kind === 'pos' ? 'bridge.dead.pos' : 'bridge.dead.neg');
+    failuresAll.unshift({ key: 'bench.bridge.dead', vars: { how, why: sc.fault || say('bridge.fault.generic') } });
+    const row = rowsAll.find((r) => r.id === def.gauge?.spec); if (row) { row.pass = false; row.margin = Math.min(row.margin, 0); }
+  }
   // numbers the player works out and enters (2-2: the distance to the fault), checked against the hidden truth; reported only once the circuit itself is right
   for (const a of def.answers ?? []) {
     const entered = tk.predictions[a.id], hv = tk.hidden[a.hidden] ?? def.hidden?.find((h) => h.id === a.hidden)?.learner ?? 0, truth = hv / a.per;
@@ -71,10 +81,11 @@ export function benchTicket(s: NodeState, def: LevelDef): { result: BenchResult;
     const rel = Math.abs(entered - truth) / Math.max(Math.abs(truth), 1e-12), good = rel <= a.tol;
     metrics.accuracy = Math.round(rel * 1e6);
     rowsAll.push({ id: a.id, pass: good, margin: sig(a.tol - rel, 4) });
-    if (!good && out.pass) {
+    if (!good && out.pass && !dead) {
       const rbox = tk.board.parts.filter((p) => p.partId === 'res-box' && p.value !== null).reduce((acc, p) => acc + (p.value ?? 0), 0);
       const wire = tk.board.parts.find((p) => p.uid === a.wire), d = wire ? getDef(wire.partId) : undefined, lCm = (wire?.pos ?? 0.5) * (d?.model.lengthM ?? 1) * 100;
-      failuresAll.push({ key: 'bench.answer.fail', vars: { id: a.id, entered: String(sig(entered, 6)), unit: a.unit, tol: sig(a.tol * 100, 3), R: sig(rbox, 4), l: sig(lCm, 4), ratio: lCm > 0 && lCm < 100 ? sig((100 - lCm) / lCm, 4) : 0 } });
+      const side = rSide(tk.board, def, (uid, pin) => liveRig(tk, def).conn.pinNodes[uid]?.[pin] ?? -1), ok = lCm > 0 && lCm < 100;
+      failuresAll.push({ key: 'bench.answer.fail', vars: { id: a.id, entered: String(sig(entered, 6)), unit: a.unit, tol: sig(a.tol * 100, 3), R: sig(rbox, 4), l: sig(lCm, 4), ratio: ok ? sig(side === 'left' ? (100 - lCm) / lCm : lCm / (100 - lCm), 4) : 0, formula: side === 'left' ? 'R × (100 − l) / l' : 'R × l / (100 − l)', side: say(side === 'left' ? 'bridge.side.left' : 'bridge.side.right') } });
       pass = false;
     }
   }
@@ -114,6 +125,22 @@ export function probeOn(board: Board, def: LevelDef, tk: TicketState | null): (p
     if (x === undefined) { const op = solveOp(ckt); x = op.ok ? op.x : null; }
     return x ? makeProbe(ckt, r)(x, new Array(ckt.stateSize).fill(0)) : null;
   };
+}
+
+/** The bridge scan of a null-detector ticket on the player's board (cached on the board's wiring: the jockey position is not part of the key), with the wiring fault in words. */
+let scanCache: { key: string; out: { scan: BridgeScan; fault: string } | null } | null = null;
+export function bridgeScan(tk: TicketState, def: LevelDef): { scan: BridgeScan; fault: string } | null {
+  if (!def.nullCheck) return null;
+  const key = hashOf({ id: def.id, p: tk.board.parts.map((p) => ({ ...p, pos: undefined })), w: tk.board.wires, v: tk.instruments.supply.v, h: tk.hidden });
+  if (scanCache && scanCache.key === key) return scanCache.out;
+  const probe = def.bench.specs.find((x) => x.id === def.gauge?.spec);
+  let out: { scan: BridgeScan; fault: string } | null = null;
+  if (probe && probe.kind === 'level') {
+    const scan = scanBridge(tk.board, def, (b) => probeOn(b, def, tk)(probe.probe));
+    if (scan) { const r = refs(tk.board, liveRig(tk, def).conn); out = { scan, fault: bridgeFault(def, r.nodeOf, r.legsOn) }; }
+  }
+  scanCache = { key, out };
+  return out;
 }
 export const partCount = (board: Board, partId: string): number => board.parts.filter((p) => p.partId === partId).length;
 export const defOfPart = (id: string): ReturnType<typeof findPart> => findPart(id);

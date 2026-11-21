@@ -207,6 +207,9 @@ export interface LevelDef {
   /** i18n key of the refusal when `measureFirst` is unmet (default 'bench.measureFirst', the 1-4 text). */
   measureFirstKey?: string;
   gauge?: GaugeDef;
+  /** A null-detector ticket (2-2, 2-4): the slide wire `wire` (fixed part uid) is swept end to end on a copy of the board; a bench pass needs a real sign change of the gauge probe
+   * (a dead bridge reads about zero everywhere and must not pass). `faults` are tried in order for the diagnosis: `need` are coach atoms `link:a~b` / `shared:ref`; the first unmet one names the fault (key + `where`). */
+  nullCheck?: { wire: string; faults: { key: string; need: string[] }[] };
   /** Exam-bridge ticket (printed exam card, predict then probe). */
   eb?: boolean;
   /** The exam figure drawn on the problem slip (exam-bridge tickets). */
