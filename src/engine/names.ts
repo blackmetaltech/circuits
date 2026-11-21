@@ -29,6 +29,9 @@ function plainName(p: PlacedPart): string {
   if (p.partId === 'rheostat' && p.value !== null) return say('name.rheostat', { value: si(p.value, 'Ω') });
   if (p.partId === 'trimmer' && p.value !== null) return say('name.trimmer', { value: si(p.value, 'Ω') });
   if (p.partId === 'galvanometer') return say('name.galvo');
+  if (d.kind === 'RELAY') return say('name.relay');
+  if (d.kind === 'CE' && p.value !== null) return say('name.cap.el', { value: si(p.value, 'F') });
+  if (d.kind === 'C' && p.value !== null) return say('name.cap', { value: si(p.value, 'F') });
   if (d.kind === 'R' && p.value !== null) {
     const v = d.variants.find((x) => x.id === p.variant) ?? d.variants[0];
     const watts = p.variant !== 'ideal' && v?.ratings.P ? ` ${wattText(v.ratings.P)}` : '';

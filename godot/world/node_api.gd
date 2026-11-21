@@ -31,12 +31,13 @@ const FOOTPRINTS := {
 }
 ## partId prefix -> [kind, footprint]. First match wins. Only used when the board JSON lacks `kind` / `pins`.
 const PART_TABLE := [
+	["cap-charged", "C", "block2"], ["cap-ideal", "C", "axial2"],
 	["res-", "R", "axial2"], ["pot-", "POT", "pot3"], ["led-", "LED", "radial2"], ["cap-el", "CE", "radial2"], ["cap-", "C", "axial2"],
 	["1n", "D", "axial2"], ["bzx", "D", "axial2"], ["bridge", "BRIDGE", ""], ["xfmr", "XFMR", "xfmr4"], ["2n3906", "PNP", "to92"],
 	["2n", "NPN", "to92"], ["bc", "NPN", "to92"], ["tip", "NPN", "to220"], ["bat-", "BAT", "block2"], ["sw-", "SW", ""], ["fuse", "FUSE", "block2"],
 	["inst-probe", "PROBE", ""],
 	["rheostat", "R", "axial2"], ["trimmer", "R", "axial2"], ["galvanometer", "GALVO", "block2"], ["slidewire", "SLIDE", "slide3"], ["blackbox", "BOXED", "block2"],
-	["adc-in", "LOAD", "block2"], ["cable-loop", "LOAD", "block2"], ["cell-", "BAT", "block2"],
+	["adc-in", "LOAD", "block2"], ["cable-loop", "LOAD", "block2"], ["pullup-", "LOAD", "block2"], ["logic-in", "LOAD", "block2"], ["relay-", "RELAY", "relay5"], ["cell-", "BAT", "block2"],
 ]
 const BAT_LABEL := {"bat-pp3": "9 V", "bat-pp3-tired": "9 V", "bat-aa": "1.5 V", "bat-cr2032": "3 V"}
 

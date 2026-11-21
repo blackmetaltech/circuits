@@ -6,7 +6,7 @@ export interface Signal { t: number[]; y: number[] }
 
 export type MetricName =
   | 'mean' | 'rms' | 'vpp' | 'min' | 'max' | 'peak' | 'freq' | 'duty' | 'riseTime' | 'fallTime' | 'overshoot'
-  | 'settlingTime' | 'crossingTime' | 'crossingCount' | 'thd' | 'harmonic';
+  | 'settlingTime' | 'crossingTime' | 'crossingCount' | 'thd' | 'harmonic' | 'energy';
 
 export interface MeasureParams {
   /** Crossing level (default: mid-level (min+max)/2). */
@@ -121,6 +121,8 @@ export function measure(name: MetricName, s: Signal, p: MeasureParams = {}, ctx:
   const { lo, hi } = extent(s.y), mid = (lo + hi) / 2, L = span(s);
   switch (name) {
     case 'mean': return integral(s, (a, b) => (a + b) / 2) / L;
+    /** The integral of the signal over the window (a power probe gives the energy in joules: the heat in a switch, 3-4). */
+    case 'energy': return integral(s, (a, b) => (a + b) / 2);
     case 'rms': return Math.sqrt(integral(s, (a, b) => (a * a + a * b + b * b) / 3) / L);
     case 'vpp': return hi - lo;
     case 'min': return lo;

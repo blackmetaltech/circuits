@@ -164,4 +164,22 @@ export const rheostat: PartDef = {
   verified: true, scope: 'campaign', simplifications: [],
 };
 
-export const MISC: PartDef[] = [relay, fuse, ntc, heater, speaker, piezo, fan, slidewire, galvanometer, adcIn, cableLoop, cell2v, cellTest, blackbox, slidewireM, resBox, trimmer, rheostat];
+/** Ticket 3-2: the 10 kohm pull-up of the arcade button's contact line, soldered between the 5 V rail and the SW pad. */
+export const pullup: PartDef = {
+  id: 'pullup-10k', kind: 'LOAD', nameKey: 'part.pullup-10k.name', footprint: 'block2', pins: ['1', '2'],
+  variants: [variant('10k', { P: 0.25 }, FIXED_T)],
+  model: { R: 10e3 },
+  source: { doc: FIX_DOC('the 10 kohm pull-up of the arcade button (DESIGN §2.8 ticket 3-2)'), gameFixture: true, note: FIX('10 kohm to the 5 V rail.') + TAU_R },
+  verified: false, scope: 'sandbox', simplifications: ['part.simplify.pullup-fixture'],
+};
+
+/** Ticket 3-2: the logic input the filtered signal feeds, 1 Mohm to ground. */
+export const logicIn: PartDef = {
+  id: 'logic-in', kind: 'LOAD', nameKey: 'part.logic-in.name', footprint: 'block2', pins: ['1', '2'],
+  variants: [variant('1M', { P: 0.25 }, FIXED_T)],
+  model: { R: 1e6 },
+  source: { doc: FIX_DOC('the 1 Mohm logic input of the arcade board (DESIGN §2.8 ticket 3-2)'), gameFixture: true, note: FIX('1 Mohm input resistance of the logic input.') + TAU_R },
+  verified: false, scope: 'sandbox', simplifications: ['part.simplify.pullup-fixture'],
+};
+
+export const MISC: PartDef[] = [relay, fuse, ntc, heater, speaker, piezo, fan, slidewire, galvanometer, adcIn, cableLoop, cell2v, cellTest, blackbox, slidewireM, resBox, trimmer, rheostat, pullup, logicIn];

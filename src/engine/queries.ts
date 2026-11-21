@@ -78,6 +78,23 @@ function explainCtx(tk: TicketState | null, def: LevelDef | undefined, prior = 0
       else if (r1 === 0 && r2 > 0 && !touches(nIn)) ctx.dividerFault = { kind: 'notop', r1: 0, rLoad: load, vin: vSupply };
     }
   }
+  // chapter 3: the player's RC filter (the resistor and the capacitor between them), the scope probe's load, and the coil with its rail
+  if (def.explain === 'rc' || def.explain === 'debounce') {
+    const caps = tk.board.parts.filter((p) => { const k = getDef(p.partId)?.kind; return (k === 'C' || k === 'CE') && p.value !== null; });
+    const res = resistors.filter((p) => !p.fixed);
+    const crossSpec = def.bench.specs.find((x) => x.kind === 'metric' && x.metric === 'crossingTime');
+    const rr = res.reduce((a, p) => a + (p.value ?? 0), 0), cc = caps.reduce((a, p) => a + (p.value ?? 0), 0);
+    if (crossSpec && crossSpec.kind === 'metric' && rr > 0 && cc > 0) ctx.rc = { r: rr, c: cc, rProbe: 10e6, vSrc: vSupply, level: crossSpec.params?.level ?? 0, tLo: crossSpec.lo, tHi: crossSpec.hi };
+  }
+  if (def.explain === 'coil') {
+    const relay = tk.board.parts.find((p) => getDef(p.partId)?.kind === 'RELAY');
+    if (relay) {
+      const rails = def.supplies.filter((x) => x.kind === 'bench' && x.fixed !== undefined);
+      const wired = rails.filter((x) => { const n = rig.conn.connectorNodes[x.plus]; return n !== undefined && n >= 0 && (rig.conn.nodes[n]?.pins.length ?? 0) > 0; });
+      const m = getDef(relay.partId)!.model;
+      ctx.coil = { relay: relay.uid, rCoil: m.Rcoil ?? 200, lCoil: m.Lcoil ?? 0.1, iPull: m.Ipull ?? 0.04, rSeries: resistors.filter((p) => !p.fixed).reduce((a, p) => a + (p.value ?? 0), 0), vRail: wired.length > 0 ? Math.max(...wired.map((x) => (x as { fixed?: number }).fixed ?? 0)) : 0 };
+    }
+  }
   for (const p of tk.board.parts) {
     const d = getDef(p.partId); if (!d) continue;
     kinds[p.uid] = d.kind;
@@ -137,7 +154,7 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
       return {
         id: def.id, chapter: def.chapter, title: t(def.titleKey), brief: t(def.briefKey, { customer, mentor, stall, lane }), customerId: def.customer, customer, mentor, stall, lane,
         examHidden, sources,
-        specs: def.bench.specs.filter((x) => def.bench.names[x.id] && !(examHidden && x.kind === 'level')).map((x) => ({ id: x.id, name: t(def.bench.names[x.id]!) })),
+        specs: def.bench.specs.filter((x) => def.bench.names[x.id] && !(examHidden && (x.kind === 'level' || x.kind === 'metric'))).map((x) => ({ id: x.id, name: t(def.bench.names[x.id]!) })),
         bin: def.bin.map((b) => ({ partId: b.partId, values: allowedValues(getDef(b.partId)!, b), variants: allowedVariants(getDef(b.partId)!, b), max: b.max ?? null })),
         maxParts: def.constraints?.maxParts ?? 40, stars: def.stars, instruments: { supply: def.supplies.some((x) => x.kind === 'bench'), gen: def.supplies.some((x) => x.kind === 'gen'), scope: !!def.instruments.scope },
         hasHints: !!def.hints, hintRung: o.tk.hintRung,
@@ -255,7 +272,8 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
       const trig = set.trigger, tdata = trig.source === 2 ? sc.ch2 : sc.ch1;
       let start = Math.max(0, data.length - n), triggered = false;
       const limit = Math.max(0, tdata.length - n);
-      for (let i = 1; i <= limit; i++) {
+      if (o.def.trace) { start = 0; triggered = true; }   // a single sweep always starts at power-on
+      else for (let i = 1; i <= limit; i++) {
         const a = tdata[i - 1]!, b = tdata[i]!;
         if (trig.edge === 'rise' ? a < trig.level && b >= trig.level : a > trig.level && b <= trig.level) { start = i; triggered = true; break; }
       }
@@ -301,7 +319,7 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         debrief: o.def.figure && b.predictions.length > 0 ? buildDebrief(o.def.figure, b.predictions.map((p) => ({
           id: p.id, name: o.def.bench.names[p.id] ? t(o.def.bench.names[p.id]!) : p.id, unit: ((sp) => (sp?.kind === 'predict' && sp.unit ? sp.unit : p.id === 'pie2' || (sp?.kind === 'predict' && sp.of.probe.trim().toLowerCase().startsWith('i(')) ? 'A' : 'V'))(o.def.bench.specs.find((x) => x.id === p.id)),
           entered: p.entered, truth: sig(p.truth, 5), gapPct: p.truth === 0 ? 0 : sig(((p.entered - p.truth) / Math.abs(p.truth)) * 100, 3), grade: p.grade, gradeText: t(PREDICT_GRADE[p.grade] ?? 'bench.predict.miss'),
-        })), b.stars, b.pass) : null,
+        })), b.stars, b.pass, b.measured) : null,
         specs: b.specs.map((x) => ({ ...x, name: t(x.key) })),
         failures: b.failures.map((f) => ({ key: f.key, vars: f.vars, text: explainedText(f, o.tk, o.def, Math.max(0, (s.progress.tickets[o.tk.id]?.attempts ?? 1) - 1) + s.progress.failureLog.filter((x) => x.ticket === o.tk.id).length - b.smoked.length) })).filter((f, i, all) => all.findIndex((g) => g.text === f.text) === i),
       };

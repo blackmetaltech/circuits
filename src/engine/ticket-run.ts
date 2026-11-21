@@ -11,6 +11,7 @@ import { BENCH_FAILURE_CAP, SCOPE_POINTS_CAP, LIVE_HIST_CAP, LIVE_X_CAP, type Be
 import type { LiveCfg } from '../sim/live';
 import { newScope } from './state';
 import { REGIONS } from '../regions';
+import { hashOf } from '@core/kit/hash';
 import { boardMetrics } from './metrics';
 import { refBoard } from './tickets';
 import { getDef } from './board';
@@ -24,16 +25,27 @@ export const hiddenOverrides = (def: LevelDef, tk: TicketState): RigOverride[] =
 
 /** The live circuit: board + bench sources + scope probes + DMM + hidden parameters + smoked parts. */
 export function liveRig(tk: TicketState, def: LevelDef): Rig {
-  return buildRig({
+  const rig = buildRig({
     board: tk.board, getDef, supplies: def.supplies, supply: tk.instruments.supply, gen: tk.instruments.gen,
     overrides: hiddenOverrides(def, tk), smoked: tk.live.smoked, ambientC: def.bench.ambientC, instruments: true,
   });
+  // a built-in clamp (3-3's coil current): CH1 shows the trace's own probe whether or not the clip is on the board
+  if (def.trace?.mode === 'auto' && rig.circuit) { const r = rig.resolve(def.trace.probe); if (r !== null) rig.scope = [r, rig.scope[1]]; }
+  return rig;
 }
 
-export const liveCfg = (tk: TicketState, def: LevelDef): LiveCfg => ({
-  frameSim: def.live.frameSim, h: def.live.h, thermalSpeed: def.live.thermalSpeed, ambientC: def.bench.ambientC,
-  xCap: LIVE_X_CAP, histCap: LIVE_HIST_CAP, scopeCap: SCOPE_POINTS_CAP, timePerDiv: tk.instruments.scope.timePerDiv ?? newScope().timePerDiv,
-});
+/** A single-sweep ticket paces itself by its screen: one sweep is SWEEP_FRAMES frames of play (about three seconds), whatever the time knob says. */
+export const SWEEP_FRAMES = 100, SWEEP_STEPS = 4;
+export function liveCfg(tk: TicketState, def: LevelDef): LiveCfg {
+  const tpd = tk.instruments.scope.timePerDiv ?? newScope().timePerDiv, oneShot = !!def.trace;
+  const frameSim = oneShot ? (10 * tpd) / SWEEP_FRAMES : def.live.frameSim;
+  return {
+    frameSim, h: oneShot ? frameSim / SWEEP_STEPS : def.live.h, thermalSpeed: def.live.thermalSpeed, ambientC: def.bench.ambientC,
+    xCap: LIVE_X_CAP, histCap: LIVE_HIST_CAP, scopeCap: SCOPE_POINTS_CAP, timePerDiv: tpd, ic: def.bench.ic === 'op' ? 'op' : 'zero', oneShot,
+  };
+}
+/** What a single sweep depends on: change any of it and the trace starts again from power-on. */
+export const sweepKey = (tk: TicketState): string => hashOf({ p: tk.board.parts, w: tk.board.wires, pr: tk.board.probes, t: tk.instruments.scope.timePerDiv, v: tk.instruments.supply.v });
 
 /** Run the pure bench for the open ticket (all conditions) and fold in cost / parts / power / area and the stars. */
 /** A rating violation or smoke from the bench is shown as the explainable cause with the player's own numbers when the ratings check has one. */
@@ -75,7 +87,7 @@ export function benchTicket(s: NodeState, def: LevelDef): { result: BenchResult;
   const result: BenchResult = {
     pass, metrics,
     specs: rowsAll.map((r) => ({ id: r.id, key: def.bench.names[r.id] ?? IMPLICIT_SPEC[r.id] ?? 'bench.spec.other', pass: r.pass, margin: Number.isFinite(r.margin) ? sig(r.margin, 4) : 0 })),
-    failures: failuresAll.map((f) => richer(f, out.causes)).slice(0, BENCH_FAILURE_CAP).map((f) => ({ key: f.key, vars: { ...f.vars } })),
+    failures: failuresAll.map((f) => richer(f, out.causes)).sort((a, b) => Number(b.key.startsWith('smoke.')) - Number(a.key.startsWith('smoke.'))).slice(0, BENCH_FAILURE_CAP).map((f) => ({ key: f.key, vars: { ...f.vars } })),
     stars, smoked: out.smoked,
     predictions: out.predictions.map((p) => ({ id: p.id, entered: p.entered, truth: p.truth, grade: p.grade })),
     badSamples: out.badSamples, measured: out.values,

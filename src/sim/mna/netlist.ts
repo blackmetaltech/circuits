@@ -179,6 +179,16 @@ const el = (x: ExpandCtx, kind: string, nodes: number[], p: Params, suffix = '')
 const resistance = (x: ExpandCtx): number => x.part.value ?? x.def.model.R;
 
 const resistor: Expander = (x) => [el(x, 'R', [x.nodes[0], x.nodes[1]], { r: resistance(x) })];
+/** C / CE: pins [+, -] (or 1, 2) -> C [a, b], value from the placed part (the catalogue's `c` for a fixed fixture), optional initial voltage `ic` (a pre-charged fixture). A model `rbleed` adds the
+ *  textbook parallel bleeder (DESIGN §3.4: the ideal capacitors of the exam bins carry 1 Gohm so a node between two of them still has a DC path). */
+const capacitor: Expander = (x) => {
+  const m = modelOf(x), p: Params = { c: x.part.value ?? m.c };
+  if (m.ic !== undefined) p.ic = m.ic;
+  const out = [el(x, 'C', [x.nodes[0], x.nodes[1]], p)];
+  if (m.rbleed !== undefined) out.push(el(x, 'R', [x.nodes[0], x.nodes[1]], { r: m.rbleed }, 'bleed'));
+  return out;
+};
+const inductor: Expander = (x) => [el(x, 'L', [x.nodes[0], x.nodes[1]], { l: x.part.value ?? x.def.model.l ?? x.def.model.L })];
 
 /** Diode family (D, LED, Z, SCHOTTKY): pins [A, K]; def.model keys Is / N / Rs / BV / Ibv / Nbv (any case) → device params (lower case);
  *  model.ideal ≠ 0 selects the textbook constant-0.7 V diode (optional model.vf, model.ron). */
@@ -265,7 +275,7 @@ export const EXPANDERS: Readonly<Partial<Record<PartKind, Expander>>> = Object.f
   NPN: bjt(1), PNP: bjt(-1), DARLINGTON: darlington, NMOS: mosfet,
   OPAMP: opamp, CMP: comparator, '555': timer555, REG: regulator, RELAY: relay, FUSE: fuse, NTC: ntc, SLIDEWIRE: slidewire,
   XFMR: transformer, D: diode, LED: diode, Z: diode, SCHOTTKY: diode,
-  R: resistor, HEATER: resistor, LOAD: resistor, SPEAKER: resistor, MOTOR: resistor,
+  C: capacitor, CE: capacitor, L: inductor, R: resistor, HEATER: resistor, LOAD: resistor, SPEAKER: resistor, MOTOR: resistor,
   POT: (x) => {
     // wiper α ∈ [alphaMin, alphaMax] when the part model gives them (0.5 % end resistance: a 0 Ω exploit stops here, DESIGN §3.7)
     const R = resistance(x), m = modelOf(x), a = Math.min(m.alphamax ?? 1, Math.max(m.alphamin ?? 0, x.part.pos ?? 0.5));

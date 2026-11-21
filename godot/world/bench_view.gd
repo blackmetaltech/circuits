@@ -56,6 +56,11 @@ var _phase: Dictionary = {}     ## id -> dot phase (pad units), accumulated so a
 var _smoke: Array = []          ## particles {pos, vel, age, life, r, seed}
 var _emit: Dictionary = {}      ## uid -> emit accumulator
 var _burst: Dictionary = {}     ## uid -> true once its pop has fired
+var _vent_t: Dictionary = {}    ## uid -> seconds since a capacitor's vent popped (the puff settles)
+var _click_t: Dictionary = {}   ## uid -> seconds since a relay's armature last changed state (the click)
+var _relay_was: Dictionary = {} ## uid -> the armature's last state
+var _bounce_t := 0.0            ## seconds since a bench contact last changed (the arcade button chatters for a moment)
+var _contact_was: Dictionary = {}
 var _layout_key := ""
 var _parts_dirty := true
 var _power_env := false
@@ -197,6 +202,19 @@ func _process(dt: float) -> void:
 		for id in m.part_i: _advance("p:" + str(id), float(m.part_i[id]), m, dt, str(id))
 		has_ac = not m.ac_amp.is_empty()
 	_smoke_step(dt, m)
+	for pt in m.parts:   # the small clocks of the chapter-3 parts: a vent's puff, a relay's click, a contact's chatter
+		var uid := str(pt.uid)
+		if m.smoked.has(uid): _vent_t[uid] = float(_vent_t.get(uid, 0.0)) + dt
+		else: _vent_t.erase(uid)
+		var rl: Dictionary = m.get("relay", {}).get(uid, {})
+		if not rl.is_empty():
+			var op := bool(rl.get("operated", false))
+			if _relay_was.has(uid) and _relay_was[uid] != op: _click_t[uid] = 0.0
+			_relay_was[uid] = op; _click_t[uid] = float(_click_t.get(uid, 9.0)) + dt
+	_bounce_t += dt
+	for ct in m.get("contacts", []):
+		if _contact_was.has(str(ct.id)) and _contact_was[str(ct.id)] != bool(ct.closed): _bounce_t = 0.0
+		_contact_was[str(ct.id)] = bool(ct.closed)
 	if _parts_dirty or has_ac:
 		_parts_dirty = false; _parts_layer.queue_redraw()
 	_glow_layer.queue_redraw(); _fx_layer.queue_redraw()
@@ -444,8 +462,12 @@ func _draw_parts(ci: Control) -> void:
 	for pt in m.parts:
 		var i: float = absf(float(m.part_i.get(pt.uid, 0.0))) if live else 0.0
 		var st := {"lit": _led_lit(pt.uid, i, m) if pt.kind == "LED" else 0.0, "smoked": m.smoked.has(pt.uid),
-			"hot": _heat_k(pt.uid, m) if live else 0.0, "needle": float(m.get("galvo", {}).get(pt.uid, 0.0)) if live else 0.0}
+			"hot": _heat_k(pt.uid, m) if live else 0.0, "needle": float(m.get("galvo", {}).get(pt.uid, 0.0)) if live else 0.0,
+			"bulge": float(m.get("cap_bulge", {}).get(pt.uid, 0.0)) if live else 0.0, "vent_t": float(_vent_t.get(pt.uid, 0.0)), "level": float(m.get("cap_level", {}).get(pt.uid, 1.0)) if live else 1.0,
+			"operated": bool(m.get("relay", {}).get(pt.uid, {}).get("operated", false)) if live else false, "click_t": float(_click_t.get(pt.uid, 9.0)),
+			"coil": clampf(float(m.get("relay", {}).get(pt.uid, {}).get("mA", 0.0)) / 60.0, 0.0, 1.5) if live else 0.0}
 		PartArt.draw(ci, pt, _px(Vector2(pt.x, pt.y)), p, st)
+	_draw_contacts(ci, m)
 	for pr in m.probes: _probe(ci, pr)
 	# labels and rating bars
 	var fs := maxi(int(clampf(p * 0.42, 13.0, 24.0)), SS.min_font)
@@ -607,6 +629,27 @@ func _draw_labels(ci: Control) -> void:
 		else: pos = Vector2(b.get_center().x - wtx * 0.5, b.position.y - 4.0)
 		PartArt.rrect(ci, Rect2(pos + Vector2(-4.0, -fs - 1.0), Vector2(wtx + 8.0, fs + 7.0)), 5.0, Color(0.03, 0.035, 0.05, 0.72))
 		_txt(ci, s, pos, fs, Color(0.96, 0.95, 0.88))
+
+## The bench-driven contacts the engine reports (liveFrame().contacts): ticket 3-2's arcade button stands on the board between the SW pad and GND (its dome goes down with the engine's contact), ticket 3-4's knife
+## switch lies between the B and D pads. Pure decoration of what the engine says is closed.
+func _draw_contacts(ci: CanvasItem, m: Dictionary) -> void:
+	for ct in m.get("contacts", []):
+		var pa := Vector2(-1, -1); var pb := Vector2(-1, -1)
+		for c in m.connectors:
+			if str(c.id) == str(ct.a): pa = c.pad
+			if str(c.id) == str(ct.b): pb = c.pad
+		if pa.x < 0 or pb.x < 0: continue
+		var closed := bool(ct.closed)
+		if str(ct.id) == "btn":
+			var cen := Vector2(pa.x + 6.0, pa.y + 4.0)   # the button stands below and to the right of the SW pad, its leads run to the SW pad and to GND
+			var cable := Color("#1a1b1f"); var w := p * 0.2
+			var l1 := PackedVector2Array([_px(pa), _px(Vector2(pa.x, cen.y)), _px(cen + Vector2(-1.2, 0.0))])
+			var l2 := PackedVector2Array([_px(cen + Vector2(1.2, 0.0)), _px(Vector2(cen.x + 3.0, cen.y)), _px(Vector2(cen.x + 3.0, pb.y)), _px(pb)])
+			for l in [l1, l2]:
+				ci.draw_polyline(l, Color(0, 0, 0, 0.35), w * 1.3, true); ci.draw_polyline(l, cable, w, true); ci.draw_polyline(l, Color(1, 1, 1, 0.12), w * 0.3, true)
+			PartArt3.arcade_button(ci, _px(cen), p, closed, clampf(1.0 - _bounce_t / 0.35, 0.0, 1.0) if closed else 0.0)
+		else:
+			PartArt3.knife_switch(ci, _px(pa), _px(pb), p, closed)
 
 ## The engine's engraved board marks: the bridge terminals (A, B, J on the slide wire, C at the junction) as small brass tags, and the clear slots a part goes in (dashed outline, until filled).
 func _draw_marks(ci: Control) -> void:

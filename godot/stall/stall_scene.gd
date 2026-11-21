@@ -56,13 +56,14 @@ var _mouse := Vector2(-1, -1)
 var _prev_cur := -1
 var _smoke_mood_until := 0.0
 var _lock_seq := -1.0
+var _bubble_passed := false
 var _next_rect := Rect2()
 var _ticket_ids: Array = ["1-1", "1-2", "1-3", "1-4", "1-5"]
 var _flow_log: Array = []
 var hover_wire := ""                 ## wid of the wire under the pointer (highlighted; right-click removes it)
 var map_chapter := 1                 ## the chapter whose notebook page the map shows
 const CONN_NAME := {"VP": "battery + (V+)", "GND": "GND", "IN": "IN", "OUT": "OUT", "BOX": "BOX terminal"}
-const CODEX_AT := {"1-1": 0, "1-2": 1, "1-3": 3, "1-4": 4, "1-5": 6, "2-1": 9, "2-2": 11, "2-3": 10, "2-4": 13}   ## the notebook opens on the page that belongs to the ticket
+const CODEX_AT := {"1-1": 0, "1-2": 1, "1-3": 3, "1-4": 4, "1-5": 6, "2-1": 9, "2-2": 11, "2-3": 10, "2-4": 13, "3-1": 16, "3-2": 20, "3-3": 21, "3-4": 15}   ## the notebook opens on the page that belongs to the ticket
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -182,7 +183,7 @@ func _refresh_pages() -> void:
 		var pg: Dictionary = backend.progress(map_chapter)
 		pages.tickets = pg.tickets; pages.wallet = int(pg.wallet); pages.wallet_text = str(pg.wallet_text)
 		pages.map_chapter = map_chapter; pages.map_title = str(pg.title); pages.map_blurb = str(pg.blurb)
-		pages.chapter_open = [true, _chapter_unlocked(2)]
+		pages.chapter_open = [true, _chapter_unlocked(2), _chapter_unlocked(3)]
 		for tk in pg.tickets: done[str(tk.id)] = bool(tk.done)
 		pages.coach_ticket = backend.ticket; return
 	var prev_done := true
@@ -489,6 +490,7 @@ func _draw() -> void:   # the bench itself: static, redrawn on resize only
 ## The line under the board; keys are in [brackets] and drawn as key caps. Tickets with a slide wire add what the wire's parts do.
 func _hint_text() -> String:
 	var base := "drag a part in  ·  drag leg to leg to wire  ·  right-click removes  ·  [Ctrl+Z] undoes  ·  [R] turns"
+	if backend != null and backend.ENGINE and scope.is_trace(): return base + "  ·  [,] [.] or click the scope's TIME knob"
 	if backend != null and backend.ENGINE and not backend.slide_part().is_empty(): return "drag from A, B, J to wire  ·  drag the jockey to slide  ·  [Ctrl+Z] undoes"
 	return base
 
@@ -677,6 +679,12 @@ func _sync_views(dt: float) -> void:
 		if _lock_seq == 0.0: scope.flash_lock(); sfx.play("chime")
 		_lock_seq += dt
 		if _lock_seq > 0.55: _lock_seq = -1.0; _finish_lock()
+	# the customer's line follows the passed state: the ask until the bench passes, the thanks (quoting the measured value) after it
+	if backend.ENGINE and backend.passed != _bubble_passed and not bt.is_empty():
+		_bubble_passed = backend.passed
+		if phase == "bench":
+			top.bubble = (str(backend.last_result.get("thanks", "")) if str(backend.last_result.get("thanks", "")) != "" else str(bt.thanks)) if backend.passed else str(bt.ask)
+			bubble_until = t + (14.0 if backend.passed else 6.0)
 	# bubble
 	top.bubble_alpha = move_toward(top.bubble_alpha, 1.0 if (t < bubble_until and phase == "bench" and pages.mode == "" and props.exam_fig.is_empty()) else 0.0, dt * 3.0)
 	# coach slip and arrow
@@ -878,6 +886,8 @@ func _unhandled_key_input(e: InputEvent) -> void:
 		KEY_F1: pages.show_page("settings")
 		KEY_C: _on_page("toggle:cute", "")
 		KEY_TAB: if phone: scope_open = not scope_open
+		KEY_COMMA: if phase == "bench" and pages.mode == "": _scope_knob(1, -1)
+		KEY_PERIOD: if phase == "bench" and pages.mode == "": _scope_knob(1, 1)
 
 func _where(sp: Vector2) -> String:
 	if (window.gear_rect()).has_point(sp): return "gear"
@@ -951,6 +961,7 @@ func _press(sp: Vector2) -> void:
 			backend.set_dial(dmm.dial_click((sp - dmm.position) / dmm.scale.x)); sfx.play("tick"); return
 		"scope": if phone: scope_open = not scope_open; return
 		"peek": scope_open = not scope_open; return
+		"knob0", "knob1": _scope_knob(int(hover.substr(4)), 1); return
 	if hover.begins_with("probe_"):
 		var w := hover.substr(6); drag = {"kind": "probe", "which": w, "pos": sp}; backend.set_probe(w, null); probe_jack[w] = ""; return
 	if hover == "box":
@@ -1064,8 +1075,19 @@ func _release(sp: Vector2) -> void:
 			if pr is Dictionary and not pr.ok and str(pr.msg) != "": top.say(str(pr.msg))
 			elif sn.x >= 0: sfx.play("tick")
 
+## The scope's knobs of a time trace: TIME (knob 1) steps the sweep length (the engine restarts the sweep and redraws the tube), VOLTS (knob 0) the vertical scale; other knobs only turn.
+func _scope_knob(i: int, dir: int) -> void:
+	scope.turn(i, float(dir))
+	if not backend.ENGINE or not scope.is_trace(): return
+	if i == 1:
+		var r: Dictionary = backend.set_time_div(dir)
+		if not bool(r.get("ok", false)) and dir > 0: r = backend.set_time_div(-99)   # past the longest sweep, round to the shortest
+		if bool(r.get("ok", false)): sfx.play("tick"); top.say_quick("Sweep: %s per division." % ScopeView.tfmt(float(r.get("tpd", 0.0))))
+	elif i == 0: scope.volts_step(dir); sfx.play("tick")
+
 func _right(sp: Vector2) -> void:
 	if not drag.is_empty(): drag = {}; return
+	if _where(sp) == "knob1" or _where(sp) == "knob0": _scope_knob(int(_where(sp).substr(4)), -1); return
 	var pd := part_at(sp)
 	if not pd.is_empty() and not pd.fixed: backend.delete_part(str(pd.uid)); return
 	var wid := wire_at(sp)
@@ -1084,5 +1106,5 @@ func _wheel(sp: Vector2, dir: int) -> void:
 	elif h == "dial": backend.set_dial(DmmView.MODES[clampi(DmmView.MODES.find(backend.dial) + dir, 0, DmmView.MODES.size() - 1)]); sfx.play("tick")
 	elif supply.adjustable and Rect2(supply.position, supply.size * supply.scale.x).has_point(sp): _bump_supply(float(dir))
 	elif h == "board" and _slide_hit(sp) != "": _jockey_nudge(float(dir))
-	elif h.begins_with("knob"): scope.turn(int(h.substr(4)), float(dir))
+	elif h.begins_with("knob"): _scope_knob(int(h.substr(4)), dir)
 	elif drag.get("kind", "") in ["part", "move"] or h == "board": rot = (rot + (1 if dir > 0 else 3)) % 4

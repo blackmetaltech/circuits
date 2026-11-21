@@ -170,6 +170,51 @@ export function explainDividerFault(a: DividerFault & { lo: number; hi: number }
   const key = a.kind === 'floating' ? 'explain.divider.floating' : a.kind === 'nobottom' ? 'explain.divider.nobottom' : 'explain.divider.notop';
   return { key, vars: { r1: si(a.r1, 'Ω'), rLoad: si(a.rLoad, 'Ω'), vin: sig(a.vin), vOut: sig(vOut), lo: sig(a.lo), hi: sig(a.hi) } };
 }
+/** Chapter 3: what the player built as the explainers need it. `r` / `c`: the resistor and the capacitor of the RC filter (ohm, farad; 0 when absent), `rProbe`: the scope probe's resistance on the node,
+ *  `vSrc`: the supply the RC is charged from, `level`: the crossing level of the spec. */
+export interface RcCtx { r: number; c: number; rProbe: number; vSrc: number; level: number; tLo: number; tHi: number }
+/** Chapter 3 ticket 3-3: the coil, the series resistor and the rail that is wired. */
+export interface CoilCtx { rCoil: number; rSeries: number; vRail: number; lCoil: number; iPull: number; relay: string }
+
+/** The time at which a capacitor charged from vSrc through r, with a probe of rProbe on it, crosses `level`: Thevenin vth = vSrc rProbe / (r + rProbe), rth = r || rProbe; null when it never gets there. */
+export function rcCrossing(a: RcCtx): { t: number | null; vth: number; rth: number; tauEff: number } {
+  const rth = (a.r * a.rProbe) / (a.r + a.rProbe), vth = (a.vSrc * a.rProbe) / (a.r + a.rProbe), tauEff = rth * a.c;
+  return { t: a.level < vth ? -tauEff * dmath.log(1 - a.level / vth) : null, vth, rth, tauEff };
+}
+/** 3-1: the RC timer's crossing missed its window. `again`: the second miss on this ticket gives the worked formula. */
+export function explainRc(a: RcCtx & { again: boolean }): Explained {
+  const tau = a.r * a.c, x = rcCrossing(a), tWant = (a.tLo + a.tHi) / 2, vars: Vars = { R: si(a.r, 'Ω'), C: si(a.c, 'F'), tau: si(tau, 's'), level: sig(a.level), tLo: si(a.tLo, 's'), tHi: si(a.tHi, 's'), tWant: si(tWant, 's'), rProbe: si(a.rProbe, 'Ω'), vth: sig(x.vth), rth: si(x.rth, 'Ω'), tauEff: si(x.tauEff, 's'), t: x.t === null ? 'never' : si(x.t, 's'), rNeeded: si(tWant / a.c, 'Ω'), cNeeded: si(tWant / a.r, 'F') };
+  if (x.t === null) return { key: 'explain.rc.never', vars };
+  const paperOk = tau >= a.tLo * 0.99 && tau <= a.tHi * 1.01;   // R x C on paper is right: the probe's load is what moved it
+  const keys = paperOk && x.t > a.tHi ? ['explain.rc.loaded.first', 'explain.rc.loaded.again'] : x.t > a.tHi ? ['explain.rc.slow.first', 'explain.rc.slow.again'] : ['explain.rc.fast.first', 'explain.rc.fast.again'];
+  return { key: keys[a.again ? 1 : 0]!, vars };
+}
+/** Chapter 3 failures in plain words: the RC timer (3-1), the debounce filter (3-2), the relay coil (3-3) and the capacitor exam (3-4). Null when the failure is not one of theirs. */
+function explainChapter3(f: BenchFailure, ctx: ExplainContext): Explained | null {
+  const mode = ctx.miss?.mode, v = f.vars, num = (k: string): number => Number(v[k]), again = (ctx.prior ?? 0) >= 1, id = String(v.id ?? '');
+  if (mode === 'rc' && ctx.rc && ctx.rc.r > 0 && ctx.rc.c > 0) return explainRc({ ...ctx.rc, again });
+  if (mode === 'debounce' && ctx.rc && ctx.rc.r > 0 && ctx.rc.c > 0) {
+    const tau = ctx.rc.r * ctx.rc.c, metric = String(v.metric ?? ''), cond = String(v.cond ?? ''), value = num('value');
+    const vars: Vars = { R: si(ctx.rc.r, 'Ω'), C: si(ctx.rc.c, 'F'), tau: si(tau, 's'), cond: cond === 'nominal' ? 'nominal' : cond, n: Number.isFinite(value) ? value : 0, t: Number.isFinite(value) ? si(value, 's') : 'never', lo: si(num('lo'), 's'), hi: si(num('hi'), 's') };
+    if (f.key === 'bench.metric.nan' || (metric === 'crossingCount' && value === 0)) return { key: 'explain.debounce.none', vars };
+    if (metric === 'crossingCount') return { key: 'explain.debounce.many', vars };
+    if (metric === 'crossingTime') return { key: value > num('hi') ? 'explain.debounce.late' : 'explain.debounce.early', vars };
+    return null;
+  }
+  if (mode === 'coil' && ctx.coil) {
+    const c = ctx.coil, R = c.rCoil + c.rSeries, iMax = c.vRail / R, tau = c.lCoil / R, value = num('value');
+    const vars: Vars = { R: si(R, 'Ω'), v: sig(c.vRail), tau: si(tau, 's'), iMax: sig(iMax * 1000), tMax: si(num('hi'), 's'), t: Number.isFinite(value) ? si(value, 's') : 'never', i: Number.isFinite(value) ? sig(value * 1000) : 0, rNeeded: si(c.vRail / 0.058, 'Ω') };
+    if (id === 'tpull') return { key: again ? 'explain.coil.slow.again' : 'explain.coil.slow', vars };
+    if (id === 'isteady') return { key: 'explain.coil.steady', vars };
+    return null;
+  }
+  if (mode === 'caps') {
+    const value = num('value'), scale = id === 'heat' ? 1e3 : 1;
+    if (id !== 'vm' && id !== 'vd' && id !== 'heat') return null;
+    return { key: id === 'vm' ? 'explain.caps.vm' : id === 'vd' ? 'explain.caps.vd' : 'explain.caps.heat', vars: { value: Number.isFinite(value) ? sig(value * scale, 3) : 0, lo: sig(num('lo') * scale, 3), hi: sig(num('hi') * scale, 3) } };
+  }
+  return null;
+}
 export function explainFloatingGate(a: { part: string; rPull?: number }): Explained {
   return { key: 'explain.floatingGate', vars: { ...pn(a.part), rPull: si(a.rPull ?? 100e3, 'Ω') } };
 }
@@ -248,6 +293,9 @@ export interface ExplainContext {
   divider?: { r1: number; r2: number; rLoad: number; vin: number };
   /** Ticket 2-1: what is missing from the divider (checked before `divider`). */
   dividerFault?: DividerFault;
+  /** Chapter 3: the RC filter on the board (3-1, 3-2) and the coil (3-3). */
+  rc?: RcCtx;
+  coil?: CoilCtx;
   /** How many failures the player already had on this ticket (the first burn teaches the cause, a repeat gives the worked formula). */
   prior?: number;
 }
@@ -283,11 +331,13 @@ function explainRaw(f: BenchFailure, ctx: ExplainContext): Explained {
       break;
     }
     case 'smoke.thermal': {   // an LED that cooked (a resistor too small for it): the power is known, the current follows from the LED's curve
+      if (ctx.coil && part === ctx.coil.relay) { const p = num('P'), i = Math.sqrt(p / ctx.coil.rCoil); return { key: 'explain.coil.hot', vars: { ...pn(part), i: sig(i * 1000), v: sig(i * ctx.coil.rCoil), p: sig(p) } }; }   // a relay coil that cooked (24 V straight across 200 ohm)
       const l = ctx.led?.[part];
       if (l?.model && l.iRated) return explainLedOvercurrent({ part, i: ledCurrentFromPower(num('P'), l.model), iRated: l.iRated, loop: l, prior: ctx.prior });
       break;
     }
-    case 'bench.level.fail': case 'bench.metric.fail': {
+    case 'bench.level.fail': case 'bench.metric.fail': case 'bench.metric.nan': case 'bench.band.fail': {
+      const e3 = explainChapter3(f, ctx); if (e3) return e3;
       if (ctx.dividerFault && /^v\(/.test(String(v.probe ?? ''))) return explainDividerFault({ ...ctx.dividerFault, lo: num('lo'), hi: num('hi') });
       if (ctx.divider && /^v\(/.test(String(v.probe ?? ''))) return explainDivider({ ...ctx.divider, lo: num('lo'), hi: num('hi') });
       const e = explainLevelMiss(f, ctx.miss); if (e) return e; break;

@@ -9,8 +9,8 @@
 import { solveOp } from './mna/op';
 import { makeProbe, tranAdvance, tranInit, tranWork, type TranState } from './mna/tran';
 import { interpAt } from './bench/measure';
-import { instantFailures } from './smoke';
-import { partPower, ratingProbes, stepThermal, thetaTotal, type Window } from './thermal';
+import { CAP_OVER, CAP_OVER_S, ELEC_REVERSE_S, ELEC_REVERSE_V, instantFailures } from './smoke';
+import { dwell, partPower, partSignals, ratingProbes, sig as sigOf, stepThermal, thetaTotal, type Window } from './thermal';
 import { explainSolve, sig } from './explain';
 import type { Rig, RigIssue } from './rig';
 
@@ -19,11 +19,19 @@ export const LIVE_FRAME_WALL_DT = 1 / 30;
 /** One scope screen (10 divisions) holds this many points; the ring holds two screens. */
 export const SCOPE_SCREEN_POINTS = 256;
 
-export interface LiveCfg { frameSim: number; h: number; thermalSpeed: number; ambientC: number; xCap: number; histCap: number; scopeCap: number; timePerDiv: number }
+export interface LiveCfg {
+  frameSim: number; h: number; thermalSpeed: number; ambientC: number; xCap: number; histCap: number; scopeCap: number; timePerDiv: number;
+  /** Initial condition of the transient: 'zero' (capacitors empty, the supply steps on at t = 0) or 'op' (the circuit has been on for ever: a pulled-up input at rest). */
+  ic?: 'zero' | 'op';
+  /** Single sweep (chapter 3): the capture holds ONE screen from power-on and stops, so the trace forms once and stays. */
+  oneShot?: boolean;
+}
 export interface LiveLike {
   powered: boolean; frame: number; t: number; x: number[]; hist: number[]; temps: Record<string, number>; smoked: string[];
   status: 'ok' | 'float' | 'noconv' | 'loop' | 'big'; h: number; be: number;
   scope: { ch1: number[]; ch2: number[]; t0: number; dt: number };
+  /** Sim seconds each capacitor has spent over its rating / reversed (the 50 ms and 0.5 s vent rules, kept across frames). */
+  dw?: Record<string, number>;
 }
 export interface LiveEvent { part: string; key: string; vars: Record<string, string | number> }
 export interface AdvanceOut { events: LiveEvent[]; issues: RigIssue[]; frames: number }
@@ -59,12 +67,13 @@ function capture(live: LiveLike, cfg: LiveCfg, ts: number[], y1: number[], y2: n
     let k = 0; while (k * dt < ts[0]! - 1e-12) k++;   // first grid point at or after the frame start (loop, no Math.ceil on a quotient)
     sc.t0 = k * dt;
   }
-  for (;;) {
+  const cap = cfg.oneShot ? SCOPE_SCREEN_POINTS : Infinity;
+  while (sc.ch1.length < cap) {
     const tq = sc.t0 + sc.ch1.length * dt;
     if (tq > tEnd + 1e-12) break;
     sc.ch1.push(q5(y1.length ? interpAt(ts, y1, tq) : 0)); sc.ch2.push(q5(y2.length ? interpAt(ts, y2, tq) : 0));
   }
-  const over = sc.ch1.length - cfg.scopeCap;
+  const over = cfg.oneShot ? 0 : sc.ch1.length - cfg.scopeCap;
   if (over > 0) { sc.ch1.splice(0, over); sc.ch2.splice(0, over); sc.t0 += over * dt; }
 }
 
@@ -99,7 +108,7 @@ export function advanceLive(live: LiveLike, rig: Rig, cfg: LiveCfg, frames: numb
         out.issues = [{ key: ex.key, vars: ex.vars }]; live.status = 'noconv'; thermalStep(live, rig, cfg, null, out.events); continue;
       }
       clearScope(live); live.t = 0;
-      const init = tranInit(ckt, { h: cfg.h, tStop: cfg.frameSim, ic: 'zero' });
+      const init = tranInit(ckt, { h: cfg.h, tStop: cfg.frameSim, ic: cfg.ic ?? 'zero' });
       if (!init.ok) {
         const ex = init.failure ? explainSolve(init.failure) : { key: 'solve.noConverge', vars: {} };
         out.issues = [{ key: ex.key, vars: ex.vars }]; live.status = 'noconv'; thermalStep(live, rig, cfg, null, out.events); continue;
@@ -129,7 +138,24 @@ export function advanceLive(live: LiveLike, rig: Rig, cfg: LiveCfg, frames: numb
     const w: Window = { t: ts, series };
     thermalStep(live, rig, cfg, (uid) => { const p = rig.rated.find((x) => x.id === uid)!; return Math.max(0, partPower(rig, p, w).avg); }, out.events);
     const alive = rig.rated.filter((p) => !live.smoked.includes(p.id));
-    for (const f2 of instantFailures(rig, alive, w)) {
+    const failures = instantFailures(rig, alive, w);
+    // the capacitor rules that need more than one frame (over its rating for 50 ms, reversed for 0.5 s): the dwell is kept across frames
+    const span = ts[ts.length - 1]! - ts[0]!, dw = (live.dw ??= {});
+    for (const part of alive) {
+      if (part.kind !== 'C' && part.kind !== 'CE') continue;
+      const v = sigOf(w, partSignals(rig, part).v); if (!v || !(span > 0)) continue;
+      const lim = part.ratings.Vrated !== undefined ? CAP_OVER * part.ratings.Vrated : Infinity;
+      const rules: [string, (x: number) => boolean, number, string, Record<string, number>][] = [
+        [`${part.id}.o`, (x) => Math.abs(x) > lim, CAP_OVER_S, 'smoke.cap.over', { v: Math.max(...v.y.map(Math.abs)), vrated: part.ratings.Vrated ?? 0, limit: lim, electrolytic: part.kind === 'CE' ? 1 : 0 }],
+        ...(part.kind === 'CE' ? [[`${part.id}.r`, (x: number) => x < -ELEC_REVERSE_V, ELEC_REVERSE_S, 'smoke.cap.reverse', { v: Math.min(...v.y), limit: -ELEC_REVERSE_V }] as [string, (x: number) => boolean, number, string, Record<string, number>]] : []),
+      ];
+      for (const [k, pred, limit, key, vars] of rules) {
+        const full = dwell(v, pred) >= span * 0.999;
+        dw[k] = full ? (dw[k] ?? 0) + span : 0;
+        if (dw[k]! > limit && !failures.some((f) => f.part === part.id)) failures.push({ part: part.id, rule: key === 'smoke.cap.over' ? 'capOverVoltage' : 'capReverse', key, vars: { part: part.id, ...vars } });
+      }
+    }
+    for (const f2 of failures) {
       if (live.smoked.includes(f2.part)) continue;
       live.smoked.push(f2.part); delete live.temps[f2.part];
       const vars: Record<string, string | number> = {}; for (const [k, v] of Object.entries(f2.vars)) vars[k] = typeof v === 'number' ? sig(v) : v;

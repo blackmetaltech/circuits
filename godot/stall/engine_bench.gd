@@ -24,11 +24,15 @@ const FLAVOUR := {
 	"2-2": {"gadget": "cable", "ask": "Where do we dig?", "thanks": "Found it, right at your mark!"},
 	"2-3": {"gadget": "module", "ask": "Nobody makes this box any more.", "thanks": "Drop-in. It behaves just like the old one."},
 	"2-4": {"gadget": "exam", "ask": "Predict first, then probe.", "thanks": "The numbers agree!"},
+	"3-1": {"gadget": "flash", "ask": "The flash should be ready one second after I switch on.", "thanks": "Ready on the dot! One second."},
+	"3-2": {"gadget": "arcade", "ask": "My button counts one press as ten.", "thanks": "One press, one press. The game is fair again."},
+	"3-3": {"gadget": "relay", "ask": "My relay is too slow to pull in.", "thanks": "Click, right on time. The valves are in step."},
+	"3-4": {"gadget": "exam", "ask": "Predict first, then probe.", "thanks": "The numbers agree!"},
 }
-const CHAPTER_TICKETS := {1: ["1-1", "1-2", "1-3", "1-4", "1-5"], 2: ["2-1", "2-2", "2-3", "2-4"]}
-const ALL_TICKETS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4"]
+const CHAPTER_TICKETS := {1: ["1-1", "1-2", "1-3", "1-4", "1-5"], 2: ["2-1", "2-2", "2-3", "2-4"], 3: ["3-1", "3-2", "3-3", "3-4"]}
+const ALL_TICKETS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4"]
 ## The parts of chapter 2 that read better with a word under the value in the shoebox (presentation only).
-const PART_TAG := {"res-box": "box plug", "trimmer": "trimmer", "rheostat": "rheostat"}
+const PART_TAG := {"res-box": "box plug", "trimmer": "trimmer", "rheostat": "rheostat", "cap-cer": "ceramic", "cap-ideal": "exact", "1n4148": "diode"}
 const DIAL_ENGINE := {"OFF": "off", "V": "dcv", "mA": "dca", "Ω": "ohm"}
 const DIAL_LABEL := {"off": "OFF", "dcv": "V", "dca": "mA", "ohm": "Ω"}
 
@@ -157,6 +161,9 @@ func _load_ticket() -> void:
 
 func _supply_info() -> Dictionary:
 	var ins: Dictionary = bench_q.get("instruments", {})
+	var rails: Array = []
+	for sd in card.get("supplies", []): if str(sd.get("kind", "")) == "bench" and sd.get("fixed", null) != null: rails.append({"name": "%s rail" % str(sd.plus), "volts": float(sd.fixed)})
+	if rails.size() >= 2: return {"kind": "sources", "label": "bench rails", "volts": 0.0, "tired": false, "sources": rails, "title": "BENCH RAILS  (always on)", "note": "wire V12 or V24 to the coil"}
 	var sup = ins.get("supply", null)
 	if sup is Dictionary: return {"kind": "bench", "label": "%s V supply" % String.num(float(sup.v), 2).trim_suffix(".0").trim_suffix(".00"), "volts": float(sup.v), "tired": false, "adjustable": str(card.get("id", "")) == "2-3"}
 	for p in _all_parts:
@@ -177,7 +184,7 @@ func _supply_info() -> Dictionary:
 	if not srcs.is_empty():
 		var cid := str(card.get("id", ""))
 		return {"kind": "sources", "label": "lab cells" if lab else "textbook sources", "volts": 0.0, "tired": false, "sources": srcs,
-			"title": ("ON THE BENCH" if lab else "TEXTBOOK SOURCES  (ideal)"), "note": ("wire the cell into the bridge" if cid == "2-2" else ("driver cell and the cell to test" if cid == "2-4" else "wired by the ticket: just probe"))}
+			"title": ("ON THE BENCH" if lab else "TEXTBOOK SOURCES  (ideal)"), "note": ("wire the cell into the bridge" if cid == "2-2" else ("driver cell and the cell to test" if cid == "2-4" else ("card (b): the 4 µF is charged to 100 V" if cid == "3-4" else "wired by the ticket: just probe")))}
 	return {"kind": "none", "label": "(textbook sources)", "volts": 0.0, "tired": false}
 
 func _short_spec(tg: Dictionary) -> String:
@@ -197,6 +204,12 @@ static func _g(x: float, n := 4) -> String:
 
 ## The engine's band is in display units; pick the scope's vertical scale so the band sits in view (the engine gives volts/div for voltage probes).
 func _scope_setup(tg: Dictionary) -> void:
+	if str(tg.get("mode", "")) == "trace":   # chapter 3: a time trace from power-on against an amber tube (all of it the engine's: scope().trace)
+		var clip0 = tg.get("clip", null)
+		scope_view = {"unit": str(tg.get("unit", "V")), "lo": 0.0, "hi": _n(tg.get("vdiv", 1.0)) * 7.0, "vdiv": _n(tg.get("vdiv", 1.0)), "label": str(tg.get("label", "")), "mode": "trace", "scale": _n(tg.get("scale", 1.0)),
+			"clip_pad": (clip0.pad if clip0 is Dictionary else null), "clip_name": (str(clip0.connector) if clip0 is Dictionary else ""), "clipped": bool(tg.get("clipped", false)), "attached": bool(tg.get("clipped", false)),
+			"value": 0.0, "text": "", "name": str(tg.get("name", "")), "nogauge": false, "hidden": false, "times": tg.get("times", []), "tpd": _n(tg.get("timePerDiv", 0.2)), "trace": {}, "sweep_text": "", "vmul": 1.0}
+		return
 	var mode := str(tg.get("mode", "gauge")); var unit := str(tg.get("unit", ""))
 	var lo := _n(tg.get("lo", 0.0)); var hi := _n(tg.get("hi", 1.0))
 	var ref := hi if (lo <= 0.0 or hi < lo * 20.0) else lo * 1.5
@@ -228,6 +241,7 @@ func bin() -> Array:
 				if v != null: label = NodeApi.format_value(float(v), "R" if kind == "R" else kind)
 				elif kind == "LED": label = "red LED"
 				var tag := _watt_tag(float(va.ratings.P)) if (kind == "R" and va.ratings.has("P") and str(va.id) != "ideal" and not PART_TAG.has(str(fam.partId))) else str(PART_TAG.get(str(fam.partId), ""))
+				if kind == "CE": tag = _volt_tag(str(va.id))
 				if kind == "METER": kind = "GALVO"
 				var mx = fam.get("max", null)
 				out.append({"i": i, "partId": str(fam.partId), "value": v, "variant": str(va.id), "tag": tag, "label": label, "kind": kind, "footprint": str(fam.footprint),
@@ -238,6 +252,9 @@ func bin() -> Array:
 
 ## JSON null -> default (float(null) is an error in GDScript)
 static func _n(v, d := 0.0) -> float: return d if v == null else float(v)
+
+## "16V" -> "16 V" (an electrolytic's voltage rating is its variant id)
+static func _volt_tag(id: String) -> String: return id.replace("V", " V")
 
 static func _watt_tag(p: float) -> String:
 	if absf(p - 1.0 / 6.0) < 0.005: return "⅙ W"
@@ -477,7 +494,12 @@ func _scene_part(p: Dictionary) -> Dictionary:
 	var variant := str(p.get("variant", ""))
 	var tag := ""
 	if kind == "R" and p.get("ratings", {}).has("P") and variant != "ideal" and not PART_TAG.has(pid): tag = _watt_tag(float(p.ratings.P))
-	if kind == "LOAD": label = str(p.get("name", "Heater"))
+	if kind == "CE": tag = _volt_tag(variant)
+	if pid == "pullup-10k": label = "pull-up 10 k"
+	elif pid == "logic-in": label = "logic in 1 M"
+	elif pid == "cap-charged": label = "4 µF, 100 V"
+	elif kind == "RELAY": label = "relay"
+	elif kind == "LOAD": label = str(p.get("name", "Heater"))
 	elif kind == "BOXED": label = "sealed box"
 	elif kind == "GALVO": label = "galvanometer"
 	elif kind == "SLIDE": label = ""
@@ -485,7 +507,7 @@ func _scene_part(p: Dictionary) -> Dictionary:
 	elif pid == "cell-test": label = "test cell"
 	elif kind == "BAT" and (pid == "cell-2v" or pid == "cell-test"): pass
 	elif kind == "BAT": label = (("E%s  %s V" % [str(p.uid).substr(1), _g(float(p.value))]) if pid.begins_with("ideal-vsource") else ("%s V" % _g(float(p.value)))) if p.get("value", null) != null else NodeApi.BAT_LABEL.get(pid, "9 V")
-	elif kind == "R" and tag != "" and _multi_rating(pid): label = "%s %s" % [label, tag]
+	elif (kind == "R" or kind == "CE") and tag != "" and (_multi_rating(pid) or kind == "CE"): label = "%s %s" % [label, tag]
 	elif kind == "LED": label = "LED"
 	return {"uid": str(p.uid), "partId": pid, "value": p.get("value", null), "label": label, "tag": tag, "kind": kind, "x": int(p.x), "y": int(p.y), "rot": int(p.rot),
 		"flip": bool(p.get("flip", false)), "fixed": bool(p.get("fixed", false)), "variant": variant, "pins": pins, "pin_labels": pin_labels, "smoked": bool(p.get("smoked", false)), "name": str(p.get("name", "")),
@@ -527,6 +549,18 @@ func _scope_update() -> void:
 		sv["clipped"] = bool(tg.get("clipped", false))
 		sv["clip_pad"] = cl.pad if cl is Dictionary else null
 	var val := 0.0; var attached := true; var txt := ""; var slide := ""
+	if str(sv.get("mode", "")) == "trace":
+		var trc: Dictionary = scope_q.get("trace", {}) if scope_q.get("trace", null) is Dictionary else {}
+		var tgt: Dictionary = tg if tg is Dictionary else {}
+		sv["trace"] = trc; sv["tpd"] = _n(tgt.get("timePerDiv", sv.get("tpd", 0.2))); sv["times"] = tgt.get("times", sv.get("times", []))
+		sv["attached"] = bool(sv.get("clipped", false)); sv["sweep_text"] = str(scope_q.get("sweepText", ""))
+		var tv: Array = trc.get("v", [])
+		if powered and not tv.is_empty() and bool(sv.attached): val = float(tv[tv.size() - 1])
+		var gg = scope_q.get("gauge", null)
+		sv["value"] = val; sv["text"] = str((gg as Dictionary).get("text", "")) if gg is Dictionary and powered and bool(sv.attached) else ""; sv["slide"] = ""
+		scope_view = sv
+		if not ticket.is_empty(): ticket["scope"] = sv
+		return
 	if str(sv.get("mode", "")) == "gauge":
 		if gauge is Dictionary and gauge.get("value", null) != null and powered:
 			val = float(gauge.value); txt = str(gauge.get("text", ""))
@@ -540,6 +574,20 @@ func _scope_update() -> void:
 	if not ticket.is_empty(): ticket["scope"] = sv
 
 func scope_value() -> float: return _n(scope_view.get("value", 0.0))
+
+## The scope's TIME knob (chapter 3): the next / previous time-per-division from the ticket's list. The engine restarts the sweep from power-on and re-draws the tube on the new scale.
+func set_time_div(dir: int) -> Dictionary:
+	var times: Array = scope_view.get("times", [])
+	if times.is_empty(): return {"ok": false, "msg": ""}
+	var cur := _n(scope_view.get("tpd", 0.2)); var best := 0
+	for i in times.size(): if absf(log(float(times[i]) / cur)) < absf(log(float(times[best]) / cur)): best = i
+	var nxt := clampi(best + dir, 0, times.size() - 1)
+	if nxt == best: return {"ok": false, "msg": ""}
+	var r := _act("setScope", [{"timePerDiv": float(times[nxt])}])
+	if r.get("ok", false):
+		_bench_key = ""; hold = 0.0
+		_refresh_board(); _refresh_live(); _rebuild_model()
+	return {"ok": bool(r.get("ok", false)), "msg": str(r.get("message", "")), "tpd": float(times[nxt])}
 
 ## DmmView reading: {text, unit, mode} straight from the engine LCD.
 func dmm() -> Dictionary:
@@ -704,7 +752,7 @@ func _rebuild_model() -> void:
 	var sets: Array = []
 	for n in frame.get("nodes", []): sets.append({"v": float(n.v), "pads": n.pads})
 	var cur_w := {}; var cur_p := {}; var spd_w := {}; var spd_p := {}; var rat := {}; var temps_m := {}; var smoked_l: Array = []
-	var heat := {}; var led := {}; var galvo := {}
+	var heat := {}; var led := {}; var galvo := {}; var cap_bulge := {}; var cap_level := {}; var relay_m := {}
 	for w in frame.get("wires", []): cur_w[str(w.wid)] = float(w.i); spd_w[str(w.wid)] = float(w.speed)
 	for p in frame.get("parts", []):
 		var uid := str(p.uid)
@@ -716,6 +764,11 @@ func _rebuild_model() -> void:
 		if bool(p.get("smoked", false)): smoked_l.append(uid)
 		if p.has("led"): led[uid] = {"mood": str(p.led.get("mood", "sleepy")), "bloom": float(p.led.get("bloom", 0.0)), "mA": float(p.led.get("mA", 0.0))}
 		if p.has("galvo"): galvo[str(p.uid)] = float(p.galvo.get("needle", 0.0))
+		if p.has("cap"):   # the vent top swells with the voltage (over the rating) or with a reverse voltage; the charged can's gauge shows how full it is (both are only a picture of the engine's volts)
+			var cv := _n(p.cap.get("v", 0.0)); var vr := _n(p.cap.get("vrated", 0.0)); var vf := _n(p.cap.get("vfull", 0.0))
+			cap_bulge[uid] = clampf(-cv / 3.0, 0.0, 1.0) if cv < -0.2 else (clampf((cv / vr - 0.85) / 0.35, 0.0, 1.0) if vr > 0.0 else 0.0)
+			cap_level[uid] = clampf(cv / vf, 0.0, 1.0) if vf > 0.0 else 0.0
+		if p.has("relay"): relay_m[uid] = {"operated": bool(p.relay.get("operated", false)), "mA": _n(p.relay.get("mA", 0.0))}
 	for e in frame.get("events", []): smoked_l.append(str(e.part))
 	var vmin := _n(frame.get("vmin", 0.0)); var vmax := _n(frame.get("vmax", 1.0))
 	var raw := {"board": bd, "nodes": {"sets": sets, "range": [minf(vmin, 0.0), maxf(vmax, 0.5)]}, "currents": {"wires": cur_w, "parts": cur_p},
@@ -725,7 +778,7 @@ func _rebuild_model() -> void:
 	var norm := {}
 	for n in frame.get("nodes", []):
 		for q in n.pads: norm["%d,%d" % [int(q[0]), int(q[1])]] = float(n.norm)
-	m["marks"] = bench_q.get("marks", []); m["slots"] = bench_q.get("slots", []); m["dangling"] = dangling; m["norm"] = norm; m["wire_speed"] = spd_w; m["part_speed"] = spd_p; m["heat"] = heat; m["led"] = led; m["galvo"] = galvo
+	m["marks"] = bench_q.get("marks", []); m["slots"] = bench_q.get("slots", []); m["dangling"] = dangling; m["norm"] = norm; m["wire_speed"] = spd_w; m["part_speed"] = spd_p; m["heat"] = heat; m["led"] = led; m["galvo"] = galvo; m["cap_bulge"] = cap_bulge; m["cap_level"] = cap_level; m["relay"] = relay_m; m["contacts"] = frame.get("contacts", [])
 	model = m
 
 ## ------------------------------------------------------------------------------------------------------------------ test helpers

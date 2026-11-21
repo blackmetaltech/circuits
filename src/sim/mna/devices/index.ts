@@ -22,5 +22,6 @@ import { REG } from './regulator';
 import { LOGIC } from './logic';
 import { RLY } from './relay';
 import { FUSE } from './fuse';
+import { SWT } from './swt';
 
-export const DEVICES: Readonly<Record<string, Device>> = Object.freeze({ R, V, I, BAT, BENCH, AM, E, G, C, L, D, Q, DAR, M, T, OA, CMP, TMR, REG, LOGIC, RLY, FUSE });
+export const DEVICES: Readonly<Record<string, Device>> = Object.freeze({ R, V, I, BAT, BENCH, AM, E, G, C, L, D, Q, DAR, M, T, OA, CMP, TMR, REG, LOGIC, RLY, FUSE, SWT });

@@ -144,6 +144,10 @@ export interface LiveState {
   issues: { key: string; vars: Record<string, string | number> }[];
   /** Decimated ring buffer, <= SCOPE_POINTS_CAP points per channel. */
   scope: { ch1: number[]; ch2: number[]; t0: number; dt: number };
+  /** Sim seconds each capacitor has spent over its rating / reversed (the 50 ms and 0.5 s vent rules need more than one frame). */
+  dw?: Record<string, number>;
+  /** A single-sweep ticket (chapter 3): a hash of everything the sweep depends on; when it changes the sweep starts again from power-on. */
+  sweep?: string;
 }
 
 export interface TicketState {

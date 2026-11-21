@@ -4,10 +4,12 @@
 // and registering it in ../i18n.ts; `checkLocales` (see locales.test.ts) fails when a key or a placeholder is missing.
 import { partsEn } from './parts.en';
 import { simEn } from './sim.en';
+import { ch3En } from './ch3.en';
 
 export const en: Record<string, string> = {
   ...partsEn,
   ...simEn,
+  ...ch3En,
   // log lines
   'log.start': '{mentor} left you {stall} on {lane}. The bench is yours: open a ticket to begin.',
   // ticket actions

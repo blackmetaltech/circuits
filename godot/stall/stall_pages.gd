@@ -30,7 +30,7 @@ var tickets: Array = []                   ## [{id,title,customer,spec,price,open
 var map_chapter := 1                      ## which chapter's page the map shows
 var map_title := ""                       ## the engine's chapter title and blurb
 var map_blurb := ""
-var chapter_open: Array = [true, false]   ## per chapter: has a ticket that is not locked
+var chapter_open: Array = [true, false, false]   ## per chapter: has a ticket that is not locked
 var pred_head := ""                        ## the slip's title line ("2-4 Exam: ... · predict first" or "Cable Fault · the crew's slip")
 var coach_ticket: Dictionary = {}
 var coach_steps: Array = []
@@ -190,9 +190,11 @@ func _map(a: float) -> void:
 	S.text(self, f, ttl, lp + Vector2(0, 64), 64 if S.tw(f, ttl, 64) < half - 130.0 else 48, S.INK)
 	var note := "Wren left me the stall, a scope, a shoebox and this notebook. Customers come to the counter with something dead. Fix it, don't burn it.\n\nPin a ticket, build, power on, and watch the band."
 	if map_chapter == 2: note = map_blurb + "\n\nA voltage divider is only as good as what hangs on it. A bridge asks nothing of the cable but a balance. Measure first, then build."
+	elif map_chapter == 3: note = map_blurb + "\n\nNothing here settles at once. A capacitor fills at a pace set by R times C, and a coil rises at L over R: watch the curve form, and keep it inside the amber tube."
 	S.text(self, f, note, lp + Vector2(0, 124), 24, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, half - 130)
 	var dc := r.position + Vector2(half * 0.5 + 170.0, r.size.y - 190)
 	if map_chapter == 2: _doodle_divider(dc)
+	elif map_chapter == 3: _doodle_rc(dc)
 	else: _doodle_led(dc)
 	S.text(self, f, ("in the tin:  %s" % wallet_text) if wallet_text != "" else ("coins in the tin:  %d" % wallet), r.position + Vector2(56, r.size.y - 60), 28, S.INK)
 	# the chits, pinned on the right page
@@ -242,11 +244,11 @@ func _map(a: float) -> void:
 	S.text(self, f, "*  met the spec", Vector2(lx0, ly0 + 26), 18, Color(S.INK, 0.8))
 	S.text(self, f, "**  and under the cost par", Vector2(lx0, ly0 + 50), 18, Color(S.INK, 0.8))
 	S.text(self, f, "***  an exam: every prediction within 1 %", Vector2(lx0, ly0 + 74), 18, Color(S.INK, 0.8))
-	for ci in 2:   # the chapters: tabs on the page's right edge (a page nobody has opened yet is dim)
+	for ci in 3:   # the chapters: tabs on the page's right edge (a page nobody has opened yet is dim)
 		var tr := Rect2(r.end.x - 22, r.position.y + 60 + ci * 66, 44, 56)
 		var chv := _btn(tr, "chapter", str(ci + 1))
 		var curc := ci + 1 == map_chapter; var openc: bool = ci < chapter_open.size() and bool(chapter_open[ci])
-		S.rr(self, tr, 8, [Color("#d9663f"), Color("#4a7fb5")][ci].lightened(0.15 if chv or curc else -0.12).darkened(0.0 if openc else 0.35))
+		S.rr(self, tr, 8, [Color("#d9663f"), Color("#4a7fb5"), Color("#6aa05a")][ci].lightened(0.15 if chv or curc else -0.12).darkened(0.0 if openc else 0.35))
 		S.text(self, f, str(ci + 1), tr.position + Vector2(24, 36), 26, Color("#fff8e0", 1.0 if openc else 0.55))
 	# back to the title
 	var br := Rect2(r.end.x - 230, r.end.y - 62, 190, 44)
@@ -258,6 +260,17 @@ func _doodle_led(dc: Vector2) -> void:
 	draw_arc(dc, 40, PI, TAU, 16, Color(S.INK, 0.8), 3.0); draw_line(dc + Vector2(-40, 0), dc + Vector2(40, 0), Color(S.INK, 0.8), 3.0)
 	draw_line(dc + Vector2(-14, 0), dc + Vector2(-14, 56), Color(S.INK, 0.8), 3.0); draw_line(dc + Vector2(14, 0), dc + Vector2(14, 44), Color(S.INK, 0.8), 3.0)
 	for i in 5: var ang := PI * (1.15 + 0.175 * i); draw_line(dc + Vector2(cos(ang), sin(ang)) * 56, dc + Vector2(cos(ang), sin(ang)) * 80, Color(S.AMBER.darkened(0.1)), 4.0)
+
+## Chapter 3's doodle: a charging curve with its 63 % line and one time constant marked.
+func _doodle_rc(dc: Vector2) -> void:
+	var o := dc + Vector2(-90, 50); var ink := Color(S.INK, 0.8)
+	draw_line(o, o + Vector2(0, -130), ink, 3.0); draw_line(o, o + Vector2(190, 0), ink, 3.0)
+	var pts := PackedVector2Array()
+	for i in 41: var x := float(i) / 40.0; pts.append(o + Vector2(x * 180.0, -118.0 * (1.0 - exp(-x * 4.0))))
+	draw_polyline(pts, S.AMBER.darkened(0.1), 4.0, true)
+	var y63 := o.y - 118.0 * 0.632; var x1 := o.x + 45.0
+	draw_dashed_line(Vector2(o.x, y63), Vector2(x1, y63), ink, 2.0, 6.0); draw_dashed_line(Vector2(x1, y63), Vector2(x1, o.y), ink, 2.0, 6.0)
+	S.text(self, S.hand(), "63 %", Vector2(o.x - 54, y63 + 8), 20, S.INK_RED); S.text(self, S.hand(), "RC", Vector2(x1 - 12, o.y + 24), 20, S.INK_RED)
 
 func _doodle_divider(dc: Vector2) -> void:
 	var ink := Color(S.INK, 0.8)

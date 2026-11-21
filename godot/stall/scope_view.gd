@@ -32,6 +32,12 @@ var _glass: BenchView.Layer
 var _warm := 0.0
 var _lock_flash := 0.0
 var _knob_ang := [0.6, -0.4, 0.2, 1.0]
+var _ghost := PackedVector2Array()           ## the previous sweep, fading (the phosphor's persistence) after a restart
+var _ghost_a := 0.0
+var _prev_pts := PackedVector2Array()        ## the last frame's trace polyline, kept to become the ghost when the sweep starts again
+var _prev_n := 0
+
+func is_trace() -> bool: return str(sc.get("mode", "")) == "trace"
 
 func _ready() -> void:
 	set_meta(&"small_text", true)   # engraved decoration stays small on handheld (the readings are big already)
@@ -44,13 +50,28 @@ func _ready() -> void:
 	set_process(true)
 
 func _y_of(v: float) -> float:
-	return SCREEN.end.y - DIV - (v / float(sc.get("vdiv", 4.0))) * DIV
+	return SCREEN.end.y - DIV - (v / (float(sc.get("vdiv", 4.0)) * float(sc.get("vmul", 1.0)))) * DIV
+
+## Seconds the full screen spans (10 divisions) at the engine's time knob, and the x of a time on the screen.
+func _span() -> float: return maxf(10.0 * float(sc.get("tpd", 0.2)), 1e-9)
+func _x_of_t(tt: float) -> float: return SCREEN.position.x + clampf(tt / _span(), 0.0, 1.0) * SCREEN.size.x
+
+static func tfmt(x: float) -> String:
+	if x <= 0.0: return "0"
+	if x < 1e-3: return "%s µs" % EngineBench._g(x * 1e6, 3)
+	if x < 1.0: return "%s ms" % EngineBench._g(x * 1e3, 3)
+	return "%s s" % EngineBench._g(x, 3)
 
 func _process(dt: float) -> void:
 	t += dt
 	_warm = move_toward(_warm, 1.0 if live else 0.0, dt * 1.5)
 	_lock_flash = maxf(0.0, _lock_flash - dt)
 	_acc += dt
+	if is_trace():
+		var tv: Array = (sc.get("trace", {}) as Dictionary).get("v", [])
+		if tv.size() + 3 < _prev_n and _prev_pts.size() > 3: _ghost = _prev_pts; _ghost_a = 0.55   # a new sweep: the old trace lingers and fades
+		_prev_n = tv.size()
+		_ghost_a = maxf(0.0, _ghost_a - dt * 0.6)
 	var step := SWEEP / float(COLS)
 	while _acc >= step:
 		_acc -= step
@@ -70,6 +91,14 @@ func hit_knob(p: Vector2) -> int:
 
 func turn(i: int, d: float) -> void:
 	if i >= 0: _knob_ang[i] += d * 0.5
+
+## The VOLTS knob of a time trace: x1, x2, x5, x0.5 ... the vertical scale only (a picture of the same samples).
+func volts_step(dir: int) -> void:
+	var opts := [0.5, 1.0, 2.0, 5.0]
+	var cur := float(sc.get("vmul", 1.0)); var i := 1
+	for k in opts.size(): if is_equal_approx(float(opts[k]), cur): i = k
+	sc["vmul"] = opts[clampi(i + dir, 0, opts.size() - 1)]
+	_knob_ang[0] += float(dir) * 0.5
 
 func _draw() -> void:
 	var rr := Rect2(Vector2.ZERO, DESIGN)
@@ -98,9 +127,50 @@ func _draw() -> void:
 	for j in range(0, 40):
 		var y := SCREEN.position.y + j * DIV / 5.0
 		draw_line(Vector2(SCREEN.position.x + 5 * DIV - 3, y), Vector2(SCREEN.position.x + 5 * DIV + 3, y), Color(0.3, 0.75, 0.4, 0.3), 1.0)
-	_band_back()
+	if is_trace(): _tube_back()
+	else: _band_back()
 	# ---- right panel: VFD, knobs, jack
 	_panel()
+
+## Chapter 3: the amber target is a tube in time and voltage (the engine's `scope().trace.tube`): an amber ribbon around the ideal curve, or the allowed windows a signal has to stay in. It turns green when the engine says LOCK.
+func _tube_back() -> void:
+	var tr: Dictionary = sc.get("trace", {}) as Dictionary
+	var tube: Dictionary = tr.get("tube", {}) as Dictionary
+	if tube.is_empty() or bool(sc.get("hidden", false)): return
+	var col := S.PHOS if locked else S.AMBER
+	var a := 0.17 + (0.2 * _lock_flash if locked else 0.03 * (0.5 + 0.5 * sin(t * 3.0)))
+	var clip := SCREEN
+	if str(tube.get("kind", "")) == "exp":
+		var lo: Array = tube.get("lo", []); var hi: Array = tube.get("hi", [])
+		var n := mini(lo.size(), hi.size())
+		if n < 2: return
+		var top := PackedVector2Array(); var bot := PackedVector2Array()
+		for k in n:
+			var x := SCREEN.position.x + float(k) / float(n - 1) * SCREEN.size.x
+			top.append(Vector2(x, clampf(_y_of(float(hi[k])), clip.position.y, clip.end.y))); bot.append(Vector2(x, clampf(_y_of(float(lo[k])), clip.position.y, clip.end.y)))
+		var poly := PackedVector2Array(top)
+		for k in range(n - 1, -1, -1): poly.append(bot[k])
+		draw_colored_polygon(poly, Color(col, a))
+		draw_polyline(top, Color(col, 0.7), 1.5, true); draw_polyline(bot, Color(col, 0.7), 1.5, true)
+		var m := n - 1   # the target value at the end of the sweep, marked on the right edge
+		draw_line(Vector2(SCREEN.end.x - 6.0, bot[m].y), Vector2(SCREEN.end.x - 6.0, top[m].y), Color(col, 0.9), 2.5)
+	else:
+		for w in tube.get("windows", []):
+			var x0 := _x_of_t(float(w.t0)); var x1 := _x_of_t(float(w.t1))
+			if x1 - x0 < 1.0: continue
+			var y1 := clampf(_y_of(float(w.hi)), clip.position.y, clip.end.y); var y0 := clampf(_y_of(float(w.lo)), clip.position.y, clip.end.y)
+			if y0 - y1 < 3.0: continue
+			draw_rect(Rect2(x0, y1, x1 - x0, y0 - y1), Color(col, a), true)
+			for yy in [y1, y0]:
+				if yy > clip.position.y + 1.0 and yy < clip.end.y - 1.0: draw_line(Vector2(x0, yy), Vector2(x1, yy), Color(col, 0.75), 1.5)
+			draw_line(Vector2(x0, y1), Vector2(x0, y0), Color(col, 0.5), 1.0); draw_line(Vector2(x1, y1), Vector2(x1, y0), Color(col, 0.5), 1.0)
+	# the axes: time along the bottom, the zero level on the left
+	var fs := 11
+	for i in [0, 5, 10]:
+		var lab := tfmt(float(i) / 10.0 * _span())
+		var x := SCREEN.position.x + float(i) * DIV
+		S.text(self, S.mono(), lab, Vector2(clampf(x - S.tw(S.mono(), lab, fs) * 0.5, SCREEN.position.x + 2.0, SCREEN.end.x - S.tw(S.mono(), lab, fs) - 2.0), SCREEN.end.y - 4.0), fs, Color(0.55, 1.0, 0.65, 0.55))
+	S.text(self, S.mono(), "0", Vector2(SCREEN.position.x + 4.0, _y_of(0.0) - 3.0), fs, Color(0.55, 1.0, 0.65, 0.55))
 
 func _band_back() -> void:
 	if sc.is_empty() or bool(sc.get("hidden", false)): return
@@ -129,6 +199,10 @@ func _panel() -> void:
 	draw_circle(lamp, 9, Color(0.05, 0.12, 0.1)); draw_circle(lamp, 6.5, Color(vc, 0.15 if not locked else 1.0))
 	var txt := sc.get("label", "") as String
 	var unit := sc.get("unit", "") as String
+	var trace_mode := is_trace()
+	if trace_mode and live and attached:
+		var trd: Dictionary = sc.get("trace", {}) as Dictionary
+		txt = "SWEEP %d%%" % int(round(float(trd.get("progress", 0.0)) * 100.0)) if not bool(trd.get("complete", false)) else ("LOCKED" if locked else ("OUT OF TUBE" if not bool(trd.get("inTube", true)) else "SPEC NOT MET"))
 	var rd := "--"
 	if live and attached: rd = ("%s %s" % [_fmt(value), unit]) if reading == "" else reading
 	elif live and clip_name != "": rd = "CLIP " + clip_name
@@ -137,7 +211,10 @@ func _panel() -> void:
 		S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14, Color(vc, 0.95 if slide != "on" else 0.6))
 	else: S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14, Color(vc, 0.55))
 	S.text(self, S.mono(), rd, Vector2(px + 10, 242), 20 if rd.length() < 11 else 15, Color(vc, 0.9 if (live and attached) else 0.3))
-	S.text(self, S.mono(), "%s/DIV" % _fmt(float(sc.get("vdiv", 4.0))), Vector2(px + 98, 206), 12, Color(vc, 0.4))
+	if trace_mode:
+		S.text(self, S.mono(), "%s/DIV" % tfmt(float(sc.get("tpd", 0.2))), Vector2(px + 98, 206), 12, Color(vc, 0.85))
+		S.text(self, S.mono(), "%s%s/DIV" % [_fmt(float(sc.get("vdiv", 4.0)) * float(sc.get("vmul", 1.0))), unit], Vector2(px + 98, 222), 11, Color(vc, 0.5))
+	else: S.text(self, S.mono(), "%s/DIV" % _fmt(float(sc.get("vdiv", 4.0))), Vector2(px + 98, 206), 12, Color(vc, 0.4))
 	# knobs
 	var kc := knob_centres(); var names := ["VOLTS", "TIME", "LEVEL", "FOCUS"]
 	for i in kc.size():
@@ -148,7 +225,10 @@ func _panel() -> void:
 			var a := -2.4 + float(k) / 10.0 * 4.8 + 1.57 - 1.57
 			var d := Vector2(cos(a - 1.57), sin(a - 1.57))
 			draw_line(kc[i] + d * 34.0, kc[i] + d * 38.0, Color("#d9d3bd", 0.7), 1.2)
-		S.text(self, S.hand(), names[i], kc[i] + Vector2(-S.tw(S.hand(), names[i], 12) * 0.5, 40), 12, Color("#e8e0c8"))
+		var nm: String = names[i]
+		if is_trace() and i == 1: nm = "TIME  %s" % tfmt(float(sc.get("tpd", 0.2)))
+		elif is_trace() and i == 0: nm = "VOLTS  x%s" % _fmt(float(sc.get("vmul", 1.0)))
+		S.text(self, S.hand(), nm, kc[i] + Vector2(-S.tw(S.hand(), nm, 12) * 0.5, 40), 12, Color("#e8e0c8"))
 	# CH1 BNC and the power lamp
 	var jc := Vector2(330, 414)
 	draw_circle(jc, 17, Color("#9ea3a6")); draw_circle(jc, 12, Color("#53575b")); draw_circle(jc, 5, Color("#d0b25a")); draw_circle(jc, 2, Color.BLACK)
@@ -166,8 +246,41 @@ func _panel() -> void:
 func _fmt(v: float) -> String: return EngineBench._g(v, 4)
 
 ## ---- additive layer: phosphor trace with persistence, bloom and the band's glow
+## The sweep of a time trace (chapter 3): the engine's samples as a green phosphor line (a brighter head while it is still forming), the fading ghost of the last sweep, failing samples in red.
+func _draw_trace(ci: Control) -> void:
+	var trd: Dictionary = sc.get("trace", {}) as Dictionary
+	var v: Array = trd.get("v", [])
+	var tr := Color("#7CFF6B")
+	if _ghost.size() > 1 and _ghost_a > 0.01:
+		ci.draw_polyline(_ghost, Color(tr, 0.10 * _ghost_a), 7.0, true); ci.draw_polyline(_ghost, Color(0.8, 1.0, 0.75, 0.5 * _ghost_a), 1.6, true)
+	if not live or not attached or v.is_empty() or _warm <= 0.0:
+		_prev_pts = PackedVector2Array()
+		if not live:   # idle: a dim baseline dot sweeping so the tube reads as on
+			var x := SCREEN.position.x + fposmod(t / SWEEP, 1.0) * SCREEN.size.x
+			S.glow(ci, Vector2(x, _y_of(0.0)), 14.0, Color(0.4, 1.0, 0.45, 0.35)); ci.draw_line(Vector2(SCREEN.position.x, _y_of(0.0)), Vector2(SCREEN.end.x, _y_of(0.0)), Color(tr, 0.05), 3.0)
+		return
+	var n := v.size()
+	var pts := PackedVector2Array()
+	for k in n: pts.append(Vector2(SCREEN.position.x + float(k) / 255.0 * SCREEN.size.x, clampf(_y_of(float(v[k])), SCREEN.position.y - 4.0, SCREEN.end.y + 4.0)))
+	_prev_pts = pts
+	var a := _warm
+	if pts.size() > 1:
+		ci.draw_polyline(pts, Color(tr, 0.10 * a), 10.0, true); ci.draw_polyline(pts, Color(tr, 0.22 * a), 5.0, true); ci.draw_polyline(pts, Color(0.8, 1.0, 0.75, 0.95 * a), 2.0, true)
+		# failing samples (outside the tube) in red, where they are
+		for k in (trd.get("bad", []) as Array):
+			var ki := int(k)
+			if ki >= 0 and ki < pts.size(): ci.draw_circle(pts[ki], 2.4, Color(1.0, 0.25, 0.2, 0.95))
+	var head := pts[pts.size() - 1]
+	if n < 256: S.glow(ci, head, 28.0, Color(0.6, 1.0, 0.6, 0.65 * a))   # still forming: the beam's head
+	else: S.glow(ci, head, 12.0, Color(0.6, 1.0, 0.6, 0.25 * a))
+	if not sc.is_empty() and not bool(sc.get("hidden", false)):
+		var col := S.PHOS if locked else S.AMBER
+		S.glow(ci, SCREEN.get_center(), 200.0, Color(col, 0.05 + (0.14 * _lock_flash if locked else 0.0)))
+	if smoked: ci.draw_rect(SCREEN, Color(1.0, 0.1, 0.05, 0.06 + 0.04 * sin(t * 12.0)), true)
+
 func _draw_glow(ci: Control) -> void:
 	if sc.is_empty(): return
+	if is_trace(): _draw_trace(ci); return
 	var tr := Color("#7CFF6B")
 	if _warm > 0.0:
 		var a := 0.0

@@ -53,8 +53,25 @@ function buildPotDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: n
   return { node: 'wire', equation: say('debrief.pot.equation'), working, answer: say('debrief.pot.answer', { r: num(r) }), currents: [{ name: 'cell', amps: sig(e, 4), charging: false, text: say('debrief.pot.robust') }], rows: full, starsText, ...retryOf(built, stars) };
 }
 
-export function buildDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: number, built: boolean): Debrief {
+/** The 3-4 slip: both capacitor cards worked out from the printed problem (series / parallel, charge, energy, charge sharing and the heat that is lost), with the predictions graded and the bench's own energy ledger. */
+function buildCapsDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: number, built: boolean, measured?: Record<string, number>): Debrief {
+  const k = f.caps!, a = k.a, b = k.b, cp = a.c2 + a.c3, c = (a.c1 * cp) / (a.c1 + cp), q = c * a.volts, u = 0.5 * q * a.volts / 1000, vM = a.volts - q / a.c1;
+  const q2 = b.c1 * b.v1, ct = b.c1 + b.c2, v2 = q2 / ct, e0 = 0.5 * b.c1 * b.v1 * b.v1 / 1000, e1 = 0.5 * ct * v2 * v2 / 1000, loss = e0 - e1;
+  const working = [
+    say('debrief.caps.par', { cp: num(cp) }), say('debrief.caps.ser', { c1: num(a.c1), cp: num(cp), c: num(c) }),
+    say('debrief.caps.q', { c: num(c), v: num(a.volts), q: num(q), c1: num(a.c1), v1: num(q / a.c1), vm: num(vM) }), say('debrief.caps.u', { q: num(q), v: num(a.volts), u: num(u) }),
+    say('debrief.caps.share', { c1: num(b.c1), v1: num(b.v1), q: num(q2), c2: num(b.c2), ct: num(ct), v: num(v2) }),
+    say('debrief.caps.loss', { c1: num(b.c1), v1: num(b.v1), e0: num(e0), ct: num(ct), v: num(v2), e1: num(e1), loss: num(loss) }),
+  ];
+  if (measured?.heat !== undefined) working.push(say('debrief.caps.ledger', { heat: num(measured.heat * 1000) }));
+  const full = rows.map((x) => ({ ...x, ok: x.grade !== 'miss' }));
+  const starsText = say(!built ? 'debrief.stars.fail' : stars >= 3 ? 'debrief.stars.3' : stars === 2 ? 'debrief.stars.2' : 'debrief.stars.1.caps');
+  return { node: 'bank', equation: say('debrief.caps.equation'), working, answer: say('debrief.caps.answer', { q: num(q), u: num(u), v: num(v2), loss: num(loss) }), currents: [], rows: full, starsText, ...retryOf(built, stars) };
+}
+
+export function buildDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: number, built: boolean, measured?: Record<string, number>): Debrief {
   if (f.kind === 'pot' && f.pot) return buildPotDebrief(f, rows, stars, built);
+  if (f.kind === 'caps' && f.caps) return buildCapsDebrief(f, rows, stars, built, measured);
   const { a, into } = solveFigure(f), n = f.node;
   const eq = f.sources.map((s) => `(${num(s.volts)} − ${n})/${num(s.r.ohm)}`).join(' + ') + ` = ${n}/${num(f.load.ohm)}`;
   const mult = f.sources.every((s) => Number.isInteger(s.r.ohm)) && Number.isInteger(f.load.ohm) ? leastCommon([...f.sources.map((s) => s.r.ohm), f.load.ohm]) : 0;

@@ -19,7 +19,11 @@ export interface BinEntry {
 
 /** A source the BENCH provides (not a placed part): the bench supply or the function generator, wired to connectors. */
 export type SupplyDef =
-  | { id: string; kind: 'bench'; plus: string; minus: string }
+  /** `fixed`: a rail the board offers at a set voltage (3-3's 12 V and 24 V rails); the supply keys do not move it. */
+  | { id: string; kind: 'bench'; plus: string; minus: string; fixed?: number }
+  /** A bench-driven contact between two connectors (chapter 3): the bouncing arcade button of 3-2 (`press` / `release` seconds, `bounce` = one pattern per condition: the open / close times, s after the first contact),
+   *  or a plain switch that closes once (`bounce` absent) at `press` (3-4's charge-sharing switch). */
+  | { id: string; kind: 'contact'; plus: string; minus: string; press: number; release?: number; bounce?: number[][]; ron?: number }
   | { id: string; kind: 'gen'; plus: string; minus: string; rOut?: number };
 
 /** A parameter the player must find by measuring. Learner uses `learner`; Engineer and Sandbox draw from `seeded` (deterministic, from the save seed). */
@@ -104,14 +108,16 @@ export interface GaugeDef {
 
 /** The printed exam figure of an exam-bridge ticket (DESIGN §2.5: the one place a schematic is allowed): sources, each through its own resistor, meet at a named node; a load resistor runs to ground. */
 export interface ExamFigure {
-  /** 'node' (default): the 1-5 nodal figure. 'pot': the 2-4 slide-wire potentiometer figure. */
-  kind?: 'node' | 'pot';
+  /** 'node' (default): the 1-5 nodal figure. 'pot': the 2-4 slide-wire potentiometer figure. 'caps': the 3-4 capacitor cards. */
+  kind?: 'node' | 'pot' | 'caps';
   /** Name of the common node (printed on the figure). */
   node: string;
   sources: { name: string; volts: number; r: { name: string; ohm: number } }[];
   load: { name: string; ohm: number };
   /** kind 'pot': the printed problem (driver cell, rheostat, wire, the two balance lengths, the shunt). */
   pot?: { driverV: number; rheostat: number; wireCm: number; wireOhm: number; l1Cm: number; l2Cm: number; shunt: number };
+  /** kind 'caps': card (a) a series / parallel bank across a source, card (b) a charged capacitor shared with an empty one. Capacitances in microfarads, voltages in volts. */
+  caps?: { a: { c1: number; c2: number; c3: number; volts: number }; b: { c1: number; v1: number; c2: number } };
 }
 
 /** A number the player works out and enters on the ticket's slip (ticket 2-2: the distance to the fault). Checked by the bench against a hidden parameter: truth = hidden[`hidden`] / `per`, within `tol`. */
@@ -126,6 +132,34 @@ export interface AnswerDef {
   unit: string;
   /** Slide wire part uid ('f3') and the resistance-box value sum named in the failure text: R and l come from the board. */
   wire: string;
+}
+
+/** The amber target of a time trace (DESIGN §3.12 `band`, §5.3): a tube in time and voltage. All numbers SI (s, V or A). */
+export type TubeDef =
+  /** A charging curve v0 -> vInf with time constant tau; the tube is +-dv in value and +-dt in time around it (the Minkowski tube of band.ts). */
+  | { kind: 'exp'; v0: number; vInf: number; tau: number; dv: number; dt: number }
+  /** Allowed windows: in [t0, t1) the trace must stay between lo and hi (a gate the signal has to pass through, 3-2 and 3-3). Outside every window the trace is free. */
+  | { kind: 'windows'; windows: { t0: number; t1: number; lo: number; hi: number }[] };
+
+/** Chapter 3: the scope shows a TIME TRACE of the transient from power-on (one single sweep that forms and holds), against a tube; LOCK means the whole sweep sits in the tube and the listed specs hold. */
+export interface TraceDef {
+  /** The bench probe the trace shows (`v(out)`, `i(@relay-12v#1)`). */
+  probe: string;
+  /** 'clip': the CH1 clip's own node (a real probe: its 10 Mohm loads the circuit, which is the 3-1 lesson); 'auto': a built-in clamp on `probe` (the coil current of 3-3). */
+  mode: 'clip' | 'auto';
+  /** Display unit and its scale from SI ('V' 1, 'mA' 1000). */
+  unit: 'V' | 'mA'; scale: number;
+  /** Connector the clip belongs on (the arrow's target; clip mode). */
+  clip?: string;
+  /** Default vertical scale, display units per division. */
+  vdiv: number;
+  tube: TubeDef;
+  /** Bench `metric` / `level` spec ids that must also hold on the captured sweep for LOCK (their probe is this trace). */
+  lockSpecs: string[];
+  /** The scope's time knob values (s per division), ascending; the first one is the default shown. */
+  times: number[];
+  /** Short readout label ("OUT", "COIL"). */
+  label: string;
 }
 
 export interface LevelDef {
@@ -182,7 +216,9 @@ export interface LevelDef {
   /** i18n key of the one-line spec printed on the ticket chit (chapter 2: the scope band is a null or a match, not a range). */
   specShort?: string;
   /** Plain-words explainer for a missed level spec: 'divider' (2-1, the load on the bottom resistor). */
-  explain?: 'divider' | 'bridge' | 'blackbox' | 'pot';
+  explain?: 'divider' | 'bridge' | 'blackbox' | 'pot' | 'rc' | 'debounce' | 'coil' | 'caps';
+  /** Chapter 3: the scope's time trace and its tube (see TraceDef). */
+  trace?: TraceDef;
   /** Engraved slots on the board where a bin part belongs (2-2, 2-4): a clear outlined spot between two pads, shown until a part of `partId` is placed. */
   slots?: { id: string; partId: string; a: Pad; b: Pad; textKey: string }[];
   /** The customer's thank-you quotes what the bench measured: `spec` is a `level` spec; the exact line when within `within` (fraction) of `target`, the near line otherwise. */

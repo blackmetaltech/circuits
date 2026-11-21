@@ -22,6 +22,7 @@ import { liveRig, probeOn } from './ticket-run';
 import { say } from './text';
 import { danglingEnds, openPins, pinLabel } from './touch';
 import { capFirst, nameVars, partNames } from './names';
+import { traceTarget } from './trace';
 
 export interface Sol { rig: Rig; ckt: Circuit; x: Float64Array; state: number[] }
 export interface UiDeps {
@@ -131,11 +132,12 @@ function liveSpecs(sol: Sol, def: LevelDef): { id: string; value: number | null;
   return out;
 }
 
-const CHAPTER: Record<number, { title: string; blurb: string }> = { 1: { title: 'chapter.1.title', blurb: 'chapter.1.blurb' }, 2: { title: 'chapter.2.title', blurb: 'chapter.2.blurb' } };
+const CHAPTER: Record<number, { title: string; blurb: string }> = { 1: { title: 'chapter.1.title', blurb: 'chapter.1.blurb' }, 2: { title: 'chapter.2.title', blurb: 'chapter.2.blurb' }, 3: { title: 'chapter.3.title', blurb: 'chapter.3.blurb' } };
 const GAUGE_UNIT: Record<string, { display: string; scale: number }> = { A: { display: 'mA', scale: 1000 }, uA: { display: 'µA', scale: 1e6 }, V: { display: 'V', scale: 1 }, W: { display: 'W', scale: 1 } };
 
 /** The scope's target band and lock for the open ticket (null when the ticket has no gauge). */
 export function scopeTarget(s: NodeState, tk: TicketState, def: LevelDef, sol: Sol | null): Record<string, unknown> {
+  if (def.trace) return traceTarget(tk, def);
   const specs = sol ? liveSpecs(sol, def) : [];
   const g = def.gauge, sp = g ? specs.find((x) => x.id === g.spec) : undefined, spec = g ? def.bench.specs.find((x) => x.id === g.spec) : undefined;
   const live = tk.live.powered && !!sol && tk.live.status !== 'noconv' && tk.live.smoked.length === 0;
@@ -175,6 +177,8 @@ export function scopeTarget(s: NodeState, tk: TicketState, def: LevelDef, sol: S
     lock, lockSpecs,
   };
 }
+
+const v0 = (p: { variant: string }, d: PartDef): number | null => (d.variants.find((x) => x.id === p.variant) ?? d.variants[0]!).ratings.Vrated ?? null;
 
 export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> {
   const { defs, Q, mine, regionString } = deps;
@@ -237,6 +241,15 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
           const iSig = c?.pins[0]?.i ?? 0, fs = d.model.fs;
           Object.assign(o2, { galvo: { i: sig(iSig, 5), uA: r4(iSig * 1e6), needle: r4(clamp(iSig / fs, -1.15, 1.15)), fs } });
         }
+        if (d.kind === 'RELAY') {   // the armature: pulled in (the contacts have switched) and the coil current, from the saved solution
+          const ce = sol?.ckt.elements.find((x) => (x.el.owner || x.el.id) === p.uid);
+          Object.assign(o2, { relay: { operated: !!ce && (sol!.state[ce.so + 2] ?? 0) >= 0.5 && tk.live.powered, coil: sig(c?.pins[0]?.i ?? 0, 5), mA: r4((c?.pins[0]?.i ?? 0) * 1000) } });
+        }
+        if (d.kind === 'C' || d.kind === 'CE') {   // a capacitor: the voltage it holds and its charge, for the swelling top and the readout
+          const ce = sol?.ckt.elements.find((x) => (x.el.owner || x.el.id) === p.uid && x.el.kind === 'C');
+          const vc = ce && tk.live.powered ? (sol!.state[ce.so] ?? 0) : 0;
+          Object.assign(o2, { cap: { v: sig(vc, 5), q: sig(vc * (ce?.el.p.c ?? 0), 5), vrated: v0(p, d), vfull: d.model.ic ?? null } });
+        }
         if (d.kind === 'LED') Object.assign(o2, { led: { i: sig(iPin, 5), mA: r4(iPin * 1000), bloom: smoked ? 0 : ledBloom(iPin), mood: ledMood(iPin, smoked) } });
         return o2;
       });
@@ -245,8 +258,9 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
         const kind = !d ? 'smoke' : ['LED', 'D', 'Z', 'SCHOTTKY', 'NPN', 'PNP', 'DARLINGTON', 'NMOS'].includes(d.kind) ? 'crack' : d.kind === 'CE' ? 'vent' : 'smoke';
         return { part: uid, kind, failureId: f?.id ?? null, key: f?.kind ?? 'smoke.thermal', text: tk.live.notes?.[uid] ?? (f ? (deps.explained ? deps.explained({ key: f.kind, vars: f.vars }, tk, o.def, log.filter((x) => x.ticket === tk.id && x.id < f.id).length + (s.progress.tickets[tk.id]?.attempts ?? 0)) : say(f.kind, nameVars(tk.board, f.vars))) : '') };
       });
+      const contacts = o.def.supplies.filter((x) => x.kind === 'contact').map((x) => { const ce = sol?.ckt.elements.find((y) => y.el.id === x.id); return { id: x.id, a: x.plus, b: x.minus, closed: !!ce && tk.live.powered && (sol!.state[ce.so] ?? 0) >= 0.5 }; });
       return {
-        valid: !!sol, powered: tk.live.powered, paused: tk.live.paused === true, frame: tk.live.frame, t: tk.live.t, status: tk.live.status,
+        contacts, valid: !!sol, powered: tk.live.powered, paused: tk.live.paused === true, frame: tk.live.frame, t: tk.live.t, status: tk.live.status,
         issues: tk.live.issues.map((i) => ({ key: i.key, text: text(i) })),
         vmin: sig(nodes.vmin, 5), vmax: sig(nodes.vmax, 5), nodes: (nodes.nodes as { v: number; norm: number }[]).map((n) => ({ ...n, v: sig(n.v, 5), norm: r4(n.norm) })), ambient: th.ambient,
         parts, wires: cur.wires.map((w) => ({ wid: w.wid, i: sig(w.i, 5), speed: dotSpeed(w.i) })), events,

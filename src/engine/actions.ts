@@ -20,7 +20,7 @@ import {
 import { q, snap125 } from './quant';
 import { MAX_WIRES, newScope, newTicketProgress, pushFailure, pushUndo, type BoardSnapshot, type NodeState, type TicketState } from './state';
 import { levelDefOf, openTicketIn, refBoard, unmetAfter } from './tickets';
-import { benchTicket, evalHint, liveCfg, liveRig, probeOn } from './ticket-run';
+import { benchTicket, evalHint, liveCfg, liveRig, probeOn, sweepKey } from './ticket-run';
 import { refuse, refuseKey, say } from './text';
 import { danglingEnds, padWhat } from './touch';
 import { capFirst, nameVars, partName } from './names';
@@ -144,7 +144,7 @@ function partOf(tk: TicketState, uid: unknown, forEdit: boolean): PlacedPart {
 /** The player's name for a part, as {what} (mid-sentence) and {What} (sentence start). */
 const nm = (tk: TicketState, uid: string): Record<string, string> => { const what = partName(tk.board, uid); return { what, What: capFirst(what) }; };
 const touch = (tk: TicketState): void => { tk.lastBench = null; };
-const resetLive = (live: TicketState['live']): void => { live.x = []; live.hist = []; live.h = 0; live.be = 0; live.t = 0; live.issues = []; live.scope = { ch1: [], ch2: [], t0: 0, dt: 0 }; };
+const resetLive = (live: TicketState['live']): void => { live.x = []; live.hist = []; live.h = 0; live.be = 0; live.t = 0; live.issues = []; live.scope = { ch1: [], ch2: [], t0: 0, dt: 0 }; delete live.dw; delete live.sweep; };
 
 function validPad(tk: TicketState, v: unknown, name: string): Pad {
   if (!Array.isArray(v) || v.length !== 2 || !Number.isInteger(v[0]) || !Number.isInteger(v[1])) refuseKey('err.arg.pad', { name });
@@ -501,6 +501,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       if (n < 1 || n > 8) refuseKey('err.advance.frames', { frames: n });
       if (tk.live.paused) return ok(say('run.paused'), { frames: 0, smoked: [], status: tk.live.status, paused: true });
       const live = tk.live, onBoard = new Set(tk.board.parts.map((p) => p.uid));
+      if (def.trace) { const key = sweepKey(tk); if (live.sweep !== key) { resetLive(live); live.sweep = key; } }   // a changed circuit, probe or time knob starts the sweep again
       live.smoked = live.smoked.filter((u) => onBoard.has(u));
       for (const u of Object.keys(live.temps)) if (!onBoard.has(u)) delete live.temps[u];
       const out = advanceLive(live, liveRig(tk, def), liveCfg(tk, def), n);

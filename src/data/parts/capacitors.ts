@@ -54,4 +54,22 @@ export const capVar: PartDef = {
   verified: false, scope: 'sandbox', simplifications: [],
 };
 
-export const CAPACITORS: PartDef[] = [capC0g, capX2, capEl, capVar];
+const IDEAL_THERMAL = { thetaJA: 1, tauS: 1, tMax: 1000, tFail: 2000 }; // never heats (Textbook bins only)
+
+/** Textbook ideal capacitor (ticket 3-4): exact value, no voltage rating, a 1 Gohm bleeder in parallel so a node between two capacitors still has a DC path (DESIGN §3.4). */
+export const capIdeal: PartDef = {
+  id: 'cap-ideal', kind: 'C', nameKey: 'part.cap-ideal.name', footprint: 'axial2', pins: ['1', '2'],
+  variants: [variant('ideal', {}, IDEAL_THERMAL)], model: { rbleed: 1e9 }, tolerance: { C: 0 },
+  source: { doc: 'Textbook ideal element, defined by its constitutive equation (no datasheet, no physical data)', definition: true, note: 'i = C dv/dt with a 1 Gohm bleeder in parallel (DESIGN §3.4: the DC operating point of a capacitor network needs a path). Textbook bins only. [R] no thermal model.' },
+  verified: true, scope: 'campaign', simplifications: ['part.simplify.cap-bleed'],
+};
+
+/** Ticket 3-4 card (b): a 4 uF capacitor that arrives charged to 100 V, soldered on the board next to a switch. A fixture: it is never offered from a shop bin. */
+export const capCharged: PartDef = {
+  id: 'cap-charged', kind: 'C', nameKey: 'part.cap-charged.name', footprint: 'block2', pins: ['+', '-'],
+  variants: [variant('4uF-100V', {}, IDEAL_THERMAL)], model: { c: 4e-6, ic: 100, rbleed: 1e9 },
+  source: { doc: 'GAME-DEFINED level fixture, not a datasheet part: the pre-charged 4 uF capacitor (100 V) of ticket 3-4 card (b) (DESIGN §2.8)', gameFixture: true, note: 'UNVERIFIED, GAME-DEFINED level fixture: 4 uF charged to 100 V is the printed problem; the 1 Gohm bleeder is the textbook DC path. Placed by the level as a fixed part, never offered from a shop bin. [R] no thermal model.' },
+  verified: false, scope: 'sandbox', simplifications: ['part.simplify.cap-bleed', 'part.simplify.cap-fixture'],
+};
+
+export const CAPACITORS: PartDef[] = [capC0g, capX2, capEl, capVar, capIdeal, capCharged];

@@ -13,7 +13,7 @@ import type { Board, Pad } from './board/types';
 import { boardToNetlist } from './mna/netlist';
 import { compileNetlist } from './mna/compile';
 import { applyFailures } from './smoke';
-import { pulse, sine, type Wave } from './mna/waveforms';
+import { pulse, pwl, sine, type Wave } from './mna/waveforms';
 import type { Circuit, Element, Netlist } from './mna/types';
 import type { RatedPart } from './thermal';
 import type { Connectivity } from './board/connectivity';
@@ -75,6 +75,29 @@ export function genWave(g: RigGen): Wave {
   }
 }
 
+/** The closedness (0 open, 1 closed) of a contact over time: it closes at `press` with the bounce pattern `k` (open / close times after the first contact), and opens again at `release`
+ *  with the mirror image of the same bounce (time reversed about the end of the bounce, DESIGN §2.8 ticket 3-2). No pattern: a plain switch that closes once at `press`. */
+export function contactWave(s: Extract<SupplyDef, { kind: 'contact' }>, k: number): Wave {
+  const E = 1e-9, pts: [number, number][] = [[0, 0]];
+  const to = (t: number, v: number): void => { const last = pts[pts.length - 1]!; if (t <= last[0]) return; pts.push([t, last[1]]); pts.push([t + E, v]); };
+  const pat = s.bounce?.[k % (s.bounce?.length || 1)];
+  if (!pat || pat.length === 0) {
+    to(s.press, 1);
+    if (s.release !== undefined) to(s.release, 0);
+    return pwl(pts);
+  }
+  const T = pat[pat.length - 1]! + E;
+  to(s.press, 1);
+  for (let j = 0; j < pat.length; j++) to(s.press + pat[j]!, j % 2 === 0 ? 0 : 1);
+  if (s.release !== undefined) {
+    // mirror: the contact stays closed until the bounce window opens, then follows the reversed pattern and ends open
+    const rev = pat.map((t) => T - t).reverse();   // times T-c6, T-o6, ..., T-c1, T-o1 (open, close, ...)
+    for (let j = 0; j < rev.length; j++) to(s.release + rev[j]!, j % 2 === 0 ? 0 : 1);
+    to(s.release + T, 0);
+  }
+  return pwl(pts);
+}
+
 export function buildRig(inp: RigInput): Rig {
   const { getDef } = inp;
   // `pos` overrides (a condition sets the jockey of a fixed slide wire, or a wiper) apply to the board before it is expanded
@@ -114,7 +137,8 @@ export function buildRig(inp: RigInput): Rig {
   for (const s of inp.supplies) {
     const a = connNode(s.plus), b = connNode(s.minus);
     if (a < 0 || b < 0) continue;
-    if (s.kind === 'bench') { add({ id: s.id, kind: 'BENCH', owner: s.id, nodes: [a, b], p: { v: inp.supply.v, ilim: inp.supply.ilim } }); sources.push(s.id); }
+    if (s.kind === 'bench') { add({ id: s.id, kind: 'BENCH', owner: s.id, nodes: [a, b], p: { v: s.fixed ?? inp.supply.v, ilim: inp.supply.ilim } }); sources.push(s.id); }
+    else if (s.kind === 'contact') add({ id: s.id, kind: 'SWT', owner: s.id, nodes: [a, b], p: { ron: s.ron ?? 0.05, roff: 1e9, pattern: 0 }, wave: contactWave(s, 0) });
     else {
       const mid = nodeNames.length; nodeNames.push(`${s.id}#o`);
       add({ id: s.id, kind: 'V', owner: s.id, nodes: [mid, b], p: { v: inp.gen.offset }, wave: genWave(inp.gen) });
@@ -123,7 +147,9 @@ export function buildRig(inp: RigInput): Rig {
     }
   }
   // overrides targeting a bench source (conditions such as "12 V supply") apply to the injected element too
-  for (const o of inp.overrides ?? []) for (const e of elements) if (e.owner === o.target && (e.kind === 'BENCH' || e.kind === 'V')) e.p[o.key] = o.value;
+  for (const o of inp.overrides ?? []) for (const e of elements) if (e.owner === o.target && (e.kind === 'BENCH' || e.kind === 'V' || e.kind === 'SWT')) e.p[o.key] = o.value;
+  // a contact's bounce pattern is picked by the condition (`key: 'pattern'`)
+  for (const e of elements) if (e.kind === 'SWT') { const sd = inp.supplies.find((x) => x.id === e.owner); if (sd && sd.kind === 'contact') e.wave = contactWave(sd, Math.round(e.p.pattern ?? 0)); }
 
   const padName = (pad: Pad): string | null => { const k = base.conn.nodeOfPad(pad); return k < 0 ? null : names[k]!; };
   const scope: [string, string] = ['', ''];
