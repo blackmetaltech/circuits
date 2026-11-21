@@ -363,7 +363,7 @@ func _predict(a: float) -> void:
 	draw_rect(Rect2(0, 0, w, h), Color(0.02, 0.01, 0.02, 0.45 * a), true)
 	var fig: Dictionary = coach_ticket.get("figure", {}) if coach_ticket.get("figure", null) is Dictionary else {}
 	var wide := not fig.is_empty()
-	var sz := Vector2(1120, 820) if wide else Vector2(720, 640 if S.handheld else 520)
+	var sz := Vector2(1120, 1010 if S.handheld else 820) if wide else Vector2(720, 640 if S.handheld else 520)   # a handheld's 16 px text needs the height: four questions never overlap
 	sz = Vector2(minf(sz.x, w - 24.0), minf(sz.y, h - 24.0))
 	var r := Rect2(w * 0.5 - sz.x * 0.5, h * 0.5 - sz.y * 0.5 + (1.0 - a) * 24, sz.x, sz.y)
 	S.paper(self, r, -0.8, S.PAPER)
@@ -388,7 +388,7 @@ func _predict(a: float) -> void:
 	var y := maxf(q.position.y + (q.size.y * 0.5 - 40.0 if wide else 200.0), q.position.y + 106.0 + brief_h + 30.0)   # the first question starts under however long the problem is
 	var need := 0.0
 	for pf0 in pred_fields: need += S.wrapped_h(f, str(pf0.name), 19, col_w) + 78.0
-	var gap_k := clampf((q.end.y - (44.0 if wide else 96.0) - y) / maxf(need, 1.0), 0.72, 1.0)   # a handheld's bigger text leaves less room: squeeze the rows a little so the buttons never sit on the last question
+	var gap_k := clampf((q.end.y - (44.0 if wide else 96.0) - y) / maxf(need, 1.0), 0.6, 1.0)   # a handheld's bigger text leaves less room: squeeze the rows a little so the buttons never sit on the last question
 	if gap_k < 1.0: y = maxf(q.position.y + 106.0 + brief_h + 22.0, y - (1.0 - gap_k) * 60.0)
 	for i in pred_fields.size():
 		var pf: Dictionary = pred_fields[i]
@@ -407,7 +407,7 @@ func _predict(a: float) -> void:
 		if cur and not pred_sel and fmod(t, 1.0) < 0.6: draw_rect(Rect2(box.position.x + 16 + S.tw(S.mono(), txt, 30), box.position.y + 10, 3, 30), S.INK, true)
 		S.text(self, f, str(pf.unit), box.position + Vector2(box.size.x + 12, 36), 28, S.INK)
 		if pf.get("done", false): S.text(self, f, "recorded", box.position + Vector2(box.size.x + 52, 36), 18, S.INK_RED)
-		y += (lh + 78.0) * gap_k
+		y += maxf((lh + 78.0) * gap_k, lh + 64.0)   # squeezed, but never tighter than a label plus its box: the next label never prints over this field
 	var bx0 := q.position.x + (q.size.x * 0.52 if wide else 36.0)   # a wide slip keeps its buttons under the figure, so the questions can use the whole left column
 	var ok_r := Rect2(bx0, q.end.y - 78, 200, 50)
 	var oh := _btn(Rect2(r.get_center() + ok_r.position, ok_r.size), "pred_submit")
