@@ -35,6 +35,10 @@ export interface TraceView {
   inTube: boolean; specsOk: boolean;
   /** The specs that do not hold on the sweep yet (ids), for the readout. */
   specsFail: string[];
+  /** Chapter 4: the second channel (the transformer's secondary, amber) on the same grid, display units; empty without one. */
+  v2: number[];
+  /** Chapter 4: the mean of CH1 over the settled part of the sweep (display units; null until there is any): what AC coupling takes away so the ripple can be read at 0.2 V per division. */
+  dc: number | null;
   /** RC / LR tickets: one time constant. `level` = 63.2 % of the circuit's final value (display units, the dashed line); `t` = when the trace crosses it (s, null until it does); `final` = the final value. */
   mark63: { level: number; final: number; t: number | null } | null;
 }
@@ -50,12 +54,13 @@ export function traceView(tk: TicketState, def: LevelDef): TraceView | null {
   for (let k = 0; k < n; k++) { const a = tubeAt(tr.tube, k * dt); if (tr.tube.kind === 'exp') { lo.push(r4((a?.lo ?? 0) * tr.scale)); hi.push(r4((a?.hi ?? 0) * tr.scale)); } }
   ys.forEach((y, k) => { const a = tubeAt(tr.tube, ts[k]!); if (a && (y < a.lo || y > a.hi)) bad.push(k); });
   const complete = ys.length >= n;
+  const from = tr.settleFrom ?? 0, i0 = Math.max(0, Math.ceil(from / dt - 1e-9));
   // the bench's own specs, measured on the sweep the scope shows
   const specsFail: string[] = [];
   if (complete) {
     for (const id of tr.lockSpecs) {
       const sp = def.bench.specs.find((x) => x.id === id); if (!sp || (sp.kind !== 'metric' && sp.kind !== 'level')) continue;
-      const sg = { t: ts, y: ys }, v = sp.kind === 'metric' ? measure(sp.metric, sg, sp.params) : measure('mean', sg);
+      const sg = { t: ts.slice(i0), y: ys.slice(i0) }, v = sp.kind === 'metric' ? measure(sp.metric, sg, sp.params) : measure('mean', sg);
       if (!(Number.isFinite(v) && v >= sp.lo && v <= sp.hi)) specsFail.push(id);
     }
   }
@@ -73,7 +78,9 @@ export function traceView(tk: TicketState, def: LevelDef): TraceView | null {
       mark63 = { level: r4(lvl * tr.scale), final: r4(fin * tr.scale), t: tc === null ? null : Math.round(tc * 1e9) / 1e9 };
     }
   }
-  return { v: ys.map((y) => r4(y * tr.scale)), t0: sc.t0, dt, progress: Math.min(1, ys.length / n), complete, bad, tube, inTube: bad.length === 0, specsOk: complete && specsFail.length === 0, specsFail, mark63 };
+  const settled = ys.slice(i0), dc = settled.length >= 8 ? r4((settled.reduce((a, y) => a + y, 0) / settled.length) * tr.scale) : null;
+  const v2 = tr.second && sc.dt === dt ? sc.ch2.slice(0, n).map((y) => r4(y)) : [];
+  return { v2, dc, v: ys.map((y) => r4(y * tr.scale)), t0: sc.t0, dt, progress: Math.min(1, ys.length / n), complete, bad, tube, inTube: bad.length === 0, specsOk: complete && specsFail.length === 0, specsFail, mark63 };
 }
 
 /** `scope().target / gauge / lock` for a ticket with a time trace. */
@@ -90,6 +97,7 @@ export function traceTarget(tk: TicketState, def: LevelDef): Record<string, unkn
       spec: tr.lockSpecs[0] ?? '', name: tr.lockSpecs[0] && def.bench.names[tr.lockSpecs[0]] ? t(def.bench.names[tr.lockSpecs[0]]!) : '', quantity: tr.unit, unit: tr.unit, scale: tr.scale, lo: 0, hi: r4(tr.vdiv * 7),
       mode: 'trace', clip: c ? { connector: c.id, pad: c.pad } : null, clipped, vdiv: tr.vdiv, label: tr.label,
       times: tr.times, timePerDiv: tk.instruments.scope.timePerDiv,
+      ...(tr.second ? { second: { label: tr.second.label } } : {}), ...(tr.vdivs ? { vdivs: tr.vdivs } : {}), ...(tr.ac ? { ac: true } : {}),
     },
     gauge: { value: live && last !== null ? last : null, text: live && last !== null ? `${sig(last, 4)} ${tr.unit}` : '', unit: tr.unit, inBand: view.inTube },
     trace: view, lock, lockSpecs: Object.fromEntries(tr.lockSpecs.map((id) => [id, !view.specsFail.includes(id) && view.complete])),

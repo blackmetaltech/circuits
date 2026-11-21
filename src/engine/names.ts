@@ -37,7 +37,10 @@ function plainName(p: PlacedPart): string {
     const watts = p.variant !== 'ideal' && v?.ratings.P ? ` ${wattText(v.ratings.P)}` : '';
     return say('name.resistor', { value: si(p.value, 'Ω') + watts });
   }
-  return `the ${t(d.nameKey).toLowerCase()}`;
+  if (d.kind === 'XFMR') return say('name.xfmr');
+  if (d.kind === 'LOAD' && d.model.cc !== undefined) return say('name.load');
+  const nm = t(d.nameKey);
+  return `the ${/^[A-Za-z]*\d/.test(nm) ? nm : nm.toLowerCase()}`;   // a part number keeps its capitals: "the LM7805 regulator, 5 V"
 }
 
 /** uid -> the player's name for it. Parts with the same description get an ordinal (LED 1, LED 2; the first / second 100 Ω resistor). */

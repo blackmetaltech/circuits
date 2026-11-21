@@ -18,6 +18,8 @@ export interface RatingOptions {
   ta?: number;
   /** Parts that smoked in earlier runs: still reported smoked (the bench refuses burnt parts). */
   previouslySmoked?: readonly string[];
+  /** A ticket's own junction limit (deg C), tighter than the part's: the finding names this number ("Tj <= 125 C"). */
+  tjLimit?: number;
 }
 export interface RatingResult extends RatingReport {
   findings: RatingFinding[];
@@ -55,6 +57,7 @@ export function checkRatings(ckt: NetLike, parts: readonly RatedPart[], w: Windo
       case 'D': case 'SCHOTTKY': {
         if (r.IFAV !== undefined && i && avg(i) > r.IFAV) add('IF(AV)', avg(i), r.IFAV, 'rating.diode.current');
         if (r.VRRM !== undefined && v && -minOf(v) > r.VRRM) add('VRRM', -minOf(v), r.VRRM, 'rating.diode.reverse');
+        if (r.IFRM !== undefined && i && maxOf(i) > r.IFRM) add('IFRM', maxOf(i), r.IFRM, 'rating.diode.peak', { avg: avg(i) });
         break;
       }
       case 'LED': {
@@ -86,7 +89,8 @@ export function checkRatings(ckt: NetLike, parts: readonly RatedPart[], w: Windo
     const T = steadyT(ta, pw.avg, thetaTotal(part.thermal, part.heatsink));
     tSteady[id] = T;
     states[id] = thermalState(part, pw.avg, T);
-    if (SEMI_KINDS.includes(part.kind) && T > part.thermal.tMax) add('Tj', T, part.thermal.tMax, 'rating.thermal.tj', { P: pw.avg, ta });
+    const tjLim = Math.min(part.thermal.tMax, o.tjLimit ?? Infinity);
+    if (SEMI_KINDS.includes(part.kind) && T > tjLim) add('Tj', T, tjLim, 'rating.thermal.tj', { P: pw.avg, ta, theta: thetaTotal(part.thermal, part.heatsink) });
     const ts = thermalSmoke(part, pw.avg, ta);
     if (ts) { mark(id); failures.push({ key: ts.key, vars: ts.vars }); }
   }

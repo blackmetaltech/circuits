@@ -24,7 +24,20 @@ export type SupplyDef =
   /** A bench-driven contact between two connectors (chapter 3): the bouncing arcade button of 3-2 (`press` / `release` seconds, `bounce` = one pattern per condition: the open / close times, s after the first contact),
    *  or a plain switch that closes once (`bounce` absent) at `press` (3-4's charge-sharing switch). */
   | { id: string; kind: 'contact'; plus: string; minus: string; press: number; release?: number; bounce?: number[][]; ron?: number }
-  | { id: string; kind: 'gen'; plus: string; minus: string; rOut?: number };
+  | { id: string; kind: 'gen'; plus: string; minus: string; rOut?: number }
+  /** Chapter 4: the wall socket behind an ISOLATION TRANSFORMER (simulated mains: a sine of `vrms` volts rms and `f` Hz between the two connectors, floating: only a 100 Mohm insulation resistance ties it to ground). A condition or a selector
+   *  sets `vrms` (key 'vrms') to the pack's low / nominal / high mains. */
+  | { id: string; kind: 'mains'; plus: string; minus: string; vrms: number; f: number };
+
+/** A live switch on the bench (chapter 4): a few positions, each a set of overrides exactly like a bench condition (the mains tolerance, the load). The bench plan still lists every condition it runs; the selector only chooses what the LIVE view shows. */
+export interface SelectorDef {
+  id: string;
+  /** i18n key of the switch's name ("MAINS", "LOAD"). */
+  labelKey: string;
+  options: { labelKey: string; set: { target: string; key: string; value: number }[] }[];
+  /** Index of the position the ticket starts on. */
+  initial: number;
+}
 
 /** A parameter the player must find by measuring. Learner uses `learner`; Engineer and Sandbox draw from `seeded` (deterministic, from the save seed). */
 export interface HiddenDef {
@@ -63,6 +76,10 @@ export interface BenchPlan {
   /** Bench-only test loads (chapter 2): a resistor from node `a` to node `b` (connector names, `0` = GND, or a part pin written `@partId#n.PIN`) that exists ONLY in the formal bench run, never in the live view. A condition's `set`
    *  overrides its `r` (`{ target: <id>, key: 'r', value }`): 'the 100 ohm test load', 'the shunt'. */
   testLoads?: { id: string; a: string; b: string; r: number }[];
+  /** Chapter 4 (4-3): the linear regulator's internal thermal shutdown runs on a compressed clock: its time constant is this many SECONDS for a bare TO-220 (a sink variant keeps its ratio), so cycling fits a bench window and a scope sweep. */
+  regTau?: number;
+  /** Chapter 4 (4-3): the junction limit the ratings check applies to semiconductors (deg C), tighter than the part's own maximum ("Tj <= 125 C at Ta = 40 C"). */
+  tjLimit?: number;
 }
 
 /** Tiny expression language for hint numbers computed from the live solver (DESIGN §7.2 rung 2). */
@@ -109,7 +126,7 @@ export interface GaugeDef {
 /** The printed exam figure of an exam-bridge ticket (DESIGN §2.5: the one place a schematic is allowed): sources, each through its own resistor, meet at a named node; a load resistor runs to ground. */
 export interface ExamFigure {
   /** 'node' (default): the 1-5 nodal figure. 'pot': the 2-4 slide-wire potentiometer figure. 'caps': the 3-4 capacitor cards. */
-  kind?: 'node' | 'pot' | 'caps';
+  kind?: 'node' | 'pot' | 'caps' | 'zener';
   /** Name of the common node (printed on the figure). */
   node: string;
   sources: { name: string; volts: number; r: { name: string; ohm: number } }[];
@@ -118,6 +135,8 @@ export interface ExamFigure {
   pot?: { driverV: number; rheostat: number; wireCm: number; wireOhm: number; l1Cm: number; l2Cm: number; shunt: number };
   /** kind 'caps': card (a) a series / parallel bank across a source, card (b) a charged capacitor shared with an empty one. Capacitances in microfarads, voltages in volts. */
   caps?: { a: { c1: number; c2: number; c3: number; volts: number }; b: { c1: number; v1: number; c2: number } };
+  /** kind 'zener': the 4-5 card: a source behind a series resistor, a Zener of `vz` volts with a minimum current, a load. */
+  zener?: { volts: number; rs: number; vz: number; izMin: number; rl: number };
 }
 
 /** A number the player works out and enters on the ticket's slip (ticket 2-2: the distance to the fault). Checked by the bench against a hidden parameter: truth = hidden[`hidden`] / `per`, within `tol`. */
@@ -160,6 +179,15 @@ export interface TraceDef {
   times: number[];
   /** Short readout label ("OUT", "COIL"). */
   label: string;
+  /** Chapter 4 (4-1): a second, built-in channel drawn in amber under CH1 (the isolated transformer's secondary, a differential probe: the `second.probe` expression, label `second.label`). */
+  second?: { probe: string; label: string };
+  /** Chapter 4: lockSpecs are measured only on the part of the sweep from this time on (the capacitor has charged: the ripple is a steady-state number). */
+  settleFrom?: number;
+  /** Chapter 4: transient step of the live run, s (default: the sweep's own frame length / 4). */
+  h?: number;
+  /** Chapter 4: the VOLTS knob steps through exactly this list (V per division), the first entry is the default; and CH1 may be AC coupled (the engine gives `trace.dc` so the ripple can be read at 0.2 V per division). */
+  vdivs?: number[];
+  ac?: boolean;
   /** RC / LR tickets: the scope draws a dashed level at 63.2 % of the final value (one time constant) and, once the sweep is in, a cursor at the time the trace crosses it. */
   mark63?: boolean;
 }
@@ -172,7 +200,7 @@ export interface LevelDef {
   /** Region-pack customer id (strings `customer.<id>`). */
   customer: string;
   teaches: string[];
-  board: { w: number; h: number; connectors: Connector[] };
+  board: { w: number; h: number; connectors: Connector[]; /** Chapter 4: the keep-out rectangles of the mains section (HIGH VOLTAGE, hatched red). */ keepOut?: { x: number; y: number; w: number; h: number }[] };
   /** Pre-placed, non-removable parts (battery, load, transformer). Their uids are fixed by the level ('f1', 'f2'...) and must have `fixed: true`. */
   fixed: PlacedPart[];
   /** Pre-wired, non-removable wires (paths of pads), uids fw1, fw2...: e.g. the exam's source minus ends tied to the GND pad. */
@@ -221,13 +249,17 @@ export interface LevelDef {
   /** i18n key of the one-line spec printed on the ticket chit (chapter 2: the scope band is a null or a match, not a range). */
   specShort?: string;
   /** Plain-words explainer for a missed level spec: 'divider' (2-1, the load on the bottom resistor). */
-  explain?: 'divider' | 'bridge' | 'blackbox' | 'pot' | 'rc' | 'debounce' | 'coil' | 'caps';
+  explain?: 'divider' | 'bridge' | 'blackbox' | 'pot' | 'rc' | 'debounce' | 'coil' | 'caps' | 'rectifier' | 'zener' | 'regulator' | 'lm317' | 'zenerexam';
   /** Chapter 3: the scope's time trace and its tube (see TraceDef). */
   trace?: TraceDef;
   /** Engraved slots on the board where a bin part belongs (2-2, 2-4): a clear outlined spot between two pads, shown until a part of `partId` is placed. */
   slots?: { id: string; partId: string; a: Pad; b: Pad; textKey: string }[];
   /** The customer's thank-you quotes what the bench measured: `spec` is a `level` spec; the exact line when within `within` (fraction) of `target`, the near line otherwise. */
   thanks?: { spec: string; target: number; within: number; exactKey: string; nearKey: string };
+  /** Chapter 4: a mains ticket (4-1). It opens with the safety card (first view: not skippable), the isolation transformer stands on the bench and the Bench Card carries the "do not try this at home" ribbon. */
+  mains?: boolean;
+  /** Chapter 4: live switches (mains tolerance, load): what the live view shows; the bench plan runs every condition itself. */
+  selectors?: SelectorDef[];
   /** Where the ticket's chit hangs on the chapter-1 notebook page, in 0..1 page coordinates. */
   chit?: { x: number; y: number };
   /** Chapter-1 tickets of the vertical slice etc.; a ticket unlocks when every id here is passed (empty = open). */

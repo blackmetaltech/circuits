@@ -52,12 +52,12 @@ export const indCoil: PartDef = {
 export const xfmr12: PartDef = {
   id: 'xfmr-12', kind: 'XFMR', nameKey: 'part.xfmr-12.name', footprint: 'xfmr4', pins: ['P1', 'P2', 'S1', 'S2'],
   variants: [variant('6VA', { VA: 6 }, semiThermal(15, 105, TAU.to220Bare, { tFail: 130 }))],
-  model: { primaryNominal: 230, secRms: 12, Rw: 1.5, Lm: 10, VA: 6 },
+  model: { primaryNominal: 230, secRms: 12, Rw: 1.5, VA: 6, Rins: 1e8 },
   tolerance: { Rw: 0.1 },
   source: {
     doc: 'GAME-DEFINED level fixture, not a datasheet part: 12 V mains wall-wart transformer of ticket 4-1 (DESIGN §4.1 [R], §2.8: ideal ratio, winding R 1.5 ohm)',
     gameFixture: true,
-    note: 'UNVERIFIED, GAME-DEFINED level fixture: 6 VA, Rw 1.5 ohm (secondary side) and Lm 10 H (primary side) are lesson values from DESIGN with no datasheet by design; '
+    note: 'UNVERIFIED, GAME-DEFINED level fixture: 6 VA and Rw 1.5 ohm (secondary side) are lesson values from DESIGN with no datasheet by design. The 10 H magnetising inductance of DESIGN §4.1 is NOT modelled (ticket 4-1 asks for an ideal ratio plus the winding resistance, as the ngspice cross-check does; Lm would only add a 73 mA reactive primary current nobody measures, and it stalls the stepper behind a 1N4148 bridge); '
       + 'primary nominal 230 V is the `global` mains (IEC 60038). Placed by the level as a fixed part, never offered from a shop bin. The thermal numbers are estimates. ' + TAU_R,
   },
   verified: false, scope: 'sandbox', simplifications: ['part.simplify.xfmr-ideal', 'part.simplify.xfmr-fixture'],

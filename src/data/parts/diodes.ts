@@ -118,4 +118,13 @@ export const ledGreen = ledColour('green', 2.2, 3.05e-19);
 export const ledBlue = ledColour('blue', 3.1, 1.12e-18, 3.0);
 export const ledWhite = ledColour('white', 3.1, 1.12e-18, 3.0);
 
-export const DIODES: PartDef[] = [d1n4148, d1n4007, d1n5819, d1n4733a, d1n4742a, d1n4728a, dBzx55, ledRed, ledYellow, ledGreen, ledBlue, ledWhite];
+/** Textbook ideal 6 V Zener (ticket 4-5): exactly 6.000 V in breakdown, 0.7 V forward, no dynamic resistance, no ratings. Textbook bins only. */
+export const dZenerIdeal: PartDef = {
+  id: 'zener-6v-ideal', kind: 'Z', nameKey: 'part.zener-6v-ideal.name', footprint: 'axial2', pins: ['A', 'K'],
+  variants: [variant('ideal', {}, { thetaJA: 1, tauS: 1, tMax: 1000, tFail: 2000 })],
+  model: { ideal: 1, BV: 6, Ibv: 1e-3, vf: 0.7 },
+  source: { doc: 'Textbook ideal element, defined by its constitutive equation (no datasheet, no physical data)', definition: true, note: 'V = 6.000 V for every reverse current, 0.7 V forward, zero dynamic resistance (piecewise-linear device, DESIGN §3.7). Textbook bins only. [R] no thermal model.' },
+  verified: true, scope: 'campaign', simplifications: ['part.simplify.zener-ideal'],
+};
+
+export const DIODES: PartDef[] = [d1n4148, d1n4007, d1n5819, d1n4733a, d1n4742a, d1n4728a, dBzx55, ledRed, ledYellow, ledGreen, ledBlue, ledWhite, dZenerIdeal];

@@ -44,6 +44,10 @@ function thermalStep(live: LiveLike, rig: Rig, cfg: LiveCfg, power: ((uid: strin
   const dt = LIVE_FRAME_WALL_DT * cfg.thermalSpeed, ta = cfg.ambientC;
   for (const part of rig.rated) {
     if (live.smoked.includes(part.id)) { delete live.temps[part.id]; continue; }
+    if (part.kind === 'REG' && power) {   // a regulator's junction is the macro's own (its thermal shutdown latch cycles around 135-150 C): show that, and never smoke it
+      const ce = rig.circuit?.elements.find((x) => (x.el.owner || x.el.id) === part.id && x.el.kind === 'REG');
+      if (ce && ce.el.p.thermal) { live.temps[part.id] = q2(ta + (live.hist[ce.so] ?? 0)); continue; }
+    }
     const P = power ? power(part.id) : 0;
     const T0 = live.temps[part.id] ?? ta;
     if (!power && live.temps[part.id] === undefined) continue;

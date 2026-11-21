@@ -29,7 +29,7 @@ export interface Wire {
 export interface Connector {
   id: string;
   pad: Pad;
-  role: 'source' | 'load' | 'probe' | 'rail' | 'ground';
+  role: 'source' | 'load' | 'probe' | 'rail' | 'ground' | 'mains';
 }
 
 export interface Board {
@@ -37,4 +37,6 @@ export interface Board {
   connectors: Connector[];
   parts: PlacedPart[];
   wires: Wire[];
+  /** Chapter 4: red hatched KEEP-OUT rectangles (the mains section behind the isolation transformer): pads x0 <= x < x0 + w, y0 <= y < y0 + h. No player part or wire may touch one. */
+  keepOut?: { x: number; y: number; w: number; h: number }[];
 }

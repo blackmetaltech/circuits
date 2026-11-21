@@ -23,6 +23,7 @@ export interface InstantFailure { part: string; rule: InstantRule; key: string; 
 
 /** Thermal smoke: steady T = Ta + P*theta above tFail. Resistors: roughly 2.6x rated power at Ta = 25 C (theta = 85/P, tFail 250 C). */
 export function thermalSmoke(part: RatedPart, pAvg: number, ta: number): InstantFailure | null {
+  if (part.kind === 'REG') return null;   // a linear regulator protects itself: its thermal shutdown latches the output off and on (it is not destroyed by heat)
   const T = steadyT(ta, pAvg, thetaTotal(part.thermal, part.heatsink));
   if (!(T > part.thermal.tFail)) return null;
   const pr = ratedPower(part) ?? 0;

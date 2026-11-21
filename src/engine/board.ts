@@ -66,10 +66,14 @@ export function occupancy(b: Board, skipUid?: string, skipWid?: string): Occupan
 // ---------------------------------------------------------------- parts
 const WIRE_ERR: Record<string, string> = { tooShort: 'err.wire.tooShort', notOrthogonal: 'err.wire.diagonal', zeroLength: 'err.wire.zero', outOfBounds: 'err.wire.bounds', nonInteger: 'err.wire.int', loop: 'err.wire.loop' };
 
+/** Chapter 4: is this pad inside a red hatched KEEP-OUT rectangle (the mains section)? */
+export const inKeepOut = (b: Pick<Board, 'keepOut'>, q: Pad): boolean => (b.keepOut ?? []).some((r) => q[0] >= r.x && q[0] < r.x + r.w && q[1] >= r.y && q[1] < r.y + r.h);
+
 /** Can a part with this geometry sit on the board? `skipUid` = the part itself (a move / rotate). */
 export function checkPartSpot(b: Board, def: PartDef, geo: Pick<PlacedPart, 'x' | 'y' | 'rot' | 'flip'>, skipUid?: string): Problem | null {
   const pads = pinPads(geo, def);
   const occ = occupancy(b, skipUid);
+  for (const q of pads) if (inKeepOut(b, q)) return problem('err.keepout.part', { pad: padText(q) });
   for (const q of pads) {
     if (q[0] < 0 || q[0] >= b.w || q[1] < 0 || q[1] >= b.h) return problem('err.part.bounds', { pad: padText(q), w: b.w, h: b.h });
   }
@@ -89,6 +93,7 @@ export function checkWire(b: Board, path: Pad[], skipWid?: string): Problem | nu
   if (bad) return problem(WIRE_ERR[bad.code] ?? 'err.wire.bad', bad.code === 'outOfBounds' ? { w: b.w, h: b.h } : {});
   const occ = occupancy(b, undefined, skipWid);
   const { ends, interior } = wirePads(path);
+  for (const q of [...ends, ...interior]) if (inKeepOut(b, q)) return problem('err.keepout.wire', { pad: padText(q) });
   for (const q of interior) {
     const k = padKey(q);
     if (occ.pins.has(k)) return problem('err.wire.overPin', { pad: padText(q), part: partName(b, occ.pins.get(k)!.uid) });

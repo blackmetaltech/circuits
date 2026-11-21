@@ -180,6 +180,11 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         answers: (def.answers ?? []).map((a) => ({ id: a.id, name: def.bench.names[a.id] ? t(def.bench.names[a.id]!) : '', unit: a.unit, entered: o.tk.predictions[a.id] ?? null, ...(def.nullCheck ? ((side) => ({ side, formula: balanceFormula(side) }))(rSide(o.tk.board, def, (uid, pin) => liveRig(o.tk, def).conn.pinNodes[uid]?.[pin] ?? -1)) : {}) })),
         specShort: def.specShort ? t(def.specShort) : '', gauge: def.gauge ?? null, supplies: def.supplies, chit: def.chit ?? null, ambientC: def.bench.ambientC, figure: def.figure ?? null,
         payText: payText(def, REGIONS.get(s.region)), starRule: def.eb ? starsRule() : '',
+        // chapter 4: the mains safety card (its words are Wren's), the live switches and the thermal camera
+        mains: def.mains ? { safetyRead: o.tk.safetyRead === true, firstView: !s.progress.codexSeen.includes('mains-safety'), vrms: (def.supplies.find((x) => x.kind === 'mains') as { vrms: number } | undefined)?.vrms ?? 0, hz: (def.supplies.find((x) => x.kind === 'mains') as { f: number } | undefined)?.f ?? 0,
+          ribbon: t('safety.ribbon'), title: t('safety.card.title'), lines: [t('safety.card.1'), t('safety.card.2'), t('safety.card.3'), t('safety.card.4')], button: t('safety.card.button'), keepOut: t('safety.keepout'), isolation: t('safety.isolation') } : null,
+        selectors: (def.selectors ?? []).map((sd) => ({ id: sd.id, label: t(sd.labelKey), options: sd.options.map((x) => t(x.labelKey)), index: o.tk.sel?.[sd.id] ?? sd.initial })),
+        camera: def.chapter === 4,
       };
     },
     /** The board with part names, rotated pin pads and ratings, probes and meter. */
