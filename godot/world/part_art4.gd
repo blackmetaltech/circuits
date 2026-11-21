@@ -33,7 +33,7 @@ static func regulator(ci: CanvasItem, lp: Array, p: float, sh: bool, variant: St
 	if sh: return
 	ci.draw_circle(Vector2(cx, tab.position.y + p * 0.55), p * 0.26, Color(0.12, 0.12, 0.14))   # the mounting hole
 	ci.draw_line(body.position + Vector2(p * 0.2, p * 0.2), Vector2(body.end.x - p * 0.2, body.position.y + p * 0.2), Color(1, 1, 1, 0.14), p * 0.07)
-	PartArt3._txt(ci, label, Vector2(cx - p * 0.62, body.position.y + p * 1.0), int(clampf(p * 0.5, 9.0, 20.0)), Color(0.86, 0.88, 0.95, 0.95))
+	PartArt3._txt(ci, label.get_slice(" ", 0), Vector2(cx - p * 0.62, body.position.y + p * 1.0), int(clampf(p * 0.5, 9.0, 20.0)), Color(0.86, 0.88, 0.95, 0.95))
 	var lamp := Vector2(body.end.x - p * 0.4, body.end.y - p * 0.4)   # the shutdown lamp: dark while it runs, red while the chip has shut itself off
 	ci.draw_circle(lamp, p * 0.2, Color(0.12, 0.04, 0.04)); ci.draw_circle(lamp, p * 0.14, Color(1.0, 0.25, 0.15) if off else Color(0.3, 0.1, 0.08))
 

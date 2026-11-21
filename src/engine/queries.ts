@@ -204,7 +204,7 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         payText: payText(def, REGIONS.get(s.region)), starRule: def.eb ? starsRule() : '',
         // chapter 4: the mains safety card (its words are Wren's), the live switches and the thermal camera
         mains: def.mains ? { safetyRead: o.tk.safetyRead === true, firstView: !s.progress.codexSeen.includes('mains-safety'), vrms: (def.supplies.find((x) => x.kind === 'mains') as { vrms: number } | undefined)?.vrms ?? 0, hz: (def.supplies.find((x) => x.kind === 'mains') as { f: number } | undefined)?.f ?? 0,
-          ribbon: t('safety.ribbon'), title: t('safety.card.title'), lines: [t('safety.card.1'), t('safety.card.2'), t('safety.card.3'), t('safety.card.4')], button: t('safety.card.button'), keepOut: t('safety.keepout'), isolation: t('safety.isolation') } : null,
+          ribbon: t('safety.ribbon'), title: t('safety.card.title'), lines: [t('safety.card.1'), t('safety.card.2'), t('safety.card.3'), t('safety.card.4', { mentor })], button: t('safety.card.button'), keepOut: t('safety.keepout'), isolation: t('safety.isolation') } : null,
         selectors: (def.selectors ?? []).map((sd) => ({ id: sd.id, label: t(sd.labelKey), options: sd.options.map((x) => t(x.labelKey)), index: o.tk.sel?.[sd.id] ?? sd.initial })),
         camera: def.chapter === 4,
       };

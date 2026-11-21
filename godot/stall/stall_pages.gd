@@ -225,7 +225,8 @@ func _map(a: float) -> void:
 		S.pin(self, q.position + Vector2(q.size.x * 0.5, 12), Color("#d23a2e") if open else Color("#7a7f86"))
 		S.text(self, f, "%s%s" % [str(tk.id), "  EB" if bool(tk.get("eb", false)) else ""], q.position + Vector2(14, 48), 18, S.INK_RED)
 		var tsz := 32   # a long title shrinks to fit the chit instead of running into the corner tags
-		while tsz > 18 and S.tw(f, str(tk.title), tsz) > q.size.x - 28.0: tsz -= 2
+		var tw_max: float = q.size.x - 28.0 - (140.0 if tk.done else 0.0)   # a FIXED stamp sits at the right: the title stops before it
+		while tsz > 18 and S.tw(f, str(tk.title), tsz) > tw_max: tsz -= 2
 		S.text(self, f, str(tk.title), q.position + Vector2(14, 84), tsz, S.INK if open else Color(S.INK, 0.5))
 		S.text(self, f, "for %s" % str(tk.customer), q.position + Vector2(14, 112), 20, Color(S.INK, 0.8 if open else 0.4))
 		if not S.handheld: S.text(self, f, str(tk.spec), q.position + Vector2(14, 130), 16, Color(S.INK, 0.9 if open else 0.4), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 26)   # (handheld: the spec is on the ticket chit; here the text is big instead)
@@ -233,7 +234,7 @@ func _map(a: float) -> void:
 		var hb := 46.0 if S.handheld else 38.0   # the 'best cost' / replay line sits this far above the bottom edge
 		if open and pay != "": S.text(self, f, pay, q.position + Vector2(14, q.size.y - 14), 14, Color(S.INK, 0.6))
 		var fee: String = str(tk.get("price_text", "")) if str(tk.get("price_text", "")) != "" else "%d coins" % int(tk.price)
-		S.text(self, f, fee, q.position + Vector2(q.size.x - 20 - S.tw(f, fee, 17), 48), 17, Color(S.INK, 0.7))
+		if not tk.done: S.text(self, f, fee, q.position + Vector2(q.size.x - 20 - S.tw(f, fee, 17), 48), 17, Color(S.INK, 0.7))   # (a fixed chit's fee is on its 'fee + per new star' line; the stamp sits here)
 		if int(tk.get("stars", 0)) > 0 or tk.done:
 			var smax := int(tk.get("stars_max", 2)); var got := int(tk.get("stars", 0))
 			S.text(self, f, "*".repeat(got) + ".".repeat(maxi(0, smax - got)), q.position + Vector2(118, 52), 30, S.INK_RED)
@@ -402,7 +403,8 @@ func _predict(a: float) -> void:
 		S.text(self, f, "Fig. 1", fr.position + Vector2(10, 22), 16, Color(S.INK, 0.6))
 		var pot := str(fig.get("kind", "node")) == "pot"
 		var caps := str(fig.get("kind", "node")) == "caps"
-		ExamFigure.draw(self, fr.grow(-10), fig, S.INK, ["Q, U", "V, energy lost"] if caps else (["gradient, EMF, r"] if pot else ["V(%s)" % str(fig.get("node", "A")), "I(E2)"]))
+		var zen := str(fig.get("kind", "node")) == "zener"
+		ExamFigure.draw(self, fr.grow(-10), fig, S.INK, ["Q, U", "V, energy lost"] if caps else (["gradient, EMF, r"] if pot else (["Iz", "RL(min)", "Pz"] if zen else ["V(%s)" % str(fig.get("node", "A")), "I(E2)"])))
 		S.text(self, f, "exact capacitors, ideal source" if caps else ("ideal driver cell, exact rheostat" if pot else "ideal sources, exact resistors"), Vector2(fr.position.x + 10, fr.end.y - 8), 14, Color(S.INK, 0.5))
 		if star_rule != "": S.text(self, f, "Marking: " + star_rule, Vector2(fr.position.x, fr.end.y + 24), 15, Color(S.INK_RED, 0.9), HORIZONTAL_ALIGNMENT_LEFT, fr.size.x)
 	var brief_h := S.wrapped_h(f, str(coach_ticket.get("brief", "")), 19, col_w)
@@ -447,7 +449,7 @@ func _stars_text(n: int, mx := 3) -> String: return "*".repeat(n) + ".".repeat(m
 func _debrief(a: float) -> void:
 	var w := size.x; var h := size.y; var f := S.hand()
 	draw_rect(Rect2(0, 0, w, h), Color(0.02, 0.01, 0.02, 0.5 * a), true)
-	var sz := Vector2(minf(1160.0, w - 24.0), minf(800.0, h - 24.0))
+	var sz := Vector2(minf(1160.0, w - 24.0), minf(800.0 if not S.handheld else 1000.0, h - 24.0))   # (a handheld's 16 px text is bigger: the marked slip may grow)
 	var r := Rect2(w * 0.5 - sz.x * 0.5, h * 0.5 - sz.y * 0.5 + (1.0 - a) * 24, sz.x, sz.y)
 	S.paper(self, r, -0.6, S.PAPER)
 	draw_set_transform(r.get_center(), deg_to_rad(-0.6), Vector2.ONE)
@@ -474,7 +476,7 @@ func _debrief(a: float) -> void:
 	if y + S.wrapped_h(f, str(coach_ticket.get("star_rule", "")), 16, lw) < q.end.y - 96.0: S.text(self, f, str(coach_ticket.get("star_rule", "")), Vector2(lx, y), 16, Color(S.INK, 0.6), HORIZONTAL_ALIGNMENT_LEFT, lw)   # (the buttons sit at the bottom: the marking rule gives way on a short page)
 	# right: the KCL working
 	var rx := q.position.x + half + 10.0; var rw := half - 46.0; var ry := q.position.y + 112.0
-	S.text(self, f, "The potentiometer, worked out" if str(d.get("node", "A")) == "wire" else ("The capacitor bank, worked out" if str(d.get("node", "A")) == "bank" else "KCL at node %s: currents in = currents out" % str(d.get("node", "A"))), Vector2(rx, ry), 24, S.INK_RED, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += 40.0
+	S.text(self, f, "The potentiometer, worked out" if str(d.get("node", "A")) == "wire" else ("The capacitor bank, worked out" if str(d.get("node", "A")) == "bank" else ("The Zener regulator, worked out" if str(d.get("node", "A")) == "zener" else "KCL at node %s: currents in = currents out" % str(d.get("node", "A")))), Vector2(rx, ry), 24, S.INK_RED, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += 40.0
 	# what fits above the buttons: the equation line and the closing remark go first when the (handheld's bigger) text would run off the paper
 	var avail := q.end.y - 96.0 - ry
 	var eq_h := S.wrapped_h(S.mono(), str(d.get("equation", "")), 20, rw) + 10.0
@@ -482,8 +484,9 @@ func _debrief(a: float) -> void:
 	for ln0 in d.get("working", []): work_h += S.wrapped_h(f, str(ln0), 18, rw) + 6.0
 	var cur_h := 0.0
 	for c0 in d.get("currents", []): cur_h += S.wrapped_h(f, str(c0.text), 18, rw) + 8.0
-	var show_eq := eq_h + work_h + 50.0 + cur_h <= avail
-	var show_cur := work_h + 50.0 + cur_h <= avail
+	var ans_h := 24.0 + S.wrapped_h(S.mono(), str(d.get("answer", "")), 26 if S.tw(S.mono(), str(d.get("answer", "")), 26) < rw else 20, rw) + 8.0
+	var show_eq := eq_h + work_h + ans_h + cur_h <= avail
+	var show_cur := work_h + ans_h + cur_h <= avail
 	if show_eq: S.text(self, S.mono(), str(d.get("equation", "")), Vector2(rx, ry), 20, S.INK, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += eq_h
 	for ln in d.get("working", []):
 		S.text(self, f, str(ln), Vector2(rx, ry), 18, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, rw); ry += S.wrapped_h(f, str(ln), 18, rw) + 6.0

@@ -57,7 +57,7 @@ describe('mains safety: the card, the gate, the isolation transformer, the keep-
   it('the safety card is on the ticket card in Wren\'s words; the bench stays off until it is read; reading it unlocks the Codex flag', () => {
     const e = open('4-1', ['3-3'], 'learner', false); const c = q(e, 'ticketCard');
     expect(c.mains).toMatchObject({ safetyRead: false, firstView: true, vrms: 230, hz: 50 }); expect(c.mains.ribbon).toMatch(/do not try this at home/); expect(c.mains.lines[0]).toMatch(/training, an isolation transformer and a second person/); expect(c.mains.lines[1]).toMatch(/Here the bench is simulated/);
-    expect(c.mains.keepOut).toBe('HIGH VOLTAGE'); expect(c.mains.isolation).toMatch(/isolation transformer/);
+    for (const l of c.mains.lines) expect(l, 'no unresolved placeholder on the card').not.toMatch(/[{}]/); expect(c.mains.lines[3]).toMatch(/^Wren wrote this page herself/); expect(c.mains.keepOut).toBe('HIGH VOLTAGE'); expect(c.mains.isolation).toMatch(/isolation transformer/);
     expect(bad(e, 'power', true)).toMatch(/Read the safety card first/); expect(bad(e, 'runBench')).toMatch(/Read the safety card first/);
     ok(e, 'readSafety'); const c2 = q(e, 'ticketCard'); expect(c2.mains.safetyRead).toBe(true); expect(e.state.progress.codexSeen).toContain('mains-safety'); ok(e, 'power', true);
     const e2 = open('4-1', ['3-3'], 'learner', false); ok(e2, 'closeTicket'); expect((e2.state.progress.codexSeen ?? []).includes('mains-safety')).toBe(false);

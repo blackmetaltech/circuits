@@ -234,7 +234,7 @@ func _panel() -> void:
 	if live and attached and slide != "":
 		txt = "<< slide left" if slide == "left" else (("slide right >>") if slide == "right" else ("NO BALANCE: check wiring" if slide == "dead" else "on balance"))
 		S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 11 if slide == "dead" else 14, Color("#ff9d6a") if slide == "dead" else Color(vc, 0.95 if slide != "on" else 0.6))
-	else: S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14, Color(vc, 0.55))
+	else: S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14 if (String(txt).length() <= 9 or not trace_mode) else 11, Color(vc, 0.55))   # "SPEC NOT MET" / "OUT OF TUBE" must stop before the V/DIV setting beside it
 	S.text(self, S.mono(), rd, Vector2(px + 10, 242), 20 if rd.length() < 11 else 15, Color(vc, 0.9 if (live and attached) else 0.3))
 	if trace_mode:
 		var hf := 1.2 if S.handheld else 1.0   # handheld: the sweep and volts settings are the ones a player reads, so they get bigger

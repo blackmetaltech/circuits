@@ -24,7 +24,7 @@ export const ch4En: Record<string, string> = {
   // ---- 4-1 Wall Wart
   'ticket.4-1.title': 'Wall Wart',
   'ticket.4-1.brief': "{customer}'s wall adapter hums and the radio on it crackles. It is a 12 V adapter: a transformer steps the mains down to 12 V rms, and you rebuild what comes after it: a diode bridge and a smoothing capacitor. OUT must average at least 12.0 V with at most 1.0 V of ripple (peak to peak) while it feeds 100 mA, and it has to do that when the mains sags 10 % (207 V) and when it runs 10 % high (253 V). With no load at all the capacitor must stay inside its voltage rating. {mentor}: rms is the heating value; the peak is 1.41 times that, and a capacitor charges to the peak.",
-  'ticket.4-1.short': 'OUT: at least 12 V mean, at most 1 V ripple at 100 mA, mains 207 to 253 V',
+  'ticket.4-1.short': 'OUT 12 V or more, ripple 1 V or less, mains 207-253 V',
   'ticket.4-1.spec.ripple': 'The ripple on OUT is at most 1.0 V peak to peak at 100 mA, for mains of 207, 230 and 253 V',
   'ticket.4-1.spec.mean': 'OUT averages at least 12.0 V at 100 mA, for mains of 207, 230 and 253 V',
   'ticket.4-1.sel.mains': 'MAINS',
@@ -134,7 +134,7 @@ export const ch4En: Record<string, string> = {
   'explain.lm317.minload': 'OUT is {value} V{cond}. The LM317 needs about 3.5 mA of load to behave: it pushes its own bias current into OUT, and with no load the only way out is through R1 + R2. Your divider carries only {iDiv} mA, so the extra {iExtra} mA raises OUT. That is why datasheets say R1 = 240 ohm: 1.25 V / 240 ohm = 5.2 mA is more than the minimum.',
   'explain.lm317.formula.again': 'Vout = 1.25 x (1 + R2 / R1) + Iadj x R2. With your R1 = {r1}, R2 should be about {r2need} for 3.30 V. Your {r2} gives {vf} V, {off} % off. The Iadj term (50 µA x R2 = {iadjV} V) is why the plain formula misses a little.',
   // ---- the zener exam debrief
-  'debrief.zener.equation': 'Rs: I = (Vin - Vz) / Rs     the load takes Vz / RL     the Zener takes the rest',
+  'debrief.zener.equation': 'Rs carries (Vin - Vz) / Rs; the load takes Vz / RL; the Zener takes the rest',
   'debrief.zener.i': 'Rs carries (12 V - 6 V) / 300 ohm = {i} mA, whatever the load does, as long as the Zener holds.',
   'debrief.zener.iz': 'The load takes 6 V / 1 kilohm = {il} mA, so the Zener takes {i} - {il} = {iz} mA.',
   'debrief.zener.rl': 'The Zener needs at least 2 mA, so the load may take at most {i} - 2 = {imax} mA: RL(min) = 6 V / {imax} mA = {rl} ohm.',

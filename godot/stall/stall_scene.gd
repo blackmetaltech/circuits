@@ -441,17 +441,27 @@ func _layout() -> void:
 	scope.scale = Vector2.ONE; scope.position = Vector2(sc_x, 190.0 + dy * 0.05)
 	var sup_x := rx; var dmm_x := rx + 340.0
 	if phone: dmm_x = W - 96.0 - 270.0; sup_x = dmm_x - 340.0
-	var low := 650.0 + dy * 0.6
+	# chapter 4's chits carry longer specs (and a mains chit the red ribbon): the paper grows to hold every line and the instruments under it step down, so words never spill onto a meter
+	var mains_t: bool = backend.ENGINE and not backend.mains.is_empty()
+	var ch4: bool = backend.ENGINE and not backend.ticket.is_empty() and int(backend.ticket.get("chapter", 0)) == 4
+	var chit_w := (190.0 if not handheld else 270.0) + (54.0 if mains_t else 0.0)   # a mains chit is wider (the ribbon runs on one line) but stops short of the scope's input jack
+	var chit_base := 186.0 if not handheld else 242.0
+	var chit_h := chit_base
+	if ch4: chit_h = maxf(chit_base, _chit_need(chit_w, mains_t))
+	var chit_dy := 28.0 if mains_t else 0.0   # below the scope's CH2 readout and its CH1 AC/DC label
+	var ms := minf(chit_h - chit_base + chit_dy, 72.0 + dy * 0.6)   # (a taller window has the room for more)
+	var low := 650.0 + dy * 0.6 + ms
 	supply.scale = Vector2(0.8, 0.8); supply.position = Vector2(sup_x, low + 12.0)
 	dmm.scale = Vector2(0.8, 0.8); dmm.position = Vector2(dmm_x, low)
-	L.tin = Rect2(maxf(sup_x + 20.0, 1306.0), 880 + dy * 0.8, 124, 124)   # right of the exam / crew slip (1094..1290): the tin never covers it
+	L.tin = Rect2(maxf(sup_x + 20.0, 1306.0), 880 + dy * 0.8 + ms, 124, 124)   # right of the exam / crew slip (1094..1290): the tin never covers it
 	L.customer = Rect2(780, 765 + dy, 300, 270)
 	L.bubble = Rect2(880, 678 + dy, 270, 112)   # above the customer's head (over the board's empty lower rows), never over the slip beside her
 	L.next = Rect2(1306, 1000 + dy, 220, 50)
 	L.exam = Rect2(1094, 816 + dy, 196, 224)   # the exam problem card (exam tickets) or the crew's slip (2-2): it stays on the bench after "later"
-	L.chit = Rect2(sc_x + 404.0, 190.0 + dy * 0.05 + 266.0, 190, 186) if not handheld else Rect2(sc_x + 340.0, 190.0 + dy * 0.05 + 270.0, 270, 242)   # handheld: a bigger chit for 16 px text
+	L.chit = Rect2(sc_x + 404.0, 190.0 + dy * 0.05 + 266.0, 190, 186) if not handheld else Rect2(sc_x + 340.0, 190.0 + dy * 0.05 + 270.0, 270, 242)
+	if ch4: L.chit = Rect2(sc_x + 594.0 - chit_w, 190.0 + dy * 0.05 + (266.0 if not handheld else 270.0) + chit_dy, chit_w, chit_h)   # handheld: a bigger chit for 16 px text
 	L.slip = Rect2(318, 870 + dy, 420, 160)
-	L.probe_rest = {"red": Vector2(dmm_x - 52, 968 + dy * 0.8), "black": Vector2(dmm_x - 112, 998 + dy * 0.8), "ch1": Vector2(sc_x - 22.0, 700.0 + dy * 0.6)}
+	L.probe_rest = {"red": Vector2(dmm_x - 52, 968 + dy * 0.8 + ms), "black": Vector2(dmm_x - 112, 998 + dy * 0.8 + ms), "ch1": Vector2(sc_x - 22.0, 700.0 + dy * 0.6)}
 	L.bench = Rect2(sup_x + 4.0, low + 160.0, 250.0, 60.0)
 	var bx0 := 372.0; var bx1 := (rx - 44.0) if not phone else (sup_x - 30.0)
 	var region := Rect2(bx0, sill + 38.0, bx1 - bx0, 800 + dy * 0.45 - sill - 38.0)
@@ -461,6 +471,18 @@ func _layout() -> void:
 	tex.position = board_rect.position; tex.size = board_rect.size
 	props.L = L; top.L = L
 	window.gear_hover = hover == "gear"
+
+## The height a chapter 4 chit needs (the flow of StallTop._chit: ribbon, ticket line, title, customer, rule, the spec's wrapped lines).
+func _chit_need(width: float, mains_t: bool) -> float:
+	var f := S.hand(); var inner := width - 28.0
+	var y := 14.0 + float(maxi(15, S.min_font)) + 12.0
+	if mains_t:
+		var rf := maxi(12, S.min_font)
+		y += S.wrapped_h(f, str(backend.mains.get("ribbon", "")), rf, inner) + 10.0 + 12.0
+	y += float(maxi(28, S.min_font)) + 8.0 + float(maxi(18, S.min_font)) + 6.0 + 10.0
+	var ssz := maxi(16, S.min_font)
+	y += float(ssz) + 8.0 + S.wrapped_h(f, str(backend.ticket.get("spec", "")), 16, inner) - float(ssz)
+	return y + 18.0
 
 func _board_poly(grow: float) -> PackedVector2Array:
 	var r := board_rect.grow(grow); var ts := TOP_SCALE

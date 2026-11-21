@@ -144,6 +144,7 @@ func progress(chapter := 1) -> Dictionary:
 
 func _load_ticket() -> void:
 	card = _q("ticketCard")
+	mains = card.get("mains", {}) if card.get("mains", null) is Dictionary else {}   # (before the supply is described: a mains ticket's supply is the isolation transformer)
 	_refresh_board()
 	var sc = _q("scope", [1])
 	scope_q = sc if sc is Dictionary else {}
@@ -258,6 +259,9 @@ func bin() -> Array:
 				var label := str(fam.name)
 				if v != null: label = NodeApi.format_value(float(v), "R" if kind == "R" else kind)
 				elif kind == "LED": label = "red LED"
+				elif kind == "REG" and str(fam.partId) == "lm7805":   # the four 7805s differ by their heatsink: the row says which one it is
+					var sink := str(va.id).get_slice("-", 1) if str(va.id).contains("-") else ""
+					label = "7805 bare" if sink == "" else "7805 +%s C/W" % sink
 				var tag := _watt_tag(float(va.ratings.P)) if (kind == "R" and va.ratings.has("P") and str(va.id) != "ideal" and not PART_TAG.has(str(fam.partId))) else str(PART_TAG.get(str(fam.partId), ""))
 				if kind == "CE": tag = _volt_tag(str(va.id))
 				if kind == "METER": kind = "GALVO"

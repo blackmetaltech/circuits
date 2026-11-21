@@ -186,17 +186,17 @@ static func _draw_zener(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, a
 	_zig(ci, P.call(110, ty), P.call(200, ty), 9.0 * k, ink, w)
 	S.text(ci, f, "Rs = %s \u03a9" % EngineBench._g(float(z.get("rs", 300))), P.call(104, ty - 24), fs, ink)
 	_wire(ci, [P.call(200, ty), P.call(340, ty)], ink, w)
-	ci.draw_circle(P.call(240, ty), 6.0 * k + 1.0, ink); S.text(ci, f, "M", P.call(232, ty - 26), int(fs * 1.5), S.INK_RED)
+	ci.draw_circle(P.call(240, ty), 6.0 * k + 1.0, ink); S.text(ci, f, "M pad", P.call(222, ty - 20), int(fs * 0.9), ink)   # the board's own pad name
 	# the Zener from M down to the rail: a triangle pointing UP the page toward M's bar (current flows from the rail up to M in reverse: the bar on M's side)
 	var zx := 240.0
 	_wire(ci, [P.call(zx, ty), P.call(zx, 196)], ink, w)
 	ci.draw_line(P.call(zx - 18, 196), P.call(zx + 18, 196), ink, w * 1.7); ci.draw_line(P.call(zx - 18, 196), P.call(zx - 26, 188), ink, w); ci.draw_line(P.call(zx + 18, 196), P.call(zx + 26, 204), ink, w)
 	ci.draw_colored_polygon(PackedVector2Array([P.call(zx - 18, 236), P.call(zx + 18, 236), P.call(zx, 200)]), ink)
 	_wire(ci, [P.call(zx, 236), P.call(zx, by)], ink, w)
-	S.text(ci, f, "Zener %s V" % EngineBench._g(float(z.get("vz", 6))), P.call(zx + 26, 222), fs, ink)
-	S.text(ci, f, "Iz(min) = %s mA" % EngineBench._g(float(z.get("izMin", 0.002)) * 1000.0), P.call(zx + 26, 248), int(fs * 0.85), ink)
+	S.text(ci, f, "Zener %s V" % EngineBench._g(float(z.get("vz", 6))), P.call(zx - 132, 222), fs, ink)   # left of the Zener: the load column stands to its right
+	S.text(ci, f, "Iz(min) %s mA" % EngineBench._g(float(z.get("izMin", 0.002)) * 1000.0), P.call(zx - 146, 248), int(fs * 0.85), ink)
 	_wire(ci, [P.call(340, ty), P.call(340, 190)], ink, w); _zig(ci, P.call(340, 190), P.call(340, 280), 9.0 * k, ink, w); _wire(ci, [P.call(340, 280), P.call(340, by)], ink, w)
-	S.text(ci, f, "RL = %s \u03a9" % EngineBench._g(float(z.get("rl", 1000))), P.call(352, 244), fs, ink)
+	S.text(ci, f, "RL =", P.call(352, 232), fs, ink); S.text(ci, f, "%s \u03a9" % EngineBench._g(float(z.get("rl", 1000))), P.call(352, 256), fs, ink)
 	_wire(ci, [P.call(56, by), P.call(340, by)], ink, w); _gnd(ci, P.call(200, by), k, ink, w)
 	if not asks.is_empty() and not small: S.text(ci, f, "find:  " + "   ".join(asks), P.call(40, 40), fs, S.INK_RED)
 

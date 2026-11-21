@@ -137,5 +137,9 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
     powerSum += p;
   }
   const rows = specIds.map((id) => ({ id, pass: !failedIds.has(id), margin: marginOf.get(id) ?? (failedIds.has(id) ? -1 : 0) }));
-  return { pass: failures.length === 0, failures, rows, supplyPowerW: conds > 0 ? powerSum / conds : 0, smoked: smokedOut, causes, predictions, badSamples, values };
+  // one rating cause per part and rule: the WORST condition (the biggest value over its limit), so the words quote the same extreme the scope shows
+  const worst = new Map<string, number>();
+  causes.forEach((c, k) => { if (!c.key.startsWith('rating.')) return; const id = `${c.key}|${String(c.vars.part)}`, w = worst.get(id); const ratio = (x: number): number => Number(causes[x]!.vars.value) / Math.max(1e-12, Number(causes[x]!.vars.limit)); if (w === undefined || ratio(k) > ratio(w)) worst.set(id, k); });
+  const keep = causes.filter((c, k) => !c.key.startsWith('rating.') || worst.get(`${c.key}|${String(c.vars.part)}`) === k);
+  return { pass: failures.length === 0, failures, rows, supplyPowerW: conds > 0 ? powerSum / conds : 0, smoked: smokedOut, causes: keep, predictions, badSamples, values };
 }
