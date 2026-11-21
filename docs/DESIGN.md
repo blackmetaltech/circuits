@@ -1,14 +1,14 @@
-# NODE: game design document (v0.1 build spec)
+# CIRCUITS: game design document (v0.1 build spec)
 
 | | |
 |---|---|
-| Repo / slug | `node-circuits` · title **NODE** · Android id `in.ixaxaar.cobanana.node` · engine port 47904 · Xvfb :260-:279 |
+| Repo / slug | `node-circuits` · title **CIRCUITS** · Android id `in.ixaxaar.cobanana.circuits` · engine port 47904 · Xvfb :260-:279 |
 | Teaches | Current electricity, capacitors, inductors, AC and resonance, semiconductors and logic (Class 11-12 / pre-university physics: NCERT XII, JEE, A-level, AP Physics C, IB HL). ECE circuit analysis, op-amps, filters, oscillators, power basics, ratings and thermals |
 | Stack | Deterministic TS engine (`src/`, MNA solver on `cobanana-core` numerics) behind the JSON-lines protocol, with a Godot 4.7 GDScript front-end, as in GIGAWATT |
 | Author | Level-1 design director (Opus), 2026-11-09. Research workers: Sonnet ×4, Haiku ×1. Provenance is marked in §4 and §9 |
 | Status | Build-ready after the level-1 review (2026-11-09, see `REVIEW.md` and `BUILD-PLAN.md`). Anything still marked **[R]** came from recall and must be checked against the cited datasheet before data entry (see §4.0) |
 | Region packs | v0.1 ships the neutral **`global`** pack (US$, IEC 60038 230 V 50 Hz, neutral setting). The original India-first content is preserved as the draft **`in`** pack (Appendix A). A test-only **`na`** pack (120 V 60 Hz) proves the seam. See §12 |
-| Scale | NODE is **component-scale** (a perfboard, parts, mA/V, µF, Ω; transients, waveforms, Bode sweeps). GRID is **system-scale** (buses, km-long lines, plants, MW/MVAr, kV, pu). The boundary is the binding table in `design/grid/DESIGN.md` §2.8, mirrored in §1.8 below |
+| Scale | CIRCUITS is **component-scale** (a perfboard, parts, mA/V, µF, Ω; transients, waveforms, Bode sweeps). GRID is **system-scale** (buses, km-long lines, plants, MW/MVAr, kV, pu). The boundary is the binding table in `design/grid/DESIGN.md` §2.8, mirrored in §1.8 below |
 
 Conventions: SI units everywhere in the engine. "Spec" means the customer's pass criteria. "Bench" means the formal test run. "Live" means the always-on simulation while building. A level id `3-2` means chapter 3, level 2. **EB** means exam bridge.
 
@@ -36,7 +36,7 @@ Why this frame:
 - The repair stall is universal: every city has a lane of phone-and-radio fixers, and nobody needs a passport to read it. It is warm without being a postcard.
 - It supports an upgrade loop that is also the syllabus: new instruments (2-channel scope, function generator, thermal camera,
   Bode plotter) arrive as the concepts that need them arrive.
-- **Scale**: one bench, one gadget at a time. NODE is the component-scale sibling of GRID (which runs whole networks); a 12 V wall-wart is NODE, the substation feeding the street is GRID (§1.8).
+- **Scale**: one bench, one gadget at a time. CIRCUITS is the component-scale sibling of GRID (which runs whole networks); a 12 V wall-wart is CIRCUITS, the substation feeding the street is GRID (§1.8).
 
 Tone: warm, funny, slightly melancholic notebook voice ("Wren: *Every resistor is a promise about heat.*"). Customers have short
 voices (as GIGAWATT's named customers did). There is no combat, no timer pressure in Learner mode, and no loot.
@@ -74,7 +74,7 @@ Shenzhen I/O, TIS-100, Turing Complete, nandgame, MHRD, Silicon Zeroes and Logic
 are optimisation puzzles with fictional rules. Falstad CircuitJS, EveryCircuit and PhET CCK are simulators without goals, stakes or
 progression. *101 Circuits* (Steam, Oct 2026, $8.99) and *Oscilloscopia* are the closest: waveform-matching on a scope. Neither has a
 smoke or ratings mechanic, a syllabus-mapped curriculum (JEE/NCERT in the `in` pack, generic pre-university tags in `global`), a mobile build or explanations tied to the player's own failure (the comparables scan found
-no confirmed smoke mechanic anywhere). NODE's wedges are **ratings and thermals as the fail state**, **robustness (tolerance) as
+no confirmed smoke mechanic anywhere). CIRCUITS's wedges are **ratings and thermals as the fail state**, **robustness (tolerance) as
 mastery**, **exam bridges**, **verified online histograms**, and **phone + Deck + desktop parity**.
 
 ### 1.6 Session shapes
@@ -86,18 +86,18 @@ mastery**, **exam bridges**, **verified online histograms**, and **phone + Deck 
 
 Every v0.1 ticket can be solved in under 10 minutes by someone who understands it. The median first-attempt time is targeted at 3-12 minutes (§9.10).
 
-### 1.8 NODE vs GRID: the boundary (binding; mirrors `design/grid/DESIGN.md` §2.8)
-| | **NODE** (this game) | **GRID** |
+### 1.8 CIRCUITS vs GRID: the boundary (binding; mirrors `design/grid/DESIGN.md` §2.8)
+| | **CIRCUITS** (this game) | **GRID** |
 |---|---|---|
 | Scale | component: one board, parts, mA/V, µF, Ω | system: buses, lines, plants, substations, MW/MVAr, kV, pu |
 | Time scale | transients (RC/RL/LC ringing), waveforms, Bode sweeps | 50 Hz phasor steady state, electromechanical seconds, 15-min operation |
 | AC content owned | reactance as a part property; **series LCR resonance, Q and bandwidth (7-3, 7-5)**; filters (7-2, 7-4); rectifiers and the **mains wall-wart transformer** (4-1); capacitive dropper (7-1); op-amps | power factor and capacitor banks at feeder scale; transformers as network elements (taps, %Z); 3-phase; grid harmonics/resonance; series compensation; generators, load flow, stability, protection |
 | Shared, framed differently | phasors across parts on the scope; NCERT AC formulas as solver oracles (AC-0x stay in both games' test suites: shared physics, not shared content) | phasors at a bus, the power triangle |
-Consequences for NODE: no NODE ticket teaches power-factor correction, transformer taps or 3-phase; the Codex "power factor & average power" entry is
+Consequences for CIRCUITS: no CIRCUITS ticket teaches power-factor correction, transformer taps or 3-phase; the Codex "power factor & average power" entry is
 framed at the part ("average power in an LCR is I²R; the capacitor and inductor only borrow energy") and links to GRID for feeder-scale correction.
 Both Codexes use the same phasor wording: **φ = the angle by which V leads I** (so in 7-5 φ = −53.13°, "current leads"). Cast names do not overlap
 with GRID (Ada Moreno, Tobi Hart, Commissioner Vance, Nia), LENSCRAFT (Noor, Pip) or EQUILIBRIUM (Mara Quinn, Tomas Brandt, Victor Hale, Noor Haddad):
-NODE's mentor is **Wren** and its customers are Lio, Ash, Mr. Brook, Bo, Kaya, Sami, Mrs. Dale, Iris, Juno.
+CIRCUITS's mentor is **Wren** and its customers are Lio, Ash, Mr. Brook, Bo, Kaya, Sami, Mrs. Dale, Iris, Juno.
 
 ### 1.7 Juice and retention checklist (added by the review; each item is an M4 task with a screenshot or clip as evidence)
 - **Minute 1** (1-1): the smoke must land within 40 s of opening the ticket; first power-on has a CRT warm-up (trace blooms from the centre, 0.4 s), dots
@@ -585,7 +585,7 @@ engineering notation and shows it back.
   datasheet's *logic-level* Vgs for logic-level parts (IRLZ44N at 5 V) and at 10 V for others.
 - **Behavioural macros**: op-amp (§3.7), comparator, 555, regulators, logic pin, PWM driver, relay, fuse, thermistor.
 
-**Newton loop** (`sim/mna/op.ts`, using `core.numerics.lu` and a NODE-side damped Newton):
+**Newton loop** (`sim/mna/op.ts`, using `core.numerics.lu` and a CIRCUITS-side damped Newton):
 ```
 x ← initial guess (previous solution if any, else zeros with diode/BE junctions at 0.6 V)
 repeat k = 1..maxIter (DC 150, transient step 25):
@@ -709,7 +709,7 @@ Ideal sources exist only in Textbook bins.
 - **Caps**: campaign boards ≤ 40 parts and ≤ 32 electrical nodes, **MNA dimension ≤ 48** including branch currents and macro internal nodes
   (review: tightened from 64 so the dense-LU bench budget below holds on the phone). Sandbox ≤ 80 parts, ≤ 64 nodes (dim ≤ 128; Sandbox benches may be slow and say so).
 - **Dense LU** (n ≤ 128) is the right tool: an LU costs ≈ ⅔n³ flops: n = 20 ≈ 5.3k, n = 30 ≈ 18k, n = 48 ≈ 74k (review: the original "9k at n = 30" was
-  low by 2×). NODE implements its own **flat `Float64Array` in-place LU with partial pivoting** in `sim/mna/lu.ts` (the core `luDecompose` works on
+  low by 2×). CIRCUITS implements its own **flat `Float64Array` in-place LU with partial pivoting** in `sim/mna/lu.ts` (the core `luDecompose` works on
   `number[][]` and allocates per call, which is too slow in the transient inner loop); it is property-tested against core `solve`, and core
   `singularityReport` is still used for the player-facing explanation. AC uses core `cLuDecompose` (≤ 200 frequencies, allocation is fine there).
   A sparse solver is a v0.2 option.
@@ -895,7 +895,7 @@ dialogs, no tables over the board. Data appears *on* objects: glow, dots, needle
 | heat-red / heat-white | `#FF3B1F` / `#FFF4D6` | thermal ramp |
 | smoke-grey | `#8C96A3` | smoke |
 | notebook-paper / ink | `#F3EAD3` / `#2B3A67` | Codex, coach cards |
-| NODE accent (kit theme) | `#7CFF6B` | cobanana kit accent for this game |
+| CIRCUITS accent (kit theme) | `#7CFF6B` | cobanana kit accent for this game |
 
 Type: a VFD/LCD-style mono for instruments (an OFL font such as "Share Tech Mono"), a warm handwritten face for Wren's notes (OFL "Kalam": it also covers Devanagari, so a future Hindi locale needs no font swap), and a clean grotesk for UI (OFL "Inter").
 Colour is never the only signal: voltage colour is paired with hover/probe numbers, heat with icons, and pass/fail with icons and text (accessibility, §6.6).
@@ -917,7 +917,7 @@ Colour is never the only signal: voltage colour is paired with hover/probe numbe
 ### 6.1 Screen list
 | Screen | Kind | Content |
 |---|---|---|
-| Title | full | animated bench, NODE neon sign, Continue / New / Load / Settings / Codex / Quit (two-column on short screens, GIGAWATT lesson B5) |
+| Title | full | animated bench, CIRCUITS neon sign, Continue / New / Load / Settings / Codex / Quit (two-column on short screens, GIGAWATT lesson B5) |
 | Lane map (ticket select) | full, diegetic | the arcade lane with customer stalls as chapter clusters; tickets as paper slips with stars; encore slips glow |
 | **Bench** (main) | world + drawers | board centre-left, scope right, parts tray bottom, ticket card top-left (collapsible), HUD top-right (power, bench, undo/redo, menu) |
 | Parts tray | bottom drawer | category tabs (R C L D LED Q FET IC Src Misc), value picker, price and rating chips |
@@ -1087,13 +1087,13 @@ godot/     main.gd shell (core addon) · world/bench_view.gd · ui/{scope,bode,d
 ```
 Rules (GIGAWATT ARCHITECTURE.md): `sim/` and `data/` never import `engine/`. Every player command is an action returning `{ok, message}` with a teaching message. Everything the UI shows is a query.
 
-### 8.2 What NODE needs from cobanana-core numerics (request to the core director)
+### 8.2 What CIRCUITS needs from cobanana-core numerics (request to the core director)
 | Core API | Used for | Notes |
 |---|---|---|
 | `lu(A: Float64Array, n)` → factor with partial pivoting, `solve(f, b)`, `refactorInPlace` | DC/transient | must expose the pivot magnitudes (singular detection) and allow factor reuse |
 | `clu(Are, Aim, n)` complex LU + solve | AC | split real/imag arrays, no object-per-complex |
-| `dampedNewton({residual, jacobianSolve, limit?: (xNew, xOld) => x, maxIter, tol})` | DC OP | the **`limit` hook** is required for pnjlim/fetlim. NODE keeps its own MNA-specific loop if the core's signature can't take it |
-| `integrators`: BE/TRAP coefficient helpers | companions | trivial. NODE's companions stay in NODE |
+| `dampedNewton({residual, jacobianSolve, limit?: (xNew, xOld) => x, maxIter, tol})` | DC OP | the **`limit` hook** is required for pnjlim/fetlim. CIRCUITS keeps its own MNA-specific loop if the core's signature can't take it |
+| `integrators`: BE/TRAP coefficient helpers | companions | trivial. CIRCUITS's companions stay in CIRCUITS |
 | `rng(seed)` | Monte Carlo, encore seeds, kicks | seeded, splittable |
 | `roots.brent`, `goldenSection` | Bode peak refinement, oracle tests | |
 | `units` parse/format with engineering prefixes | UI and data | "4k7", "100n", "2.2µ" |
@@ -1132,7 +1132,7 @@ interface NodeState extends BaseState {                     // BaseState: game, 
   after which the engine refuses further actions. So the campaign never uses `startLevel`: `openTicket(id)` opens a ticket inside the campaign state
   with `s.level = null`. The same ticket setup function is registered as a core `Level` (`setup` = open the ticket on a fresh state, `goal` = bench passed,
   `solver` = the ref replay) so `checkAllLevels` and the persona runner exercise exactly the campaign code path.
-- **Autosave.** The core autosaves after every built-in `tick`; NODE does not use `tick` for live simulation (it would write the autosave 30×/s).
+- **Autosave.** The core autosaves after every built-in `tick`; CIRCUITS does not use `tick` for live simulation (it would write the autosave 30×/s).
   Live frames use the game action `advance(frames)`; Godot calls `save('auto')` after board edits (debounced 2 s), after every bench, on pause, focus
   loss, Android pause and quit. `systems` is empty.
 - Saves: `saveVersion` starts at 1 with a migration table from day one; a save from another region pack loads only into that pack (the pack id is checked in `validateSave`).
@@ -1284,7 +1284,7 @@ SC-01 the checker used peak/π, and the original conduction-angle averages are c
 4-3 Tj 102.5/88.75 °C; 4-4 Vout 3.3008 V; 5-4 IC(β 200) 1.12 mA, gain from EMF 9.53; 3-2 47k+330n 10.6-11.5 / 13.7-14.7 ms; 5-1 pin 17.2 mA, fan 11.96 V; 5-3 VOH 4.098 V; 6-5 82k → 52.8/47.0 °C; 8-5 R2 15.894 kΩ, H3 −16.8 dB; 6-3 −0.68 dB at 20 kHz; 6-6 Vpp 2.038 V; 7-1 0.15 µF 9.75-11.92 mA rms (`na` 0.22 µF 8.95-10.94); 7-2 fc(rel) 3545 Hz; 7-3 rejection 5.5/12.3 dB; 7-4 fc 294 Hz, Q 0.693, −30.8 dB at 50 Hz; 8-1 2.061 Hz, 65.7 %. Total oracle assertions ≈ 220.
 
 ### 9.2 Reference circuits against SPICE
-`scripts/ngspice-ref/*.cir`: decks that use only models NODE implements identically (`D(Is N Rs BV IBV)`, `NPN(Is Bf Br Vaf)`, `NMOS level=1`, linear elements, ideal switches via `sw`), run in **ngspice 42+**
+`scripts/ngspice-ref/*.cir`: decks that use only models CIRCUITS implements identically (`D(Is N Rs BV IBV)`, `NPN(Is Bf Br Vaf)`, `NMOS level=1`, linear elements, ideal switches via `sw`), run in **ngspice 42+**
 offline. CSVs are committed (`tests/ref/*.csv`), so CI needs no ngspice. Comparisons resample to a common grid; tolerance max |Δ| ≤ 0.5 % of signal range (transient) and 0.1 dB / 0.5° (AC):
 1 diode clipper (±0.7 V sine 5 V) · 2 half-wave + 470 µF + 1 kΩ · 3 Shockley bridge + 1000 µF + 150 Ω (ripple, peak, inrush) · 4 Zener shunt with breakdown model, Vin sweep 0-20 V (DC sweep) · 5 LED + R I-V sweep ·
 6 CE amp transient 1 kHz 100 mV (distortion visible) · 7 MOSFET inverter VTC (DC sweep) · 8 NMOS switch with an RL load and flyback diode (turn-off spike) · 9 RLC step (TR-03) · 10 Sallen-Key LP AC · 11 Wien/phase-shift startup (frequency only) ·
@@ -1450,8 +1450,8 @@ class A/B, crossover distortion) · user-made tickets shared via codes · leader
 
 ## 11. Online leaderboards (user decision 2; added by the level-1 review)
 
-NODE uses the shared `cobanana-scores` service (repo `cobanana-scores`, contract in its `docs/API.md` and `src/verify/types.ts`). The game never trusts
-itself: it submits a **solution code** plus the metrics it computed; the server re-runs NODE's deterministic bench and accepts the score only if the
+CIRCUITS uses the shared `cobanana-scores` service (repo `cobanana-scores`, contract in its `docs/API.md` and `src/verify/types.ts`). The game never trusts
+itself: it submits a **solution code** plus the metrics it computed; the server re-runs CIRCUITS's deterministic bench and accepts the score only if the
 recomputed metrics are **bit-identical** (`Object.is` per value). Determinism (§3.11, dmath) is therefore a hard requirement, not a nicety.
 
 ### 11.1 What has a leaderboard
@@ -1468,8 +1468,8 @@ leaderboard metric (the Monte Carlo is too heavy for the 2000 ms server cap on e
 
 ### 11.2 Solution-code format (on the core `kit/solution` envelope)
 The core envelope is `CB1.<base64url JSON>.<crc32 hex8>` carrying `{game, level, ruleset, seed, mode, actions}`, with
-`ruleset = node-circuits:<region>@<packVersion>.<gameVersion>` (core `rulesetId`). The core's default records every action a player took; for NODE
-that log is long and noisy (live frames, probes, undo), so NODE emits a **canonical two-action code** instead:
+`ruleset = node-circuits:<region>@<packVersion>.<gameVersion>` (core `rulesetId`). The core's default records every action a player took; for CIRCUITS
+that log is long and noisy (live frames, probes, undo), so CIRCUITS emits a **canonical two-action code** instead:
 ```
 actions = [ ["loadBoard", ["<board payload>"]], ["runBench", []] ]          seed = 1, mode = 'learner' (the canonical ticket)
 <board payload> = base64url (no padding) of a binary record, integers as unsigned LEB128 varints:
@@ -1489,7 +1489,7 @@ actions = [ ["loadBoard", ["<board payload>"]], ["runBench", []] ]          seed
 ### 11.3 `src/verify.ts`
 ```ts
 export const verify = makeVerifier(GAME);           // core kit/verify: decode → ruleset/region check → startLevel → replay → must be won → GAME.metrics(state)
-export const nodeVerifier: GameVerifier = adaptForScores(verify, { // thin adapter in NODE (cobanana-scores contract, src/verify/types.ts)
+export const nodeVerifier: GameVerifier = adaptForScores(verify, { // thin adapter in CIRCUITS (cobanana-scores contract, src/verify/types.ts)
   game: 'node-circuits', rulesVersion: '1.0.0', gameVersions: ['0.1.0'], regionRulesets: ['global'],
   levels: { global: levelSpecsFromLevelFiles() },   // metric specs + epoch per ticket with a leaderboard (§11.1)
   samples: committedSamples,                        // every must-ship build ticket's ref code + 2 failing codes (from goldens)
@@ -1499,14 +1499,14 @@ export const nodeVerifier: GameVerifier = adaptForScores(verify, { // thin adapt
 - **Pure**: no Node APIs, no I/O, no `Date`, no `Math.random`, no globals mutated; imports only `src/sim`, `src/data`, `src/regions`, `src/locales`, `@core/*`.
   A test bundles `verify.ts` with esbuild for a Workers-like target and fails on any Node built-in import.
 - Cost: the core verifier has no cooperative budget hook; the scores server's Node adapter hard-kills at 2000 ms and Workers relies on the platform limit.
-  So NODE asserts in `verify.perf.test.ts` that the worst novice board of every must-ship ticket verifies in ≤ 1000 ms on the CI runner (half the cap).
+  So CIRCUITS asserts in `verify.perf.test.ts` that the worst novice board of every must-ship ticket verifies in ≤ 1000 ms on the CI runner (half the cap).
   (A request to core: pass an optional `budget()` through `VerifyOpts` to `GameDef` actions; logged in REVIEW.md, not blocking.)
 - Epochs: any rule, catalogue-price or level change that can move a metric for a ticket bumps that ticket's `epoch` (and the pack's `rulesetVersion` for pack
   data changes); a test compares committed `samples` metrics with a fresh run and fails if they changed without a bump.
 
 ### 11.4 Client: offline-first, never blocking
 - The Godot side uses the shared addon `cobanana_scores` (`CbScoresClient`, autoload `Scores`): first-run privacy notice, Settings row (on/off, nickname,
-  "delete my online data"), a persistent **offline queue** with retry and backoff, a histogram cache, signals only (never blocks gameplay). NODE adds no
+  "delete my online data"), a persistent **offline queue** with retry and backoff, a histogram cache, signals only (never blocks gameplay). CIRCUITS adds no
   networking code of its own.
 - Flow on a pass: `exportSolution()` → `Scores.submit(levelId, code, metrics)` → the bench report shows the local result immediately; the histogram fills in
   when `histogram_ready` arrives (cached first, then fresh). Offline is silent: a small "queued" chip on the report, sent later.
@@ -1563,7 +1563,7 @@ Physics and engine rules are region-independent. Everything regional is data in 
 3. **Schema**: every pack validates against the core pack schema; every customer id used by a level has a name in every pack's `en` table; every EB set has 8
    cards with matching `teaches` ids.
 4. **Solution codes carry the ruleset** (`node-circuits:<region>@<packVersion>.<gameVersion>`): a code made under `in` refuses to load or verify under `global` with a teaching message; verify rejects a
-   region/code ruleset mismatch (core `makeVerifier` does this; NODE tests it).
+   region/code ruleset mismatch (core `makeVerifier` does this; CIRCUITS tests it).
 5. **Formatting**: `global` renders `$1,234.50`; `in` renders `₹1,03,698`; the mains readout shows the pack's V and Hz.
 
 

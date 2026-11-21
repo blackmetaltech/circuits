@@ -1,7 +1,7 @@
 class_name StallPages
 extends Control
 ## Paper overlays on top of the bench (the bench stays visible behind a scrim; nothing is a grey modal):
-##   title     the neon NODE sign at dusk and hanging painted signs: Continue / New / Settings / Cute mode
+##   title     the neon CIRCUITS sign at dusk and hanging painted signs: Continue / New / Settings / Cute mode
 ##   map       the chapter as an open notebook page with the tickets pinned as paper chits
 ##   notebook  Wren's notebook: the coach steps for this ticket (left) and the Codex (right)
 ##   settings  a pinned card with chalk toggles
@@ -105,7 +105,8 @@ func _title() -> void:
 	# the neon sign, hung in front of the window: tubes in a frame, letters light up one by one, one flickers
 	var cx := w * 0.5; var cy := h * 0.19
 	var f := S.hand(); var fs := int(h * 0.19)
-	var word := "NODE"; var cols := [S.PHOS, S.CYAN, S.MAGENTA, S.AMBER]
+	var word := "CIRCUITS"; var cols := [S.PHOS, S.CYAN, S.MAGENTA, S.AMBER]
+	while fs > 40 and S.tw(f, word, fs) > w * 0.5: fs -= 4   # eight letters: the sign is sized to fit the window, never wider than half of it
 	var total := S.tw(f, word, fs); var x := cx - total * 0.5
 	var board := Rect2(x - 70, cy - fs * 0.88, total + 140, fs * 1.38)
 	draw_line(Vector2(board.position.x + 40, board.position.y), Vector2(board.position.x + 40, 0), Color(0.05, 0.05, 0.08), 4.0)
@@ -116,15 +117,15 @@ func _title() -> void:
 	var lx := x
 	for i in word.length():
 		var ch := word[i]; var cw := S.tw(f, ch, fs)
-		var on_t := 0.5 + float(i) * 0.55
+		var on_t := 0.5 + float(i) * 0.4
 		var k := 0.0
 		if _intro > on_t:
 			var since := _intro - on_t
 			k = 1.0 if since > 0.9 else (0.25 + 0.75 * float(int(since * 22.0) % 2))
-			if since > 0.9 and i == 2 and fposmod(t, 6.5) > 6.0: k = 0.3 + 0.7 * float(int(t * 26.0) % 2)   # the D stutters now and then
+			if since > 0.9 and i == 5 and fposmod(t, 6.5) > 6.0: k = 0.3 + 0.7 * float(int(t * 26.0) % 2)   # the U stutters now and then
 			k *= 0.95 + 0.05 * sin(t * 46.0 + i)
 		else: k = 0.06
-		var col: Color = cols[i]
+		var col: Color = cols[i % cols.size()]
 		S.glow(self, Vector2(lx + cw * 0.5, cy - fs * 0.22), fs * 0.95, Color(col, 0.28 * k))
 		for p in 3:
 			draw_string_outline(f, Vector2(lx, cy + fs * 0.18), ch, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, [14, 8, 4][p], Color(col, [0.12, 0.25, 0.55][p] * k))
@@ -162,6 +163,8 @@ func _title() -> void:
 		S.pin(self, q.position + Vector2(18, 16), Color("#cfa13a")); S.pin(self, q.position + Vector2(q.size.x - 18, 16), Color("#cfa13a"))
 		if hv: S.rr_line(self, q.grow(4), 12, Color("#ffd98a", 0.85), 3.0)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	var ver := "v%s" % str(ProjectSettings.get_setting("application/config/version", "0.1.0"))   # the version, from the project (one place)
+	S.text(self, f, ver, Vector2(w - 24.0 - S.tw(f, ver, 20), h - 24), 20, Color(1, 0.9, 0.7, 0.55))
 	if cute:   # Rezzy peeks in from the corner so Cute mode says "yes" on the title too
 		S.text(self, f, "~ Rezzy is on shift ~", Vector2(24, h - 24), 20, Color(1, 0.9, 0.7, 0.55))
 

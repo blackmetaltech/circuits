@@ -1,4 +1,4 @@
-# NODE chapter 4 "Mains & Rectifiers": what is new in the engine contract
+# CIRCUITS chapter 4 "Mains & Rectifiers": what is new in the engine contract
 
 Everything in `docs/API-CH1.md` .. `API-CH3.md` still holds. Level data: `src/data/levels/4-*.ts` (each header lists its numbers and its deviations from DESIGN §2.8); tests: `src/engine/ch4.test.ts` (engine) and `godot/tests/ch4_engine_flow.gd`
 (every ticket through the stall UI with the reference designs and the naive fails, ErrorTrap zero). Screens: `docs/screens/ch4/`.

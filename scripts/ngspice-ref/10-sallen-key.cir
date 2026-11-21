@@ -2,7 +2,7 @@
 * Ideal buffer (VCVS gain 1). f0 = 1/(2 pi R sqrt(C1 C2)) = 1125.395 Hz, Q = 0.5 sqrt(C1/C2) = 0.70711, so -3.0103 dB and -90 deg at f0.
 * Analysis : AC small signal, 10 Hz..100 kHz, 40 points/decade (161 rows).
 * Outputs  : 10-sallen-key.csv = freq_Hz, mag_dB (V(out)/V(in)), phase_deg (not unwrapped; stays within -180..0).
-* NODE side: use an ideal op-amp (the textbook-bin ideal variant) or a VCVS; the 741/TL072 macros differ by design.
+* CIRCUITS side: use an ideal op-amp (the textbook-bin ideal variant) or a VCVS; the 741/TL072 macros differ by design.
 .include common.inc
 Vin in 0 DC 0 AC 1
 R1 in n1 10k

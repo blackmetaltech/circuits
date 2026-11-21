@@ -1,4 +1,4 @@
-# NODE build decisions (deviations from BUILD-PLAN.md, with reasons)
+# CIRCUITS build decisions (deviations from BUILD-PLAN.md, with reasons)
 
 - 2026-11-10 (director): M1-A1 and M1-A2 run as one worker task (netlist/compile + linear stamps/DC/topology + NC/CA oracles):
   the device-stamp interface and its first users are designed together, which avoids an interface round trip between lanes.

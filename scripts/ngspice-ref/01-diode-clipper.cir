@@ -1,7 +1,7 @@
 * 01 diode clipper: 5 V peak 1 kHz sine, 1 kohm series R, anti-parallel 1N4148 to ground.
 * Analysis : transient from the DC operating point, t = 0..1.999 ms (2 cycles), uniform 1 us grid (2000 rows).
 * Outputs  : 01-diode-clipper.csv = time_s, v_in_V, v_out_V.
-* NODE circuit: Vsrc sin(0, 5 V, 1 kHz) -> R 1k -> node out; 2x D1N4148 anti-parallel out<->gnd.
+* CIRCUITS circuit: Vsrc sin(0, 5 V, 1 kHz) -> R 1k -> node out; 2x D1N4148 anti-parallel out<->gnd.
 * Parameters: 1N4148 (Is 2.52n N 1.752 Rs 0.568; CJO=0 TT=0; no breakdown). Diodes are Shockley only.
 .include common.inc
 Vin in 0 SIN(0 5 1k)

@@ -8,7 +8,7 @@
 .include common.inc
 * Numerical aid: 1 pF from every node to ground. Without it ngspice (any method) fails with "timestep too small" when the
 * floating, capacitance-free bridge nodes / regenerative BJT nodes switch. 1 pF is 1e-5 of the smallest real capacitor here, so it
-* changes no result at the reference tolerance (checked against 0.1 pF; see README). NODE has no shunt capacitance: this is ngspice-only.
+* changes no result at the reference tolerance (checked against 0.1 pF; see README). CIRCUITS has no shunt capacitance: this is ngspice-only.
 .options cshunt=1p
 Vcc vcc 0 9
 RC1 vcc c1 1k

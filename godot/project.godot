@@ -1,9 +1,9 @@
-; Engine configuration file (Godot 4.7). NODE, node-circuits and 47904 are filled in by scaffold/new-game.sh; they work as literals too.
+; Engine configuration file (Godot 4.7). CIRCUITS, node-circuits and 47904 are filled in by scaffold/new-game.sh; they work as literals too.
 config_version=5
 
 [application]
 
-config/name="NODE"
+config/name="CIRCUITS"
 config/version="0.1.0"
 config/quit_on_go_back=false
 run/main_scene="res://main.tscn"

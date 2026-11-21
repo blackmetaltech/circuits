@@ -1,6 +1,6 @@
 * 00 thermal-voltage check (not a comparison deck): what Vt = kT/q does ngspice use at temp = tnom = 26.85 C?
 * A 1 mA current into an ideal diode (Is 1e-14, N 1, Rs 0) gives V = Vt*ln(1 + I/Is); the control block solves for Vt.
-* NODE uses Vt = 25.852 mV (DESIGN 3.3, T fixed at 300 K).
+* CIRCUITS uses Vt = 25.852 mV (DESIGN 3.3, T fixed at 300 K).
 .include common.inc
 .model DCHK D(IS=1e-14 N=1)
 I1 0 a DC 1m
@@ -9,6 +9,6 @@ D1 a 0 DCHK
 op
 let vt_mV = 1000*v(a)/ln(1 + 1m/1e-14)
 set numdgt=8
-echo "VT-CHECK ngspice_Vt_mV = $&vt_mV (CODATA-2018 kT/q at 300 K = 25.85200 mV; NODE = 25.852 mV)"
+echo "VT-CHECK ngspice_Vt_mV = $&vt_mV (CODATA-2018 kT/q at 300 K = 25.85200 mV; CIRCUITS = 25.852 mV)"
 .endc
 .end

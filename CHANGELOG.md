@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to NODE. The release workflow publishes the section whose heading contains `[x.y.z]`.
+All notable changes to CIRCUITS (called NODE until v0.1.0). The release workflow publishes the section whose heading contains `[x.y.z]`.
 
 ## [0.1.0] - unreleased
 ### Play-test round C3-1 (diploma student, chapters 2 and 3)

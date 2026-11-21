@@ -1,4 +1,4 @@
-// Engine-level tests of the NODE skeleton: actions teach on failure, determinism, saves, protocol, slim snapshot, personas, goldens.
+// Engine-level tests of the CIRCUITS skeleton: actions teach on failure, determinism, saves, protocol, slim snapshot, personas, goldens.
 import { describe, expect, it } from 'vitest';
 import { Engine, Env, MemoryKV, createProtocol, play } from '@core/kit';
 import { goldenFile, trajectory } from '@core/kit/golden';
@@ -6,9 +6,9 @@ import { GAME } from './game';
 import { REGIONS } from './regions';
 import { UNDO_CAP, pushUndo, type NodeState } from './engine/state';
 
-describe('NODE skeleton', () => {
+describe('CIRCUITS skeleton', () => {
   it('the game definition: id, title, versions, empty systems', () => {
-    expect(GAME.id).toBe('node-circuits'); expect(GAME.title).toBe('NODE'); expect(GAME.saveVersion).toBe(1); expect(GAME.rulesetVersion).toBe(1);
+    expect(GAME.id).toBe('node-circuits'); expect(GAME.title).toBe('CIRCUITS'); expect(GAME.saveVersion).toBe(1); expect(GAME.rulesetVersion).toBe(1);
     expect(GAME.systems).toEqual([]);
   });
   it.each(REGIONS.ids().map((r) => [r]))('newGame in %s builds the campaign state: no ticket open, empty progress, the pack\'s ruleset', (region) => {

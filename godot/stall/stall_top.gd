@@ -211,11 +211,10 @@ func _chit() -> void:
 	if pay != "" and chit_pay and not locked:
 		y += float(psz) + 10.0
 		S.text(self, f, pay, Vector2(q.position.x + 14, y), CH_PAY, Color(S.INK, 0.7), HORIZONTAL_ALIGNMENT_LEFT, inner)
-	if locked:   # a rubber stamp: it sits below the last line of text (and may hang over the paper's edge), never on the words
-		var top_y := minf(maxf(y + 12.0, q.end.y - 46.0), q.end.y - 26.0)   # below the words when there is room, but always on the paper (never drifting onto the instrument below)
-		draw_set_transform(c + Vector2(r.size.x * 0.5 - 62.0, top_y + 22.0), deg_to_rad(-8.0), Vector2.ONE)
-		S.rr_line(self, Rect2(-56, -20, 112, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5)
-		S.text(self, S.hand(), "FIXED", Vector2(-38, 10), 28, Color(0.1, 0.55, 0.2, 0.9))
+	if locked:   # a rubber stamp: it sits below the last line of text and hangs over the paper's lower edge (onto the meter's blank top rim), never on the words
+		draw_set_transform(c + Vector2(r.size.x * 0.5 - 62.0, y + 26.0), deg_to_rad(-8.0), Vector2.ONE)
+		S.rr_line(self, Rect2(-52, -17, 104, 34), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5)
+		S.text(self, S.hand(), "FIXED", Vector2(-36, 9), 24, Color(0.1, 0.55, 0.2, 0.9))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _slip() -> void:

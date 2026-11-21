@@ -28,7 +28,7 @@ const wallet = (s: Readonly<NodeState>): string => formatMinor(s.progress.wallet
 export function makeGame(defs: readonly LevelDef[]): GameDef<NodeState> {
   return {
     id: GAME_ID,
-    title: 'NODE',
+    title: 'CIRCUITS',
     saveVersion: 1,
     /** Game-wide rules version: part of every solution code's ruleset id. Bump when a rule change can change a level score. */
     rulesetVersion: 1,

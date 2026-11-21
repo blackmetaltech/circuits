@@ -1,9 +1,9 @@
-# NODE: build plan (v0.1)
+# CIRCUITS: build plan (v0.1)
 
-> For the NODE build director (Opus, level 1). Implementation and serious testing go to Sonnet workers; volume work goes to Haiku.
+> For the CIRCUITS build director (Opus, level 1). Implementation and serious testing go to Sonnet workers; volume work goes to Haiku.
 > Spec: `DESIGN.md` (authoritative, revised by the review). Review: `REVIEW.md`. Contract: `PROGRAM.md` (user decisions 1-5), `cobanana-core/CORE.md`,
 > `cobanana-scores/docs/API.md`.
-> Repo: this one · title NODE · app id `in.ixaxaar.cobanana.node` · port 47904 · Xvfb :260-:279
+> Repo: this one · title CIRCUITS · app id `in.ixaxaar.cobanana.circuits` · port 47904 · Xvfb :260-:279
 > (desk testers a..h :261-:268, shot1 :270, ph :271, titles :272, tour :273) · phone `flock …/.locks/phone.lock`, pad `…/.locks/pad.lock`.
 
 ## Rules for every task
@@ -27,7 +27,7 @@ Model key: **S** = Sonnet, **H** = Haiku, **O** = the director (Opus).
 ## M0: scaffold from core (half a day)
 | task | model | deliverable | acceptance |
 |---|---|---|---|
-| M0-1 | O | `cobanana-core/scaffold/new-game.sh node-circuits NODE in.ixaxaar.cobanana.node 47904`; set `qa.env` (`CB_DISP_BASE=260`); keep the template tank as a smoke fixture until M1 replaces it | `pnpm typecheck && pnpm test` green; `CB_SMOKE=1 godot --headless --path godot` prints `SMOKE OK`; first commit |
+| M0-1 | O | `cobanana-core/scaffold/new-game.sh node-circuits CIRCUITS in.ixaxaar.cobanana.circuits 47904`; set `qa.env` (`CB_DISP_BASE=260`); keep the template tank as a smoke fixture until M1 replaces it | `pnpm typecheck && pnpm test` green; `CB_SMOKE=1 godot --headless --path godot` prints `SMOKE OK`; first commit |
 | M0-2 | S | Skeleton: `src/regions/{index,global,in,na}` (core `defineRegion`; `global` shipping, `in` draft with the Appendix A strings and `leakMarkers`, `na` test-only); `src/locales/en.ts`; the `NodeState` type (§8.3) with `newGame`, empty actions, a `snapshot` override; the `regions.test.ts` pattern from the template | Template region tests pass with three packs; leak test green; `state.size.test.ts` scaffolded |
 
 ## Gate 0: week-1 go/no-go spike (in parallel with M1 lane A; no M2 work starts until it is GO)
@@ -57,7 +57,7 @@ Exit: all **57 oracles** (≈ 220 assertions) green; 16 property families green 
 | A | M1-A2 linear stamps + DC solve + topology checks | S | `sim/mna/{stamp,topology,op}.ts`, `devices/{r,vsrc,isrc,battery,bench,meter}.ts` | **oracles NC-01..10, CA-01..06**; topology explainer cases (§3.10) | oracle tolerance 0.1 %; KCL/KVL/Tellegen/superposition/reciprocity/Thevenin properties |
 | A | M1-A3 transient TRAP/BE + breakpoints + companions | S | `sim/mna/tran.ts`, `devices/{c,l}.ts` | **CAP-01..07, TR-01..03**; order of accuracy (TRAP ≈ 4×, BE ≈ 2×); energy; DC limit; charge conservation | fixed step, BE restarts at breakpoints |
 | A | M1-A4 AC (core cLU) | S | `sim/mna/ac.ts` | **AC-01..07, TR-04, FI-01, FI-02, FI-04**; AC vs transient property; passivity | phase ±0.3° |
-| B (devices) | M1-B1 diode/LED/Zener/Schottky + pnjlim + gmin/source/ptran homotopy (core `solveRobust` + NODE limiter) | S | `devices/diode.ts`, `sim/mna/op.ts` | **SD-01, SC-01, SC-02, SC-03**; device-consistency property; the convergence suite (§9.4) | the exponential guard; never hangs (2 s wall guard) |
+| B (devices) | M1-B1 diode/LED/Zener/Schottky + pnjlim + gmin/source/ptran homotopy (core `solveRobust` + CIRCUITS limiter) | S | `devices/diode.ts`, `sim/mna/op.ts` | **SD-01, SC-01, SC-02, SC-03**; device-consistency property; the convergence suite (§9.4) | the exponential guard; never hangs (2 s wall guard) |
 | B | M1-B2 BJT EM-lite + Darlington, MOSFET Level-1 + fetlim + body diode | S | `devices/{bjt,mosfet}.ts` | **SC-04, SD-02, SD-03**; ngspice refs 6, 7, 8, 13 | |
 | B | M1-B3 macros: op-amp, comparator, 555, regulators, logic pin, relay, fuse, NTC, pot, slide wire, transformer | S | `devices/*` | **OA-01..09, FI-03, OS-01, NC-07/08 (slide wire), AC-07**; regulator Iq/min-load emergence (4-4); thermal shutdown cycling | event mechanism with crossing refinement (§3.5) |
 | C (bench) | M1-C1 spec engine: level/band/metric/mask/rating/safety/predict, DFT/THD, periodic settle | S | `sim/bench/*` | the band tube on square edges; THD of known Fourier series; mask edges; crossing count with hysteresis | `runBench` is pure and deterministic |
@@ -117,9 +117,9 @@ below a 20 % novice pass. Every explainer has fired at least once across persona
 **M4 exit**: smoke and audit clean at 1280x720, 1280x800, 1920x1080, 2560x1440, 3440x1440, 3840x2160 and the phone with insets. Audio test OK.
 The four §1.7 clips are recorded. About 7 tasks.
 
-## M5: QA rounds (PROGRAM rule 8; briefs from the skill's `references/tester-prompts.md`, adapted to NODE)
+## M5: QA rounds (PROGRAM rule 8; briefs from the skill's `references/tester-prompts.md`, adapted to CIRCUITS)
 Round 1 (in parallel; each tester has an isolated display and `XDG_DATA_HOME`, uses `CB_SCORES=mock`, and must Read every screenshot):
-| tester | model | surface | NODE-specific checks |
+| tester | model | surface | CIRCUITS-specific checks |
 |---|---|---|---|
 | novice | S | Learner, 1920x1080, ≥ 150 actions | first-minute smoke, coach, hint ladder, does Thevenin (2-3) or L/R (3-3) "land" |
 | form factors + settings | S | 3440x1440, 2560x1080, 4K, 1366x768, 1280x720 | scope readability, tray wrap, every setting persists |
@@ -136,7 +136,7 @@ Then: fix in batches, re-run the suites and soaks, then Round 2 "verify these N 
 | task | model | deliverable |
 |---|---|---|
 | M6-1 | O | Version bumps (package.json, project.godot, export presets), CHANGELOG, README with fresh 4K-downsampled screenshots, the Pages site |
-| M6-2 | O | Register the NODE verifier bundle in `cobanana-scores` (`gameVersions: ['0.1.0']`, samples), and run its registry test |
+| M6-2 | O | Register the CIRCUITS verifier bundle in `cobanana-scores` (`gameVersions: ['0.1.0']`, samples), and run its registry test |
 | M6-3 | O | Tag → CI release (Linux/Windows/macOS), the signed APK by hand + SHA256SUMS, then verify the assets |
 About 3 tasks.
 

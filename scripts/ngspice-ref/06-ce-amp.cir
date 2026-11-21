@@ -5,7 +5,7 @@
 *            (10 cycles, 5 us grid, 2000 rows).
 * Outputs  : 06-ce-amp.csv = time_s, v_src_V, v_base_V, v_coll_V, v_out_V, v_out_noearly_V.
 *            v_out_noearly_V is the SAME circuit with the 2N3904 model without the Early effect (VAF infinite): it does not
-*            depend on how the Early effect is formulated, so NODE can be checked against it with Vaf set to infinity.
+*            depend on how the Early effect is formulated, so CIRCUITS can be checked against it with Vaf set to infinity.
 * Parameters: 2N3904 Is 6.734f Bf 200 Br 0.737 Vaf 74 (Ebers-Moll: ISE=ISC=IKF=0, RB=RC=RE=0, all C and TF/TR 0).
 .include common.inc
 Vcc vcc 0 9

@@ -1,4 +1,4 @@
-# NODE chapter 3 "Charge": what is new in the engine contract
+# CIRCUITS chapter 3 "Charge": what is new in the engine contract
 
 Everything in `docs/API-CH1.md` and `docs/API-CH2.md` still holds. This file lists only what chapter 3 added. Level data: `src/data/levels/3-*.ts` (each header lists its numbers and its deviations from DESIGN §2.8); tests:
 `src/engine/ch3.test.ts` (engine, 27) and `godot/tests/ch3_engine_flow.gd` (every ticket through the stall UI with the reference designs and the naive fails, ErrorTrap zero). Screens: `docs/screens/ch3/`.

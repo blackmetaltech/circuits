@@ -1,5 +1,5 @@
 * 09 series RLC step response (DESIGN 9.1 TR-03): 10 V step, 20 ohm, 10 mH, 10 uF; output = capacitor voltage.
-* The step is the NODE power-on convention: a 1 us linear ramp 0 -> 10 V starting at t = 0 (DESIGN 3.5).
+* The step is the CIRCUITS power-on convention: a 1 us linear ramp 0 -> 10 V starting at t = 0 (DESIGN 3.5).
 * Analysis : transient from zero state, t = 0..4.9975 ms (2.5 us grid, 2000 rows).
 * Outputs  : 09-rlc-step.csv = time_s, v_in_V, v_cap_V, i_L_A.
 * TR-03 (ideal step): zeta 0.31623, w0 3162.3 rad/s, overshoot 35.092 %, Vpk 13.509 V at 1.0472 ms.

@@ -1,6 +1,6 @@
 class_name StallScene
 extends Control
-## NODE's own interface: Wren's repair stall at night (docs/briefs/CH1-SOUL.md). No top bar, sidebar or tabs: money is the coin tin, the ticket is
+## CIRCUITS's own interface: Wren's repair stall at night (docs/briefs/CH1-SOUL.md). No top bar, sidebar or tabs: money is the coin tin, the ticket is
 ## a chit on the scope bezel, the coach is Wren's notebook (a slip with a hand-drawn arrow), settings is the brass gear on the stall wall.
 ##
 ## Back to front: StallWindow (the lane) -> this node's own _draw (walnut bench, cutting mat) -> StallProps (mug, shoebox, Rezzy, notebook, coin
@@ -12,7 +12,7 @@ extends Control
 
 const S = preload("res://stall/stall_style.gd")
 const EB = preload("res://stall/engine_bench.gd")
-const SAVE := "user://node_stall.cfg"
+const SAVE := "user://circuits_stall.cfg"
 const TOP_SCALE := 0.88            ## perspective: the far (top) edge of the board is this fraction as wide as the near edge
 const DEPTH := 0.94                ## vertical foreshortening of the board
 
@@ -162,7 +162,7 @@ func start_ticket(id: String) -> void:
 ## A ticket not listed shows the whole board. tests/layout_flow.gd checks every reference design and connector lies inside its view.
 const BOARD_VIEW := {
 	"1-1": Rect2(0, 0, 15, 8), "1-2": Rect2(0, 0, 22, 8), "1-3": Rect2(0, 0, 17, 10), "1-4": Rect2(0, 0, 15, 8),
-	"2-1": Rect2(0, 0, 17, 10), "3-1": Rect2(0, 0, 17, 10), "3-3": Rect2(0, 0, 15, 10),
+	"2-1": Rect2(0, 0, 17, 10), "3-1": Rect2(0, 0, 17, 10), "3-3": Rect2(0, 0, 23, 12),
 }
 
 func _ticket_view() -> void:   # push the open ticket onto the instruments and props

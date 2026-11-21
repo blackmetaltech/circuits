@@ -103,6 +103,11 @@ func _audit(id: String, res: Vector2i) -> void:
 	for c in bk.ticket.board.connectors: pts.append(Vector2(c.pad[0], c.pad[1]))
 	for w in ref.get("wires", []): for q in w: pts.append(Vector2(q[0], q[1]))
 	for q in ref.get("parts", []): pts.append(Vector2(q[3], q[4]))
+	for pt in bk.parts:   # fixed parts of the ticket (the relay, the slide wire, the sealed module): every pin, and a pad of room around the body
+		for q in pt.pins: pts.append(Vector2(q[0], q[1]))
+		var lo := Vector2(1e9, 1e9); var hi := Vector2(-1e9, -1e9)
+		for q in pt.pins: lo = Vector2(minf(lo.x, q[0]), minf(lo.y, q[1])); hi = Vector2(maxf(hi.x, q[0]), maxf(hi.y, q[1]))
+		pts.append(hi + Vector2(1, 1)); pts.append(lo - Vector2(1, 1))
 	for q in pts:
 		var sp := sc.pad_screen(q)
 		ok(sc.board_rect.grow(-2.0).has_point(sp), "%s pad %s is on screen at %s (board %s)" % [tag, str(q), str(sp), str(sc.board_rect)])

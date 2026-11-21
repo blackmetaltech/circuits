@@ -1,11 +1,11 @@
-// NODE vs ngspice-47 reference decks (DESIGN §9.2): diode decks 01-05, 09 and 14 (4-1 wall wart). Tolerance: max |NODE - ngspice| <= 0.5 % of the
+// CIRCUITS vs ngspice-47 reference decks (DESIGN §9.2): diode decks 01-05, 09 and 14 (4-1 wall wart). Tolerance: max |CIRCUITS - ngspice| <= 0.5 % of the
 // reference signal range, on a common grid (transientError.fraction). The CSVs in tests/ref are committed; CI needs no ngspice.
 //
-// Models: every .model line is PARSED FROM scripts/ngspice-ref/common.inc, so NODE and ngspice run the identical numbers. For the parts that
+// Models: every .model line is PARSED FROM scripts/ngspice-ref/common.inc, so CIRCUITS and ngspice run the identical numbers. For the parts that
 // exist in the catalogue (1N4007, 5.1 V Zener, red LED) the test also asserts the catalogue model equals the deck model, so the decks cannot
 // drift from src/data/parts again. 1N4148 (deck 01) is the exception: the deck still carries the DESIGN recall (Is 2.52n N 1.752 Rs 0.568),
 // the catalogue has since been re-fitted (Is 4.47n N 1.92 Rs 0.35); the comparison here is solver-vs-solver, so it uses the deck numbers.
-// ZENER decks (04): the forward Is 1e-14 / N 1 are ESTIMATES (the catalogue has none; NODE falls back to the same diode defaults), and Rs 6.47 is
+// ZENER decks (04): the forward Is 1e-14 / N 1 are ESTIMATES (the catalogue has none; CIRCUITS falls back to the same diode defaults), and Rs 6.47 is
 // a fit to Zzt; only BV / Ibv / Rs are datasheet-derived.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -37,7 +37,7 @@ const deckModels = (): Record<string, Record<string, number>> => {
   return out;
 };
 const MODELS = deckModels();
-/** `.model` card for NODE from a deck model (NODE implements is n rs bv ibv nbv; breakdown only where bv < 1e20). */
+/** `.model` card for CIRCUITS from a deck model (CIRCUITS implements is n rs bv ibv nbv; breakdown only where bv < 1e20). */
 const card = (name: string): string => {
   const p = MODELS[name.toUpperCase()]; if (!p) throw new Error('no deck model ' + name);
   const keys = ['is', 'n', 'rs', ...(p.bv < 1e20 ? ['bv', 'ibv', 'nbv'] : [])];
@@ -54,7 +54,7 @@ describe('deck models match the catalogue where the part exists', () => {
   };
   it('1N4007: Vishay line (Is, N, Rs, BV, Ibv)', () => same('D1N4007', '1n4007', ['is', 'n', 'rs', 'bv', 'ibv']));
   it('red LED: Is, N, Rs', () => same('DLEDRED', 'led-red-5mm', ['is', 'n', 'rs']));
-  it('5.1 V Zener: BV, Ibv, Rs (forward Is 1e-14 / N 1 are estimates in the deck, defaults in NODE)', () => same('DZ5V1', '1n4733a', ['bv', 'ibv', 'rs']));
+  it('5.1 V Zener: BV, Ibv, Rs (forward Is 1e-14 / N 1 are estimates in the deck, defaults in CIRCUITS)', () => same('DZ5V1', '1n4733a', ['bv', 'ibv', 'rs']));
 });
 
 // ---------------------------------------------------------------- runners
@@ -86,9 +86,9 @@ function sweep(cards: string, src: string, vmax: number, step: number, node: str
   return { v: { x: xs, y: v } as Series, i: { x: xs, y: i } as Series };
 }
 
-/** NODE is sampled AT the reference's own x values (its fine internal grid is linearly interpolated there), so both series then share one grid and the
+/** CIRCUITS is sampled AT the reference's own x values (its fine internal grid is linearly interpolated there), so both series then share one grid and the
  *  harness's own linear interpolation error cancels. Without this the coarse ngspice CSV (100 us grid on a 11 V peak with ~ms curvature, deck 02)
- *  is compared with NODE's true curve and shows a 4 mV (1 % of the 0.44 V ripple) PLOTTING artifact: at the CSV's own points NODE agrees to 1e-7 V. */
+ *  is compared with CIRCUITS's true curve and shows a 4 mV (1 % of the 0.44 V ripple) PLOTTING artifact: at the CSV's own points CIRCUITS agrees to 1e-7 V. */
 function check(what: string, ref: Series, nodeRaw: Series, window?: [number, number]): void {
   const test: Series = { x: ref.x, y: ref.x.map((x) => interp(nodeRaw.x, nodeRaw.y, x)) };
   const r = transientError(ref, test, { window, points: 4000 });
@@ -97,7 +97,7 @@ function check(what: string, ref: Series, nodeRaw: Series, window?: [number, num
 }
 const ref = (c: Csv, xk: number | string, yk: number | string): Series => ({ x: column(c, xk), y: column(c, yk) });
 
-describe('NODE vs ngspice-47: diode decks (0.5 % of range)', () => {
+describe('CIRCUITS vs ngspice-47: diode decks (0.5 % of range)', () => {
   it('01 diode clipper: 5 V 1 kHz, 1 k, anti-parallel 1N4148 (deck values), from the DC OP', () => {
     const c = csv('01-diode-clipper');
     const s = tran(`${card('D1N4148')}\nV1 in 0 0\nR1 in out 1k\nD1 out 0 d1n4148\nD2 0 out d1n4148`, { V1: sine(5, 1e3) }, { h: 1e-6, tStop: 1.999e-3, ic: 'op', probes: ['v(out)', 'v(in)'] });

@@ -1,4 +1,4 @@
-# NODE chapter 2 "Divide & Measure": what is new in the engine contract
+# CIRCUITS chapter 2 "Divide & Measure": what is new in the engine contract
 
 Everything in `docs/API-CH1.md` still holds. This file lists only what chapter 2 added. Level data: `src/data/levels/2-*.ts` (each header documents its deviations from DESIGN §2.8); tests: `src/engine/ch2.test.ts`
 (engine) and `godot/tests/ch2_engine_flow.gd` (the stall, through the UI layer).

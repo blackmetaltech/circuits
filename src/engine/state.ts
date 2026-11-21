@@ -1,4 +1,4 @@
-// NODE game state (DESIGN §8.3). Plain JSON only: the core engine clones it on every action, hashes it and saves it. No classes,
+// CIRCUITS game state (DESIGN §8.3). Plain JSON only: the core engine clones it on every action, hashes it and saves it. No classes,
 // Maps, typed arrays, functions or `undefined`-vs-missing tricks. Sub-types live here so the engine, the queries and the tests share them.
 import type { BaseState } from '@core/kit';
 import type { Board, Pad, PlacedPart, Wire } from '../sim/board/types';

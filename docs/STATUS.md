@@ -1,4 +1,4 @@
-# NODE status (for the next director)
+# CIRCUITS status (for the next director)
 
 ## Done (committed, CI green)
 - M0-1 scaffold (core 2034140), CI workflows (ci/release/pages), smoke OK.
@@ -21,7 +21,7 @@ Nothing (all workers stopped/landed; working tree clean at handoff).
 - M1-A4 AC (ac.ts + AC-01..07, TR-04, FI-01/02/04, Sallen-Key ref)
 - M1-B2 BJT/MOSFET (SC-04, SD-02, SD-03, refs 06/07/08/13/15)
 - M1-C1 bench spec engine (sim/bench/*)
-- M1-D2b NODE-vs-ngspice diode decks 01-05, 09, 14; make tran reuse op.solveNewton; ideal transformer device
+- M1-D2b CIRCUITS-vs-ngspice diode decks 01-05, 09, 14; make tran reuse op.solveNewton; ideal transformer device
 - then M1-B3 macros (needs tran events), C2 thermal/ratings/smoke, C3 explainers, E1 goldens/Node18, E2 bench-cost; M2 slice.
 
 ## Open issues

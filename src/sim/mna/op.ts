@@ -2,7 +2,7 @@
 //   linear circuit → one assemble + factor + solve.
 //   nonlinear      → `solveNewton` (damped Newton, limit hooks, reltol 1e-4 / vntol 1e-6 / abstol 1e-12 + KCL residual test), then
 //                    the homotopy chain when plain Newton fails: gmin stepping → source stepping → pseudo-transient → explained failure.
-//                    NODE keeps its own flat-array Newton loop (core `newton` takes number[][] Jacobians and a vector F; the MNA loop needs
+//                    CIRCUITS keeps its own flat-array Newton loop (core `newton` takes number[][] Jacobians and a vector F; the MNA loop needs
 //                    the factored flat matrix, device limit hooks writing into x, and in-place buffers per iteration): same algorithm
 //                    family (limiter hook, damping, homotopy) but on Float64Array, no per-iteration allocation of rows.
 //   initial guess  → opts.x0 (previous solution) else zeros with every diode junction seeded at 0.6 V above its cathode (diode-ON guess,

@@ -1,4 +1,4 @@
-// NODE regional parameters (DESIGN §12.2). Physics is region-independent: a pack may change prices, mains, names, currency and the
+// CIRCUITS regional parameters (DESIGN §12.2). Physics is region-independent: a pack may change prices, mains, names, currency and the
 // exam-bridge set, never a law or a constant of nature. The one law field a pack keeps (`vtAt300K`) exists so that tests can prove
 // no pack tampers with it; any field this interface does not list is rejected.
 import { formatMoney, type MoneyOpts, type RegionPack } from '@core/regions';

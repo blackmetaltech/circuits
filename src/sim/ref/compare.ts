@@ -1,4 +1,4 @@
-// Comparison harness for NODE-vs-ngspice reference CSVs (DESIGN §9.2).
+// Comparison harness for CIRCUITS-vs-ngspice reference CSVs (DESIGN §9.2).
 // Pure TS, no Node built-ins (tests read files with node:fs and pass the text in). Deterministic: uses dmath for log.
 import { dmath } from '@core/numerics';
 

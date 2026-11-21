@@ -13,7 +13,7 @@ function idleRun(region?: string, level = '0-0'): Engine<any> {
   return env.engine;
 }
 
-describe('solution codes of NODE (sample ticket 0-0)', () => {
+describe('solution codes of CIRCUITS (sample ticket 0-0)', () => {
   it('free play has no code', () => expect(new Engine(GAME).q('solutionCode')).toBeNull());
   it('the idle run produces a code that verifies as a clean not-ok (an idle player cannot win), the same every time', () => {
     const code = idleRun().q('solutionCode') as string; expect(code).toMatch(/^CB1\./);

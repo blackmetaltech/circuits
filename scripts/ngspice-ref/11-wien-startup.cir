@@ -2,7 +2,7 @@
 * Circuit  : op-amp (ideal VCVS, gain 1e6, unlimited) with out -> series R1C1 -> p; p -> parallel R2C2 -> gnd (positive feedback);
 *            negative feedback n: Rg 10k (n-gnd), Rf = 10k + (22k || 2 anti-parallel 1N4148) (out-n); the diodes shunt the 22k when the
 *            swing grows, which sets the amplitude (small-signal gain 1 + 32k/10k = 4.2, steady state about 3).
-* Start-up : "kick" = initial capacitor voltage 1 mV on node p (.ic with uic), the NODE oscillator-kick equivalent.
+* Start-up : "kick" = initial capacitor voltage 1 mV on node p (.ic with uic), the CIRCUITS oscillator-kick equivalent.
 * Analysis : transient with uic, t = 0..39.98 ms (20 us grid, 2000 rows). Only the oscillation FREQUENCY is a reference (not the
 *            amplitude or the start-up delay); measure it on the last cycles (see README).
 * Outputs  : 11-wien-startup.csv = time_s, v_out_V, v_p_V.

@@ -1,6 +1,6 @@
 // Seeded random diode / resistor / battery boards for the diode property and convergence tests (core Rng, never Math.random).
 // Test support, not a test. Every node has a resistive or battery path to the tree, diodes are extras (never tree edges), and every
-// battery has an internal resistance (as real NODE sources do), so the boards are physically sane but nonlinear enough to bite.
+// battery has an internal resistance (as real CIRCUITS sources do), so the boards are physically sane but nonlinear enough to bite.
 import { Rng } from '@core/kit/rng';
 import { dmath } from '@core/numerics';
 import type { Element, Netlist, Params } from './types';

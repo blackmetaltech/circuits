@@ -354,8 +354,17 @@ func _connector(c: Dictionary, m: Dictionary) -> void:   # the brass edge connec
 	var left: bool = c.pad.x < float(m.w - 1) * 0.5
 	var edge := br.position.x - p * 0.35 if left else br.end.x + p * 0.35
 	var r: Rect2
-	if left: r = Rect2(edge, pos.y - p * 0.5, pos.x - edge + p * 0.5, p)
-	else: r = Rect2(pos.x - p * 0.5, pos.y - p * 0.5, edge - pos.x + p * 0.5, p)
+	if left:
+		# two bars on one row (the battery's V+ and GND): each starts where the one before it ends, so neither covers the other's engraved name
+		var start := edge
+		for o in m.get("connectors", []):
+			if o != c and float(o.pad.y) == float(c.pad.y) and float(o.pad.x) < float(c.pad.x) and float(o.pad.x) < float(m.w - 1) * 0.5: start = maxf(start, _px(o.pad).x + p * 0.75)
+		r = Rect2(start, pos.y - p * 0.5, pos.x - start + p * 0.5, p)
+	else:
+		var stop := edge
+		for o in m.get("connectors", []):
+			if o != c and float(o.pad.y) == float(c.pad.y) and float(o.pad.x) > float(c.pad.x) and float(o.pad.x) >= float(m.w - 1) * 0.5: stop = minf(stop, _px(o.pad).x - p * 0.75)
+		r = Rect2(pos.x - p * 0.5, pos.y - p * 0.5, stop - pos.x + p * 0.5, p)
 	PartArt.rrect(self, Rect2(r.position + Vector2(p * 0.06, p * 0.1), r.size), p * 0.18, Color(0, 0, 0, 0.4))
 	PartArt.rrect(self, r, p * 0.18, Color("#b8893a"))
 	draw_line(r.position + Vector2(p * 0.1, p * 0.16), Vector2(r.end.x - p * 0.1, r.position.y + p * 0.16), Color(1, 0.9, 0.6, 0.45), p * 0.07)
@@ -372,7 +381,7 @@ func _connector(c: Dictionary, m: Dictionary) -> void:   # the brass edge connec
 	var sym := p * 0.5 if gnd else 0.0   # a ground symbol sits before the word
 	if left:
 		var tx := pos.x - p * 0.55 - tw
-		if gnd: tx = br.position.x + p * 0.1 + sym * 0.9   # a soldered wire may run along this bar: the name goes to its free left end
+		if gnd: tx = r.position.x + p * 0.1 + sym * 0.9   # a soldered wire may run along this bar: the name goes to its free left end
 		draw_string(f, Vector2(tx, gy), long, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, ink)
 		if gnd: _ground_symbol(self, Vector2(tx - sym * 0.85, pos.y), p * 0.3, ink)
 	else:

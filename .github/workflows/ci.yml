@@ -1,4 +1,4 @@
-# NODE CI (template from cobanana-core/ci/ci.yml): every push and PR, Linux only, cheap — typecheck, unit/golden/
+# CIRCUITS CI (template from cobanana-core/ci/ci.yml): every push and PR, Linux only, cheap — typecheck, unit/golden/
 # persona/level tests, sidecar build, Godot UI smoke. Exports and macOS/Windows packaging run only on v* tags (release.yml):
 # private-repo Actions minutes are limited.
 # SUBMODULE ACCESS: core/ is a git submodule with the RELATIVE url `../cobanana-core`, which resolves against this repo's

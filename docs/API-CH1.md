@@ -1,4 +1,4 @@
-# NODE chapter 1: engine contract for the Godot world
+# CIRCUITS chapter 1: engine contract for the Godot world
 
 Everything the bench world draws or says comes from these queries; everything the player does is one of these actions. The engine owns every number
 (dot speed, LED bloom, rating ratios, band, lock, payment); the UI computes none. All values are SI (V, A, W, ohm, s, deg C) unless a field says

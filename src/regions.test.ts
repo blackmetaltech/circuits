@@ -28,7 +28,7 @@ function render(pack: { id: string }) {
   return out;
 }
 
-describe('region packs of NODE', () => {
+describe('region packs of CIRCUITS', () => {
   it('there are three packs: global ships (default), in is a draft, na is a test-only draft', () => {
     expect(REGIONS.ids()).toEqual(['global', 'in', 'na']);
     expect(REGIONS.defaultId).toBe('global');

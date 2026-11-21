@@ -1,4 +1,4 @@
-# NODE: level-1 design review (2026-11-09/10)
+# CIRCUITS: level-1 design review (2026-11-09/10)
 
 Reviewer: level-1 design reviewer + build planner (Opus). Inputs: PROGRAM.md (with user decisions 1-5), RESEARCH.md, the GIGAWATT skill and its
 references, `DESIGN.md` (1313 lines as received; a pristine copy of it is kept outside the repo), CORE.md and the real `cobanana-core/ts` APIs
@@ -28,7 +28,7 @@ Severity: **B** blocker · **M** major · **m** minor. "Fixed" means DESIGN.md w
 | U5 | B | Region packs (decision 5, mid-review) | Fixed. New §12: `global` (ships), `in` (draft), `na` (test-only, 120 V 60 Hz). Mains, prices, availability, names, EB sets and syllabus map are pack data; the transformer primary follows the pack; `refByRuleset`; pack-switch solvability, leak, schema, ruleset-in-code and formatting tests. Aligned with core `defineRegion`, `rulesetId` and `expectNoRegionLeaks` [§12, §2.9, §9.12] |
 | U6 | M | Strings not externalised | Fixed. `src/locales/en.ts` via core `createI18n`; regional words in pack `strings`; Godot chrome via a CSV; lint + `checkLocales` + `missingKeys()` tests [§7.5] |
 | U7 | m | Mains tickets: user kept them | Fixed. Strengthened safety framing: a non-skippable first-view card, a visible isolation-transformer object, a keep-out silkscreen, a "simulated mains: do not try this at home" ribbon on Bench Cards, and the Codex page unlocked first [§1.2, §10.5] |
-| U8 | M | Differentiate from GRID; GRID's reviewer set a binding boundary (grid DESIGN §2.8) | Fixed. New NODE §1.8 mirrors it: NODE owns reactance as a part property, series LCR/Q/bandwidth, filters, rectifiers, the wall-wart transformer, op-amps; GRID owns feeder power factor, network transformers, 3-phase, grid resonance. No NODE ticket teaches PF correction or taps; shared phasor wording (φ = angle by which V leads I). Cast checked against GRID (Ada Moreno, Tobi Hart, Commissioner Vance, Nia), LENSCRAFT (Noor, Pip) and EQUILIBRIUM (Mara Quinn, Tomas Brandt, Victor Hale, Noor Haddad): mentor is **Wren**, and Pip/Theo/Hale were renamed Lio/Ash/Brook [header, §1.2, §1.8, §7.4] |
+| U8 | M | Differentiate from GRID; GRID's reviewer set a binding boundary (grid DESIGN §2.8) | Fixed. New CIRCUITS §1.8 mirrors it: CIRCUITS owns reactance as a part property, series LCR/Q/bandwidth, filters, rectifiers, the wall-wart transformer, op-amps; GRID owns feeder power factor, network transformers, 3-phase, grid resonance. No CIRCUITS ticket teaches PF correction or taps; shared phasor wording (φ = angle by which V leads I). Cast checked against GRID (Ada Moreno, Tobi Hart, Commissioner Vance, Nia), LENSCRAFT (Noor, Pip) and EQUILIBRIUM (Mara Quinn, Tomas Brandt, Victor Hale, Noor Haddad): mentor is **Wren**, and Pip/Theo/Hale were renamed Lio/Ash/Brook [header, §1.2, §1.8, §7.4] |
 
 ### 1.2 Fun critic
 | # | Sev | Finding | Action |
@@ -66,7 +66,7 @@ Severity: **B** blocker · **M** major · **m** minor. "Fixed" means DESIGN.md w
 | L2 | B | Live mode `advance(maxMs)` and thermal "wall time × speed" made results depend on device speed | Fixed. `advance(frames)` with a fixed sim quantum per frame and a fixed thermal step per frame; Godot only chooses the count [§3.9, §3.11, §8.4] |
 | L3 | B | GameState used `Float64Array` (not plain JSON) and kept derived live data loosely | Fixed. `NodeState extends BaseState`, plain arrays, capped undo/redo/failure log, a 64 KB size budget, a compile memo outside the state (tested equal with the cache off), slim `snapshot` [§8.3] |
 | L4 | B | Core `startLevel` wipes progress and freezes the state on win; core autosaves on every `tick`, which at 30 Hz would write the save 30×/s | Fixed. The campaign uses `openTicket` with `level = null`; the same setup is registered as core Levels for `checkAllLevels`/verify; live frames are a game action (not `tick`); autosave is debounced on edits/bench/pause [§8.3] |
-| L5 | M | Phone budget understated: ⅔n³ at n = 30 is 18 k flops (not 9 k); 25 k steps × Newton × n = 64 dense LU blows the 5 s Pixel budget | Fixed. MNA dim ≤ 48 in campaign, a NODE-side flat `Float64Array` LU (core LU allocates `number[][]`), a `bench-cost` flop gate (≤ 1.5e9 per bench) on ref + worst novice board, a Pixel factor measured in M2 [§3.11] |
+| L5 | M | Phone budget understated: ⅔n³ at n = 30 is 18 k flops (not 9 k); 25 k steps × Newton × n = 64 dense LU blows the 5 s Pixel budget | Fixed. MNA dim ≤ 48 in campaign, a CIRCUITS-side flat `Float64Array` LU (core LU allocates `number[][]`), a `bench-cost` flop gate (≤ 1.5e9 per bench) on ref + worst novice board, a Pixel factor measured in M2 [§3.11] |
 | L6 | M | Stretch tickets 8-2 (≈ 40 k steps) and 8-3 (≈ 200 k steps) exceed the 25 k step cap | Fixed. Averaged-model pre-charge (8-3) or dt = T/100; both are stretch anyway [§3.11] |
 | L7 | M | The Monte Carlo was "asynchronous" in a synchronous engine | Fixed. Chunked `runTolerance(k)` with progress in the state; the seed is derived from (ruleset, ticket, board hash) so client and server agree [§3.11, §8.4] |
 | L8 | M | The solution code was "base64 netlist + layout" with no versioning, ruleset or canonical form | Fixed. Core CB1 envelope + canonical two-action replay (`loadBoard`, `runBench`); all action arguments quantised on entry so a board has exactly one encoding [§8.4, §11.2] |
@@ -127,14 +127,14 @@ Ticket references re-checked by the reviewer: 1-1, 1-2 (changed), 1-3, 1-4, 2-1 
 4. Leaderboards on build tickets only (canonical Learner hidden values); no boards for EB, encore, Engineer seeds, assisted passes. Integer metrics. Par fixed in level files.
 5. Solution code = core CB1 envelope with a canonical `[loadBoard, runBench]` replay; `verify = makeVerifier(GAME)` + scores adapter.
 6. Live sim = `advance(frames)` game action with fixed quanta; the core `tick` is not used; autosave is debounced by Godot.
-7. NODE owns a flat `Float64Array` LU for DC/transient; core cLU for AC; core `singularityReport` for explanations.
+7. CIRCUITS owns a flat `Float64Array` LU for DC/transient; core cLU for AC; core `singularityReport` for explanations.
 8. MNA dim ≤ 48 in the campaign; `bench-cost` flop gate ≤ 1.5e9 per bench; verify ≤ 1000 ms per worst board.
 9. Red LED model N 2.0, Is 1.19e-17 A, Rs 9.9 Ω until data entry refits it (a test pins 1-1/1-2 margins).
 10. Prices are game values (`game-estimate-2026`) until browser data entry; price orderings are tested.
 11. 2-2 becomes Cable Fault; 7-1 band 8.5-12.0 mA; 7-2 −3 dB is relative; 1-2 ref 150 Ω; 5-4 band 8.5-11; 3-2 ref 47k + 330 nF; 6-5 ref 82 kΩ; 8-5 op-amp on a Zener 5.1 V rail.
-12. NODE/GRID boundary per grid DESIGN §2.8 (NODE §1.8); cast names unique across the five games.
+12. CIRCUITS/GRID boundary per grid DESIGN §2.8 (CIRCUITS §1.8); cast names unique across the five games.
 
 ## 4. Requests to other directors
-- **Core**: optional cooperative `budget()` in `VerifyOpts` (not blocking). Expose `luDecompose` on flat arrays if other games want it (NODE will carry its own otherwise).
+- **Core**: optional cooperative `budget()` in `VerifyOpts` (not blocking). Expose `luDecompose` on flat arrays if other games want it (CIRCUITS will carry its own otherwise).
 - **cobanana-scores**: register `node-circuits` metric specs (`cost` US$ cents lower, `parts` integer lower, `power_mw` lower [µW integer, displayed as mW], `efficiency_pct` higher [0.01 % units], `area` integer lower, `accuracy_ppm` lower).
 - **GRID**: agree the Codex cross-links (transformer, RMS, power factor) and keep the scale split (component vs system).

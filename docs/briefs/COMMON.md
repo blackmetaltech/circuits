@@ -1,6 +1,6 @@
-# Rules for every NODE worker (read first)
+# Rules for every CIRCUITS worker (read first)
 
-Repo: this repository (CIRCUITS, formerly NODE; slug `node-circuits`). Core is the submodule `core/` (read-only for you).
+Repo: this repository (CIRCUITS, formerly CIRCUITS; slug `node-circuits`). Core is the submodule `core/` (read-only for you).
 
 Read before coding:
 - the program contract `PROGRAM.md` (private program repo) (contract; "User decisions" are binding: neutral global setting, US$, region packs, all
@@ -26,7 +26,7 @@ Hard rules:
 8. **Do not commit** (the director reviews and commits). Do not push. Do not edit `core/`. If you find a core bug, describe it (problem, repro,
    proposed fix) in your report and work around it locally behind the same interface.
 9. Shell: never `pkill -f` a pattern that appears in your own command line (use the bracket trick `pkill -f "[X]vfb :26x "`). Only use Xvfb
-   displays your brief gives you (NODE owns :260-:279). Never touch the phone or the virtual pad unless your brief says so (locks in PROGRAM.md).
+   displays your brief gives you (CIRCUITS owns :260-:279). Never touch the phone or the virtual pad unless your brief says so (locks in PROGRAM.md).
    Foreground `sleep` is blocked: poll with `until …; do sleep 2; done` inside a script or run long jobs in the background.
 10. Report (your final message): files changed (with line counts), tests added (counts by kind), the full `pnpm test` summary line, anything
     you could not do, every assumption you made, and any number you could not source.
