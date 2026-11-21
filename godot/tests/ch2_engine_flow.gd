@@ -5,6 +5,7 @@ extends SceneTree
 ## Every Godot error the run logs is counted by the ErrorTrap (zero SCRIPT ERROR is a check of its own). Time is advanced with backend.step(dt), so the run is deterministic.
 var sc: StallScene
 var bk: EngineBench
+const S_ = preload("res://stall/stall_style.gd")
 var fails := 0
 var checks := 0
 var evlog: Array = []
@@ -306,6 +307,54 @@ func _run() -> void:
 	sc.start_ticket("2-3"); await _frames(2); sc.pages.show_page("notebook"); await _frames(3)
 	ok(sc.pages.codex_i == 10, "the notebook opens on the page that belongs to the ticket (Thevenin)")
 	sc.pages.show_page(""); await _frames(2)
+
+	print("== round C2-1: leaks, select-all, dial labels, slide-wire drags, stale verdicts, retry, key caps")
+	await _start("2-4")
+	var srcs: Array = sc.supply.sources
+	ok(srcs.size() == 2 and srcs[1].get("volts", 1) == null and sc.backend.ticket.supply.sources[1].volts == null, "2-4: the test cell's volts are hidden before the predictions (supply panel shows ?)")
+	ok(not str(sc.top.slip_text).contains("75.0") and not str(bk.ticket.spec).contains("75"), "2-4: no balance length in the note or on the chit")
+	sc.open_predict(); sc.pages.pred_focus = 0
+	_type("0.5"); ok(str(sc.pages.pred_fields[0].text) == "0.5", "slip: a fresh field takes typing (0.5)")
+	sc._on_page("pred_focus", "0"); _type("0.02")
+	ok(str(sc.pages.pred_fields[0].text) == "0.02", "slip: clicking the field selects all, so typing replaces it (%s)" % str(sc.pages.pred_fields[0].text))
+	sc.pages.show_page("")
+	for fld in ["pgrad", "pemf", "pr"]: bk.predict(fld, 1.0)
+	sc._ticket_view()
+	ok(sc.supply.sources[1].volts == 1.5, "2-4: the test cell shows 1.5 V once the predictions are locked")
+	await _start("2-2")
+	ok(sc._hint_text().contains("[Ctrl+Z]") and sc._hint_text().contains("A, B, J"), "hint bar: Ctrl+Z is a key cap, and the slide-wire line says how to wire and slide")
+	sc.open_predict(); sc.pages.pred_sel = true; _type("133"); sc._on_page("pred_focus", "0"); _type("74.9")
+	ok(str(sc.pages.pred_fields[0].text) == "74.9", "crew slip: retyping 74.9 after 133 gives exactly 74.9")
+	sc.pages.show_page("")
+	var g := sc._slide_geom()
+	var near_a := sc.pad_screen(g.a + Vector2(0.8, 0.0)); sc._motion(near_a); sc._press(near_a)
+	ok(str(sc.drag.get("kind", "")) == "wire", "a press at the wire's end A starts a wire, it does not move the jockey")
+	sc._release(near_a); sc.drag = {}
+	var mid_w := sc.pad_screen(g.a + Vector2(8.0, 0.0)); sc._motion(mid_w); sc._press(mid_w)
+	ok(str(sc.drag.get("kind", "")) == "jockey", "a press along the wire moves the jockey")
+	sc._release(mid_w); sc.drag = {}
+	var before := bk.wires.size()
+	var hole := sc.pad_screen(Vector2(8, 14)); var hole2 := sc.pad_screen(Vector2(8.4, 14))
+	sc._motion(hole); sc._press(hole); sc._motion(hole2); sc._release(hole2)
+	ok(bk.wires.size() == before, "a failed drag that goes nowhere leaves no stray wire end")
+	sc.dmm.set_mode("V")
+	var mA_chip: Vector2 = sc.dmm.position + DmmView.label_pos("mA") * sc.dmm.scale.x
+	sc._motion(mA_chip); sc._press(mA_chip); await _frames(1)
+	ok(bk.dial == "mA", "clicking the mA label on the dial goes straight to the mA range")
+	var off_chip: Vector2 = sc.dmm.position + DmmView.label_pos("OFF") * sc.dmm.scale.x
+	sc._motion(off_chip); sc._press(off_chip); ok(bk.dial == "OFF", "clicking OFF goes to OFF")
+	await _start("2-1")
+	sc.top.say_bench("Too high: OUT reads 7.63 V"); sc.top.edited()
+	ok(sc.top.toast_age > 50.0, "a bench verdict comes down at the next edit")
+	sc.top.say("Wire joined"); sc.top.edited()
+	ok(sc.top.toast_age < 1.0, "an ordinary note is not taken down by an edit")
+	ok(S_.mono().get_string_size("Ctrl+Z").x > 0.0 and sc._hint_text().count("[") == sc._hint_text().count("]"), "key caps: the hint bar marks keys in brackets, drawn in the mono font")
+	await _start("2-4")
+	for fld in [["pgrad", 0.0205], ["pemf", 1.5], ["pr", 0.5]]: bk.predict(fld[0], fld[1])
+	_build("2-4"); bk.set_jockey(750.0); _rocker(); _clock(0.4); sc.run_bench(); await _frames(3)
+	ok(bk.passed and bk.last_result.stars == 2 and bool(bk.last_result.retry), "2-4 at two stars offers a retry")
+	sc.pages.show_page(""); sc.retry_exam(); await _frames(2)
+	ok(not bk.passed and not bk.predictions_done() and sc.pages.mode == "predict", "retry: the stamp is off and the predict slip is open again")
 
 	print("== no script errors")
 	ok(trap.count == 0, "the run logged no engine or script errors (%d: %s)" % [trap.count, str(trap.lines)])

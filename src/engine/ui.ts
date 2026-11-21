@@ -171,7 +171,7 @@ export function scopeTarget(s: NodeState, tk: TicketState, def: LevelDef, sol: S
       // on the connector's pad OR on any other pad of the same node (a clip on R3's top leg is on A as much as a clip on the brass pad)
       clipped: !!c && (() => { const conn = liveRig(tk, def).conn, want = conn.nodeOfPad(c.pad); return tk.board.probes.some((p) => p.ch === 1 && ((p.pad[0] === c.pad[0] && p.pad[1] === c.pad[1]) || (want >= 0 && conn.nodeOfPad(p.pad) === want))); })(),
     },
-    gauge: { value, signed, slide, signedText: signed === null ? '' : `${signed > 0 ? '+' : signed < 0 ? '-' : ''}${sig(Math.abs(signed), 4)} ${u.display}`, slideText: slide === null ? '' : say(`gauge.slide.${slide}`), unit: u.display, text: value === null ? '' : `${value} ${u.display}`, inBand: value !== null && value >= band.lo && value <= band.hi, v: value === null ? [] : Array.from({ length: 256 }, () => value) },
+    gauge: { value, signed, slide, signedText: signed === null ? '' : `${signed > 0 ? '+' : signed < 0 ? '-' : ''}${sig(Math.abs(signed), 4)} ${u.display}`, slideText: slide === null ? '' : say(slide === 'right' ? 'gauge.slide.right' : slide === 'left' ? 'gauge.slide.left' : 'gauge.slide.on'), unit: u.display, text: value === null ? '' : `${value} ${u.display}`, inBand: value !== null && value >= band.lo && value <= band.hi, v: value === null ? [] : Array.from({ length: 256 }, () => value) },
     lock, lockSpecs,
   };
 }
