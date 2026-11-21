@@ -59,7 +59,7 @@
  "regulator-7805": {
   "tran.samples": 502,
   "tran.steps": 501,
-  "tran.newtonIters": 681,
+  "tran.newtonIters": 683,
   "tran.rejected": 0,
   "tran.t": "9278d8e95afe390f",
   "tran.v(in)": "54c38a02958f4e68",
