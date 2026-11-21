@@ -450,7 +450,7 @@ func _debrief(a: float) -> void:
 		S.text(self, f, "%s%.1f %% off: %s" % ["+" if gp > 0.0 else "", gp, str(row.gradeText)] + ("   - spot on" if okr else "   - not yet"), Vector2(lx, y), 22, col); y += 40.0
 	y += 4.0
 	S.text(self, f, str(d.get("starsText", "")), Vector2(lx, y), 19, S.INK, HORIZONTAL_ALIGNMENT_LEFT, lw); y += S.wrapped_h(f, str(d.get("starsText", "")), 19, lw) + 12.0
-	S.text(self, f, str(coach_ticket.get("star_rule", "")), Vector2(lx, y), 16, Color(S.INK, 0.6), HORIZONTAL_ALIGNMENT_LEFT, lw)
+	if y + S.wrapped_h(f, str(coach_ticket.get("star_rule", "")), 16, lw) < q.end.y - 96.0: S.text(self, f, str(coach_ticket.get("star_rule", "")), Vector2(lx, y), 16, Color(S.INK, 0.6), HORIZONTAL_ALIGNMENT_LEFT, lw)   # (the buttons sit at the bottom: the marking rule gives way on a short page)
 	# right: the KCL working
 	var rx := q.position.x + half + 10.0; var rw := half - 46.0; var ry := q.position.y + 112.0
 	S.text(self, f, "The potentiometer, worked out" if str(d.get("node", "A")) == "wire" else ("The capacitor bank, worked out" if str(d.get("node", "A")) == "bank" else "KCL at node %s: currents in = currents out" % str(d.get("node", "A"))), Vector2(rx, ry), 24, S.INK_RED, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += 40.0

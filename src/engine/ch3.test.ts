@@ -242,7 +242,7 @@ describe('3-4 EB: Capacitor Bank', () => {
     const e = open('3-4', ['1-4', '2-3', '3-1', '3-2']); runRef(e, '3-4'); const b = bench(e);
     expect(b.pass).toBe(true); expect(b.stars).toBe(3); expect(b.pay).toBe(900 + 3 * 150); expect(b.measured.vm).toBeCloseTo(20, 1); expect(b.measured.vd).toBeCloseTo(40, 1); expect(b.measured.heat * 1e3).toBeGreaterThan(11.9); expect(b.measured.heat * 1e3).toBeLessThan(12.15);
     expect(b.predictions.map((p: any) => [p.id, p.truth, p.grade])).toEqual([['pq', 180, 'exact'], ['pu', 9.9, 'exact'], ['pv', 40, 'exact'], ['pl', 12, 'exact']]);
-    const d = b.debrief; expect(d.node).toBe('bank'); expect(d.working).toHaveLength(7); expect(d.working.join(' ')).toMatch(/bank is 1\.636 µF/); expect(d.working.join(' ')).toMatch(/Q = C V = 1\.636 µF x 110 V = 180 µC/); expect(d.working.join(' ')).toMatch(/charge is conserved|same whatever their resistance/);
+    const d = b.debrief; expect(d.node).toBe('bank'); expect(d.working).toHaveLength(7); expect(d.working.join(' ')).toMatch(/bank is 1\.636 µF/); expect(d.working.join(' ')).toMatch(/Q = C V = 1\.636 µF x 110 V = 180 µC/); expect(d.working.join(' ')).toMatch(/whatever its resistance/);
     expect(d.answer).toBe('Q = 180 µC, U = 9.9 mJ, V = 40 V, loss = 12 mJ'); expect(d.retry).toBe(false);
   });
   it('a prediction within 5 % earns 2 stars and offers the retry; a wrong one (card (b) loss as the energy lost = 20 mJ) only 1 star with the working', () => {

@@ -70,14 +70,14 @@ export const ch3En: Record<string, string> = {
   'coach.3-4.s5': 'Marked. See how close your predictions were, and where card (b)\'s energy went.',
   // the debrief of the capacitor exam
   'debrief.caps.equation': 'Q = C V     U = 1/2 C V squared     charge is conserved',
-  'debrief.caps.par': 'Card (a): 3 µF and 6 µF in parallel add: {cp} µF.',
-  'debrief.caps.ser': 'In series 1/C = 1/{c1} + 1/{cp}, so the bank is {c} µF, and every part of the series path holds the same charge.',
-  'debrief.caps.q': 'Q = C V = {c} µF x {v} V = {q} µC. The {c1} µF alone carries it, so it has {v1} V across it, and M sits at {vm} V.',
-  'debrief.caps.u': 'U = 1/2 Q V = 1/2 x {q} µC x {v} V = {u} mJ.',
-  'debrief.caps.share': 'Card (b): the charge on the {c1} µF is {c1} µF x {v1} V = {q} µC. Joined to the {c2} µF it spreads over {ct} µF: V = {q} / {ct} = {v} V.',
-  'debrief.caps.loss': 'Energy before 1/2 x {c1} µF x {v1} squared = {e0} mJ, after 1/2 x {ct} µF x {v} squared = {e1} mJ. The {loss} mJ that is missing went into heat in the switch and the wires, and it is the same whatever their resistance: a small R passes a big current briefly, a big R a small one for longer.',
+  'debrief.caps.par': "Parallel adds: 3 µF + 6 µF = {cp} µF.",
+  'debrief.caps.ser': "1/C = 1/{c1} + 1/{cp}, so the bank is {c} µF, and a series path shares one charge.",
+  'debrief.caps.q': "Q = C V = {c} µF x {v} V = {q} µC. The {c1} µF carries it all ({v1} V), so M sits at {vm} V.",
+  'debrief.caps.u': "U = 1/2 Q V = 1/2 x {q} µC x {v} V = {u} mJ.",
+  'debrief.caps.share': "Card (b): Q = {c1} µF x {v1} V = {q} µC, shared over {ct} µF: V = {v} V.",
+  'debrief.caps.loss': "Energy {e0} mJ before, {e1} mJ after: the {loss} mJ went to heat in the switch, whatever its resistance.",
   'debrief.caps.answer': 'Q = {q} µC, U = {u} mJ, V = {v} V, loss = {loss} mJ',
   'debrief.stars.1.caps': '1 star: the circuit is built right, but a prediction was off by more than 5 %. Redo the capacitors: in series Q is shared and 1/C adds, in parallel C adds, U = 1/2 C V squared, and when two capacitors are joined the charge is conserved, not the energy.',
-  'debrief.caps.ledger': 'The bench measured {heat} mJ of heat in the switch: the energy ledger agrees.',
+  'debrief.caps.ledger': "The bench measured {heat} mJ in the switch.",
   // plain-words explainers (the player's own numbers; first mistake: the cause, repeat: the working)
 };
