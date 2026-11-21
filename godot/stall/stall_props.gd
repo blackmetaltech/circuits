@@ -436,7 +436,9 @@ func _scroll_cues(ci: Control, inner: Rect2, n: int) -> void:
 	ci.draw_rect(Rect2(tr.position.x, tr.position.y + (tr.size.y - th) * bin_scroll / mx, tr.size.x, th), Color("#ffd98a", 0.95), true)
 	if bin_scroll < mx - 0.02:   # a hint on the lower fade while there are more parts below
 		var word := "more parts below"
-		S.text(ci, S.hand(), word, Vector2(inner.get_center().x - S.tw(S.hand(), word, 20) * 0.5, inner.end.y - 8.0), 20, Color("#ffd98a", 0.95))
+		var plate := Rect2(inner.position.x + 4.0, inner.end.y - 31.0, inner.size.x - 18.0, 29.0)   # an opaque strip: the words never print over a part's own label
+		S.rr(ci, plate, 8, Color("#120c07", 0.97)); S.rr_line(ci, plate, 8, Color("#ffd98a", 0.35), 1.2)
+		S.text(ci, S.hand(), word, Vector2(plate.get_center().x - S.tw(S.hand(), word, 20) * 0.5, plate.end.y - 7.0), 20, Color("#ffd98a", 0.95))
 
 ## ------------------------------------------------------------------------------------------------------------------ customer
 

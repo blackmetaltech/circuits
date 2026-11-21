@@ -155,8 +155,8 @@ func _chit() -> void:
 		y += float(psz) + 10.0
 		S.text(self, f, pay, Vector2(q.position.x + 14, y), 13, Color(S.INK, 0.7), HORIZONTAL_ALIGNMENT_LEFT, inner)
 	if locked:   # a rubber stamp: it sits below the last line of text (and may hang over the paper's edge), never on the words
-		var top_y := maxf(y + 12.0, q.end.y - 46.0)
-		draw_set_transform(c + Vector2(r.size.x * 0.5 - 76.0, top_y + 22.0), deg_to_rad(-8.0), Vector2.ONE)
+		var top_y := minf(maxf(y + 12.0, q.end.y - 46.0), q.end.y - 26.0)   # below the words when there is room, but always on the paper (never drifting onto the instrument below)
+		draw_set_transform(c + Vector2(r.size.x * 0.5 - 62.0, top_y + 22.0), deg_to_rad(-8.0), Vector2.ONE)
 		S.rr_line(self, Rect2(-56, -20, 112, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5)
 		S.text(self, S.hand(), "FIXED", Vector2(-38, 10), 28, Color(0.1, 0.55, 0.2, 0.9))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
@@ -188,6 +188,8 @@ func _bubble() -> void:
 	var a := bubble_alpha
 	modulate = Color(1, 1, 1, 1)
 	var q := r
+	var need := S.wrapped_h(S.hand(), bubble, 22, q.size.x - 32.0) + 30.0   # the bubble grows UP to hold the whole sentence (a bigger handheld font wraps to more lines): never clipped
+	if need > q.size.y: q = Rect2(q.position.x, q.end.y - need, q.size.x, need)
 	S.shadow(self, q, 22, Vector2(5, 7), 0.3 * a)
 	S.rr(self, q, 22, Color(0.98, 0.96, 0.9, a)); S.rr_line(self, q, 22, Color(S.INK, 0.5 * a), 2.0)
 	var tail := PackedVector2Array([Vector2(q.position.x + 6, q.end.y - 22), Vector2(q.position.x - 30, q.end.y + 6), Vector2(q.position.x + 30, q.end.y - 4)])

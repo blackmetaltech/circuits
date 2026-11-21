@@ -213,8 +213,9 @@ func _panel() -> void:
 	else: S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14, Color(vc, 0.55))
 	S.text(self, S.mono(), rd, Vector2(px + 10, 242), 20 if rd.length() < 11 else 15, Color(vc, 0.9 if (live and attached) else 0.3))
 	if trace_mode:
-		S.text(self, S.mono(), "%s/DIV" % tfmt(float(sc.get("tpd", 0.2))), Vector2(px + 84, 206), 13, Color(vc, 0.85))
-		S.text(self, S.mono(), "%s%s/DIV" % [_fmt(float(sc.get("vdiv", 4.0)) * float(sc.get("vmul", 1.0))), unit], Vector2(px + 98, 222), 11, Color(vc, 0.5))
+		var hf := 1.35 if S.handheld else 1.0   # handheld: the sweep and volts settings are the ones a player reads, so they get bigger
+		S.text(self, S.mono(), "%s/DIV" % tfmt(float(sc.get("tpd", 0.2))), Vector2(px + 84 - (14 if S.handheld else 0), 206), int(13 * hf), Color(vc, 0.85))
+		S.text(self, S.mono(), "%s%s/DIV" % [_fmt(float(sc.get("vdiv", 4.0)) * float(sc.get("vmul", 1.0))), unit], Vector2(px + 98 + (6 if S.handheld else 0), 242 if S.handheld else 222), int(11 * hf), Color(vc, 0.6))
 	else: S.text(self, S.mono(), "%s/DIV" % _fmt(float(sc.get("vdiv", 4.0))), Vector2(px + 98, 206), 12, Color(vc, 0.4))
 	# knobs
 	var kc := knob_centres(); var names := ["VOLTS", "TIME", "LEVEL", "FOCUS"]
@@ -227,9 +228,12 @@ func _panel() -> void:
 			var d := Vector2(cos(a - 1.57), sin(a - 1.57))
 			draw_line(kc[i] + d * 34.0, kc[i] + d * 38.0, Color("#d9d3bd", 0.7), 1.2)
 		var nm: String = names[i]
-		if is_trace() and i == 1: nm = "TIME  %s" % tfmt(float(sc.get("tpd", 0.2)))
-		elif is_trace() and i == 0: nm = "VOLTS  x%s" % _fmt(float(sc.get("vmul", 1.0)))
-		S.text(self, S.hand(), nm, kc[i] + Vector2(-S.tw(S.hand(), nm, 12) * 0.5, 40), 12, Color("#e8e0c8"))
+		# the setting itself is on the VFD ("200 ms/DIV"); on a handheld the knob carries only its name, big enough to read (about 12 screen px at this scale)
+		if not S.handheld:
+			if is_trace() and i == 1: nm = "TIME  %s" % tfmt(float(sc.get("tpd", 0.2)))
+			elif is_trace() and i == 0: nm = "VOLTS  x%s" % _fmt(float(sc.get("vmul", 1.0)))
+		var kfs := 19 if S.handheld else 12
+		S.text(self, S.hand(), nm, kc[i] + Vector2(-S.tw(S.hand(), nm, kfs) * 0.5, 40 if not S.handheld else 44), kfs, Color("#e8e0c8"))
 	# CH1 BNC and the power lamp
 	var jc := Vector2(330, 414)
 	draw_circle(jc, 17, Color("#9ea3a6")); draw_circle(jc, 12, Color("#53575b")); draw_circle(jc, 5, Color("#d0b25a")); draw_circle(jc, 2, Color.BLACK)

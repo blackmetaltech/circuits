@@ -339,7 +339,19 @@ func _submit_predictions() -> void:
 		pages.show_page(""); sfx.play("page", 0.7)
 		top.say("Predictions recorded. Now build it and probe." if bool(backend.ticket.get("eb", false)) else "Answer written on the slip. Now bench it.")
 
+## The character a number-field key types: its unicode, or (when the platform sends none) the digit / point / sign the keycode stands for.
+static func _field_char(e: InputEventKey) -> String:
+	if e.unicode > 0: return char(e.unicode)
+	if e.keycode >= KEY_0 and e.keycode <= KEY_9: return char(int(e.keycode))
+	if e.keycode >= KEY_KP_0 and e.keycode <= KEY_KP_9: return char(int(e.keycode) - int(KEY_KP_0) + 48)
+	match e.keycode:
+		KEY_PERIOD, KEY_KP_PERIOD: return "."
+		KEY_MINUS, KEY_KP_SUBTRACT: return "-"
+		KEY_PLUS, KEY_KP_ADD: return "+"
+	return ""
+
 func _predict_key(e: InputEventKey) -> void:
+	if e.echo and e.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_ESCAPE, KEY_TAB, KEY_UP, KEY_DOWN]: return
 	var f: Dictionary = pages.pred_fields[pages.pred_focus] if pages.pred_focus < pages.pred_fields.size() else {}
 	match e.keycode:
 		KEY_ESCAPE: pages.show_page("")
@@ -351,8 +363,8 @@ func _predict_key(e: InputEventKey) -> void:
 				f.text = "" if pages.pred_sel else str(f.text).substr(0, str(f.text).length() - 1); f.done = false
 				pages.pred_sel = false
 		_:
-			if not f.is_empty() and e.unicode > 0:
-				var ch := char(e.unicode)
+			var ch := _field_char(e)
+			if not f.is_empty() and ch != "":
 				if ch in "0123456789.-+eE":
 					f.text = (ch if pages.pred_sel else str(f.text) + ch); f.done = false   # a selected field is replaced by the first key
 					pages.pred_sel = false
@@ -433,7 +445,7 @@ func _layout() -> void:
 	L.bubble = Rect2(880, 678 + dy, 270, 112)   # above the customer's head (over the board's empty lower rows), never over the slip beside her
 	L.next = Rect2(1306, 1000 + dy, 220, 50)
 	L.exam = Rect2(1094, 816 + dy, 196, 224)   # the exam problem card (exam tickets) or the crew's slip (2-2): it stays on the bench after "later"
-	L.chit = Rect2(sc_x + 404.0, 190.0 + dy * 0.05 + 258.0, 190, 190) if not handheld else Rect2(sc_x + 340.0, 190.0 + dy * 0.05 + 244.0, 270, 270)   # handheld: a bigger chit for 16 px text
+	L.chit = Rect2(sc_x + 404.0, 190.0 + dy * 0.05 + 266.0, 190, 186) if not handheld else Rect2(sc_x + 340.0, 190.0 + dy * 0.05 + 270.0, 270, 242)   # handheld: a bigger chit for 16 px text
 	L.slip = Rect2(318, 870 + dy, 420, 160)
 	L.probe_rest = {"red": Vector2(dmm_x - 52, 968 + dy * 0.8), "black": Vector2(dmm_x - 112, 998 + dy * 0.8), "ch1": Vector2(sc_x - 22.0, 700.0 + dy * 0.6)}
 	L.bench = Rect2(sup_x + 4.0, low + 160.0, 250.0, 60.0)
@@ -869,8 +881,9 @@ func _gui_input(e: InputEvent) -> void:
 		elif e.button_index == MOUSE_BUTTON_LEFT: _release(e.position)
 
 func _unhandled_key_input(e: InputEvent) -> void:
-	if not (e is InputEventKey) or not e.pressed or e.echo: return
-	if pages.mode == "predict": _predict_key(e); return
+	if not (e is InputEventKey) or not e.pressed: return
+	if pages.mode == "predict": _predict_key(e); return   # typing in a field keeps every press, even one the OS flags as auto-repeat (fast "9.9" on some keyboards): a held digit repeats like any text field
+	if e.echo: return
 	match e.keycode:
 		KEY_ENTER, KEY_KP_ENTER: if phase == "bench" and pages.mode == "": run_bench()
 		KEY_P: if phase == "bench" and pages.mode == "" and backend.ENGINE and bool(backend.ticket.get("eb", false)): open_predict()

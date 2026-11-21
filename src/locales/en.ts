@@ -233,7 +233,7 @@ export const en: Record<string, string> = {
   'pot.set': '{uid} wiper set to {alpha}.',
   'jockey.set': '{uid} jockey at {l} mm.',
   'part.placed': 'Placed {what}.',
-  'part.placed.polar': 'Placed {what}. An electrolytic has a polarity: the stripe leg is minus, never put it at the lower voltage.',
+  'part.placed.polar': 'Placed {what}. An electrolytic has a polarity: the stripe marks the MINUS leg. It goes to the lower voltage (the GND side), never to the higher one, or the capacitor vents.',
   'part.moved': '{What} moved. Wires stay where they are: reconnect them if you need to.',
   'part.rotated': '{What} turned to {rot} degrees.',
   'part.deleted': '{What} removed.',
