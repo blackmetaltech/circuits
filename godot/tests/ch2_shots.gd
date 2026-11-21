@@ -11,7 +11,7 @@ func run(scene: StallScene) -> void:
 	await _wait(1.0)
 	tag = "%dx%d" % [DisplayServer.window_get_size().x, DisplayServer.window_get_size().y]
 	var only := OS.get_environment("CB_ONLY")
-	var steps := ["s21", "s22", "s23", "s24", "maps"]
+	var steps := ["s21", "s22", "s22b", "s23", "s24", "maps"]
 	for s in steps:
 		if only != "" and not only.split(",").has(s): continue
 		await call("_" + s)
@@ -58,6 +58,20 @@ func _s22() -> void:
 	bk.set_jockey(400.0); await _wait(1.2); await _shot("2-2_ref")
 	sc.open_predict(); await _wait(0.5); await _shot("2-2_slip"); sc.pages.show_page("")
 	bk.predict("dist", 133.0); await _wait(0.2); bk.predict("dist", 13374.9); sc.run_bench(); await _wait(0.8); await _shot("2-2_wrong")
+
+## Play-test C3-1: what is joined (hop-overs and solder dots) and a bridge with no balance.
+func _s22b() -> void:
+	await _open("2-2"); await _wait(0.8)
+	var bk = sc.backend
+	_w([4, 3], [4, 9]); _w([2, 6], [8, 6]); _w([6, 7], [6, 13]); _w([6, 13], [9, 13]); await _wait(0.6); await _shot("2-2_crossing")
+	await _open("2-2")
+	bk.place(_item("galvanometer", null, "100ohm"), 13, 8, 0); bk.place(_item("res-box", 5, "plug"), 3, 5, 0)
+	for w in EngineBench.REFS_CH2["2-2"].wires:
+		var wp: Array = w
+		if wp[0] == [22, 11] and wp[wp.size() - 1] == [22, 2]: continue
+		_w(wp[0], wp[wp.size() - 1])
+	sc.pages.show_page(""); bk.set_power(true); bk.set_jockey(400.0); await _wait(1.4); await _shot("2-2_dead")
+	bk.predict("dist", 75.0); sc.run_bench(); await _wait(0.8); await _shot("2-2_dead_fail")
 
 func _s23() -> void:
 	await _open("2-3"); await _wait(1.0); await _shot("2-3_idle")

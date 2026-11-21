@@ -84,6 +84,13 @@ func _s32() -> void:
 	bk.set_probe("ch1", [14, 8]); bk.set_power(true)
 	await _until(func(): return bool(bk.scope_view.trace.get("complete", false)), 14.0); await _wait(0.5); await _shot("3-2_weak")
 	sc.run_bench(); await _wait(0.8); await _shot("3-2_weak_fail")
+	# the big capacitor: the trace visibly falls on the press but never through 2.5 V; the failure quotes that same trace and the pull-up on release
+	await _open("3-2")
+	bk.place(_item("res-cf", 47000, "0.25W"), 4, 8, 0); bk.place(_item("cap-el", 4.7e-6, "16V"), 14, 9, 1)
+	_w([2, 8], [4, 8]); _w([8, 8], [14, 8]); _w([14, 8], [14, 9]); _w([14, 11], [14, 13])
+	bk.set_probe("ch1", [14, 8]); bk.set_power(true); sc.pages.show_page("")
+	await _until(func(): return bool(bk.scope_view.trace.get("complete", false)), 14.0); await _wait(0.5); await _shot("3-2_big_cap")
+	sc.run_bench(); await _wait(0.8); await _shot("3-2_big_cap_fail")
 	await _open("3-2"); bk.build_ref("3-2"); sc.pages.show_page(""); sc._lay_key = ""; await _wait(0.4)
 	bk.set_power(true)
 	await _until(func(): return (bk.scope_view.trace.get("v", []) as Array).size() > 60, 10.0); await _shot("3-2_pressed")
