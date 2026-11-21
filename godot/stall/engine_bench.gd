@@ -444,6 +444,9 @@ func _board_key() -> String: return "%s|%d" % [str(bench_q.get("ticket", "")), i
 
 func _after_edit() -> void:
 	passed = false; hold = 0.0; locked = false; _was_lock = false
+	if ENGINE and not (ticket.get("answers", []) as Array).is_empty():   # the slip's formula follows which side of C the plug R is wired on
+		var cd = _q("ticketCard")
+		if cd is Dictionary: ticket["answers"] = cd.get("answers", ticket.get("answers", []))
 	_refresh_board(); _refresh_live(); _rebuild_model()
 
 ## ------------------------------------------------------------------------------------------------------------------ reading the engine
@@ -778,7 +781,7 @@ func _rebuild_model() -> void:
 	var norm := {}
 	for n in frame.get("nodes", []):
 		for q in n.pads: norm["%d,%d" % [int(q[0]), int(q[1])]] = float(n.norm)
-	m["marks"] = bench_q.get("marks", []); m["slots"] = bench_q.get("slots", []); m["dangling"] = dangling; m["norm"] = norm; m["wire_speed"] = spd_w; m["part_speed"] = spd_p; m["heat"] = heat; m["led"] = led; m["galvo"] = galvo; m["cap_bulge"] = cap_bulge; m["cap_level"] = cap_level; m["relay"] = relay_m; m["contacts"] = frame.get("contacts", [])
+	m["crossings"] = bench_q.get("crossings", []); m["joins"] = bench_q.get("joins", []); m["marks"] = bench_q.get("marks", []); m["slots"] = bench_q.get("slots", []); m["dangling"] = dangling; m["norm"] = norm; m["wire_speed"] = spd_w; m["part_speed"] = spd_p; m["heat"] = heat; m["led"] = led; m["galvo"] = galvo; m["cap_bulge"] = cap_bulge; m["cap_level"] = cap_level; m["relay"] = relay_m; m["contacts"] = frame.get("contacts", [])
 	model = m
 
 ## ------------------------------------------------------------------------------------------------------------------ test helpers

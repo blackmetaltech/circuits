@@ -282,6 +282,11 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       const act = rows.find((r) => r.shown && !r.done && !r.optional) ?? rows.find((r) => r.shown && !r.done);
       const opts = rows.filter((r) => r.optional && r.shown && !r.done && r !== act && (act ? rows.indexOf(r) < rows.indexOf(act) : true));
       if (act) { act.active = true; if (opts.length > 0 && !act.optional) act.text = `${act.text} ${t('coach.optional', { text: opts[0]!.text })}`; }
+      // a bridge with no balance anywhere: Wren says so (and what is probably wrong) instead of sending the player on to read a jockey position that means nothing
+      if (act && def.nullCheck && tk.live.powered && !['galvo', 'box', 'build', 'wire', 'done'].includes(act.id)) {
+        const b = bridgeScan(tk, def);
+        if (b && !b.scan.hasNull) act.text = say('bench.bridge.dead', { how: say(b.scan.kind === 'zero' ? 'bridge.dead.zero' : b.scan.kind === 'pos' ? 'bridge.dead.pos' : 'bridge.dead.neg'), why: b.fault || say('bridge.fault.generic') });
+      }
       // numbered like the notebook reads: only the main line counts (a smoke branch or an optional meter step never takes a number, so the numbers never skip or move)
       const mainLine = steps.map((st) => st.optional !== true && !(st.when ?? '').split(/[&|]/).includes('smoked'));
       const stepTotal = mainLine.filter(Boolean).length, stepNo = act ? mainLine.slice(0, rows.indexOf(act)).filter(Boolean).length + 1 : stepTotal;

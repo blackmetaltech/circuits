@@ -100,7 +100,8 @@ func _crew_slip(r: Rect2) -> void:
 	S.rr(self, line, 6, Color(S.INK, 0.07)); S.rr_line(self, line, 6, Color(S.INK, 0.5 if entered != null else 0.3), 2.0)
 	var txt: String = "%s m" % EngineBench._g(float(entered), 6) if entered != null else "___ m"
 	S.text(self, S.mono(), txt, line.position + Vector2(10, 32), 26, S.INK)
-	S.text(self, S.hand(), "X = R (100 - l) / l,", q.position + Vector2(12, 166), 16, Color(S.INK, 0.8))
+	var fml := str(a.get("formula", "X = R (100 - l) / l"))   # the engine's formula follows which side of the junction C the plug R is wired on
+	S.text(self, S.hand(), fml + ",", q.position + Vector2(12, 166), 16, Color(S.INK, 0.8))
 	S.text(self, S.hand(), "then 0.1 ohm per metre", q.position + Vector2(12, 186), 16, Color(S.INK, 0.8))
 	S.text(self, S.hand(), "tap: write the distance" if entered == null else "tap: change it", q.position + Vector2(12, q.size.y - 10), 15, Color(S.INK, 0.8))
 	if hv: S.rr_line(self, q.grow(3), 5, Color("#ffd98a", 0.9), 3.0)

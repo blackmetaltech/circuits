@@ -73,6 +73,7 @@ describe('2-2 a bridge with no balance is diagnosed, never "balances at l"', () 
     const e = refExcept((w) => w[0]![0] === 22 && w[0]![1] === 11 && w[w.length - 1]![1] === 2);
     ok(e, 'power', true); ok(e, 'advance', 3);
     const s = q(e, 'scope'); expect(s.lock).toBe(false); expect(s.gauge.slide).toBe('dead'); expect(s.gauge.deadText).toMatch(/same \(zero\)/);
+    expect(q(e, 'coach').text).toMatch(/no balance/);
     const b = bench(e);
     expect(b.pass).toBe(false);
     expect(texts(b)).toMatch(/no balance/); expect(texts(b)).toMatch(/cell is not across the wire/); expect(texts(b)).not.toMatch(/balances (with|at)/);

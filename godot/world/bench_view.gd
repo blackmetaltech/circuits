@@ -458,6 +458,7 @@ func _draw_parts(ci: Control) -> void:
 		for v in pts: ci.draw_circle(v, wd * 0.36, base)
 		for e in [_px(w.path[0]), _px(w.path[w.path.size() - 1])]:   # solder blobs sit on the pads themselves
 			ci.draw_circle(e, p * 0.25, Color(0.5, 0.52, 0.56)); ci.draw_circle(e, p * 0.21, Color(0.8, 0.82, 0.86)); ci.draw_circle(e + Vector2(-p * 0.07, -p * 0.07), p * 0.06, Color(1, 1, 1, 0.7))
+	_draw_junctions(ci, m, geo)
 	# parts
 	for pt in m.parts:
 		var i: float = absf(float(m.part_i.get(pt.uid, 0.0))) if live else 0.0
@@ -486,6 +487,37 @@ func _draw_parts(ci: Control) -> void:
 			ci.draw_rect(Rect2(bp, Vector2(bw, p * 0.13)), Color(0, 0, 0, 0.7))
 			var rc := Color("#3fd47a") if worst < 0.7 else (AMBER if worst < 0.95 else Color("#ff4a3a"))
 			ci.draw_rect(Rect2(bp, Vector2(bw * clampf(worst, 0.0, 1.0), p * 0.13)), rc)
+
+## What is joined and what only passes: where two wires cross they are NOT joined, so the later wire hops over the earlier one (a gap in the lower wire, an arch on the upper);
+## where two or more wire ends meet on one pad they ARE joined, shown as a bright solder dot. The engine's `crossings` / `joins` say where; this only draws.
+func _draw_junctions(ci: Control, m: Dictionary, geo: Dictionary) -> void:
+	var wd := p * 0.26
+	for cx in m.get("crossings", []):
+		var pad := Vector2(cx.pad[0], cx.pad[1]); var c := _px(pad)
+		var hi := str(cx.b); var lo := str(cx.a)   # b (the later wire) hops over a
+		var hue: Color = WIRE_HUES[_wire_index(hi) % WIRE_HUES.size()]
+		# the direction of the upper wire at the crossing: the nearest segment of its drawn polyline
+		var dir := Vector2.RIGHT
+		var pts: Array = geo.get(hi, [])
+		var best := 1e9
+		for i in range(1, pts.size()):
+			var a: Vector2 = pts[i - 1]; var b2: Vector2 = pts[i]
+			var cp := Geometry2D.get_closest_point_to_segment(c, a, b2)
+			if cp.distance_to(c) < best and (b2 - a).length() > 0.1: best = cp.distance_to(c); dir = (b2 - a).normalized()
+		var nrm := Vector2(-dir.y, dir.x)
+		# a dark gap in whatever lies beneath (the lower wire), then the arch of the upper one
+		ci.draw_circle(c, wd * 0.95, Color(0.03, 0.035, 0.04, 0.9))
+		var arch := PackedVector2Array()
+		for k in range(0, 13):
+			var f := float(k) / 12.0
+			arch.append(c + dir * (f - 0.5) * p * 0.9 - nrm * sin(PI * f) * p * 0.3)
+		ci.draw_polyline(arch, Color(0.03, 0.035, 0.04), wd * 1.15, true)
+		ci.draw_polyline(arch, hue.darkened(0.15), wd * 0.62, true)
+		ci.draw_polyline(arch, Color(1, 1, 1, 0.2), p * 0.04, true)
+	for jn in m.get("joins", []):
+		var e := _px(Vector2(jn.pad[0], jn.pad[1]))
+		ci.draw_circle(e, p * 0.33, Color(0.18, 0.19, 0.22)); ci.draw_circle(e, p * 0.29, Color(0.86, 0.88, 0.92)); ci.draw_circle(e + Vector2(-p * 0.08, -p * 0.09), p * 0.08, Color(1, 1, 1, 0.85))
+		ci.draw_arc(e, p * 0.37, 0.0, TAU, 20, Color("#ffd98a", 0.75), 1.6, true)
 
 ## "A +" on the long (anode) leg and "K -" on the flat (cathode) side, written beside each leg on the board.
 func _led_pin_tags(ci: Control, pt: Dictionary) -> void:

@@ -208,8 +208,8 @@ func _panel() -> void:
 	if live and attached: rd = ("%s %s" % [_fmt(value), unit]) if reading == "" else reading
 	elif live and clip_name != "": rd = "CLIP " + clip_name
 	if live and attached and slide != "":
-		txt = "<< slide left" if slide == "left" else (("slide right >>") if slide == "right" else "on balance")
-		S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14, Color(vc, 0.95 if slide != "on" else 0.6))
+		txt = "<< slide left" if slide == "left" else (("slide right >>") if slide == "right" else ("NO BALANCE: check wiring" if slide == "dead" else "on balance"))
+		S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 11 if slide == "dead" else 14, Color("#ff9d6a") if slide == "dead" else Color(vc, 0.95 if slide != "on" else 0.6))
 	else: S.text(self, S.mono(), String(txt), Vector2(px + 10, 222), 14, Color(vc, 0.55))
 	S.text(self, S.mono(), rd, Vector2(px + 10, 242), 20 if rd.length() < 11 else 15, Color(vc, 0.9 if (live and attached) else 0.3))
 	if trace_mode:
@@ -276,10 +276,34 @@ func _draw_trace(ci: Control) -> void:
 	var head := pts[pts.size() - 1]
 	if n < 256: S.glow(ci, head, 28.0, Color(0.6, 1.0, 0.6, 0.65 * a))   # still forming: the beam's head
 	else: S.glow(ci, head, 12.0, Color(0.6, 1.0, 0.6, 0.25 * a))
+	_mark63(ci, trd)
 	if not sc.is_empty() and not bool(sc.get("hidden", false)):
 		var col := S.PHOS if locked else S.AMBER
 		S.glow(ci, SCREEN.get_center(), 200.0, Color(col, 0.05 + (0.14 * _lock_flash if locked else 0.0)))
 	if smoked: ci.draw_rect(SCREEN, Color(1.0, 0.1, 0.05, 0.06 + 0.04 * sin(t * 12.0)), true)
+
+## RC / LR tickets: a dashed level at 63.2 % of the final value (one time constant) and a time cursor where the trace crosses it, with its readout.
+func _mark63(ci: Control, trd: Dictionary) -> void:
+	var mk = trd.get("mark63", null)
+	if not (mk is Dictionary): return
+	var yl := _y_of(float(mk.level))
+	if yl < SCREEN.position.y + 2.0 or yl > SCREEN.end.y - 2.0: return
+	var cc := Color("#bfe9ff")
+	var x := SCREEN.position.x
+	while x < SCREEN.end.x:
+		ci.draw_line(Vector2(x, yl), Vector2(minf(x + 9.0, SCREEN.end.x), yl), Color(cc, 0.75), 1.6); x += 16.0
+	var lab := "63 %%  %s %s" % [_fmt(float(mk.level)), str(sc.get("unit", ""))]
+	S.text(ci, S.mono(), lab, Vector2(SCREEN.end.x - S.tw(S.mono(), lab, 11) - 6.0, yl - 4.0), 11, Color(cc, 0.95))
+	var tc = mk.get("t", null)
+	if tc != null and (locked or bool(trd.get("complete", false))):
+		var xc := _x_of_t(float(tc))
+		var y := SCREEN.position.y
+		while y < SCREEN.end.y:
+			ci.draw_line(Vector2(xc, y), Vector2(xc, minf(y + 8.0, SCREEN.end.y)), Color(cc, 0.6), 1.4); y += 14.0
+		ci.draw_circle(Vector2(xc, yl), 4.0, Color(cc, 0.95))
+		var rd := "t = %s" % tfmt(float(tc))
+		var rw := S.tw(S.mono(), rd, 12)
+		S.text(ci, S.mono(), rd, Vector2(clampf(xc + 6.0, SCREEN.position.x + 2.0, SCREEN.end.x - rw - 4.0), SCREEN.end.y - 18.0), 12, Color(S.PHOS if locked else cc, 1.0))
 
 func _draw_glow(ci: Control) -> void:
 	if sc.is_empty(): return

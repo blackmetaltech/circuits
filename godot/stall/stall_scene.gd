@@ -535,6 +535,11 @@ func snap(sp: Vector2, pin_reach := WIRE_DROP_REACH, pad_reach := 0.7) -> Dictio
 	if pa.x >= 0: return {"kind": "pad", "pad": pa, "label": ""}
 	return best
 
+## Where a scope clip or DMM lead dropped at `sp` lands: a magnet. The nearest leg or connector within 1.7 pads (2.3 on a handheld) wins, else the hole within 0.9 pad; (-1, -1) when neither.
+func _probe_drop_pad(sp: Vector2) -> Vector2:
+	var sn := snap(sp, 2.3 if handheld else 1.7, 0.9)
+	return sn.pad if sn.kind != "none" else Vector2(-1, -1)
+
 ## Every leg of every placed part and every board connector, with its name for the player.
 func _pin_index() -> Array:
 	var out: Array = []
@@ -840,7 +845,7 @@ func _board_overlay() -> void:
 	elif drag.get("kind", "") == "probe":
 		var jh := _jack_at(_mouse) if drag.which != "ch1" else ""
 		supply.jack_glow = jh
-		var sp := pad_at(_mouse, 0.8) if jh == "" else _jack_pad(jh)
+		var sp := _probe_drop_pad(_mouse) if jh == "" else _jack_pad(jh)
 		drag["snap"] = sp
 		if sp.x >= 0: ov["hover_pad"] = sp
 	bench.overlay = ov
@@ -1062,14 +1067,14 @@ func _release(sp: Vector2) -> void:
 				if not r3.ok and str(r3.msg) != "": top.say(str(r3.msg))
 				elif r3.ok:
 					var dang: Array = r3.get("dangling", [])
-					if not dang.is_empty(): top.say(str(r3.get("note", "")))   # the end touches no leg: the engine says so
+					if not dang.is_empty() or str(r3.get("note", "")).contains("do NOT touch"): top.say(str(r3.get("note", "")))   # the end touches no leg, or the wire only passes another one: the engine says so
 					else: top.say_quick("Wire joined: %s  to  %s." % [pad_label(d.pad), pad_label(tp)])
 			elif (L.box as Rect2).has_point(sp):   # dragged a wire end back to the box: take the wire off that pad
 				for w in backend.wires.duplicate():
 					if (w.a == [int(d.pad.x), int(d.pad.y)] or w.b == [int(d.pad.x), int(d.pad.y)]) and not bool(w.get("fixed", false)): backend.delete_wire(w.wid); break
 		"probe":
 			var jk := _jack_at(sp) if d.which != "ch1" else ""   # a lead dropped on a battery / supply terminal reads that net
-			var sn := _jack_pad(jk) if jk != "" else pad_at(sp, 0.8)
+			var sn := _jack_pad(jk) if jk != "" else _probe_drop_pad(sp)
 			probe_jack[d.which] = jk
 			var pr = backend.set_probe(d.which, [int(sn.x), int(sn.y)] if sn.x >= 0 else null)
 			if pr is Dictionary and not pr.ok and str(pr.msg) != "": top.say(str(pr.msg))
