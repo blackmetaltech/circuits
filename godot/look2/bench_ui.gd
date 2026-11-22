@@ -151,7 +151,7 @@ func _short(id: String, name: String) -> String:
 	return name
 
 func _drawer() -> void:
-	var p := _panel(Vector2(28, 420 if bench.mode == "job" else 330), Vector2(470, 470 if bench.mode == "job" else 560))
+	var p := _panel(Vector2(28, 500 if bench.mode == "job" else 330), Vector2(470, 450 if bench.mode == "job" else 560))
 	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 6); p.add_child(v)
 	_lab(v, "PARTS DRAWER" if bench.mode == "job" else "CATALOGUE  (all parts)", 16, AMBER, f_semi)
 	var sc := ScrollContainer.new(); sc.size_flags_vertical = Control.SIZE_EXPAND_FILL; sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; v.add_child(sc)
