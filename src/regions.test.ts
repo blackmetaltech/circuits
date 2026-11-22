@@ -10,7 +10,7 @@ import { derivePrices, formatMinor, validateNodeData, type NodeRegionData } from
 import { LAWS } from './sim/laws';
 
 const PACKS = REGIONS.list({ includeDrafts: true });
-const CUSTOMERS = ['kid_torch', 'cyclist', 'aquarium', 'toycar', 'weather', 'irrigation', 'wallwart', 'radio', 'musician'];
+const CUSTOMERS = ['kid_torch', 'cyclist', 'aquarium', 'toycar', 'weather', 'irrigation', 'wallwart', 'radio', 'musician', 'maker', 'strip', 'robotics'];
 
 /** Everything a player can see for one region: init data, the region query, the ticket card, progress, formatted money, the log. */
 function render(pack: { id: string }) {
@@ -90,7 +90,7 @@ describe('region packs of CIRCUITS', () => {
     expect(play(GAME, { persona: 'idle', seed: 2, ticks: 20, region: id }).violations, id).toEqual([]);
     // every level (the sample ticket 0-0 and chapter 1) is solvable in every pack, idle does not pass, and nothing degenerate wins
     const reports = checkAllLevels(GAME, { seed: 1, region: id });
-    expect(reports.map((r) => r.level)).toEqual(['0-0', '1-1', '1-2', '1-3', '1-4', '1-5', '2-1', '2-2', '2-3', '2-4', '3-1', '3-2', '3-3', '3-4', '4-1', '4-2', '4-3', '4-4', '4-5']);
+    expect(reports.map((r) => r.level)).toEqual(['0-0', '1-1', '1-2', '1-3', '1-4', '1-5', '2-1', '2-2', '2-3', '2-4', '3-1', '3-2', '3-3', '3-4', '4-1', '4-2', '4-3', '4-4', '4-5', '5-1', '5-2', '5-3', '5-4', '5-5']);
     for (const r of reports) expect(r.problems, r.level).toEqual([]);
   });
   it('mains differ by pack but physics-facing engine data does not', () => {
