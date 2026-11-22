@@ -154,6 +154,7 @@ func _room() -> void:
 	_drawers()
 	_props()
 	_pegboard()
+	_shelf()
 
 func _night_sky_mat() -> StandardMaterial3D:
 	var g := Gradient.new(); g.set_color(0, Color(0.02, 0.03, 0.07)); g.set_color(1, Color(0.10, 0.12, 0.22))
@@ -164,13 +165,13 @@ func _night_sky_mat() -> StandardMaterial3D:
 
 func _esd_mat() -> void:
 	var img := Image.create(512, 512, false, Image.FORMAT_RGB8)
-	var base := Color(0.20, 0.27, 0.32)
+	var base := Color(0.13, 0.18, 0.22)
 	img.fill(base)
 	var n := FastNoiseLite.new(); n.frequency = 0.08
 	for y in 512:
 		for x in 512:
 			var c := base * (0.975 + 0.025 * n.get_noise_2d(x, y))
-			if x % 64 == 0 or y % 64 == 0: c = c.lightened(0.09)
+			if x % 64 == 0 or y % 64 == 0: c = c.lightened(0.035)
 			img.set_pixel(x, y, c)
 	var tex := ImageTexture.create_from_image(img)
 	var m := MeshKit.mat(Color.WHITE, 0.78, 0.0, {"normal": 0.25})
@@ -178,6 +179,10 @@ func _esd_mat() -> void:
 	var mat_mesh := MeshKit.rounded_box(Vector3(0.66, 0.003, 0.46), 0.0012, 2)
 	MeshKit.add(self, mat_mesh, m, Vector3(0, 0.0015, 0.07))
 	m.uv1_triplanar = true; m.uv1_world_triplanar = true; m.uv1_scale = Vector3(3.2, 3.2, 3.2)
+	MeshKit.label(self, "ESD SAFE WORK SURFACE   10⁶-10⁹ Ω", 0.00012, Vector3(-0.12, 0.0032, 0.29), Color(0.55, 0.62, 0.68, 0.7))
+	for i in 31:   # printed ruler along the front edge, 1 cm ticks
+		var t := BoxMesh.new(); t.size = Vector3(0.0006, 0.0002, 0.006 if i % 5 == 0 else 0.003)
+		MeshKit.add(self, t, MeshKit.mat(Color(0.55, 0.62, 0.68), 0.7), Vector3(0.0 + i * 0.01, 0.0031, 0.296))
 	# grounding snap and coiled cord
 	var snap := CylinderMesh.new(); snap.top_radius = 0.006; snap.bottom_radius = 0.006; snap.height = 0.004
 	MeshKit.add(self, snap, MeshKit.m("steel"), Vector3(0.31, 0.004, -0.14))
@@ -247,7 +252,7 @@ func _props() -> void:
 	var sponge := CylinderMesh.new(); sponge.top_radius = 0.025; sponge.bottom_radius = 0.025; sponge.height = 0.02
 	MeshKit.add(st, sponge, MeshKit.mat(Color(0.75, 0.6, 0.3), 0.4, 1.0, {"normal": 1.0}), Vector3(0.11, 0.01, -0.08))
 	# solder spool
-	var spool := Node3D.new(); spool.position = Vector3(0.40, 0, 0.26); add_child(spool)
+	var spool := Node3D.new(); spool.position = Vector3(0.47, 0, -0.17); add_child(spool)
 	for yy in [0.002, 0.042]:
 		var fl := CylinderMesh.new(); fl.top_radius = 0.03; fl.bottom_radius = 0.03; fl.height = 0.004
 		MeshKit.add(spool, fl, MeshKit.mat(Color(0.75, 0.2, 0.12), 0.5), Vector3(0, yy, 0))
@@ -268,8 +273,22 @@ func _props() -> void:
 	for s in [-1, 1]:
 		MeshKit.add(self, MeshKit.tube(PackedVector3Array([Vector3(0.18, 0.004, 0.27), Vector3(0.30, 0.004 + 0.0, 0.27 + s * 0.006)]), 0.0016, 6), MeshKit.m("steel"))
 
+func _shelf() -> void:
+	var sh := Node3D.new(); sh.position = Vector3(0.62, 0.40, -0.43); add_child(sh)
+	MeshKit.add(sh, MeshKit.rounded_box(Vector3(0.6, 0.018, 0.16), 0.003), MeshKit.mat(Color(0.30, 0.22, 0.15), 0.6, 0.0, {"normal": 0.4}))
+	var items := [["RADIO", Vector3(0.16, 0.10, 0.08), Color(0.42, 0.30, 0.20)], ["SYNTH", Vector3(0.18, 0.05, 0.10), Color(0.15, 0.16, 0.18)], ["CHARGER", Vector3(0.06, 0.07, 0.05), Color(0.85, 0.85, 0.83)], ["LED STRIP", Vector3(0.09, 0.04, 0.09), Color(0.20, 0.22, 0.25)]]
+	var x := -0.26
+	for it in items:
+		var sz: Vector3 = it[1]
+		x += sz.x * 0.5
+		MeshKit.add(sh, MeshKit.rounded_box(sz, 0.006), MeshKit.mat(it[2], 0.5), Vector3(x, 0.009 + sz.y * 0.5, 0))
+		var tag := MeshKit.rounded_box(Vector3(0.05, 0.022, 0.001), 0.001)
+		MeshKit.add(sh, tag, MeshKit.mat(Color(0.93, 0.90, 0.80), 0.8), Vector3(x, 0.03, sz.z * 0.5 + 0.002))
+		MeshKit.label(sh, it[0], 0.00009, Vector3(x, 0.03, sz.z * 0.5 + 0.0028), Color(0.1, 0.1, 0.1), true, Vector3.ZERO)
+		x += sz.x * 0.5 + 0.03
+
 func _pegboard() -> void:
-	var pb := Node3D.new(); pb.position = Vector3(-0.3, 0.62, -0.49); add_child(pb)
+	var pb := Node3D.new(); pb.position = Vector3(-0.3, 0.46, -0.49); add_child(pb)
 	var pbm := MeshKit.mat(Color(0.22, 0.2, 0.17), 0.8, 0.0, {"normal": 0.3})
 	MeshKit.add(pb, MeshKit.rounded_box(Vector3(1.2, 0.6, 0.012), 0.002), pbm)
 	var holes := MultiMesh.new(); holes.transform_format = MultiMesh.TRANSFORM_3D
@@ -325,10 +344,23 @@ func board_centre() -> Vector3:
 	if board == null: return Vector3(0, 0.02, 0.07)
 	return board.to_global(Vector3((board.w - 1) * P * 0.5, 0, (board.h - 1) * P * 0.5))
 
+## World bounds of what is in use on the board (parts, wires, connectors), so the wiring view frames the circuit, not the empty pads.
+func _used_bounds() -> AABB:
+	if board == null: return AABB(Vector3(-0.07, 0.02, 0.02), Vector3(0.14, 0.01, 0.1))
+	var pts: Array = []
+	for c in board.connectors: pts.append(c.pad)
+	for p in backend.parts: for q in p.pins: pts.append(q)
+	for w in backend.wires: for q in w.path: pts.append(q)
+	var bb := AABB(board.pad_world(int(pts[0][0]), int(pts[0][1])), Vector3.ZERO)
+	for q in pts: bb = bb.expand(board.pad_world(int(q[0]), int(q[1])))
+	return bb.grow(0.012)
+
 func set_view(v: int, snap := false) -> void:
 	view = v
 	match v:
-		1: g_tgt = board_centre() + Vector3(0.0, 0.0, 0.005); g_yaw = 0.0; g_pitch = deg_to_rad(-62.0); g_dist = 0.31
+		1:
+			var bb := _used_bounds()
+			g_tgt = bb.get_center() + Vector3(-0.022, 0.0, 0.004); g_yaw = 0.0; g_pitch = deg_to_rad(-62.0); g_dist = clampf(bb.size.length() * 2.3, 0.2, 0.31)
 		2: g_tgt = Vector3(0.02, 0.04, -0.03); g_yaw = deg_to_rad(16.0); g_pitch = deg_to_rad(-26.0); g_dist = 0.92
 		3: g_tgt = (scope.global_position + Vector3(0, 0.08, 0)) if scope else Vector3(-0.3, 0.08, -0.25); g_yaw = deg_to_rad(14.0); g_pitch = deg_to_rad(-10.0); g_dist = 0.48
 		4: g_tgt = (fan.global_position + Vector3(0, 0.07, 0)) if fan else Vector3(0.03, 0.07, -0.24); g_yaw = deg_to_rad(-20.0); g_pitch = deg_to_rad(-14.0); g_dist = 0.42
@@ -356,7 +388,8 @@ func start_job() -> void:
 		backend.build_ref(TICKET)
 		if OS.get_environment("CB_L2_NODIODE") == "1":
 			for p in backend.parts: if str(p.partId) == "1n4007": backend.delete_part(str(p.uid))
-	if OS.get_environment("CB_PROBE") != "": backend.set_probe("ch1", [16, 8])
+	if OS.get_environment("CB_PROBE") != "":
+		backend.set_probe("ch1", [16, 8]); backend.set_dial("V"); backend.set_probe("red", [16, 2]); backend.set_probe("black", [22, 2])
 	if OS.get_environment("CB_PIN") != "": backend.set_selector("pin", int(OS.get_environment("CB_PIN")))
 	if OS.get_environment("CB_POWER") == "1": backend.set_power(true)
 	if OS.get_environment("CB_VIEW") != "": set_view(int(OS.get_environment("CB_VIEW")), true)
@@ -369,7 +402,9 @@ func _ghost_demo() -> void:
 	for it in drawer():
 		if str(it.partId) == "2n2222a": pick_part(it); break
 	await get_tree().process_frame
-	_hover(cam.unproject_position(board.pad_world(14, 8)))
+	qa_hover_lock = true
+	for i in 30: await get_tree().process_frame   # the camera glides into the wiring view first
+	_hover(cam.unproject_position(board.pad_world(14, 8)), true)
 	hover_pad = Vector2i(14, 8)
 
 func start_free() -> void:
@@ -417,7 +452,7 @@ func drawer() -> Array:
 		var va: Dictionary = d.variants[0]
 		var pick: Array = [null] if vals.is_empty() else [vals[0], vals[vals.size() / 2]] if vals.size() > 1 else [vals[0]]
 		for v in pick:
-			out.append({"i": i, "partId": str(d.id), "value": v, "variant": str(va.id), "label": ("%s  %s" % [NodeApi.format_value(float(v), str(d.kind)), str(d.name).get_slice(" ", 0).to_lower() if str(d.name).length() < 40 else ""]) if v != null else str(d.name), "kind": str(d.kind), "footprint": fp, "price_text": str(va.get("priceText", "")), "tag": str(d.name) if v != null else "", "left": -1})
+			out.append({"i": i, "partId": str(d.id), "value": v, "variant": str(va.id), "label": ("%s  %s" % [NodeApi.format_value(float(v), str(d.kind)), str(d.name) if str(d.name).length() <= 22 else str(d.name).substr(0, 22)]) if v != null else str(d.name), "kind": str(d.kind), "footprint": fp, "price_text": str(va.get("priceText", "")), "tag": str(d.name) if v != null else "", "left": -1})
 			i += 1
 	return out
 
@@ -454,7 +489,7 @@ func sync_board() -> void:
 			n.wid = str(w.wid)
 			n.build(w.path, Wire3D.palette(i + 2), bool(w.get("fixed", false)), board, 0.0004 * (i % 3))
 			wires3d[w.wid] = n; i += 1
-	_probes()
+	_probes(); _meter_leads()
 
 func _probes() -> void:
 	var pad = backend.probes.get("ch1", null)
@@ -465,21 +500,40 @@ func _probes() -> void:
 	if probe_node == null:
 		probe_node = Node3D.new(); add_child(probe_node)
 		var pm := MeshKit.mat(Color(0.14, 0.145, 0.155), 0.55)
-		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(-0.002, 0.013, -0.003), Vector3(-0.05, 0.022, -0.06)]), 0.0034, 16), pm)
-		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(-0.0003, 0.0125, -0.0004), Vector3(-0.0042, 0.0135, -0.0048)]), 0.0042, 16), pm)   # finger guard
+		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0.001, 0.012, 0.003), Vector3(0.012, 0.017, 0.045)]), 0.0030, 16), pm)
+		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0.0001, 0.0118, 0.0004), Vector3(0.0012, 0.0124, 0.0048)]), 0.0038, 16), pm)   # finger guard
 		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0, 0.003, 0), Vector3(0, 0.013, -0.002)]), 0.0014, 10), MeshKit.mat(Color(0.25, 0.26, 0.28), 0.5))
 		var hook := PackedVector3Array()
 		for i in 10: hook.append(Vector3(0.0012 * sin(i * 0.6), 0.003 - i * 0.0004, 0.0012 * cos(i * 0.6) - 0.0012))
 		MeshKit.add(probe_node, MeshKit.tube(hook, 0.00035, 6), MeshKit.m("steel"))
 		var ring := TorusMesh.new(); ring.inner_radius = 0.0029; ring.outer_radius = 0.0038
-		MeshKit.add(probe_node, ring, MeshKit.mat(Color(0.95, 0.8, 0.1), 0.4, 0.0, {"emission": Color(0.95, 0.8, 0.1), "emission_energy": 0.4}), Vector3(-0.037, 0.0195, -0.045), Vector3(1.43, deg_to_rad(40.0), 0))
+		MeshKit.add(probe_node, ring, MeshKit.mat(Color(0.95, 0.8, 0.1), 0.4, 0.0, {"emission": Color(0.95, 0.8, 0.1), "emission_energy": 0.4}), Vector3(0.009, 0.016, 0.034), Vector3(1.46, deg_to_rad(-15.0), 0))
 	probe_node.visible = true
 	var top := board.pad_world(int(pad[0]), int(pad[1]))
 	probe_node.global_position = top
-	var from := top + Vector3(-0.05, 0.022, -0.06)
+	var from := top + Vector3(0.012, 0.017, 0.045)
 	var to: Vector3 = (scope.global_position + Vector3(0.11, 0.03, 0.08)) if scope else Vector3(-0.2, 0.03, -0.17)
 	if probe_cable: probe_cable.queue_free()
-	probe_cable = MeshKit.add(self, MeshKit.tube(_catenary(from, to, 0.08), 0.0022, 8), MeshKit.mat(Color(0.12, 0.12, 0.13), 0.55))
+	probe_cable = MeshKit.add(self, MeshKit.tube(MeshKit.round_corners(PackedVector3Array([from, from + Vector3(0.0, -0.01, 0.05), Vector3(to.x, 0.004, from.z + 0.05), to]), 0.04, 6), 0.0022, 8), MeshKit.mat(Color(0.12, 0.12, 0.13), 0.55))
+
+var _lead_sig := ""
+func _meter_leads() -> void:
+	var sig := "%s|%s" % [str(backend.probes.get("red", null)), str(backend.probes.get("black", null))]
+	if sig == _lead_sig: return
+	_lead_sig = sig
+	for k in meter_leads: if is_instance_valid(meter_leads[k]): meter_leads[k].queue_free()
+	meter_leads.clear()
+	if board == null or dmm == null: return
+	for which in ["red", "black"]:
+		var pad = backend.probes.get(which, null)
+		if pad == null: continue
+		var n := Node3D.new(); add_child(n); meter_leads[which] = n
+		var top := board.pad_world(int(pad[0]), int(pad[1]))
+		var col := Color(0.62, 0.07, 0.05) if which == "red" else Color(0.04, 0.04, 0.045)
+		var m := MeshKit.mat(col, 0.45, 0.0, {"clearcoat": 0.3})
+		MeshKit.add(n, MeshKit.tube(PackedVector3Array([top + Vector3(0, 0.002, 0), top + Vector3(0.004, 0.012, 0.03)]), 0.0026, 12), m)
+		var jack := dmm.global_position + dmm.global_transform.basis * Vector3(-0.02 if which == "red" else 0.02, 0.02, 0.06)
+		MeshKit.add(n, MeshKit.tube(_catenary(top + Vector3(0.004, 0.012, 0.03), jack, 0.05), 0.0018, 8), m)
 
 func _catenary(a: Vector3, b: Vector3, sag: float, n := 24) -> PackedVector3Array:
 	var out := PackedVector3Array()
@@ -601,12 +655,20 @@ func _on_event(name: String, data: Dictionary) -> void:
 			if vce > 0.0:
 				_call(scope, "show_capture", [vce, vceo, 0.3]); capture_until = Time.get_ticks_msec() / 1000.0 + 1e6
 			last_failure = {"title": _fail_title(str(data.get("kind", "")), vce), "text": str(data.get("text", "")), "uid": str(data.uid)}
+			var cv := backend.coach_view()
+			var cur := int(cv.get("cur", -1))
+			if cur >= 0 and board:
+				var tg := str(cv.steps[cur].get("target", ""))
+				if tg.begins_with("pad:"):
+					var xy := tg.substr(4).split(","); board.set_marks([[int(xy[0]), int(xy[1])]], Color(0.95, 0.4, 0.3))
 			changed.emit()
 		"bench_failed":
 			if last_failure.is_empty(): last_failure = {"title": "Bench test failed", "text": str(data.get("text", ""))}
 			changed.emit()
 		"paid":
-			last_failure = {}; note = "Bench test passed. Paid %s." % str(data.get("pay_text", "")); changed.emit()
+			var st := int(data.get("stars", 0))
+			note = "Bench test passed. Paid %s: the %s fee%s." % [str(data.get("pay_text", "")), str(backend.ticket.get("price_text", "")), (" and %d new star%s" % [st, "" if st == 1 else "s"]) if st > 0 else ""]
+			last_failure = {}; changed.emit()
 		"power", "lock", "wired", "placed", "deleted":
 			changed.emit()
 
@@ -621,8 +683,8 @@ func _smoke_at(p: Vector3) -> void:
 	var pm := ParticleProcessMaterial.new()
 	pm.direction = Vector3(0, 1, 0); pm.spread = 18.0; pm.initial_velocity_min = 0.02; pm.initial_velocity_max = 0.05; pm.gravity = Vector3(0.002, 0.012, -0.002)
 	pm.scale_min = 0.6; pm.scale_max = 1.4
-	var sc := Curve.new(); sc.add_point(Vector2(0, 0.2)); sc.add_point(Vector2(1, 1.0)); var sct := CurveTexture.new(); sct.curve = sc; pm.scale_curve = sct
-	var g := Gradient.new(); g.set_color(0, Color(0.30, 0.29, 0.28, 0.0)); g.add_point(0.12, Color(0.34, 0.33, 0.32, 0.32)); g.set_color(1, Color(0.36, 0.36, 0.36, 0.0))
+	var sc := Curve.new(); sc.add_point(Vector2(0, 0.25)); sc.add_point(Vector2(1, 2.4)); var sct := CurveTexture.new(); sct.curve = sc; pm.scale_curve = sct
+	var g := Gradient.new(); g.set_color(0, Color(0.32, 0.30, 0.28, 0.0)); g.add_point(0.15, Color(0.36, 0.34, 0.32, 0.16)); g.add_point(0.6, Color(0.40, 0.40, 0.40, 0.08)); g.set_color(1, Color(0.42, 0.42, 0.42, 0.0))
 	var gt := GradientTexture1D.new(); gt.gradient = g; pm.color_ramp = gt
 	pm.turbulence_enabled = true; pm.turbulence_noise_strength = 0.4; pm.turbulence_noise_scale = 2.0
 	ps.process_material = pm
@@ -634,7 +696,7 @@ func _smoke_at(p: Vector3) -> void:
 	m.albedo_texture = rt; q.material = m
 	ps.draw_pass_1 = q
 	add_child(ps); ps.global_position = p + Vector3(0, 0.012, 0)
-	var ember := OmniLight3D.new(); ember.light_color = Color(1.0, 0.35, 0.05); ember.light_energy = 0.8; ember.omni_range = 0.05; ps.add_child(ember)
+	var ember := OmniLight3D.new(); ember.light_color = Color(1.0, 0.35, 0.05); ember.light_energy = 1.4; ember.omni_range = 0.09; ps.add_child(ember)
 	smoke_fx.append(ps)
 	get_tree().create_timer(7.0).timeout.connect(func(): if is_instance_valid(ps): ps.emitting = false)
 	get_tree().create_timer(11.0).timeout.connect(func(): if is_instance_valid(ps): ps.queue_free())
@@ -721,7 +783,9 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_PERIOD: if paused: backend._act("advance", [1]); backend._refresh_live(); backend._rebuild_model()
 		get_viewport().set_input_as_handled()
 
-func _hover(mp: Vector2) -> void:
+var qa_hover_lock := false
+func _hover(mp: Vector2, qa := false) -> void:
+	if qa_hover_lock and not qa: return
 	var pad := ray_pad(mp)
 	hover_pad = pad
 	if board == null: return
@@ -801,10 +865,14 @@ func cycle_pin() -> void:
 		if str(s.id) == "pin": backend.set_selector("pin", (int(s.index) + 1) % (s.options as Array).size())
 	changed.emit()
 
+func set_pin(i: int) -> void:
+	backend.set_selector("pin", i); changed.emit()
+
 func run_test() -> void:
 	backend.run_bench(); changed.emit()
 
 func undo() -> void:
 	var r := backend.undo(); note = str(r.get("msg", ""))
+	if board: board.set_marks([])
 	capture_until = 0.0; _call(scope, "clear_capture"); last_failure = {}
 	changed.emit()

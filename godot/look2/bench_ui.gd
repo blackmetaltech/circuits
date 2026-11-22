@@ -46,8 +46,14 @@ func _panel(pos: Vector2, size: Vector2, accent := Color(0, 0, 0, 0)) -> PanelCo
 	_root.add_child(p)
 	return p
 
+## Canvas font size that lands at >= 16 real pixels in this window (the canvas stretches: at 1280x800 one canvas px is 0.67 px).
+func fs(n: int) -> int:
+	var vis := get_viewport().get_visible_rect().size
+	var k := float(DisplayServer.window_get_size().x) / maxf(vis.x, 1.0)
+	return maxi(n, int(ceil(16.0 / maxf(k, 0.1))))
+
 func _lab(parent: Node, text: String, size := 21, col := TXT, font: Font = null, wrap := false) -> Label:
-	var l := Label.new(); l.text = text; l.add_theme_font_size_override("font_size", size); l.add_theme_color_override("font_color", col)
+	var l := Label.new(); l.text = text; l.add_theme_font_size_override("font_size", fs(size)); l.add_theme_color_override("font_color", col)
 	l.add_theme_font_override("font", font if font else f_sans)
 	if wrap: l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(l)
@@ -55,7 +61,7 @@ func _lab(parent: Node, text: String, size := 21, col := TXT, font: Font = null,
 
 func _btn(parent: Node, text: String, cb: Callable, key := "", primary := false, active := false) -> Button:
 	var b := Button.new(); b.text = text; b.focus_mode = Control.FOCUS_ALL
-	b.add_theme_font_override("font", f_semi); b.add_theme_font_size_override("font_size", 19)
+	b.add_theme_font_override("font", f_semi); b.add_theme_font_size_override("font_size", fs(19))
 	for st in ["normal", "hover", "pressed", "focus"]:
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = (AMBER if primary else (Color(0.22, 0.24, 0.27) if active else BG2))
@@ -94,9 +100,8 @@ func _rebuild() -> void:
 	_failure()
 
 func _title() -> void:
-	var p := _panel(Vector2(120, 300), Vector2(620, 0))
-	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 14); p.add_child(v)
-	_lab(v, "CIRCUITS", 64, TXT, f_semi)
+	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 12); v.position = Vector2(110, 560); v.custom_minimum_size = Vector2(560, 0); _root.add_child(v)
+	var wm := _lab(v, "CIRCUITS", 40, TXT, f_semi); wm.add_theme_constant_override("outline_size", 0)
 	_lab(v, "An electronics workbench. Repair real devices, build circuits, and see why they work.", 22, DIM, f_sans, true)
 	var gap := Control.new(); gap.custom_minimum_size = Vector2(0, 10); v.add_child(gap)
 	var b1 := _btn(v, "Jobs: 5-1  Fan Driver", func(): bench.start_job(), "", true)
@@ -104,8 +109,7 @@ func _title() -> void:
 	_btn(v, "Free bench", func(): bench.start_free())
 	_lab(v, "Every part in the catalogue on an open board. Pause time and step it.", 18, DIM)
 	b1.call_deferred("grab_focus")
-	var hint := _panel(Vector2(120, 860), Vector2(620, 0))
-	_lab(hint, "Right drag orbits   Middle drag pans   Wheel zooms   1-4 views   Tab schematic", 17, DIM, f_mono)
+	_lab(v, "Right drag orbits   Middle drag pans   Wheel zooms   1-4 views   Tab schematic", 16, DIM, f_mono)
 
 func _job_card() -> void:
 	var t: Dictionary = bench.backend.ticket
@@ -127,8 +131,17 @@ func _job_card() -> void:
 		var nm := _lab(row, _short(str(s.get("id", "")), str(s.get("name", ""))), 18, TXT); nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var val := _lab(row, "—", 20, TXT, f_mono)
 		_spec_vals[str(s.id)] = [mark, val]
-	var pay := _lab(v, "Pays %s.  Parts: %s." % [str(t.get("price_text", "")), str(bench.backend.last_result.get("costText", "$0.00"))], 17, DIM)
-	pay.name = "pay"
+	_lab(v, "Pays %s.  Parts used: %s." % [str(t.get("pay_text", t.get("price_text", ""))).trim_prefix("fee "), str(bench.backend.last_result.get("costText", "$0.00"))], 17, DIM, f_sans, true)
+	v.add_child(HSeparator.new())
+	_status = _lab(v, "", 18, TXT, f_mono)
+	_readout = _lab(v, "", 18, DIM, f_mono)
+	var seg := HBoxContainer.new(); seg.add_theme_constant_override("separation", 4); v.add_child(seg)
+	_lab(seg, "PIN", 16, DIM, f_semi).custom_minimum_size = Vector2(52, 0)
+	var opts: Array = []
+	for sl in bench.backend.selectors: if str(sl.id) == "pin": opts = sl.options
+	for i in opts.size():
+		var idx := i
+		_btn(seg, str(opts[i]), func(): bench.set_pin(idx), "", false, bench.pin_mode() == str(opts[i]))
 
 func _short(id: String, name: String) -> String:
 	match id:
@@ -152,7 +165,7 @@ func _drawer() -> void:
 		var row := Button.new(); row.alignment = HORIZONTAL_ALIGNMENT_LEFT; row.focus_mode = Control.FOCUS_ALL
 		row.text = "%s    %s" % [str(it.label), str(it.get("price_text", ""))]
 		row.tooltip_text = str(it.get("tag", ""))
-		row.add_theme_font_override("font", f_mono); row.add_theme_font_size_override("font_size", 18)
+		row.add_theme_font_override("font", f_mono); row.add_theme_font_size_override("font_size", fs(18))
 		var active: bool = bench.tool == "place" and bench.place_item.get("i", -1) == it.i and str(bench.place_item.get("partId", "")) == str(it.partId)
 		for st in ["normal", "hover", "pressed", "focus"]:
 			var sb := StyleBoxFlat.new(); sb.bg_color = Color(0.20, 0.17, 0.11) if active else (BG2 if st != "hover" else BG2.lightened(0.06))
@@ -193,13 +206,12 @@ func _tools() -> void:
 	p.position.x = (1920 - p.get_combined_minimum_size().x) * 0.5
 
 func _status_chip() -> void:
-	var p := _panel(Vector2(1480, 28), Vector2(412, 0))
-	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 6); p.add_child(v)
-	_status = _lab(v, "", 18, TXT, f_mono)
-	_readout = _lab(v, "", 18, DIM, f_mono)
-	var pin := _btn(v, "Pin: %s   (click to switch)" % bench.pin_mode(), func(): bench.cycle_pin())
-	pin.visible = bench.mode == "job"
-	_lab(v, "Views  1 wiring  2 bench  3 scope  4 fan", 16, DIM, f_mono)
+	var p := _panel(Vector2(1500, 28), Vector2(0, 0))
+	var v := VBoxContainer.new(); p.add_child(v)
+	if bench.mode == "free":
+		_status = _lab(v, "", 18, TXT, f_mono)
+	_lab(v, "1 wiring   2 bench   3 scope   4 device", 16, DIM, f_mono)
+	p.position.x = 1892 - p.get_combined_minimum_size().x
 
 func _failure() -> void:
 	var f: Dictionary = bench.last_failure
@@ -217,12 +229,12 @@ func _failure() -> void:
 
 func _refresh_live() -> void:
 	var b = bench.backend
-	if _status: _status.text = "POWER %s    PIN %s" % ["ON " if b.powered else "OFF", bench.pin_mode()]
+	if _status and is_instance_valid(_status): _status.text = "POWER %s" % ("ON" if b.powered else "OFF")
 	var fan_v: float = b.volt_at([16, 2]) - b.volt_at([22, 2])
 	var ipin: float = float(b.scope_view.get("value", 0.0)) / 1000.0
 	var has_i: bool = b.powered and str(b.scope_view.get("text", "")) != ""
 	var pm: String = bench.pin_mode()
-	if _readout: _readout.text = "Fan %s    Pin %s" % [(si(fan_v, "V") if pm != "100 Hz" else "switching") if b.powered else "--", si(ipin, "A") if has_i else "--"]
+	if _readout and is_instance_valid(_readout): _readout.text = "Fan %s    Pin %s" % [(si(fan_v, "V") if pm != "100 Hz" else "switching") if b.powered else "--", si(ipin, "A") if has_i else "--"]
 	var res: Dictionary = b.last_result
 	var specs := {}
 	for s in res.get("specs", []): specs[str(s.id)] = s
@@ -301,13 +313,31 @@ class SchematicView extends Control:
 				draw_colored_polygon(PackedVector2Array([t0 + nrm * 10, t0 - nrm * 10, t1]), col)
 				draw_line(t1 + nrm * 11, t1 - nrm * 11, col, 3.0)
 			"NPN", "PNP", "DARLINGTON":
+				# standard symbol: base into a bar, collector and emitter diagonals, arrow on the emitter; leads run to the real pins
+				var names: Array = p.get("pin_labels", [])
+				var pin_of := {}
+				for i in mini(names.size(), pins.size()): pin_of[str(names[i])] = P.call(pins[i])
 				var cen := Vector2.ZERO
 				for q in pins: cen += P.call(q)
-				cen /= pins.size(); cen += Vector2(0, -0.9 * s)
-				draw_arc(cen, 0.9 * s, 0, TAU, 40, col, 2.0, true)
-				var names: Array = p.get("pin_labels", [])
-				for i in pins.size(): draw_line(P.call(pins[i]), cen, col, 2.2, true)
-				for i in names.size(): draw_string(font, P.call(pins[i]) + Vector2(-6, 24), str(names[i]), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.56, 0.6, 0.65))
+				cen /= pins.size(); cen += Vector2(0, -1.4 * s)
+				var r := 0.85 * s
+				draw_arc(cen, r, 0, TAU, 48, col, 2.0, true)
+				var bar_x := cen.x - r * 0.25
+				draw_line(Vector2(bar_x, cen.y - r * 0.55), Vector2(bar_x, cen.y + r * 0.55), col, 3.0)
+				var bt := Vector2(cen.x - r * 1.05, cen.y)
+				draw_line(bt, Vector2(bar_x, cen.y), col, 2.2)
+				var ct := Vector2(cen.x + r * 0.45, cen.y - r * 0.85); var et := Vector2(cen.x + r * 0.45, cen.y + r * 0.85)
+				draw_line(Vector2(bar_x, cen.y - r * 0.25), ct, col, 2.2); draw_line(Vector2(bar_x, cen.y + r * 0.25), et, col, 2.2)
+				var ed := (et - Vector2(bar_x, cen.y + r * 0.25)).normalized(); var en := Vector2(-ed.y, ed.x)
+				var tip := et - ed * r * 0.12 if kind != "PNP" else Vector2(bar_x, cen.y + r * 0.25) + ed * r * 0.35
+				var dirv := ed if kind != "PNP" else -ed
+				draw_colored_polygon(PackedVector2Array([tip, tip - dirv * 9 + en * 5, tip - dirv * 9 - en * 5]), col)
+				var term := {"B": bt, "C": ct, "E": et}
+				for nm in term:
+					if pin_of.has(nm):
+						var pp: Vector2 = pin_of[nm]; var tt: Vector2 = term[nm]
+						draw_polyline(PackedVector2Array([tt, Vector2(tt.x, pp.y) if nm != "B" else Vector2(pp.x, tt.y), pp]), Color(0.72, 0.78, 0.84), 2.0, true)
+						draw_string(font, tt + Vector2(6 if nm != "B" else -18, -6 if nm == "C" else 18), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.56, 0.6, 0.65))
 			"MOTOR":
 				draw_line(a, mid - dir * 22, col, 2.5); draw_line(mid + dir * 22, c, col, 2.5)
 				draw_arc(mid, 22, 0, TAU, 40, col, 2.5, true)
