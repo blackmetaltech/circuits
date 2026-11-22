@@ -249,6 +249,7 @@ func _job_card() -> void:
 			var k := _key(row2, "Load %d" % slot, func(): bench.load_build(slot), "", false, false)
 			k.disabled = not bench.has_build(slot)
 		_status = _lcd(fv, "", 20)
+		_meter = _lcd(fv, "", 20, Color(0.62, 0.95, 0.66))
 		if bench.note != "": _lab(fv, bench.note, 18, TXT, f_sans, true)
 		return
 	var v := _paper(Vector2(30, 26), 430)
@@ -270,7 +271,7 @@ func _job_card() -> void:
 		var st := Stamp.new(); st.font = f_engr; st.custom_minimum_size = Vector2(0, 90); st.mouse_filter = Control.MOUSE_FILTER_IGNORE; v.add_child(st)
 		_key(v, "Next job", func(): bench.next_job(), "", true)
 		return
-	var sep := ColorRect.new(); sep.color = Color(0.3, 0.27, 0.22, 0.5); sep.custom_minimum_size = Vector2(0, 1); v.add_child(sep)
+	var sep := ColorRect.new(); sep.color = Color(0.3, 0.27, 0.22, 0.5); sep.custom_minimum_size = Vector2(0, 2); v.add_child(sep)   # 2 px: 1 px broke into dashes at 1280x800
 	for s in t.get("specs", []):
 		var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 10); v.add_child(row)
 		var mark := _ink(row, "[ ]", 18, INK, f_type, false)
@@ -286,8 +287,11 @@ func _job_card() -> void:
 	if not f.is_empty():
 		var sep2 := ColorRect.new(); sep2.color = RED_INK; sep2.custom_minimum_size = Vector2(0, 2); v.add_child(sep2)
 		_ink(v, str(f.get("title", "")), 20, RED_INK, f_semi)
-		_ink(v, str(f.get("text", "")), 17, INK, f_sans)
-		_ink(v, "Ctrl+Z puts in a fresh part with the power off.", 16, Color(0.30, 0.28, 0.25), f_sans)
+		var full := str(f.get("text", ""))
+		var cut := full.find(". ")
+		_ink(v, full.substr(0, cut + 1) if cut > 0 and cut < full.length() - 2 else full, 17, INK, f_sans)   # the cause in one sentence; the scope shows the rest
+		if cut > 0 and cut < full.length() - 2: _ink(v, "Why: " + full.substr(cut + 2).strip_edges(), 15, Color(0.30, 0.28, 0.25), f_sans)
+		_ink(v, "Ctrl+Z puts in a fresh part with the power off.", 15, Color(0.30, 0.28, 0.25), f_sans)
 	elif bench.note != "":
 		_ink(v, bench.note, 17, Color(0.14, 0.20, 0.42), f_sans)
 	# the bench control plate: power key with its lamp, the ticket's switches, and the readings in LCD windows
@@ -428,7 +432,7 @@ func _tools() -> void:
 
 func _refresh_live() -> void:
 	var b = bench.backend
-	if _status and is_instance_valid(_status): _status.text = "POWER %s   %s" % ["ON" if b.powered else "OFF", bench.meter_text()]
+	if _status and is_instance_valid(_status): _status.text = "POWER %s" % ("ON" if b.powered else "OFF")
 	if _readout and is_instance_valid(_readout): _readout.text = bench.readout_text()
 	if _meter and is_instance_valid(_meter): _meter.text = "METER  " + bench.meter_text()
 	var res: Dictionary = b.last_result

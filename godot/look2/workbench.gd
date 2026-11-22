@@ -108,6 +108,7 @@ func _aa() -> void:
 		"high": vp.msaa_3d = Viewport.MSAA_4X; vp.use_taa = true; vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
 		"medium": vp.msaa_3d = Viewport.MSAA_2X; vp.use_taa = false; vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
 		_: vp.msaa_3d = Viewport.MSAA_DISABLED; vp.use_taa = false; vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
+	if OS.get_environment("CB_AA") == "none": vp.msaa_3d = Viewport.MSAA_DISABLED; vp.use_taa = false   # measurement hook
 
 ## Low tier (integrated GPUs, Deck class, the Compatibility renderer): one soft lamp shadow at a small atlas, no moon shadow,
 ## no depth of field, 3D drawn at 75 % and scaled up. The emissive screens, LEDs, glow and the warm/cool colour plan stay.
@@ -394,7 +395,7 @@ func _used_bounds() -> AABB:
 func set_view(v: int, snap := false) -> void:
 	view = v
 	match v:
-		1: g_tgt = board_centre() + Vector3(-0.03, 0.0, -0.01); g_yaw = deg_to_rad(4.0); g_pitch = deg_to_rad(-42.0); g_dist = 0.48
+		1: g_tgt = board_centre() + Vector3(-0.03, 0.02, -0.03); g_yaw = deg_to_rad(4.0); g_pitch = deg_to_rad(-33.0); g_dist = 0.50   # higher horizon: pegboard and lamp in the top of the frame
 		5:
 			var bb := _used_bounds()
 			# the board sits above the tray: aim below its centre and pull back on narrow (16:10) windows
@@ -731,17 +732,17 @@ func _process(dt: float) -> void:
 
 func _live(dt: float) -> void:
 	var f: Dictionary = backend.frame
+	# the engine's board list says which parts are burnt (a repair's arrived-burnt part stays charred with the power off)
+	var burnt := {}
+	for bp in backend.bench_q.get("parts", []): if bool(bp.get("smoked", false)): burnt[str(bp.uid)] = true
 	for p in f.get("parts", []):
 		var n: Part3D = parts3d.get(str(p.uid), null)
 		if n == null: continue
 		n.set_heat(backend._heat(p))
-		n.set_smoked(bool(p.get("smoked", false)) or backend.smoked.has(str(p.uid)))
+		n.set_smoked(bool(p.get("smoked", false)) or backend.smoked.has(str(p.uid)) or burnt.has(str(p.uid)))
 		if p.has("led"): n.set_led(float(p.led.get("mA", 0.0)), float(p.led.get("bloom", 0.0)))
 	if not backend.powered:   # power off: every LED goes dark (the frame stops listing them, which left the last glow on)
 		for u in parts3d: (parts3d[u] as Part3D).set_led(0.0, 0.0)
-	# the engine's board list says which parts are burnt (a repair's arrived-burnt part stays charred with the power off)
-	var burnt := {}
-	for bp in backend.bench_q.get("parts", []): if bool(bp.get("smoked", false)): burnt[str(bp.uid)] = true
 	for u in parts3d: if not backend.powered: (parts3d[u] as Part3D).set_smoked(burnt.has(u) or backend.smoked.has(u))
 	# the fan: speed from its own current (200 mA = full speed)
 	var fi := 0.0

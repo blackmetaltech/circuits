@@ -5,6 +5,7 @@ extends SceneTree
 ## opens the next ticket. Then the free bench: place, power, save build 1, clear, load build 1.
 ##   godot --headless --path godot -s res://tests/look2_ch1_flow.gd         (exit code 0 = green; needs godot/sidecar/bridge.mjs)
 var wb: Workbench
+const LevelBurnt := {"1-1": ["x1"], "1-4": ["x1"]}
 var trap := ErrorTrap.new()
 var fails := 0
 var checks := 0
@@ -43,6 +44,10 @@ func _run() -> void:
 		var fw := 0
 		for w in wb.backend.wires: if str(w.wid).begins_with("xw"): fw += 1
 		ok((faulty + fw > 0) == repair, "the faulty board is on the bench (%d parts, %d wires)" % [faulty, fw])
+		await _frames(3)
+		for i in (LevelBurnt.get(id, []) as Array):
+			var n = wb.parts3d.get(i, null)
+			ok(n != null and n._smoked, "%s arrived burnt and is drawn charred (bench_q smoked: %s)" % [i, str((wb.backend.bench_q.get("parts", []) as Array).filter(func(q): return bool(q.get("smoked", false))).map(func(q): return q.uid))])
 		if repair:
 			wb.toggle_power(); await _step(0.4)
 			wb.run_test(); await _frames(3)

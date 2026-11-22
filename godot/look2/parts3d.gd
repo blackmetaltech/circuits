@@ -316,12 +316,23 @@ func set_heat(k: float) -> void:
 		m.albedo_color = m.albedo_color.lerp(Color(0.12, 0.06, 0.03), k * 0.5)
 		mi.material_override = m
 
+## Tinned leads stay metal when a part burns.
+func _is_lead(mi: MeshInstance3D) -> bool:
+	var m := mi.get_active_material(0)
+	return m != null and m == MeshKit.m("tin")
+
 func set_smoked(on: bool) -> void:
 	if on == _smoked: return
 	_smoked = on
-	var char_m := MeshKit.mat(Color(0.05, 0.035, 0.025), 0.95, 0.0, {"normal": 0.8, "emission": Color(0.9, 0.22, 0.02), "emission_energy": 0.25})
+	var char_m := MeshKit.mat(Color(0.025, 0.02, 0.018), 0.98, 0.0, {"normal": 0.9})   # cold char: no glow (it read as a hot brown body)
 	for i in body_meshes.size():
 		(body_meshes[i] as MeshInstance3D).material_override = char_m if on else _body_mats[i]
+	for c in get_children():   # colour bands, caps and bodies outside body_meshes char too (a burnt resistor kept its bands)
+		if c is MeshInstance3D and not body_meshes.has(c) and c != _crack:
+			var mi := c as MeshInstance3D
+			if mi.mesh is ArrayMesh or mi.mesh is PrimitiveMesh:
+				if _is_lead(mi): continue
+				mi.material_override = char_m if on else null
 	for l in _labels: (l as Label3D).visible = not on
 	if on and _scorch == null:
 		_scorch = Decal.new(); _scorch.size = Vector3(0.03, 0.02, 0.03)
