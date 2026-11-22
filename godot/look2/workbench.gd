@@ -207,7 +207,7 @@ func _lamp() -> void:
 	MeshKit.add(shade_node, shade, sm, Vector3(0, 0, -0.04), Vector3(-PI / 2, 0, 0))
 	var bulb := SphereMesh.new(); bulb.radius = 0.022; bulb.height = 0.044
 	MeshKit.add(shade_node, bulb, MeshKit.mat(Color(1, 0.9, 0.75), 0.3, 0.0, {"emission": Color(1.0, 0.82, 0.6), "emission_energy": 8.0}), Vector3(0, 0, -0.06))
-	lamp = SpotLight3D.new(); lamp.light_color = Color(1.0, 0.80, 0.58); lamp.light_energy = 3.2; lamp.spot_range = 1.6; lamp.spot_angle = 52.0; lamp.spot_angle_attenuation = 1.2
+	lamp = SpotLight3D.new(); lamp.light_color = Color(1.0, 0.80, 0.58); lamp.light_energy = 2.5; lamp.spot_range = 1.6; lamp.spot_angle = 52.0; lamp.spot_angle_attenuation = 1.2
 	lamp.shadow_enabled = true; lamp.light_size = 0.04 if quality == "high" else 0.0; lamp.shadow_blur = 1.5; lamp.light_volumetric_fog_energy = 0.6
 	shade_node.add_child(lamp); lamp.position = Vector3(0, 0, -0.07)
 	# a soft overall fill from the lamp bouncing off the wall
@@ -328,7 +328,7 @@ func board_centre() -> Vector3:
 func set_view(v: int, snap := false) -> void:
 	view = v
 	match v:
-		1: g_tgt = board_centre(); g_yaw = 0.0; g_pitch = deg_to_rad(-64.0); g_dist = 0.36
+		1: g_tgt = board_centre() + Vector3(0.0, 0.0, 0.005); g_yaw = 0.0; g_pitch = deg_to_rad(-62.0); g_dist = 0.31
 		2: g_tgt = Vector3(0.02, 0.04, -0.03); g_yaw = deg_to_rad(16.0); g_pitch = deg_to_rad(-26.0); g_dist = 0.92
 		3: g_tgt = (scope.global_position + Vector3(0, 0.08, 0)) if scope else Vector3(-0.3, 0.08, -0.25); g_yaw = deg_to_rad(14.0); g_pitch = deg_to_rad(-10.0); g_dist = 0.48
 		4: g_tgt = (fan.global_position + Vector3(0, 0.07, 0)) if fan else Vector3(0.03, 0.07, -0.24); g_yaw = deg_to_rad(-20.0); g_pitch = deg_to_rad(-14.0); g_dist = 0.42
@@ -465,18 +465,18 @@ func _probes() -> void:
 	if probe_node == null:
 		probe_node = Node3D.new(); add_child(probe_node)
 		var pm := MeshKit.mat(Color(0.14, 0.145, 0.155), 0.55)
-		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0, 0.013, -0.004), Vector3(0, 0.024, -0.08)]), 0.0034, 16), pm)
-		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0, 0.0125, -0.0005), Vector3(0, 0.0135, -0.006)]), 0.0042, 16), pm)   # finger guard
+		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(-0.002, 0.013, -0.003), Vector3(-0.05, 0.022, -0.06)]), 0.0034, 16), pm)
+		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(-0.0003, 0.0125, -0.0004), Vector3(-0.0042, 0.0135, -0.0048)]), 0.0042, 16), pm)   # finger guard
 		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0, 0.003, 0), Vector3(0, 0.013, -0.002)]), 0.0014, 10), MeshKit.mat(Color(0.25, 0.26, 0.28), 0.5))
 		var hook := PackedVector3Array()
 		for i in 10: hook.append(Vector3(0.0012 * sin(i * 0.6), 0.003 - i * 0.0004, 0.0012 * cos(i * 0.6) - 0.0012))
 		MeshKit.add(probe_node, MeshKit.tube(hook, 0.00035, 6), MeshKit.m("steel"))
 		var ring := TorusMesh.new(); ring.inner_radius = 0.0029; ring.outer_radius = 0.0038
-		MeshKit.add(probe_node, ring, MeshKit.mat(Color(0.95, 0.8, 0.1), 0.4, 0.0, {"emission": Color(0.95, 0.8, 0.1), "emission_energy": 0.4}), Vector3(0, 0.0185, -0.045), Vector3(1.43, 0, 0))
+		MeshKit.add(probe_node, ring, MeshKit.mat(Color(0.95, 0.8, 0.1), 0.4, 0.0, {"emission": Color(0.95, 0.8, 0.1), "emission_energy": 0.4}), Vector3(-0.037, 0.0195, -0.045), Vector3(1.43, deg_to_rad(40.0), 0))
 	probe_node.visible = true
 	var top := board.pad_world(int(pad[0]), int(pad[1]))
 	probe_node.global_position = top
-	var from := top + Vector3(0, 0.024, -0.08)
+	var from := top + Vector3(-0.05, 0.022, -0.06)
 	var to: Vector3 = (scope.global_position + Vector3(0.11, 0.03, 0.08)) if scope else Vector3(-0.2, 0.03, -0.17)
 	if probe_cable: probe_cable.queue_free()
 	probe_cable = MeshKit.add(self, MeshKit.tube(_catenary(from, to, 0.08), 0.0022, 8), MeshKit.mat(Color(0.12, 0.12, 0.13), 0.55))

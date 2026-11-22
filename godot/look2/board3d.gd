@@ -19,7 +19,7 @@ func build(gw: int, gh: int, conns: Array) -> void:
 	var m := 2.0 * P
 	var size := Vector3((w - 1) * P + 2 * m, MeshKit.BOARD_T, (h - 1) * P + 2 * m)
 	var centre := Vector3((w - 1) * P * 0.5, -MeshKit.BOARD_T * 0.5, (h - 1) * P * 0.5)
-	var fr4 := MeshKit.mat(Color(0.09, 0.25, 0.14), 0.32, 0.0, {"clearcoat": 0.7, "clearcoat_rough": 0.25, "normal": 0.25, "uv_scale": 30.0})
+	var fr4 := MeshKit.mat(Color(0.09, 0.25, 0.14), 0.32, 0.0, {"clearcoat": 0.35, "clearcoat_rough": 0.4, "normal": 0.25, "uv_scale": 30.0})
 	var board := MeshKit.add(self, MeshKit.rounded_box(size, 0.0015, 2), fr4, centre)
 	board.name = "fr4"
 	# standoffs
