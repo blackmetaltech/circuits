@@ -61,6 +61,24 @@ func _smoke() -> void:
 	if scene.phase != "bench" or str(scene.backend.ticket.get("id", "")) != "1-1": fail.call("ticket 1-1 did not open"); return
 	if scene.bench.model.is_empty() or int(scene.bench.model.get("w", 0)) <= 0: fail.call("the bench has no board"); return
 	print("smoke: ticket 1-1 open on a %dx%d board" % [int(scene.bench.model.w), int(scene.bench.model.h)])
-	print("SMOKE OK")
 	stop_engine.call()
+	# the default front end: the 3D workbench opens 1-1 as a repair, with the customer's faulty board, on its own sidecar
+	scene.queue_free(); scene = null
+	var wb := Workbench.new(); add_child(wb)
+	var stop_wb := func() -> void:
+		if wb.backend != null and wb.backend.bridge != null and wb.backend.bridge.has_method("stop"): wb.backend.bridge.stop()
+	t0 = Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < 30000:
+		await get_tree().process_frame
+		if wb.backend != null and wb.backend.ENGINE: break
+	if wb.backend == null or not wb.backend.ENGINE: print("SMOKE FAIL: the workbench's engine did not start"); get_tree().quit(1); return
+	wb.start_job("1-1")
+	for i in 30: await get_tree().process_frame
+	var faulty := 0
+	for p in wb.backend._all_parts: if str(p.uid).begins_with("x"): faulty += 1
+	if wb.mode != "job" or str(wb.backend.ticket.get("id", "")) != "1-1" or faulty == 0:
+		print("SMOKE FAIL: the workbench did not open 1-1 with its faulty board (mode %s, %d faulty parts)" % [wb.mode, faulty]); stop_wb.call(); get_tree().quit(1); return
+	print("smoke: workbench open on 1-1 with %d faulty part(s)" % faulty)
+	print("SMOKE OK")
+	stop_wb.call()
 	get_tree().quit(0)
