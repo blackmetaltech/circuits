@@ -30,6 +30,9 @@ func _run() -> void:
 	wb = Workbench.new(); root.add_child(wb)
 	await _frames(20)
 	ok(wb.mode == "title", "the title is up")
+	var names := []
+	for b in wb.find_children("*", "Button", true, false): names.append((b as Button).text)
+	ok(names.has("Quit") and names.has("High") and names.has("Low"), "the title has Quit and the graphics tiers (%s)" % str(names))
 	var wallet0 := -1
 	wb.start_job(); await _frames(10)
 	for id in ["1-1", "1-2", "1-3", "1-4", "1-5"]:

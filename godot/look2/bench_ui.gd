@@ -230,6 +230,13 @@ func _title() -> void:
 	_key(v, "Classic look: all five chapters", func(): bench.get_parent().call("set_look", "classic") if bench.get_parent().has_method("set_look") else null)
 	_lab(v, "Chapters 2 to 5 are in the classic 2D stall for now. Its title has the way back.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
 	b1.call_deferred("grab_focus")
+	var qrow := HBoxContainer.new(); qrow.add_theme_constant_override("separation", 8); v.add_child(qrow)
+	_lab(qrow, "Graphics", 18, Color(0.72, 0.75, 0.78), f_sans)
+	for q in ["high", "medium", "low"]:
+		var qq: String = q
+		_key(qrow, qq.capitalize(), func(): bench.set_quality_saved(qq), "", false, bench.quality == qq)
+	var spacer := Control.new(); spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL; qrow.add_child(spacer)
+	_key(qrow, "Quit", func(): bench.get_tree().quit(), "", false, false)
 	_lab(v, "Right drag orbits   Middle drag pans   Wheel zooms   Keys 1-5 views   Tab schematic", 17, Color(0.72, 0.75, 0.78), f_mono)
 	_lab(v, "v%s" % str(ProjectSettings.get_setting("application/config/version", "")), 15, Color(0.56, 0.60, 0.65), f_mono)
 

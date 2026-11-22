@@ -92,11 +92,23 @@ func _ready() -> void:
 
 ## ------------------------------------------------------------------------------------------------ quality tiers
 
+const QUALITY_FILE := "user://quality.txt"
+
+## The title's Graphics keys: remember the tier and rebuild the bench with it (the detected tier is the default).
+func set_quality_saved(q: String) -> void:
+	if OS.get_environment("CB_NOSAVE") == "":
+		var f := FileAccess.open(QUALITY_FILE, FileAccess.WRITE)
+		if f: f.store_string(q); f.close()
+	if get_parent() and get_parent().has_method("set_look"): get_parent().call_deferred("set_look", "workbench")
+
 func _pick_quality() -> String:
 	var q := OS.get_environment("CB_QUALITY")
 	if q in ["high", "medium", "low"]: return q
 	var method := RenderingServer.get_current_rendering_method()
 	if method == "gl_compatibility": return "low"
+	if FileAccess.file_exists(QUALITY_FILE):
+		var saved := FileAccess.get_file_as_string(QUALITY_FILE).strip_edges()
+		if saved in ["high", "medium", "low"]: return saved
 	var dev := RenderingServer.get_video_adapter_name().to_lower()
 	if dev.contains("nvidia") or dev.contains("rtx") or dev.contains("radeon rx"): return "high"
 	return "medium"
