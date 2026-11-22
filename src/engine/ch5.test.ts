@@ -208,3 +208,10 @@ describe('5-1 coach after a burn', () => {
     ok(e, 'addWire', [[10, 4], [10, 6], [16, 6]]); ok(e, 'addWire', [[14, 4], [14, 2]]); expect(q(e, 'coach').active).toBe('power');
   });
 });
+describe('a stuck transient ends', () => {
+  it('a random 5-1 board that made the 100 Hz transient crawl (found by the level search) returns a bench failure instead of running for minutes', () => {
+    const e = open('5-1'); const A: [string, unknown[]][] = [['placePart', ['tip120', null, null, 3, 12, 0, false]], ['placePart', ['2n2222a', null, null, 15, 8, 0, false]], ['placePart', ['res-cf', 47, null, 3, 8, 0, false]], ['rotatePart', ['p2']], ['addWire', [[[16, 2], [22, 2]]]], ['addWire', [[[2, 2], [7, 2], [7, 8]]]], ['placePart', ['1n4007', null, null, 9, 8, 0, false]], ['addWire', [[[2, 2], [5, 2], [5, 12]]]]];
+    for (const [n, a] of A) e.act(n, a);
+    const t0 = Date.now(); e.act('runBench', []); expect(Date.now() - t0).toBeLessThan(110000); expect(q(e, 'benchResult').pass).toBe(false);
+  }, 150000);
+});

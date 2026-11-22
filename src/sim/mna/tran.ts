@@ -264,6 +264,8 @@ export function tranAdvance(ws: TranWork, st: TranState, k: number, cb?: (s: Ste
   const xs = Float64Array.from(st.x);
   while (taken < k && !st.done) {
     if (st.t >= st.tStop) { st.done = true; break; }
+    // a circuit the stepper keeps rejecting (halve, accept a sliver, double, reject again) must end: more than 8 times the planned steps and 10000 more is a failure to converge, not a long run
+    if (st.stats.steps > 8 * (st.tStop / st.h0) + 10000) return { steps: taken, failure: { code: 'noConverge', key: 'tran.noConverge', vars: { t: st.t }, nodes: [], elements: [] } };
     const method: TranMethod = st.method === 'BE' ? 'BE' : st.method === 'TRAP' ? 'TRAP' : st.be > 0 ? 'BE' : 'TRAP';
     for (;;) {
       const nb = Math.min(nextBreakpoint(ws, st.t), st.tStop);
