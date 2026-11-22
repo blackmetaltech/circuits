@@ -145,10 +145,10 @@ func _drawer() -> void:
 	_drawer_box = VBoxContainer.new(); _drawer_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL; _drawer_box.add_theme_constant_override("separation", 4); sc.add_child(_drawer_box)
 	var last_kind := ""
 	for it in bench.drawer():
-		var kind := str(it.kind)
+		var kind := _kind_name(str(it.kind))
 		if kind != last_kind:
 			last_kind = kind
-			_lab(_drawer_box, _kind_name(kind), 15, DIM, f_semi)
+			_lab(_drawer_box, kind, 15, DIM, f_semi)
 		var row := Button.new(); row.alignment = HORIZONTAL_ALIGNMENT_LEFT; row.focus_mode = Control.FOCUS_ALL
 		row.text = "%s    %s" % [str(it.label), str(it.get("price_text", ""))]
 		row.tooltip_text = str(it.get("tag", ""))
@@ -163,6 +163,17 @@ func _drawer() -> void:
 		var item: Dictionary = it
 		row.pressed.connect(func(): bench.pick_part(item))
 		_drawer_box.add_child(row)
+
+## SI value text with 3 significant digits: 0.000072 V -> "72.0 µV", 0.0171478 A -> "17.1 mA".
+static func si(v: float, unit: String) -> String:
+	var a := absf(v)
+	var pre := [[1e3, "k"], [1.0, ""], [1e-3, "m"], [1e-6, "µ"]]
+	for e in pre:
+		if a >= float(e[0]) * 0.9995 or e[1] == "µ":
+			var x := v / float(e[0])
+			var d := 2 if absf(x) < 10.0 else (1 if absf(x) < 100.0 else 0)
+			return "%s %s%s" % [String.num(x, d), e[1], unit]
+	return "%s %s" % [String.num(v, 3), unit]
 
 func _kind_name(k: String) -> String:
 	return {"R": "RESISTORS", "D": "DIODES", "NPN": "TRANSISTORS", "PNP": "TRANSISTORS", "DARLINGTON": "TRANSISTORS", "NMOS": "MOSFETS", "C": "CAPACITORS", "CE": "ELECTROLYTICS", "LED": "LEDS", "Z": "ZENERS", "REG": "REGULATORS", "OPAMP": "OP-AMPS", "L": "INDUCTORS"}.get(k, k)
@@ -186,7 +197,7 @@ func _status_chip() -> void:
 	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 6); p.add_child(v)
 	_status = _lab(v, "", 18, TXT, f_mono)
 	_readout = _lab(v, "", 18, DIM, f_mono)
-	var pin := _btn(v, "Pin mode:  %s   (click the board)" % bench.pin_mode(), func(): bench.cycle_pin())
+	var pin := _btn(v, "Pin: %s   (click to switch)" % bench.pin_mode(), func(): bench.cycle_pin())
 	pin.visible = bench.mode == "job"
 	_lab(v, "Views  1 wiring  2 bench  3 scope  4 fan", 16, DIM, f_mono)
 
@@ -208,7 +219,9 @@ func _refresh_live() -> void:
 	var b = bench.backend
 	if _status: _status.text = "POWER %s    PIN %s" % ["ON " if b.powered else "OFF", bench.pin_mode()]
 	var fan_v: float = b.volt_at([16, 2]) - b.volt_at([22, 2])
-	if _readout: _readout.text = "Fan %s V    Pin %s" % [EngineBench._g(fan_v, 4) if b.powered else "--", (str(b.scope_view.get("text", "")) if b.powered and str(b.scope_view.get("text", "")) != "" else "--")]
+	var ipin: float = float(b.scope_view.get("value", 0.0)) / 1000.0
+	var has_i: bool = b.powered and str(b.scope_view.get("text", "")) != ""
+	if _readout: _readout.text = "Fan %s    Pin %s" % [si(fan_v, "V") if b.powered else "--", si(ipin, "A") if has_i else "--"]
 	var res: Dictionary = b.last_result
 	var specs := {}
 	for s in res.get("specs", []): specs[str(s.id)] = s
@@ -217,10 +230,10 @@ func _refresh_live() -> void:
 		var mark: Label = _spec_vals[id][0]; var val: Label = _spec_vals[id][1]
 		var live := ""
 		if b.powered:
-			if id == "fanhi" and bench.pin_mode() == "high": live = "%s V" % EngineBench._g(fan_v, 4)
-			if id == "fanlo" and bench.pin_mode() == "low": live = "%s V" % EngineBench._g(fan_v, 3)
-			if id == "ipin" and str(b.scope_view.get("text", "")) != "": live = str(b.scope_view.text)
-		if live == "" and meas.has(id): live = ("%s mA" % EngineBench._g(float(meas[id]) * 1000.0, 4)) if id == "ipin" else ("%s V" % EngineBench._g(float(meas[id]), 4))
+			if id == "fanhi" and bench.pin_mode() == "high": live = si(fan_v, "V")
+			if id == "fanlo" and bench.pin_mode() == "low": live = si(fan_v, "V")
+			if id == "ipin" and has_i: live = si(ipin, "A")
+		if live == "" and meas.has(id): live = si(float(meas[id]), "A" if id == "ipin" else "V")
 		val.text = live if live != "" else "—"
 		if specs.has(id):
 			var ok: bool = bool(specs[id].get("pass", false))

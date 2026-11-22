@@ -57,14 +57,14 @@ func build(gw: int, gh: int, conns: Array) -> void:
 		var p := pad_local(int(pad[0]), int(pad[1]))
 		var post := MeshKit.rounded_box(Vector3(0.0013, 0.012, 0.0013), 0.0002)
 		MeshKit.add(self, post, MeshKit.m("gold"), p + Vector3(0, 0.0065, 0))
-		var base := MeshKit.rounded_box(Vector3(0.005, 0.005, 0.005), 0.0004)
-		MeshKit.add(self, base, MeshKit.m("black_plastic"), p + Vector3(0, 0.0025, 0))
+		var base := MeshKit.rounded_box(Vector3(0.0045, 0.0035, 0.0045), 0.0005)
+		MeshKit.add(self, base, MeshKit.m("black_plastic"), p + Vector3(0, 0.00175, 0))
 		var col: Color = ROLE_COL.get(str(c.get("role", "")), Color(0.5, 0.5, 0.5))
-		var tab := MeshKit.rounded_box(Vector3(0.011, 0.0002, 0.0042), 0.0003)
+		var tab := MeshKit.rounded_box(Vector3(0.014, 0.0002, 0.0055), 0.0003)
 		var side := -1.0 if int(pad[0]) < w / 2 else 1.0
 		var tp := p + Vector3(side * 0.0028 + side * 0.0055 - side * 0.0028, 0.0001, -0.0046)
 		MeshKit.add(self, tab, MeshKit.mat(col, 0.6, 0.0, {"normal": 0.0}), tp)
-		MeshKit.label(self, str(c.id), 0.00005, tp + Vector3(0, 0.00015, 0), Color(0.96, 0.96, 0.94))
+		MeshKit.label(self, str(c.id), 0.00007, tp + Vector3(0, 0.00015, 0), Color(0.96, 0.96, 0.94))
 	_ring_mesh = TorusMesh.new(); _ring_mesh.inner_radius = 0.0018; _ring_mesh.outer_radius = 0.0026; _ring_mesh.rings = 24; _ring_mesh.ring_segments = 8
 	_hover = MeshKit.add(self, _ring_mesh, _glow(Color(0.91, 0.64, 0.24)), Vector3.ZERO)
 	_hover.visible = false; _hover.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

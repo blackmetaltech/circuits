@@ -205,7 +205,7 @@ func _lamp() -> void:
 	MeshKit.add(shade_node, shade, sm, Vector3(0, 0, -0.04), Vector3(-PI / 2, 0, 0))
 	var bulb := SphereMesh.new(); bulb.radius = 0.022; bulb.height = 0.044
 	MeshKit.add(shade_node, bulb, MeshKit.mat(Color(1, 0.9, 0.75), 0.3, 0.0, {"emission": Color(1.0, 0.82, 0.6), "emission_energy": 8.0}), Vector3(0, 0, -0.06))
-	lamp = SpotLight3D.new(); lamp.light_color = Color(1.0, 0.80, 0.58); lamp.light_energy = 9.0; lamp.spot_range = 1.6; lamp.spot_angle = 48.0; lamp.spot_angle_attenuation = 1.2
+	lamp = SpotLight3D.new(); lamp.light_color = Color(1.0, 0.80, 0.58); lamp.light_energy = 3.2; lamp.spot_range = 1.6; lamp.spot_angle = 52.0; lamp.spot_angle_attenuation = 1.2
 	lamp.shadow_enabled = true; lamp.light_size = 0.04 if quality == "high" else 0.0; lamp.shadow_blur = 1.5; lamp.light_volumetric_fog_energy = 0.6
 	shade_node.add_child(lamp); lamp.position = Vector3(0, 0, -0.07)
 	# a soft overall fill from the lamp bouncing off the wall
@@ -445,17 +445,17 @@ func _probes() -> void:
 		return
 	if probe_node == null:
 		probe_node = Node3D.new(); add_child(probe_node)
-		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0, 0.012, 0), Vector3(0, 0.075, -0.035)]), 0.0042, 14), MeshKit.mat(Color(0.32, 0.33, 0.35), 0.5))
+		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0, 0.012, 0), Vector3(0, 0.03, -0.065)]), 0.0030, 14), MeshKit.mat(Color(0.32, 0.33, 0.35), 0.5))
 		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0, 0.003, 0), Vector3(0, 0.013, 0)]), 0.0016, 10), MeshKit.mat(Color(0.25, 0.26, 0.28), 0.5))
 		var hook := PackedVector3Array()
 		for i in 10: hook.append(Vector3(0.0012 * sin(i * 0.6), 0.003 - i * 0.0004, 0.0012 * cos(i * 0.6) - 0.0012))
 		MeshKit.add(probe_node, MeshKit.tube(hook, 0.00035, 6), MeshKit.m("steel"))
-		var ring := TorusMesh.new(); ring.inner_radius = 0.004; ring.outer_radius = 0.0052
-		MeshKit.add(probe_node, ring, MeshKit.mat(Color(0.95, 0.8, 0.1), 0.4, 0.0, {"emission": Color(0.95, 0.8, 0.1), "emission_energy": 0.4}), Vector3(0, 0.07, -0.032), Vector3(0.45, 0, 0))
+		var ring := TorusMesh.new(); ring.inner_radius = 0.0029; ring.outer_radius = 0.0038
+		MeshKit.add(probe_node, ring, MeshKit.mat(Color(0.95, 0.8, 0.1), 0.4, 0.0, {"emission": Color(0.95, 0.8, 0.1), "emission_energy": 0.4}), Vector3(0, 0.028, -0.058), Vector3(1.3, 0, 0))
 	probe_node.visible = true
 	var top := board.pad_world(int(pad[0]), int(pad[1]))
 	probe_node.global_position = top
-	var from := top + Vector3(0, 0.075, -0.035)
+	var from := top + Vector3(0, 0.03, -0.065)
 	var to: Vector3 = (scope.global_position + Vector3(0.11, 0.03, 0.08)) if scope else Vector3(-0.2, 0.03, -0.17)
 	if probe_cable: probe_cable.queue_free()
 	probe_cable = MeshKit.add(self, MeshKit.tube(_catenary(from, to, 0.08), 0.0022, 8), MeshKit.mat(Color(0.12, 0.12, 0.13), 0.55))
@@ -576,7 +576,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 				if str(e.part) == str(data.uid) and e.get("failureId", null) != null: ex = backend._q("explain", [int(e.failureId)])
 			if ex is Dictionary:
 				var vars: Dictionary = ex.get("vars", {})
-				vce = float(vars.get("vce", 0.0)); vceo = float(vars.get("vceo", 0.0))
+				vce = float(vars.get("vPeak", vars.get("vce", 0.0))); vceo = float(vars.get("vceo", 0.0))
 			if vce > 0.0:
 				_call(scope, "show_capture", [vce, vceo, 0.3]); capture_until = Time.get_ticks_msec() / 1000.0 + 1e6
 			last_failure = {"title": _fail_title(str(data.get("kind", "")), vce), "text": str(data.get("text", "")), "uid": str(data.uid)}
@@ -596,16 +596,16 @@ func _fail_title(kind: String, vce: float) -> String:
 	return "A part burnt"
 
 func _smoke_at(p: Vector3) -> void:
-	var ps := GPUParticles3D.new(); ps.amount = 90; ps.lifetime = 3.5; ps.one_shot = false; ps.explosiveness = 0.25
+	var ps := GPUParticles3D.new(); ps.amount = 60; ps.lifetime = 3.0; ps.one_shot = false; ps.explosiveness = 0.25
 	var pm := ParticleProcessMaterial.new()
-	pm.direction = Vector3(0, 1, 0); pm.spread = 18.0; pm.initial_velocity_min = 0.02; pm.initial_velocity_max = 0.05; pm.gravity = Vector3(0.004, 0.025, -0.003)
+	pm.direction = Vector3(0, 1, 0); pm.spread = 18.0; pm.initial_velocity_min = 0.02; pm.initial_velocity_max = 0.05; pm.gravity = Vector3(0.002, 0.012, -0.002)
 	pm.scale_min = 0.6; pm.scale_max = 1.4
 	var sc := Curve.new(); sc.add_point(Vector2(0, 0.2)); sc.add_point(Vector2(1, 1.0)); var sct := CurveTexture.new(); sct.curve = sc; pm.scale_curve = sct
-	var g := Gradient.new(); g.set_color(0, Color(0.55, 0.52, 0.5, 0.0)); g.add_point(0.1, Color(0.5, 0.48, 0.46, 0.55)); g.set_color(1, Color(0.4, 0.4, 0.4, 0.0))
+	var g := Gradient.new(); g.set_color(0, Color(0.30, 0.29, 0.28, 0.0)); g.add_point(0.12, Color(0.34, 0.33, 0.32, 0.32)); g.set_color(1, Color(0.36, 0.36, 0.36, 0.0))
 	var gt := GradientTexture1D.new(); gt.gradient = g; pm.color_ramp = gt
 	pm.turbulence_enabled = true; pm.turbulence_noise_strength = 0.4; pm.turbulence_noise_scale = 2.0
 	ps.process_material = pm
-	var q := QuadMesh.new(); q.size = Vector2(0.03, 0.03)
+	var q := QuadMesh.new(); q.size = Vector2(0.018, 0.018)
 	var m := StandardMaterial3D.new(); m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA; m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES; m.vertex_color_use_as_albedo = true
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL; m.roughness = 1.0
 	var rg := Gradient.new(); rg.set_color(0, Color(1, 1, 1, 1)); rg.set_color(1, Color(1, 1, 1, 0))
