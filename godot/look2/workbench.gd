@@ -417,7 +417,7 @@ func drawer() -> Array:
 		var va: Dictionary = d.variants[0]
 		var pick: Array = [null] if vals.is_empty() else [vals[0], vals[vals.size() / 2]] if vals.size() > 1 else [vals[0]]
 		for v in pick:
-			out.append({"i": i, "partId": str(d.id), "value": v, "variant": str(va.id), "label": (NodeApi.format_value(float(v), str(d.kind)) if v != null else str(d.name)), "kind": str(d.kind), "footprint": fp, "price_text": str(va.get("priceText", "")), "tag": str(d.name) if v != null else "", "left": -1})
+			out.append({"i": i, "partId": str(d.id), "value": v, "variant": str(va.id), "label": ("%s  %s" % [NodeApi.format_value(float(v), str(d.kind)), str(d.name).get_slice(" ", 0).to_lower() if str(d.name).length() < 40 else ""]) if v != null else str(d.name), "kind": str(d.kind), "footprint": fp, "price_text": str(va.get("priceText", "")), "tag": str(d.name) if v != null else "", "left": -1})
 			i += 1
 	return out
 

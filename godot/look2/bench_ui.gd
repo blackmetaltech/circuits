@@ -22,7 +22,7 @@ var _drawer_box: VBoxContainer
 var _drawer_sig := ""
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT); mouse_filter = Control.MOUSE_FILTER_IGNORE
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); mouse_filter = Control.MOUSE_FILTER_IGNORE
 	f_sans = load("res://look2/assets/fonts/Inter-Regular.ttf"); f_semi = load("res://look2/assets/fonts/Inter-SemiBold.ttf"); f_mono = load("res://look2/assets/fonts/JetBrainsMono-Medium.ttf")
 	var th := Theme.new(); th.default_font = f_sans; th.default_font_size = 21; theme = th
 	bench.changed.connect(_rebuild)
@@ -82,11 +82,11 @@ var _readout: Label
 
 func _rebuild() -> void:
 	if _root: _root.queue_free()
-	_root = Control.new(); _root.set_anchors_preset(Control.PRESET_FULL_RECT); _root.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(_root)
+	_root = Control.new(); add_child(_root); _root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_spec_vals.clear(); _drawer_sig = ""
 	if bench.mode == "title": _title(); return
 	if schem:
-		var sv := SchematicView.new(); sv.bench = bench; sv.ui = self; sv.set_anchors_preset(Control.PRESET_FULL_RECT); _root.add_child(sv)
+		var sv := SchematicView.new(); sv.bench = bench; sv.ui = self; _root.add_child(sv); sv.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); sv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_job_card()
 	if bench.view == 1 or bench.tool == "place" or bench.mode == "free": _drawer()
 	_tools()
