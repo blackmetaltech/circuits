@@ -73,6 +73,8 @@ func _ready() -> void:
 	board_root = Node3D.new(); board_root.name = "board_root"; add_child(board_root)
 	cables_root = Node3D.new(); add_child(cables_root)
 	_instruments()
+	sort_box = SortBox.new(); add_child(sort_box); sort_box.position = SORT_BOX_AT; sort_box.rotation_degrees.y = 6.0; sort_box.visible = false
+	changed.connect(_refresh_tray)
 	ui = load("res://look2/bench_ui.gd").new(); ui.bench = self
 	var cl := CanvasLayer.new(); cl.add_child(ui); add_child(cl)
 	backend = EngineBench.new()
@@ -407,7 +409,7 @@ func _used_bounds() -> AABB:
 func set_view(v: int, snap := false) -> void:
 	view = v
 	match v:
-		1: g_tgt = board_centre() + Vector3(-0.03, 0.02, -0.03); g_yaw = deg_to_rad(4.0); g_pitch = deg_to_rad(-33.0); g_dist = 0.50   # higher horizon: pegboard and lamp in the top of the frame
+		1: g_tgt = board_centre() + Vector3(-0.055, 0.02, -0.02); g_yaw = deg_to_rad(4.0); g_pitch = deg_to_rad(-33.0); g_dist = 0.50   # higher horizon: pegboard and lamp in the top of the frame
 		5:
 			var bb := _used_bounds()
 			# the board sits above the tray: aim below its centre and pull back on narrow (16:10) windows
@@ -548,6 +550,7 @@ func _layout_for_ticket() -> void:
 	if mcu: mcu.visible = fan_job
 	if scope: scope.position = Vector3(-0.10, 0, -0.30) if fan_job else Vector3(0.0, 0, -0.29); scope.rotation_degrees.y = 6.0 if fan_job else 0.0
 	if fan: fan.position = Vector3(0.17, 0.0, -0.12)
+	if mcu: mcu.position = Vector3(-0.07, 0.003, 0.215); mcu.rotation_degrees.y = 0.0   # in front of the case; the sorting box stands at its left
 
 ## Drawer rows: the ticket's shoebox (job) or the whole catalogue (free bench), grouped by kind.
 func drawer() -> Array:
@@ -959,7 +962,12 @@ func _unhandled_input(e: InputEvent) -> void:
 	if mode == "title": return
 	if e is InputEventMouseButton:
 		var mb := e as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed: g_dist = clampf(g_dist * 0.9, 0.12, 1.6)
+		var over_tray := {} if not (mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]) else _tray_slot_hit(ray_hit(mb.position))
+		if not over_tray.is_empty():
+			if mb.pressed:
+				var fam: Dictionary = over_tray.fam
+				tray_step(_fam_key(fam), fam.items, tray_index(fam) + (1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else -1))
+		elif mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed: g_dist = clampf(g_dist * 0.9, 0.12, 1.6)
 		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed: g_dist = clampf(g_dist * 1.1, 0.12, 1.6)
 		elif mb.button_index == MOUSE_BUTTON_MIDDLE: _drag = "pan" if mb.pressed else ""
 		elif mb.button_index == MOUSE_BUTTON_RIGHT:
@@ -979,7 +987,16 @@ func _unhandled_input(e: InputEvent) -> void:
 			g_tgt += (-right * mm.relative.x + fwd * -mm.relative.y) * g_dist * 0.0015
 			g_tgt = g_tgt.clamp(Vector3(-0.8, 0.0, -0.4), Vector3(0.8, 0.4, 0.5))
 		_hover(mm.position)
-		if tool == "select" and _drag == "" and not case_closed(): _set_pick_hl(_pick_item(mm.position))
+		var hid := ray_hit(mm.position) if _drag == "" else ""
+		var tsl := _tray_slot_hit(hid)
+		if not tsl.is_empty():
+			var t2 := "%s %s: click picks it%s" % [str(tsl.fam.name), str(tsl.item.label).get_slice("  ", 0) if tsl.item.get("value", null) != null else "", ", wheel changes the value" if (tsl.fam.items as Array).size() > 1 else ""]
+			if t2 != hover_tip: hover_tip = t2; changed.emit()
+		elif hid == "psu_output" or hid == "psu_test" or hid == "tray_page":
+			var t3: String = {"psu_output": "OUTPUT: power on or off (Space)", "psu_test": "TEST: run the bench test (Enter)", "tray_page": "Next drawer of parts"}[hid]
+			if t3 != hover_tip: hover_tip = t3; changed.emit()
+		elif tool == "select" and _drag == "" and not case_closed(): _set_pick_hl(_pick_item(mm.position))
+		elif hover_tip != "" and _pick_hl.is_empty(): hover_tip = ""; changed.emit()
 	elif e is InputEventKey and e.pressed and not e.echo:
 		var k := e as InputEventKey
 		var kc: int = k.keycode if k.keycode != KEY_NONE else k.physical_keycode   # some X input tools send only the physical code
@@ -998,6 +1015,11 @@ func _unhandled_input(e: InputEvent) -> void:
 				if tool == "place": place_rot = (place_rot + 1) % 4; _hover(get_viewport().get_mouse_position())
 			KEY_O: open_case()
 			KEY_H: if backend.passed and not handed: hand_back()
+			KEY_BRACKETLEFT, KEY_BRACKETRIGHT:
+				if tool == "place":
+					for fam in tray_families():
+						if str(fam.items[0].partId) == str(place_item.get("partId", "")) and str(fam.items[0].variant) == str(place_item.get("variant", "")):
+							tray_step(_fam_key(fam), fam.items, tray_index(fam) + (1 if kc == KEY_BRACKETRIGHT else -1))
 			KEY_SPACE: toggle_power()
 			KEY_ENTER, KEY_KP_ENTER: run_test()
 			KEY_Z:
@@ -1117,6 +1139,43 @@ func _set_pick_hl(it: Dictionary) -> void:
 	changed.emit()
 var hover_tip := ""
 
+## ------------------------------------------------------------------------------------------------ the sorting box (the parts tray)
+
+const SORT_BOX_AT := Vector3(-0.205, 0.0, 0.125)   ## front left of the case, below the ticket at 1280x800
+var sort_box: SortBox
+var tray_idx := {}          ## family key -> value index shown in its compartment
+var _tray_sig := ""
+
+func _fam_key(fam: Dictionary) -> String: return str(fam.items[0].partId) + "|" + str(fam.items[0].variant)
+
+func _tray_default(items: Array) -> int:
+	for i in items.size(): if str(items[i].label).begins_with("220 "): return i
+	return items.size() / 2
+
+func tray_index(fam: Dictionary) -> int: return int(tray_idx.get(_fam_key(fam), _tray_default(fam.items)))
+
+## Step a family's value; if a part of that family is in hand, the part in hand changes too.
+func tray_step(fam_key: String, items: Array, i: int) -> void:
+	tray_idx[fam_key] = posmod(i, items.size())
+	var it: Dictionary = items[tray_idx[fam_key]]
+	if tool == "place" and str(place_item.get("partId", "")) == str(it.partId) and str(place_item.get("variant", "")) == str(it.variant): pick_part(it)
+	else: changed.emit()
+
+func _refresh_tray() -> void:
+	if sort_box == null: return
+	var show := mode == "free" or (mode == "job" and not case_closed() and not handed)
+	sort_box.visible = show
+	if not show: return
+	var fams := tray_families()
+	var sig := "%d|%s|%s|%s|%s" % [sort_box.page, str(fams.map(func(f): return _fam_key(f) + str(tray_index(f)) + str(f.items.size()))), str(place_item.get("partId", "")), str(place_item.get("value", "")), tool]
+	if sig == _tray_sig: return
+	_tray_sig = sig
+	sort_box.fill(fams, tray_index, place_item if tool == "place" else {})
+
+func _tray_slot_hit(id: String) -> Dictionary:
+	var s := SortBox.slot_of(id)
+	return sort_box.slots[s] if sort_box and s >= 0 and s < sort_box.slots.size() else {}
+
 func _hit(id: String) -> void:
 	match id:
 		"psu_output": toggle_power()
@@ -1127,6 +1186,11 @@ func _hit(id: String) -> void:
 			backend.set_dial(order[(order.find(backend.dial) + 1) % order.size()])
 		"scope_run": paused = not paused; backend.set_running(not paused)
 		"fan": set_view(4)
+		"psu_test": run_test()
+		"tray_page": sort_box.page = (sort_box.page + 1) % maxi(1, sort_box.pages)
+		_:
+			var sl := _tray_slot_hit(id)
+			if not sl.is_empty(): pick_part(sl.item)
 	changed.emit()
 
 func toggle_power() -> void:

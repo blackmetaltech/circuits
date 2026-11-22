@@ -59,6 +59,11 @@ func _init() -> void:
 	_led_light.position = Vector3(bx, by, Z0 + 0.02); add_child(_led_light)
 	MeshKit.label(self, "OUTPUT", 0.00006, Vector3(bx, by - 0.0215, Z0 + 0.0001), Color(0.6, 0.62, 0.64), false, Vector3.ZERO)
 	Instruments3D.hit(self, "psu_output", Vector3(0.036, 0.03, 0.02), Vector3(bx, by, Z0 + 0.008))
+	# TEST key (phase C: the bench test lives on the supply, beside OUTPUT)
+	var tx := -0.0205; var ty := CY - 0.0525   # between OUTPUT and the red post
+	MeshKit.add(self, MeshKit.rounded_box(Vector3(0.0185, 0.0110, 0.006), 0.0025, 2), MeshKit.mat(Color(0.62, 0.38, 0.08), 0.45, 0.0, {"normal": 0.0}), Vector3(tx, ty, Z0 + 0.003))
+	MeshKit.label(self, "TEST", 0.00006, Vector3(tx, ty, Z0 + 0.0062), Color(0.08, 0.06, 0.03), false, Vector3.ZERO)
+	Instruments3D.hit(self, "psu_test", Vector3(0.019, 0.014, 0.02), Vector3(tx, ty, Z0 + 0.008))
 	# binding posts: red +, black -
 	for k in 2:
 		var px := 0.0 if k == 0 else 0.035

@@ -208,8 +208,7 @@ func _rebuild() -> void:
 	if schem:
 		var sv := SchematicView.new(); sv.bench = bench; sv.ui = self; _root.add_child(sv); sv.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); sv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_job_card()
-	if not _focus_view(): _drawer()
-	_tools()
+	_tools()   # the parts tray is a sorting box on the bench and power/test are keys on the bench supply (phase C): no 2D panels
 
 ## Views 3 (scope) and 4 (device) are for looking: the tray goes away and the ticket folds to its heading, so nothing covers them.
 func _focus_view() -> bool: return bench.view in [3, 4] and bench.mode == "job"
@@ -243,9 +242,10 @@ func _title() -> void:
 func _job_card() -> void:
 	var t: Dictionary = bench.backend.ticket
 	if bench.mode == "free":
-		var fv := _plate(Vector2(28, 28), "Free bench")
-		_lab(fv, "Open testbed", 28, TXT, f_semi)
-		_lab(fv, "Pick any part from the tray. Space powers the bench.\nScope RUN key pauses time; full stop steps it.", 18, Color(0.76, 0.78, 0.80), f_sans, true)
+		var fv := _paper(Vector2(30, 26), 430)
+		_ink(fv, "FREE BENCH", 17, RED_INK, f_type, false)
+		_ink(fv, "Open testbed", 28, INK, f_semi, false)
+		_ink(fv, "Pick any part from the sorting box. OUTPUT on the bench supply powers the board. The drawer tab shows more parts.", 17, INK, f_sans)
 		var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 8); fv.add_child(row)
 		for i in 3:
 			var slot := i + 1
@@ -255,9 +255,7 @@ func _job_card() -> void:
 			var slot := i + 1
 			var k := _key(row2, "Load %d" % slot, func(): bench.load_build(slot), "", false, false)
 			k.disabled = not bench.has_build(slot)
-		_status = _lcd(fv, "", 20)
-		_meter = _lcd(fv, "", 20, Color(0.62, 0.95, 0.66))
-		if bench.note != "": _lab(fv, bench.note, 18, TXT, f_sans, true)
+		if bench.note != "": _ink(fv, bench.note, 17, Color(0.14, 0.20, 0.42), f_sans)
 		return
 	var v := _paper(Vector2(30, 26), 430)
 	var head := HBoxContainer.new(); v.add_child(head)
@@ -311,8 +309,6 @@ func _job_card() -> void:
 		if not short: _ink(v, "Ctrl+Z puts in a fresh part with the power off.", 15, Color(0.30, 0.28, 0.25), f_sans)
 	elif bench.note != "":
 		_ink(v, bench.note, 17, Color(0.14, 0.20, 0.42), f_sans)
-	# the bench control plate: power key with its lamp, the ticket's switches, and the readings in LCD windows
-	_control_plate(Vector2(30, 0), v.get_parent())
 
 ## Exam tickets: predict first. One field per prediction on the paper ticket; "Lock in" sends them to the engine, and the band
 ## and the test cell's volts stay hidden until every one is in (Noor could not find where to answer 1-5).
@@ -470,6 +466,14 @@ func _tools() -> void:
 	var v := _plate(Vector2(560, 0), "")
 	var pc: Control = v.get_parent()
 	var h := HBoxContainer.new(); h.add_theme_constant_override("separation", 8); v.add_child(h)
+	_key(h, "Power", func(): bench.toggle_power(), "Space", false, bench.backend.powered)
+	if bench.mode == "job": _key(h, "Test", func(): bench.run_test(), "Enter", false)
+	for sl in bench.backend.selectors:
+		if str(sl.id) == "pin": continue   # the pin switch is on the microcontroller board (click it); not a rail key
+		var opts: Array = sl.options
+		for i in opts.size():
+			var idx := i; var sid := str(sl.id)
+			_key(h, str(opts[i]), func(): bench.set_selector(sid, idx), "", false, int(sl.get("index", 0)) == i)
 	_key(h, "Select", func(): bench.set_tool("select"), "Esc", false, bench.tool == "select")
 	_key(h, "Wire", func(): bench.set_tool("wire"), "W", false, bench.tool == "wire")
 	_key(h, "Scope probe", func(): bench.set_tool("probe"), "P", false, bench.tool == "probe")
@@ -477,16 +481,18 @@ func _tools() -> void:
 	_key(h, "Undo", func(): bench.undo(), "Ctrl+Z")
 	_key(h, "Schematic", func(): toggle_schematic(), "Tab", false, schem)
 	_key(h, "Menu", func(): bench.back_to_title())
-	var vk := _eng(h, bench.hover_tip if bench.hover_tip != "" else "Views 1-5", 14); vk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	if bench.hover_tip != "": vk.add_theme_color_override("font_color", AMBER)
+	var tip: String = bench.hover_tip
+	if tip == "" and bench.backend.dial != "OFF": tip = "Meter  " + bench.meter_text()
+	var vk := _eng(h, tip if tip != "" else "Views 1-5", 14); vk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if tip != "": vk.add_theme_color_override("font_color", AMBER)
+	_tip_label = vk
 	pc.position.x = (1920 - pc.get_combined_minimum_size().x) * 0.5
 	pc.position.y = _canvas_h() - 16.0 - pc.get_combined_minimum_size().y
-	# a narrow window: the rail reaches under the bench control plate, so the plate stands on top of the rail instead
-	if _ctl_plate and is_instance_valid(_ctl_plate) and pc.position.x < _ctl_plate.position.x + _ctl_plate.get_combined_minimum_size().x + 12.0:
-		_ctl_plate.position.y = pc.position.y - 14.0 - _ctl_plate.get_combined_minimum_size().y
 
+var _tip_label: Label
 func _refresh_live() -> void:
 	var b = bench.backend
+	if _tip_label and is_instance_valid(_tip_label) and bench.hover_tip == "" and b.dial != "OFF": _tip_label.text = ("Meter  " + bench.meter_text()).to_upper()
 	if _status and is_instance_valid(_status): _status.text = "POWER %s" % ("ON" if b.powered else "OFF")
 	if _readout and is_instance_valid(_readout): _readout.text = bench.readout_text()
 	if _meter and is_instance_valid(_meter): _meter.text = "METER  " + bench.meter_text()

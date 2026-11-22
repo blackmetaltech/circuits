@@ -51,9 +51,20 @@ func _run() -> void:
 		for i in (LevelBurnt.get(id, []) as Array):
 			var n = wb.parts3d.get(i, null)
 			ok(n != null and n._smoked, "%s arrived burnt and is drawn charred (bench_q smoked: %s)" % [i, str((wb.backend.bench_q.get("parts", []) as Array).filter(func(q): return bool(q.get("smoked", false))).map(func(q): return q.uid))])
+		if id == "1-1":
+			# phase C: the tray is a sorting box on the bench and the bench test is a key on the supply (no 2D tray, no control plate)
+			await _frames(3)
+			ok(wb.sort_box.visible and wb.sort_box.slots.size() == 2, "the sorting box stands on the bench with the ticket's two parts (%d)" % wb.sort_box.slots.size())
+			var texts := []
+			for b in wb.find_children("*", "Button", true, false): texts.append((b as Button).text)
+			ok(not texts.any(func(t): return str(t).begins_with("Bench test")) and wb.find_children("*", "ScrollContainer", true, false).is_empty(), "no 2D tray and no bench control plate on screen")
+			wb._hit("tray:1"); await _frames(2)
+			ok(wb.tool == "place" and str(wb.place_item.get("partId", "")) == str(wb.sort_box.slots[1].item.partId), "a click on a compartment picks its part (%s)" % str(wb.place_item.get("partId", "")))
+			wb.set_tool("select")
 		if repair:
-			wb.toggle_power(); await _step(0.4)
-			wb.run_test(); await _frames(3)
+			wb._hit("psu_output"); await _step(0.4)
+			ok(wb.backend.powered, "OUTPUT on the bench supply powers the bench")
+			wb._hit("psu_test"); await _frames(3)
 			ok(not wb.backend.passed, "the bench fails the device as it came in")
 			if wb.backend.powered: wb.toggle_power()
 		if id == "1-5":
@@ -76,7 +87,7 @@ func _run() -> void:
 			# the tray arrows change the part in hand, not only the label (Noor placed a 6 ohm while the tile showed 2 ohm)
 			var fam: Array = wb.drawer().filter(func(d): return str(d.partId) == "res-exact")
 			wb.pick_part(fam[1]); await _frames(2)
-			wb.ui._fam_step("res-exact", fam, 2); await _frames(2)
+			wb.tray_step("res-exact|ideal", fam, 2); await _frames(2)
 			ok(float(wb.place_item.get("value", 0)) == float(fam[2].value), "stepping the tray changes the resistor in hand (%s ohm)" % str(wb.place_item.get("value")))
 			wb.set_tool("select")
 		ok(wb.backend.build_ref(id), "the reference build goes on (the old work is cleared first)")
