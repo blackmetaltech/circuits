@@ -106,5 +106,5 @@ Asset gaps: CC0 props (hand tools, a mug model, cable ties), a smoke flipbook, a
 - **Repairs (decision 10b):** `LevelDef.fault` is the device as it arrives (1-1, 1-2, 1-3, 1-4, 5-1). Each device has its own case colours, brand and model plate. Burnt parts are billed and come out of the pay.
 - **Textures:** mipmaps and VRAM compression on every 3D texture (normal maps RGTC), import files tracked, a test guards it; roughness limiter on; AA per tier.
 - **Speed:** exact bench memo and a missing-part precondition: checkLevel 5-1 111 s to 6.5 s, 4-4 132 s to 61 s, reports byte-identical; vitest 399 s on 4 workers.
-- **Measured:** RTX 4090 high 6.4 ms (phase A figure, the scene grew a little since and was not re-measured); Ryzen 9900X iGPU low tier, Compatibility, 1280x800: 15.0 ms avg, 18.9 ms p95 (was 9.3 ms in round 2 before FXAA and the new panels).
+- **Measured:** RTX 4090 high, 1920x1080: chapter 1 powered 5.4 to 5.8 ms, 5-1 unpowered 7.5 ms, 5-1 switching at 100 Hz 23 to 28 ms (the live simulation; the GPU share is about 4 ms); Ryzen 9900X iGPU low tier, Compatibility, 1280x800: 15.0 ms avg, 18.9 ms p95 (was 9.3 ms in round 2 before FXAA and the new panels).
 - **Clips:** `docs/readme/wb-*.gif`, made with Godot's movie maker on the 4090 at a fixed 30 fps (the clip hooks CB_POWER_AT, CB_OPEN_AT, CB_VIEW_AT set the moments).
