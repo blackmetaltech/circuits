@@ -8,8 +8,8 @@ import { checkRatings, ratingProbes } from '../ratings';
 import { refuseSmoked } from '../smoke';
 import type { SupplyDef } from '../../data/levels/types';
 import { runBench } from './run';
-import { BENCH_FLOP_LIMIT } from './cost';
-import type { BenchFailure, BenchSpec } from './types';
+import { BENCH_FLOP_LIMIT, conditionOf, estimateCost } from './cost';
+import type { BenchFailure, BenchOptions, BenchSpec } from './types';
 
 export interface TicketBenchInput {
   board: RigBoard;
@@ -74,6 +74,7 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
       if (probes.some((pr) => rig0.resolve(pr) === null)) { missingAny = true; break; }
     }
   }
+  let spentFlops = 0;
   for (const cond of plan.conditions) {
     const overrides: RigOverride[] = [...inp.hidden, ...(cond.set ?? [])];
     const ta = cond.ambientC ?? plan.ambientC;
@@ -119,10 +120,15 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
     full.push({ kind: 'rating', id: 'ratings', probes });
     const psIds = rig.sources.filter((id) => ckt.elementIndex[id] !== undefined);
     for (const id of psIds) full.push({ kind: 'level', id: `__ps:${id}`, probe: `p(${id})`, lo: -BIG, hi: BIG });
-    const r = runBench(ckt, full, {
+    const opts: BenchOptions = {
       h: plan.h, settle: plan.settle, window: plan.window, period: plan.period, measurePeriods: plan.measurePeriods, maxPeriods: plan.maxPeriods,
-      ic: plan.ic, ratings: (w) => { const rr = checkRatings(rig, rig.rated, w, { ta, tjLimit: plan.tjLimit }); for (const c of rr.failures) causes.push({ key: c.key, vars: { ...c.vars, cond: cond.id } }); return { violations: rr.violations, smoked: rr.smoked }; }, maxFlops: inp.flopLimit ?? BENCH_FLOP_LIMIT, condition: cond.id,
-    });
+      ic: plan.ic, ratings: (w) => { const rr = checkRatings(rig, rig.rated, w, { ta, tjLimit: plan.tjLimit }); for (const c of rr.failures) causes.push({ key: c.key, vars: { ...c.vars, cond: cond.id } }); return { violations: rr.violations, smoked: rr.smoked }; }, condition: cond.id,
+    };
+    // the flop limit is for the whole bench (DESIGN 3.11), not each condition (Tomasz, 11-23): a condition may use only what is left
+    const condFlops = estimateCost(ckt, [conditionOf(full, opts)]).flops;
+    opts.maxFlops = (inp.flopLimit ?? BENCH_FLOP_LIMIT) - spentFlops;
+    spentFlops += condFlops;
+    const r = runBench(ckt, full, opts);
     conds++;
     // A voltage probe on an island that never reaches the GND connector can only read leakage (a few microvolts): say the real problem instead of a meaningless number.
     const islandNodes = new Set<string>(); for (const i of rig0.circuit?.issues ?? []) if (i.code === 'island') for (const n of i.nodes) islandNodes.add(n.toLowerCase());

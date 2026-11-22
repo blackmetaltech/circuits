@@ -50,7 +50,8 @@ function run(ckt: Circuit, b: Board): void {
   if (!r.ok) throw new Error(`${b.id}: tran failed`);
   if (b.ac) { const ac = makeAc(ckt); bode(ac, b.ac.out, b.ac.inp, logFreqs(b.ac.f0, b.ac.f1, b.ac.perDecade)); }
 }
-/** Lower quartile of the timings (ms) after three warm-up runs, repeating until at least `reps` runs AND 250 ms of measured time.
+/** Lower quartile of the timings (ms) after three warm-up runs, repeating until at least `reps` runs and 250 ms of measured time
+ *  or 400 runs, whichever comes first (a sub-millisecond board stops at 400 runs, about 40 ms; Tomasz, 11-23).
  *  A 2-3 ms board timed five times was all JIT and GC noise (rc-step read 0.26 on CI and 0.86 here on the same code);
  *  more samples of the same run measure the same thing more precisely. The 2x tolerance is unchanged. */
 function timeMs(ckt: Circuit, b: Board, reps: number): number {
