@@ -268,7 +268,11 @@ func _job_card() -> void:
 		if not bench.last_failure.is_empty(): _ink(v, str(bench.last_failure.get("title", "")), 18, RED_INK, f_semi)
 		_ink(v, "Key 1 returns to the work view.", 15, Color(0.30, 0.28, 0.25), f_sans)
 		return
-	_ink(v, "%s: \"%s\"" % [str(t.get("customer", "")), str(t.get("ask", ""))], 21, Color(0.14, 0.20, 0.42), f_hand)
+	if bool(t.get("eb", false)) and not bench.case_closed():
+		# an exam is a textbook problem: the paper must say the network to predict (Noor could not tell what to build)
+		_ink(v, str(t.get("brief", "")).replace(" Predict first, then build and probe.", ""), 17, INK, f_sans)
+	else:
+		_ink(v, "%s: \"%s\"" % [str(t.get("customer", "")), str(t.get("ask", ""))], 21, Color(0.14, 0.20, 0.42), f_hand)
 	if bench.case_closed() and not bench.handed:
 		_ink(v, bench.arrival_line(), 18, INK, f_sans)
 		_key(v, "Open the case", func(): bench.open_case(), "O", true)
@@ -327,8 +331,8 @@ func _predict_slip(v: Control, t: Dictionary) -> void:
 		_ink(v, str(pr.name).trim_prefix("Your prediction: "), 16, INK, f_sans)
 		var le := LineEdit.new(); le.placeholder_text = "a number in %s" % str(pr.get("unit", "")) if str(pr.get("unit", "")) != "" else "a number"
 		le.add_theme_font_override("font", f_type); le.add_theme_font_size_override("font_size", 18)
-		le.add_theme_color_override("font_color", INK); le.add_theme_color_override("font_placeholder_color", Color(0.45, 0.42, 0.38))
-		var sb := StyleBoxFlat.new(); sb.bg_color = Color(0.90, 0.86, 0.76); sb.border_color = Color(0.3, 0.27, 0.22); sb.set_border_width_all(1); sb.set_content_margin_all(6)
+		le.add_theme_color_override("font_color", INK); le.add_theme_color_override("font_placeholder_color", Color(0.38, 0.35, 0.31))
+		var sb := StyleBoxFlat.new(); sb.bg_color = Color(1.0, 0.99, 0.95); sb.border_color = Color(0.25, 0.22, 0.18); sb.set_border_width_all(2); sb.set_content_margin_all(6)
 		le.add_theme_stylebox_override("normal", sb); le.add_theme_stylebox_override("focus", sb)
 		if pr.get("entered", null) != null: le.text = str(pr.entered)
 		v.add_child(le); fields.append([str(pr.id), le])
@@ -409,7 +413,7 @@ func _drawer() -> void:
 		var tname := _tile_name(str(f.name), str(it.partId))
 		var vr := str(it.get("variant", ""))
 		if str(it.partId).begins_with("res") and vr.ends_with("W"): tname += " " + {"0.25W": "¼ W", "0.5W": "½ W"}.get(vr, vr.trim_suffix("W") + " W")   # two 47 Ω tiles were told apart only by the schematic
-		var nm := _lab(col, tname, 15, TXT, f_semi); nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; nm.custom_minimum_size = Vector2(130, 0); nm.clip_text = true
+		var nm := _lab(col, tname, 15, TXT, f_semi); nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; nm.custom_minimum_size = Vector2(130, 0); nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # wraps instead of clipping ("esistor ¼ W")
 		var under := HBoxContainer.new(); under.alignment = BoxContainer.ALIGNMENT_CENTER; col.add_child(under)
 		var val_txt := str(it.label).get_slice("  ", 0).replace(" ", "") if it.value != null else str(it.get("price_text", ""))
 		if items.size() > 1:

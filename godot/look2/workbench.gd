@@ -847,6 +847,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 			else: note = "Bench test passed again. This job is already paid."   # was "Paid : the $4.00 fee" with the amount missing
 			last_failure = {}; changed.emit()
 		"power", "lock", "wired", "placed", "deleted":
+			# an edit or a power change makes the last bench verdict stale: clear it so the ticket never shows an old failure (Noor, 1-5)
+			if name in ["wired", "placed", "deleted"] and not last_failure.is_empty(): last_failure = {}; capture_until = 0.0   # not on power: a burn explanation stays readable after switching off
 			changed.emit()
 
 func _fail_title(kind: String, vce: float) -> String:
@@ -903,7 +905,7 @@ func ray_pad(mp: Vector2) -> Vector2i:
 	# wires and leads go onto legs: a player aims at the leg as drawn, which stands above its pad. If the board-level pad is empty
 	# and the ray at leg height lands on a pad with a leg or a wire end, take that one (Noor: clicks landed "one row short").
 	if tool in ["wire", "red", "black", "probe"] and not _pad_used(pad):
-		for h in [0.003, 0.006]:
+		for h in [0.003, 0.006, 0.010, 0.014]:
 			var hit2 = _plane_at(h).intersects_ray(o, d)
 			if hit2 == null: continue
 			var pad2: Vector2i = board.pad_at_world(hit2 - board.global_transform.basis.y.normalized() * h)
@@ -1088,8 +1090,9 @@ func _pick_item(mp: Vector2) -> Dictionary:
 				var a := Vector2(float(pins[i][0]), float(pins[i][1])); var b := Vector2(float(pins[mini(i + 1, pins.size() - 1)][0]), float(pins[mini(i + 1, pins.size() - 1)][1]))
 				var d := q.distance_to(Geometry2D.get_closest_point_to_segment(q, a, b))
 				if d < bd: bd = d; best = {"kind": "part", "id": str(p.uid), "label": str(p.get("label", p.partId))}
-	if not best.is_empty(): return best
-	bd = 0.45
+	# a wire beside a part wins when the cursor is nearer the wire (Noor: right-click on a wire next to a resistor removed the resistor)
+	var part_d := bd
+	bd = minf(0.45, part_d - 0.05) if not best.is_empty() else 0.45
 	for w in backend.wires:
 		if bool(w.get("fixed", false)): continue
 		var path: Array = w.path
