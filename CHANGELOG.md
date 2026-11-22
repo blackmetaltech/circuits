@@ -22,6 +22,8 @@ Chapter 5 (five tickets) and the fixes from the 0.1 play-test and screenshot rev
 ### Fixed
 - After a burn and an undo the coach points at what limits the current (ticket 1-1: the resistor) instead of the power switch; after a 5-1 burn it points at the flyback diode. `burned` is a coach condition.
 - A fast press-move-release in the shoebox always places the part: the press now finds its own row (it used to rely on an earlier motion event) and a single motion sample that leaves the box lifts the part even when it is steeper than the scroll rule.
+- The headless smoke check (`CB_SMOKE=1`) waits by wall clock for the engine (up to 30 s), stops the engine before quitting and has a 90 s hard stop. The exported 0.2.0 build smoke-runs in about 2 s here (also with six busy loops and piped output), so no hang was reproduced; what could hang before was waiting a fixed number of frames, which headless runs unthrottled.
+- A bench or live transient that keeps rejecting steps now ends in a convergence failure (a random 5-1 board made the 100 Hz transient crawl for minutes in the level search).
 - The "burned" coach line names a voltage spike or heat as well as current for transistors and FETs.
 - The 1-2 coach step is shorter so no step needs more than a handheld slip can hold.
 

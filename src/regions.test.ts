@@ -45,7 +45,7 @@ describe('region packs of CIRCUITS', () => {
     expect(g.data.examBridge.set).toBe('global');
     expect(g.data.prices).toBe(PRICES_GLOBAL_CENTS);
     const names = CUSTOMERS.map((c) => g.strings[`customer.${c}`]);
-    expect(names).toEqual(['Lio', 'Ash', 'Mr. Brook', 'Bo', 'Kaya', 'Sami', 'Mrs. Dale', 'Iris', 'Juno']);
+    expect(names).toEqual(['Lio', 'Ash', 'Mr. Brook', 'Bo', 'Kaya', 'Sami', 'Mrs. Dale', 'Iris', 'Juno', 'Kit', 'Tess', 'Dev']);
   });
   it('in: rupees with Indian grouping, 230 V 50 Hz, its own names; na: 120 V 60 Hz, US$', () => {
     const n = REGIONS.get('in'), a = REGIONS.get('na');
