@@ -193,6 +193,8 @@ func _run() -> void:
 	_ctrl_z()
 	ok(bk.smoked.is_empty() and sc.top.toast.contains("Fresh part"), "Ctrl+Z after a burn swaps in a fresh LED (%s)" % sc.top.toast)
 	ok(not bk.powered and sc.top.toast.contains("power is off"), "and the power is off, so nothing re-burns by itself")
+	var cvu: Dictionary = bk.coach_view()
+	ok(str(cvu.steps[cvu.cur].id) == "undo-smoke" and str(cvu.steps[cvu.cur].target) == "box:res-cf", "after the burn and the undo the coach points at the resistor, not the power switch (%s)" % str(cvu.steps[cvu.cur].id))
 	_clock(1.0); evlog.clear(); _clock(1.0)
 	ok(bk.smoked.is_empty() and not evlog.has("smoked") and not str(sc.top.toast).contains("Burned again"), "no 'Burned again' fires while the power is off (%s)" % sc.top.toast.left(30))
 	bk.set_power(true); _clock(0.5)   # burn it again: the SECOND burn gets the worked formula

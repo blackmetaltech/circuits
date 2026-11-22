@@ -71,6 +71,13 @@ describe('1-1 Torch', () => {
     ok(e, 'power', true); ok(e, 'advance', 3); c = q(e, 'coach'); expect(c.active).toBe('undo-smoke'); expect(c.anchor).toMatchObject({ target: 'bin', partId: 'res-cf' });
     expect(c.steps.length).toBe(7); expect(c.total).toBe(7);
   });
+  it('after a burn and an undo the coach still points at the resistor, never back at the power switch (playtest 0.1)', () => {
+    const e = open('1-1');
+    ok(e, 'placePart', 'led-red-5mm', null, '5mm', 4, 5, 0, false); ok(e, 'addWire', [[2, 2], [2, 5], [4, 5]]); ok(e, 'addWire', [[6, 5], [6, 2], [8, 2]]);
+    ok(e, 'power', true); const smoked = burn(e); expect(smoked.length).toBeGreaterThan(0);
+    ok(e, 'replaceSmoked', smoked[0]); ok(e, 'power', false);          // the player swaps the burned part (the undo of a burn)
+    const c = q(e, 'coach'); expect(c.active).not.toBe('power-on'); expect(c.anchor).toMatchObject({ target: 'bin', partId: 'res-cf' });
+  });
 });
 
 // ---------------------------------------------------------------- 1-2
@@ -118,7 +125,7 @@ describe('1-3 Hot Resistor', () => {
   it('one 22 ohm 1/4 W gives the right voltage but 0.61 W in a 0.25 W part: it glows, then smokes', () => {
     const e = build(22, '0.25W'); ok(e, 'power', true); ok(e, 'advance', 1);
     const f1 = q(e, 'liveFrame'); const r = f1.parts.find((p: any) => p.uid === 'p1'); expect(r.ratio).toBeGreaterThan(2.3); expect(r.ratio).toBeLessThan(2.6); expect(['warm', 'hot']).toContain(r.state);
-    const smoked = burn(e); expect(smoked).toEqual(['p1']);
+    ok(e, 'power', true); const smoked = burn(e); expect(smoked).toEqual(['p1']);
     const f2 = q(e, 'liveFrame'); expect(f2.events).toMatchObject([{ part: 'p1', kind: 'smoke', key: 'smoke.resistor' }]);
     const b = bench(e); expect(b.pass).toBe(false);
     const e2 = build(22, '0.25W'); const b2 = bench(e2); expect(b2.pass).toBe(false);

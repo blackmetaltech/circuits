@@ -101,7 +101,7 @@ export type CoachAnchor =
 /**
  * One coach step (DESIGN §7.1). Steps advance on ENGINE conditions, never timers. A step is the active one when `when` holds (default: always) and
  * `done` does not, scanning in order. Conditions are `&`-joined atoms, `!` negates: `always`, `part:<partId>` (one is on the board), `wired` (every placed
- * part has every pin on a node shared with another pin or a connector), `powered`, `flowing` (powered and solved), `smoked`, `benched` (a bench run is on record),
+ * part has every pin on a node shared with another pin or a connector), `powered`, `flowing` (powered and solved), `smoked`, `burned` (a part has smoked at least once on this ticket), `benched` (a bench run is on record),
  * `passed` (the last bench passed), `failed`, `probing` (a scope probe or the DMM is attached), `measured` (the DMM shows a reading), `joined:<connector>` (a part leg is on that connector's node), `probed` (the meter leads or scope clip have been on the board at least once), `predicted` (every prediction is entered), `answered` (every answer of `answers` is entered), `jockey` (a fixed slide wire's jockey has been set), `shorted` (the DMM is on its mA range with both leads placed), `supplyset` (the bench supply voltage was changed from the ticket's start value).
  */
 export interface CoachStep {

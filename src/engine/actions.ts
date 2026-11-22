@@ -535,7 +535,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
         const uid = typeof ev.vars.part === 'string' ? ev.vars.part : '';
         if (uid) (live.notes ??= {})[uid] = explainedText({ key: ev.key, vars: ev.vars }, tk, def, s.progress.failureLog.filter((x) => x.ticket === tk.id).length + rec.attempts);
         pushFailure(s.progress, { id, ticket: tk.id, tick: s.tick, kind: ev.key, vars: ev.vars });
-        rec.smokes += 1;
+        rec.smokes += 1; tk.burned = true;
         s.log.push({ tick: s.tick, level: 'bad', text: say(ev.key, nameVars(tk.board, ev.vars)) });
       }
       if (out.events.length > 0) return ok(say('live.smoked', { part: out.events.map((e) => partName(tk.board, e.part)).join(', '), text: say(out.events[0]!.key, nameVars(tk.board, out.events[0]!.vars)) }), { frames: out.frames, smoked: out.events.map((e) => e.part), status: live.status });
@@ -553,7 +553,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       tk.lastBench = result;
       const rec = (s.progress.tickets[tk.id] ??= newTicketProgress());
       rec.attempts += 1;
-      for (const uid of result.smoked) if (!tk.live.smoked.includes(uid)) { tk.live.smoked.push(uid); delete tk.live.temps[uid]; rec.smokes += 1; }
+      for (const uid of result.smoked) if (!tk.live.smoked.includes(uid)) { tk.live.smoked.push(uid); delete tk.live.temps[uid]; rec.smokes += 1; tk.burned = true; }
       for (const c of causes) if (c.key.startsWith('smoke.') && typeof c.vars.part === 'string' && !tk.live.notes?.[c.vars.part]) (tk.live.notes ??= {})[c.vars.part] = explainedText({ key: c.key, vars: c.vars as Record<string, string | number> }, tk, def, s.progress.failureLog.filter((x) => x.ticket === tk.id).length + rec.attempts - 1);
       for (const c of causes) if (c.key.startsWith('smoke.')) {
         const id = (s.progress.failureLog[s.progress.failureLog.length - 1]?.id ?? 0) + 1;

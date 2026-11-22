@@ -53,8 +53,8 @@ export const L1_1: LevelDef = {
   coach: [
     { id: 'place-led', key: 'coach.1-1.s1', anchor: { target: 'bin', partId: 'led-red-5mm' }, done: 'part:led-red-5mm' },
     { id: 'wire-led', key: 'coach.1-1.s2', anchor: { target: 'part', partId: 'led-red-5mm', pin: 'A' }, done: 'wired' },
-    { id: 'power-on', key: 'coach.1-1.s3', anchor: { target: 'power' }, done: 'powered', when: '!part:res-cf&!smoked' },
-    { id: 'undo-smoke', key: 'coach.1-1.s4a', anchor: { target: 'bin', partId: 'res-cf' }, done: 'part:res-cf', when: 'smoked' },
+    { id: 'power-on', key: 'coach.1-1.s3', anchor: { target: 'power' }, done: 'powered', when: '!part:res-cf&!smoked&!burned' },
+    { id: 'undo-smoke', key: 'coach.1-1.s4a', anchor: { target: 'bin', partId: 'res-cf' }, done: 'part:res-cf', when: 'smoked|burned' },
     { id: 'see-dots', key: 'coach.1-1.s4b', anchor: { target: 'part', partId: 'led-red-5mm', pin: 'A' }, done: 'probing', when: 'part:res-cf&wired&!smoked', optional: true },
     { id: 'run-bench', key: 'coach.1-1.s5', anchor: { target: 'bench' }, done: 'benched', when: 'part:res-cf&wired' },
     { id: 'done', key: 'coach.1-1.s6', anchor: { target: 'chit' }, done: '!passed', when: 'passed' },

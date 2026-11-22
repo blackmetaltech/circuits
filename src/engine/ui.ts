@@ -71,6 +71,7 @@ export function evalCond(expr: string | undefined, s: NodeState, tk: TicketState
     else if (atom === 'powered') v = tk.live.powered;
     else if (atom === 'flowing') v = tk.live.powered && tk.live.x.length > 0;
     else if (atom === 'smoked') v = tk.live.smoked.length > 0;
+    else if (atom === 'burned') v = tk.burned === true;
     else if (atom === 'benched') v = tk.lastBench !== null;
     else if (atom === 'passed') v = !!tk.lastBench?.pass;
     else if (atom === 'failed') v = !!tk.lastBench && !tk.lastBench.pass;

@@ -165,6 +165,8 @@ export interface TicketState {
   lastBench: BenchResult | null;
   /** The player has put the meter leads on the board (both) or clipped the scope at least once on this ticket. */
   probed?: boolean;
+  /** A part has smoked at least once on this ticket (live or bench): the coach keeps pointing at what limits the current after an undo, instead of back at the power switch. */
+  burned?: boolean;
   tolerance: { done: number; total: number; failures: number } | null;
   /** Chapter 4: the position of each live switch (mains tolerance, load) by selector id; absent = the ticket's initial positions. */
   sel?: Record<string, number>;
