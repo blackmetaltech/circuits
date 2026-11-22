@@ -522,6 +522,7 @@ func _draw_parts(ci: Control) -> void:
 		if b.size.y > b.size.x * 1.4: pos = Vector2(b.end.x + 4.0, b.get_center().y + fs * 0.35)
 		else: pos = Vector2(b.get_center().x - wtx * 0.5, b.position.y - 4.0)
 		if pt.kind == "LED" and (pt.pin_labels as Array).size() == pt.pins.size() and pt.pins.size() == 2: _led_pin_tags(ci, pt)
+		elif pt.kind in ["NPN", "PNP", "NMOS", "DARLINGTON"] and (pt.pin_labels as Array).size() == pt.pins.size() and pt.pins.size() == 3: _trans_pin_tags(ci, pt)
 		if show_ratings and live and m.ratings.has(pt.uid):
 			var r: Dictionary = m.ratings[pt.uid]; var worst := 0.0
 			for k in r: worst = maxf(worst, float(r[k]))
@@ -594,6 +595,20 @@ func _led_pin_tags(ci: Control, pt: Dictionary) -> void:
 		var c := pp + dir * (p * 0.62 + (box.x * 0.5 if absf(dir.x) > 0.5 else box.y * 0.5))   # beside the leg, away from the dome
 		var r := Rect2(c - box * 0.5, box)
 		var col := Color("#ff9d8c") if i == 0 else Color("#8fbfff")
+		PartArt.rrect(ci, r, 6.0, Color(0.04, 0.05, 0.07, 0.88))
+		ci.draw_string(f, r.position + Vector2(5.0, fs + 1.0), raw, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, col)
+
+## A transistor's legs are not guessable: C, B, E (or D, G, S) is written under each leg, in its own colour, so a newcomer knows which leg is which.
+func _trans_pin_tags(ci: Control, pt: Dictionary) -> void:
+	var fs := maxi(int(clampf(p * 0.5, 13.0, 20.0)), SS.min_font)
+	var f := ThemeDB.fallback_font
+	for i in 3:
+		var raw := str(pt.pin_labels[i]).replace("-", "\u2212")
+		var pp := _px(pt.pins[i])
+		var tw := f.get_string_size(raw, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
+		var box := Vector2(tw + 10.0, fs + 6.0)
+		var r := Rect2(pp + Vector2(-box.x * 0.5, p * 0.55), box)
+		var col := Color("#8fbfff") if raw in ["C", "D"] else (Color("#ffe08a") if raw in ["B", "G"] else Color("#ff9d8c"))
 		PartArt.rrect(ci, r, 6.0, Color(0.04, 0.05, 0.07, 0.88))
 		ci.draw_string(f, r.position + Vector2(5.0, fs + 1.0), raw, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, col)
 

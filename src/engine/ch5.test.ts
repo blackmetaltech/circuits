@@ -200,3 +200,11 @@ describe('5-4 scope', () => {
     const sc = q(e, 'scope'); expect(sc.trace.complete).toBe(true); expect(Math.max(...sc.trace.v)).toBeGreaterThan(0.9); expect(Math.min(...sc.trace.v)).toBeLessThan(-0.9); expect(sc.lock).toBe(true);
   });
 });
+describe('5-1 coach after a burn', () => {
+  it('after the fan burns the transistor, Wren points at the diode (not the power switch), and goes on to power once it is placed', () => {
+    const e = mk('5-1', (p, w) => { p.splice(2, 1); w.splice(5, 2); }); ok(e, 'setSelector', 'pin', 2); ok(e, 'power', true); const sm = burn(e); expect(sm.length).toBe(1); ok(e, 'replaceSmoked', sm[0]); ok(e, 'power', false);
+    const c = q(e, 'coach'); expect(c.active).toBe('diode-burn'); expect(c.anchor).toMatchObject({ target: 'bin', partId: '1n4007' }); expect(c.text).toMatch(/Put a diode across the fan/);
+    ok(e, 'placePart', '1n4007', null, 'DO41', 10, 4, 0, false); expect(q(e, 'coach').active).toBe('wire');   // (the new diode is not wired yet)
+    ok(e, 'addWire', [[10, 4], [10, 6], [16, 6]]); ok(e, 'addWire', [[14, 4], [14, 2]]); expect(q(e, 'coach').active).toBe('power');
+  });
+});

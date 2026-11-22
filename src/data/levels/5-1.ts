@@ -75,6 +75,7 @@ export const L5_1: LevelDef = {
     { id: 'base', key: 'coach.5-1.s2', anchor: { target: 'connector', connector: 'PIN' }, done: 'part:res-cf', when: 'part:2n2222a|part:bc547b|part:tip120' },
     { id: 'wire', key: 'coach.5-1.s3', anchor: { target: 'connector', connector: 'COLL' }, done: 'wired&joined:COLL&joined:PIN', when: 'part:res-cf' },
     { id: 'diode', key: 'coach.5-1.s3b', anchor: { target: 'bin', partId: '1n4007' }, done: 'part:1n4007|part:1n4148', when: 'wired&joined:PIN', optional: true },
+    { id: 'diode-burn', key: 'coach.5-1.s3c', anchor: { target: 'bin', partId: '1n4007' }, done: 'part:1n4007|part:1n4148', when: 'burned&wired&joined:PIN' },
     { id: 'power', key: 'coach.5-1.s4', anchor: { target: 'power' }, done: 'powered', when: 'wired&joined:PIN' },
     { id: 'run-bench', key: 'coach.5-1.s5', anchor: { target: 'bench' }, done: 'benched', when: 'wired&joined:PIN' },
     { id: 'done', key: 'coach.5-1.s6', anchor: { target: 'chit' }, done: '!passed', when: 'passed' },

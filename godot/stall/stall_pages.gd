@@ -401,13 +401,17 @@ func _notebook(a: float) -> void:
 	S.rr(self, eq, 6, Color(S.INK, 0.07)); S.rr_line(self, eq, 6, Color(S.INK, 0.35), 2.0)
 	S.text(self, S.mono(), str(e.eq), eq.position + Vector2(24, 44), 36, S.INK)
 	S.text(self, f, str(e.body), rp + Vector2(0, 214), 24, Color(S.INK, 0.9), HORIZONTAL_ALIGNMENT_LEFT, half - 120)
-	var tab_dy := minf(66.0, (r.size.y - 130.0) / float(maxi(CoachData.CODEX.size(), 1)))
-	for i in CoachData.CODEX.size():   # index tabs down the right edge (they squeeze together as the notebook fills up)
-		var tr := Rect2(r.end.x - 22, r.position.y + 60 + i * tab_dy, 44, minf(56.0, tab_dy - 4.0))
+	var n_tabs := CoachData.CODEX.size()
+	var vis_tabs := mini(n_tabs, 26)   # a window of the index tabs that follows the open page (40 pages do not fit side by side), so every number stays readable
+	var first_tab := clampi(codex_i - vis_tabs / 2, 0, n_tabs - vis_tabs)
+	var tab_dy := minf(66.0, (r.size.y - 130.0) / float(maxi(vis_tabs, 1)))
+	for k in vis_tabs:   # index tabs down the right edge
+		var i := first_tab + k
+		var tr := Rect2(r.end.x - 22, r.position.y + 60 + k * tab_dy, 44, minf(56.0, tab_dy - 2.0))
 		var hv := _btn(tr, "codex", str(i))
 		var cur2 := i == codex_i
 		S.rr(self, tr, 8, [Color("#d9663f"), Color("#e0b43f"), Color("#4f9a6a"), Color("#4a7fb5"), Color("#9a5fb0")][i % 5].lightened(0.1 if hv or cur2 else -0.1))
-		S.text(self, f, str(i + 1), tr.position + Vector2(24, tr.size.y * 0.5 + 9.0), 24 if tr.size.y > 40.0 else 20, Color("#fff8e0"))
+		S.text(self, f, str(i + 1), tr.position + Vector2(24, tr.size.y * 0.5 + 8.0), 24 if tr.size.y > 40.0 else 20, Color("#fff8e0"))
 	# footer buttons, handwritten
 	var fy := r.end.y - 58.0
 	var items := [["close", "back to the bench", 0.0], ["goto:map", "ticket pages", 0.0], ["goto:title", "title", 0.0], ["settings", "settings", 0.0]]

@@ -599,6 +599,21 @@ func _gadget(g: Vector2) -> void:
 			for i in 9: draw_line(g + Vector2(-30, -58 + i * 6), g + Vector2(-6, -56 + i * 6), Color("#c47a2a"), 3.5)
 			draw_line(g + Vector2(30, -60), g + Vector2(16, -8 if not ok else -30), Color("#b8bcc4"), 5.0); draw_circle(g + Vector2(16, -8 if not ok else -30), 5, Color("#d9b24a"))
 			if ok: S.glow(self, g + Vector2(-18, -30), 50.0, Color(1, 0.6, 0.25, 0.35))
+		"wallwart":   # a plug-in adapter brick with its two pins; the lamp is green when the job is right
+			S.rr(self, Rect2(g.x - 34, g.y - 66, 68, 62), 8, Color("#2a2c31")); draw_rect(Rect2(g.x - 14, g.y - 82, 6, 18), Color("#c9ced4"), true); draw_rect(Rect2(g.x + 8, g.y - 82, 6, 18), Color("#c9ced4"), true)
+			S.text(self, S.mono(), "12V", g + Vector2(-18, -30), 16, Color("#cfd6dc")); draw_circle(g + Vector2(22, -50), 5, Color("#4ad06a") if ok else Color("#2a5a38"))
+		"radio":   # a pocket radio: speaker grille, dial and an aerial
+			S.rr(self, Rect2(g.x - 44, g.y - 56, 88, 54), 8, Color("#8a4a2a")); draw_line(g + Vector2(30, -56), g + Vector2(52, -92), Color("#c9ced4"), 3.0)
+			for i in 5: draw_line(g + Vector2(-34, -46 + i * 7), g + Vector2(-8, -46 + i * 7), Color("#3a2014"), 3.0)
+			draw_circle(g + Vector2(22, -28), 12, Color("#e8e0c8")); draw_line(g + Vector2(22, -28), g + Vector2(30, -36) if ok else g + Vector2(14, -34), Color("#d23a2e"), 3.0)
+			if ok: for i in 3: draw_arc(g + Vector2(54, -86), 8.0 + i * 8.0, -0.9, 0.9, 8, Color(1, 1, 1, 0.5 - i * 0.12), 2.5)
+		"printer":   # a boxy 3D printer: frame, nozzle and a little print
+			draw_rect(Rect2(g.x - 40, g.y - 70, 6, 70), Color("#9aa0a8"), true); draw_rect(Rect2(g.x + 34, g.y - 70, 6, 70), Color("#9aa0a8"), true); draw_rect(Rect2(g.x - 40, g.y - 70, 80, 6), Color("#9aa0a8"), true)
+			S.rr(self, Rect2(g.x - 12, g.y - 60, 24, 14), 3, Color("#d9663f")); draw_line(g + Vector2(0, -46), g + Vector2(0, -34), Color("#c9ced4"), 3.0)
+			S.rr(self, Rect2(g.x - 36, g.y - 10, 72, 10), 2, Color("#3a3d44")); if ok: S.rr(self, Rect2(g.x - 14, g.y - 30, 28, 20), 2, Color("#5fb3d9"))
+		"bench":   # a bench supply: a panel with its red readout
+			S.rr(self, Rect2(g.x - 44, g.y - 54, 88, 50), 6, Color("#2e3238")); S.rr(self, Rect2(g.x - 36, g.y - 46, 50, 22), 3, Color("#150808")); S.text(self, S.mono(), "3.3", g + Vector2(-32, -29), 18, Color("#ff5a3a") if ok else Color("#6a2a20"))
+			draw_circle(g + Vector2(28, -34), 6, Color("#e0453a")); draw_circle(g + Vector2(28, -14), 6, Color("#2a2d33"))
 		"fan":   # a 12 V fan in a square frame: the blades turn when the job is right
 			S.rr(self, Rect2(g.x - 40, g.y - 76, 80, 80), 8, Color("#23262c")); draw_circle(g + Vector2(0, -36), 33, Color("#14161a"))
 			var ang := t * 9.0 if ok else 0.4

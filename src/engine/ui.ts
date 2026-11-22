@@ -308,7 +308,7 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       if (tk.live.smoked.length > 0 && !tk.lastBench?.pass && !ownBurnStep) {
         const names = partNames(tk.board), burnt = tk.live.smoked.map((u) => names[u] ?? t('name.part.some')).join(' and ');
         const pd = tk.board.parts.find((p) => p.uid === tk.live.smoked[0]), d = pd ? getDef(pd.partId) : undefined;
-        const text = t(d?.kind === 'CE' ? 'coach.burned.cap' : 'coach.burned', { part: burnt, Part: capFirst(burnt) });
+        const text = t(d?.kind === 'CE' ? 'coach.burned.cap' : d?.kind === 'NPN' || d?.kind === 'NMOS' || d?.kind === 'DARLINGTON' ? 'coach.burned.semi' : 'coach.burned', { part: burnt, Part: capFirst(burnt) });
         const anchor = pd && d ? { target: 'part', partId: pd.partId, uid: pd.uid, pin: d.pins[0], pad: pinPads(pd, d)[0], name: t(d.nameKey) } : { target: 'bench' };
         if (act) act.active = false;
         return { ...base, steps: [{ id: 'burned', text, done: false, shown: true, anchor, active: true, optional: false }, ...rows], active: 'burned', text, anchor };
