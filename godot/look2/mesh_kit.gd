@@ -24,6 +24,8 @@ static func noise_rough() -> Texture2D:
 	if _noise_rough == null:
 		var n := FastNoiseLite.new(); n.frequency = 0.05; n.fractal_octaves = 4
 		var t := NoiseTexture2D.new(); t.noise = n; t.width = 256; t.height = 256; t.seamless = true
+		var ramp := Gradient.new(); ramp.set_color(0, Color(0.78, 0.78, 0.78)); ramp.set_color(1, Color(1.0, 1.0, 1.0))
+		t.color_ramp = ramp   # the texture MULTIPLIES roughness: keep it in 0.78..1 or matte surfaces get mirror patches
 		_noise_rough = t
 	return _noise_rough
 
