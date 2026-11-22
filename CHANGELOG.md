@@ -2,6 +2,34 @@
 
 All notable changes to CIRCUITS (called NODE until v0.1.0). The release workflow publishes the section whose heading contains `[x.y.z]`.
 
+## [0.2.0] - 2026-11-22 · "Switches & Gain"
+Chapter 5 (five tickets) and the fixes from the 0.1 play-test and screenshot review. Saves from 0.1.0 load unchanged (chapter 5 is simply unlocked by chapter 4).
+
+### Added
+- Chapter 5 "Switches & Gain", 23 tickets in all: 5-1 Fan Driver (a 5 V pin drives a 12 V fan through a transistor: forced gain, base resistor, the turn-off kick and the flyback diode), 5-2 3.3 V Gate (a MOSFET lighting a 12 V strip; the bench runs the threshold at its minimum, typical and maximum, then a reset with the pin floating), 5-3 Gate Builder (a NAND from diodes and one transistor, with real 0.4 V logic lows, fan-out and a 1 mA sink), 5-4 Synth Preamp (a common-emitter stage, gain 8.5 to 11 at transistor gains of 100, 200 and 300), 5-5 EB: CE Amplifier (predict IB, IC, VCE and the gain, then build it; the slip works the card out, checks the real junction with the engine's own Ebers-Moll law and swaps beta for 300).
+- Engine: a driven pin source (`SupplyDef` kind `pin`: level, output resistance, 100 Hz switching, a sine), tolerance conditions (`*tol`: Vt, beta at their datasheet minimum, typical and maximum), per-condition specs (`BenchPlan.only`) with the live switches knowing which condition they stand for, a winding resistance on the inductor (the fan), the textbook NPN, the LED strip and amplifier-input fixtures. A voltage kick on a transistor that was conducting a sample before is a failure that burns it.
+- Plain-words explainers with the engine's own arithmetic for every designed failure of chapter 5 (first miss the cause, repeat the working); eight Codex pages (a transistor as a switch first); a 40-page notebook with a sliding index window.
+- Front end: the fan (blades turn with the winding current), the LED strip, TO-220 transistors and FETs, C / B / E legs written under every transistor, customers' gadgets for chapters 4 and 5, the CE exam figure, a larger hand-drawn sketch and the star total on the chapter page.
+- Tests: `src/engine/ch5.test.ts` (31), `godot/tests/ch5_engine_flow.gd` (46 checks through the stall UI), `godot/tests/drag_flow.gd` (one-frame drags), layout_flow now also audits the notebook's ticket cards, the customer and every coach slip; docs/API-CH5.md; chapter 5 screens in docs/screens/ch5.
+
+### Changed
+- The customer is fully readable (face and the paper or gadget in the hands) at 1920x1080 and 1280x800 and clear of every control.
+- Map page ticket cards are 16 px or more with no overlap (the "locked" tag has its own corner); the chapter page's left side holds Wren's note, a large sketch of the chapter's idea, the star key and the stars earned.
+- The coach slip never covers the perfboard: a long step writes on a slightly wider paper, then in a smaller hand (never under the text floor); a handheld slip sits lower.
+- The scope's lead cables lie under the ticket chit instead of across its text.
+- Version shown on the title: v0.2.0.
+
+### Fixed
+- After a burn and an undo the coach points at what limits the current (ticket 1-1: the resistor) instead of the power switch; after a 5-1 burn it points at the flyback diode. `burned` is a coach condition.
+- A fast press-move-release in the shoebox always places the part: the press now finds its own row (it used to rely on an earlier motion event) and a single motion sample that leaves the box lifts the part even when it is steeper than the scroll rule.
+- The "burned" coach line names a voltage spike or heat as well as current for transistors and FETs.
+- The 1-2 coach step is shorter so no step needs more than a handheld slip can hold.
+
+### Known gaps
+- Phone layout, a physical gamepad, a human listening to the audio, and Windows and macOS builds were not checked. The chapter 5 parts 2N2222A and BC547B are unverified catalogue rows (the manufacturer's site refuses scripted fetches), listed with the other campaign blockers.
+- 5-4's THD is checked by the formal bench only (the scope's LOCK uses the gain). A notebook with 40 Codex pages shows 26 index tabs at a time.
+- The three-star tolerance run on build tickets is still not built.
+
 ## [0.1.0] - 2026-11-22 · "Four chapters on Lantern Lane"
 The first release: the stall, the circuit engine and chapters 1 to 4 (18 tickets). The game was called NODE until this release.
 

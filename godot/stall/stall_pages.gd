@@ -168,7 +168,7 @@ func _title() -> void:
 		S.pin(self, q.position + Vector2(18, 16), Color("#cfa13a")); S.pin(self, q.position + Vector2(q.size.x - 18, 16), Color("#cfa13a"))
 		if hv: S.rr_line(self, q.grow(4), 12, Color("#ffd98a", 0.85), 3.0)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	var ver := "v%s" % str(ProjectSettings.get_setting("application/config/version", "0.1.0"))   # the version, from the project (one place)
+	var ver := "v%s" % str(ProjectSettings.get_setting("application/config/version", "0.2.0"))   # the version, from the project (one place)
 	S.text(self, f, ver, Vector2(w - 24.0 - S.tw(f, ver, 20), h - 24), 20, Color(1, 0.9, 0.7, 0.55))
 	if cute:   # Rezzy peeks in from the corner so Cute mode says "yes" on the title too
 		S.text(self, f, "~ Rezzy is on shift ~", Vector2(24, h - 24), 20, Color(1, 0.9, 0.7, 0.55))
