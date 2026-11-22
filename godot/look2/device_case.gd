@@ -9,6 +9,7 @@ signal state_changed(state: String)
 var state := "closed"
 var lid: Node3D
 var tag: Node3D
+var tag_string: Node3D
 var _lid_closed := Transform3D()
 var _lid_open := Transform3D()
 var size := Vector3(0.16, 0.03, 0.12)
@@ -75,10 +76,12 @@ func build(inner: Vector2, ticket_id: String, title: String, customer: String) -
 	MeshKit.label(tag, "from %s" % customer, 0.00009, Vector3(0.0, 0.0006, 0.011), Color(0.10, 0.10, 0.10), true)
 	var a0 := tag.position + Vector3(0.027, 0.001, -0.016).rotated(Vector3.UP, tag.rotation.y)
 	var str_pts := PackedVector3Array([a0, Vector3(-size.x * 0.5 - 0.006, -0.012, size.z * 0.5 - 0.02), Vector3(-size.x * 0.5 + 0.002, 0.004, size.z * 0.5 - 0.012)])
-	MeshKit.add(self, MeshKit.tube(MeshKit.round_corners(str_pts, 0.01), 0.0004, 5), MeshKit.mat(Color(0.7, 0.66, 0.55), 0.9))
+	tag_string = MeshKit.add(self, MeshKit.tube(MeshKit.round_corners(str_pts, 0.01), 0.0004, 5), MeshKit.mat(Color(0.7, 0.66, 0.55), 0.9))
 
 func set_state(s: String, animate := true) -> void:
 	state = s
+	if tag: tag.visible = s != "open"
+	if tag_string: tag_string.visible = s != "open"   # the tag tells the arrival; on the bench the paper ticket says it (Dagny: two papers was clutter)
 	var target := _lid_open if s == "open" else _lid_closed
 	if not animate or not is_inside_tree():
 		lid.transform = target

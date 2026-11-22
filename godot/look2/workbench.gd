@@ -797,6 +797,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 		"smoked":
 			var n: Part3D = parts3d.get(str(data.uid), null)
 			if n: _smoke_at(n.global_transform * n._centre())
+			var b = backend._q("bench")   # the burn bill changes the moment a part burns: show it now, not at the next edit
+			if b is Dictionary: backend.bench_q = b
 			var vce := 0.0; var vceo := 0.0
 			var ex = null
 			for e in backend.frame.get("events", []):
