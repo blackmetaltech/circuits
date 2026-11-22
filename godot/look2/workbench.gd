@@ -394,10 +394,12 @@ func _used_bounds() -> AABB:
 func set_view(v: int, snap := false) -> void:
 	view = v
 	match v:
-		1: g_tgt = board_centre() + Vector3(-0.03, 0.0, -0.045); g_yaw = deg_to_rad(4.0); g_pitch = deg_to_rad(-38.0); g_dist = 0.56
+		1: g_tgt = board_centre() + Vector3(-0.03, 0.0, -0.01); g_yaw = deg_to_rad(4.0); g_pitch = deg_to_rad(-42.0); g_dist = 0.48
 		5:
 			var bb := _used_bounds()
-			g_tgt = bb.get_center() + Vector3(-0.022, 0.0, 0.004); g_yaw = 0.0; g_pitch = deg_to_rad(-62.0); g_dist = clampf(bb.size.length() * 2.3, 0.2, 0.31)
+			# the board sits above the tray: aim below its centre and pull back on narrow (16:10) windows
+			var asp := get_viewport().get_visible_rect().size.aspect()
+			g_tgt = bb.get_center() + Vector3(-0.022, 0.0, 0.032); g_yaw = 0.0; g_pitch = deg_to_rad(-62.0); g_dist = clampf(bb.size.length() * 2.6 * (1.78 / maxf(asp, 1.2)), 0.22, 0.42)
 		2: g_tgt = Vector3(0.02, 0.04, -0.03); g_yaw = deg_to_rad(16.0); g_pitch = deg_to_rad(-26.0); g_dist = 0.92
 		3: g_tgt = (scope.global_position + Vector3(-0.06, 0.075, 0)) if scope else Vector3(-0.3, 0.08, -0.25); g_yaw = deg_to_rad(14.0); g_pitch = deg_to_rad(-10.0); g_dist = 0.48
 		4: g_tgt = (fan.global_position + Vector3(0, 0.07, 0)) if fan else Vector3(0.03, 0.07, -0.24); g_yaw = deg_to_rad(-20.0); g_pitch = deg_to_rad(-14.0); g_dist = 0.42
@@ -735,6 +737,8 @@ func _live(dt: float) -> void:
 		n.set_heat(backend._heat(p))
 		n.set_smoked(bool(p.get("smoked", false)) or backend.smoked.has(str(p.uid)))
 		if p.has("led"): n.set_led(float(p.led.get("mA", 0.0)), float(p.led.get("bloom", 0.0)))
+	if not backend.powered:   # power off: every LED goes dark (the frame stops listing them, which left the last glow on)
+		for u in parts3d: (parts3d[u] as Part3D).set_led(0.0, 0.0)
 	# the engine's board list says which parts are burnt (a repair's arrived-burnt part stays charred with the power off)
 	var burnt := {}
 	for bp in backend.bench_q.get("parts", []): if bool(bp.get("smoked", false)): burnt[str(bp.uid)] = true
@@ -926,9 +930,11 @@ func _unhandled_input(e: InputEvent) -> void:
 			g_tgt += (-right * mm.relative.x + fwd * -mm.relative.y) * g_dist * 0.0015
 			g_tgt = g_tgt.clamp(Vector3(-0.8, 0.0, -0.4), Vector3(0.8, 0.4, 0.5))
 		_hover(mm.position)
+		if tool == "select" and _drag == "" and not case_closed(): _set_pick_hl(_pick_item(mm.position))
 	elif e is InputEventKey and e.pressed and not e.echo:
 		var k := e as InputEventKey
-		match k.keycode:
+		var kc: int = k.keycode if k.keycode != KEY_NONE else k.physical_keycode   # some X input tools send only the physical code
+		match kc:
 			KEY_1: set_view(1)
 			KEY_2: set_view(2)
 			KEY_3: set_view(3)
@@ -1001,15 +1007,53 @@ func _left(pressed: bool, mp: Vector2) -> void:
 
 func _right_click(mp: Vector2) -> void:
 	if tool != "select": set_tool("select"); return
-	var pad := ray_pad(mp)
-	if pad.x < 0: return
+	var it := _pick_item(mp)
+	if it.is_empty(): return
+	if it.kind == "part":
+		var nm := str(it.label)
+		backend.delete_part(str(it.id)); note = "Removed the %s." % nm
+	else:
+		backend.delete_wire(str(it.id)); note = "Removed a wire."
+	_set_pick_hl({}); changed.emit()
+
+## What the pointer is over on the board, in board pad units: the nearest removable part (its body runs between its first and
+## last leg) within 0.7 pad, else the nearest wire within 0.45 pad. Used for right-click removal and its hover highlight.
+func _pick_item(mp: Vector2) -> Dictionary:
+	if board == null: return {}
+	var hit = board.plane_world().intersects_ray(cam.project_ray_origin(mp), cam.project_ray_normal(mp))
+	if hit == null: return {}
+	var l: Vector3 = board.to_local(hit)
+	var q := Vector2(l.x / P, l.z / P)
+	var best := {}; var bd := 0.7
 	for p in backend.parts:
-		for q in p.pins:
-			if int(q[0]) == pad.x and int(q[1]) == pad.y and not bool(p.fixed): backend.delete_part(str(p.uid)); changed.emit(); return
+		if bool(p.get("fixed", false)): continue
+		var pins: Array = p.pins
+		for i in maxi(1, pins.size() - 1):
+			var a := Vector2(float(pins[i][0]), float(pins[i][1])); var b := Vector2(float(pins[mini(i + 1, pins.size() - 1)][0]), float(pins[mini(i + 1, pins.size() - 1)][1]))
+			var d := q.distance_to(Geometry2D.get_closest_point_to_segment(q, a, b))
+			if d < bd: bd = d; best = {"kind": "part", "id": str(p.uid), "label": str(p.get("label", p.partId))}
+	if not best.is_empty(): return best
+	bd = 0.45
 	for w in backend.wires:
 		if bool(w.get("fixed", false)): continue
-		for q in w.path:
-			if int(q[0]) == pad.x and int(q[1]) == pad.y: backend.delete_wire(str(w.wid)); changed.emit(); return
+		var path: Array = w.path
+		for i in path.size() - 1:
+			var d2 := q.distance_to(Geometry2D.get_closest_point_to_segment(q, Vector2(float(path[i][0]), float(path[i][1])), Vector2(float(path[i + 1][0]), float(path[i + 1][1]))))
+			if d2 < bd: bd = d2; best = {"kind": "wire", "id": str(w.wid)}
+	return best
+
+var _pick_hl := {}
+func _set_pick_hl(it: Dictionary) -> void:
+	if str(it.get("id", "")) == str(_pick_hl.get("id", "")): return
+	for d in [_pick_hl, it]:
+		if d.is_empty(): continue
+		var on: bool = d == it
+		var n = parts3d.get(str(d.id), null) if d.kind == "part" else wires3d.get(str(d.id), null)
+		if n and is_instance_valid(n) and n.has_method("set_highlight"): n.set_highlight(on)
+	_pick_hl = it
+	hover_tip = ("%s: right-click removes it" % str(it.get("label", "wire"))) if not it.is_empty() else ""
+	changed.emit()
+var hover_tip := ""
 
 func _hit(id: String) -> void:
 	match id:
@@ -1038,6 +1082,8 @@ func set_pin(i: int) -> void:
 	backend.set_selector("pin", i); changed.emit()
 
 func run_test() -> void:
+	if backend.passed and mode == "job":
+		note = "Already passed and paid. Close up and hand it back."; changed.emit(); return
 	backend.run_bench(); changed.emit()
 
 func undo() -> void:

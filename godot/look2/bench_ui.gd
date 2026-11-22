@@ -216,7 +216,8 @@ func _focus_view() -> bool: return bench.view in [3, 4] and bench.mode == "job"
 
 func _title() -> void:
 	_fonts2()
-	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 12); v.position = Vector2(110, 500); v.custom_minimum_size = Vector2(600, 0); _root.add_child(v)
+	var v := _plate(Vector2(90, 380), "")   # a faceplate behind the menu so its text never sits on the lit mat
+	v.add_theme_constant_override("separation", 12); v.custom_minimum_size = Vector2(620, 0)
 	_lab(v, "CIRCUITS", 44, TXT, f_engr)
 	_lab(v, "A repair bench. Customers bring broken devices; you probe, fix, and hand them back.", 22, Color(0.80, 0.82, 0.84), f_sans, true)
 	var gap := Control.new(); gap.custom_minimum_size = Vector2(0, 8); v.add_child(gap)
@@ -276,7 +277,7 @@ func _job_card() -> void:
 		var val := _ink(row, "—", 19, INK, f_type, false)
 		_spec_vals[str(s.id)] = [mark, val]
 	_ink(v, "Pays %s." % str(t.get("pay_text", "")).trim_prefix("fee "), 17, Color(0.30, 0.28, 0.25), f_sans)
-	_ink(v, "Parts %s   Burnt parts %s" % [str(bench.backend.last_result.get("costText", "$0.00")), bench.burn_cost_text()], 17, Color(0.30, 0.28, 0.25), f_sans)
+	_ink(v, "Parts %s   Burnt parts %s   Wallet %s" % [str(bench.backend.last_result.get("costText", "$0.00")), bench.burn_cost_text(), bench.backend.wallet_text], 17, Color(0.30, 0.28, 0.25), f_sans)
 	if bench.backend.passed:
 		var st2 := Stamp.new(); st2.font = f_engr; st2.custom_minimum_size = Vector2(0, 80); st2.mouse_filter = Control.MOUSE_FILTER_IGNORE; v.add_child(st2)
 		_key(v, "Close up and hand back", func(): bench.hand_back(), "", true)
@@ -416,7 +417,8 @@ func _tools() -> void:
 	_key(h, "Undo", func(): bench.undo(), "Ctrl+Z")
 	_key(h, "Schematic", func(): toggle_schematic(), "Tab", false, schem)
 	_key(h, "Menu", func(): bench.back_to_title())
-	var vk := _eng(h, "Views 1-5", 14); vk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var vk := _eng(h, bench.hover_tip if bench.hover_tip != "" else "Views 1-5", 14); vk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if bench.hover_tip != "": vk.add_theme_color_override("font_color", AMBER)
 	pc.position.x = (1920 - pc.get_combined_minimum_size().x) * 0.5
 	pc.position.y = _canvas_h() - 16.0 - pc.get_combined_minimum_size().y
 	# a narrow window: the rail reaches under the bench control plate, so the plate stands on top of the rail instead

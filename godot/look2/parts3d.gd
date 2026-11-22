@@ -182,7 +182,7 @@ func _led(pid: String) -> void:
 func set_led(mA: float, bloom := 0.0) -> void:
 	if _led_mat == null: return
 	var k := clampf(mA / 20.0, 0.0, 1.5)
-	_led_mat.emission_energy_multiplier = k * 6.0 + bloom * 2.0
+	_led_mat.emission_energy_multiplier = k * 3.2 + bloom * 1.0   # keeps the die colour; 6x washed it to a white blob
 	if _led_light: _led_light.light_energy = k * 0.6
 
 func _electrolytic() -> void:
@@ -260,7 +260,7 @@ func _terminals() -> void:
 func _pp3(pid: String) -> void:
 	var tired := pid.ends_with("tired")
 	var body := MeshKit.mat(Color(0.06, 0.06, 0.065), 0.4, 0.0, {"clearcoat": 0.5})
-	var band := MeshKit.mat(Color(0.80, 0.55, 0.10) if not tired else Color(0.45, 0.42, 0.38), 0.35, 0.3, {"clearcoat": 0.4})
+	var band := MeshKit.mat(Color(0.42, 0.33, 0.16) if not tired else Color(0.36, 0.34, 0.31), 0.5, 0.4, {"clearcoat": 0.2})   # muted brass: the old orange read as glowing
 	var c := Vector3(3 * P, 0.0082, -0.010)
 	_body(MeshKit.rounded_box(Vector3(0.036, 0.016, 0.022), 0.002), body, c)
 	MeshKit.add(self, MeshKit.rounded_box(Vector3(0.024, 0.0162, 0.0222), 0.0018), band, c + Vector3(0.002, 0, 0))

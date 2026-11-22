@@ -86,6 +86,11 @@ func _run() -> void:
 	ok(wb.backend.parts.size() == before, "the board is cleared")
 	wb.load_build(1); await _frames(3)
 	ok(wb.backend.parts.size() == before + 2, "build 1 loads back: %s" % wb.note)
+	# right-click on the middle of the resistor's body (not a leg) removes it
+	wb.set_view(5, true); await _frames(3)
+	var n_before: int = wb.backend.parts.size()
+	wb._right_click(wb.cam.unproject_position(wb.board.pad_world(10, 11)))
+	ok(wb.backend.parts.size() == n_before - 1 and wb.note.begins_with("Removed"), "right-click on a part's body removes it: %s" % wb.note)
 	wb.back_to_title(); await _frames(5)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(wb._build_path(1)))
 	ok(trap.count == 0, "zero script errors in the whole session (%d: %s)" % [trap.count, str(trap.lines.slice(0, 3))])
