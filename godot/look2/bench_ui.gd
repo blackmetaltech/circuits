@@ -94,7 +94,7 @@ func _rebuild() -> void:
 	if schem:
 		var sv := SchematicView.new(); sv.bench = bench; sv.ui = self; _root.add_child(sv); sv.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); sv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_job_card()
-	if bench.view == 1 or bench.tool == "place" or bench.mode == "free": _drawer()
+	if bench.view in [1, 5] or bench.tool == "place" or bench.mode == "free": _drawer()
 	_tools()
 	_status_chip()
 	_failure()
@@ -210,7 +210,7 @@ func _status_chip() -> void:
 	var v := VBoxContainer.new(); p.add_child(v)
 	if bench.mode == "free":
 		_status = _lab(v, "", 18, TXT, f_mono)
-	_lab(v, "1 wiring   2 bench   3 scope   4 device", 16, DIM, f_mono)
+	_lab(v, "1 work   2 bench   3 scope   4 device   5 wiring", 16, DIM, f_mono)
 	p.position.x = 1892 - p.get_combined_minimum_size().x
 
 func _failure() -> void:

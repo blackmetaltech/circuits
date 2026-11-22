@@ -172,6 +172,8 @@ func _esd_mat() -> void:
 		for x in 512:
 			var c := base * (0.975 + 0.025 * n.get_noise_2d(x, y))
 			if x % 64 == 0 or y % 64 == 0: c = c.lightened(0.035)
+			var sc := n.get_noise_2d(x * 0.25 + 900.0, y * 3.0)
+			if sc > 0.55: c = c.lightened((sc - 0.55) * 0.25)   # scuffs and wipe marks
 			img.set_pixel(x, y, c)
 	var tex := ImageTexture.create_from_image(img)
 	var m := MeshKit.mat(Color.WHITE, 0.78, 0.0, {"normal": 0.25})
@@ -358,7 +360,8 @@ func _used_bounds() -> AABB:
 func set_view(v: int, snap := false) -> void:
 	view = v
 	match v:
-		1:
+		1: g_tgt = board_centre() + Vector3(0.0, 0.0, -0.09); g_yaw = deg_to_rad(8.0); g_pitch = deg_to_rad(-38.0); g_dist = 0.62
+		5:
 			var bb := _used_bounds()
 			g_tgt = bb.get_center() + Vector3(-0.022, 0.0, 0.004); g_yaw = 0.0; g_pitch = deg_to_rad(-62.0); g_dist = clampf(bb.size.length() * 2.3, 0.2, 0.31)
 		2: g_tgt = Vector3(0.02, 0.04, -0.03); g_yaw = deg_to_rad(16.0); g_pitch = deg_to_rad(-26.0); g_dist = 0.92
@@ -500,21 +503,28 @@ func _probes() -> void:
 	if probe_node == null:
 		probe_node = Node3D.new(); add_child(probe_node)
 		var pm := MeshKit.mat(Color(0.14, 0.145, 0.155), 0.55)
-		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0.001, 0.012, 0.003), Vector3(0.012, 0.017, 0.045)]), 0.0030, 16), pm)
-		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0.0001, 0.0118, 0.0004), Vector3(0.0012, 0.0124, 0.0048)]), 0.0038, 16), pm)   # finger guard
+		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0.001, 0.012, 0.003), Vector3(0.012, 0.017, 0.045)]), 0.0022, 16), pm)
+		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0.0001, 0.0118, 0.0004), Vector3(0.0012, 0.0124, 0.0048)]), 0.0029, 16), pm)   # finger guard
 		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0, 0.003, 0), Vector3(0, 0.013, -0.002)]), 0.0014, 10), MeshKit.mat(Color(0.25, 0.26, 0.28), 0.5))
 		var hook := PackedVector3Array()
 		for i in 10: hook.append(Vector3(0.0012 * sin(i * 0.6), 0.003 - i * 0.0004, 0.0012 * cos(i * 0.6) - 0.0012))
 		MeshKit.add(probe_node, MeshKit.tube(hook, 0.00035, 6), MeshKit.m("steel"))
-		var ring := TorusMesh.new(); ring.inner_radius = 0.0029; ring.outer_radius = 0.0038
+		var ring := TorusMesh.new(); ring.inner_radius = 0.0021; ring.outer_radius = 0.0028
 		MeshKit.add(probe_node, ring, MeshKit.mat(Color(0.95, 0.8, 0.1), 0.4, 0.0, {"emission": Color(0.95, 0.8, 0.1), "emission_energy": 0.4}), Vector3(0.009, 0.016, 0.034), Vector3(1.46, deg_to_rad(-15.0), 0))
 	probe_node.visible = true
 	var top := board.pad_world(int(pad[0]), int(pad[1]))
 	probe_node.global_position = top
 	var from := top + Vector3(0.012, 0.017, 0.045)
+	if probe_node.has_meta("gnd"): (probe_node.get_meta("gnd") as Node).queue_free()
+	for c in board.connectors:
+		if str(c.role) == "ground":
+			var g := board.pad_world(int(c.pad[0]), int(c.pad[1])) + Vector3(0, 0.012, 0)
+			var gm := MeshKit.add(self, MeshKit.tube(_catenary(top + Vector3(0.006, 0.014, 0.022), g, 0.01, 12), 0.0007, 6), MeshKit.m("black_plastic"))
+			MeshKit.add(gm, MeshKit.rounded_box(Vector3(0.0025, 0.002, 0.007), 0.0006), MeshKit.m("black_plastic"), g)
+			probe_node.set_meta("gnd", gm); break
 	var to: Vector3 = (scope.global_position + Vector3(0.11, 0.03, 0.08)) if scope else Vector3(-0.2, 0.03, -0.17)
 	if probe_cable: probe_cable.queue_free()
-	probe_cable = MeshKit.add(self, MeshKit.tube(MeshKit.round_corners(PackedVector3Array([from, from + Vector3(0.0, -0.01, 0.05), Vector3(to.x, 0.004, from.z + 0.05), to]), 0.04, 6), 0.0022, 8), MeshKit.mat(Color(0.12, 0.12, 0.13), 0.55))
+	probe_cable = MeshKit.add(self, MeshKit.tube(MeshKit.round_corners(PackedVector3Array([from, from + Vector3(0.0, -0.01, 0.05), Vector3(to.x, 0.004, from.z + 0.05), to]), 0.04, 6), 0.0013, 8), MeshKit.mat(Color(0.12, 0.12, 0.13), 0.55))
 
 var _lead_sig := ""
 func _meter_leads() -> void:
@@ -531,9 +541,9 @@ func _meter_leads() -> void:
 		var top := board.pad_world(int(pad[0]), int(pad[1]))
 		var col := Color(0.62, 0.07, 0.05) if which == "red" else Color(0.04, 0.04, 0.045)
 		var m := MeshKit.mat(col, 0.45, 0.0, {"clearcoat": 0.3})
-		MeshKit.add(n, MeshKit.tube(PackedVector3Array([top + Vector3(0, 0.002, 0), top + Vector3(0.004, 0.012, 0.03)]), 0.0026, 12), m)
+		MeshKit.add(n, MeshKit.tube(PackedVector3Array([top + Vector3(0, 0.002, 0), top + Vector3(0.004, 0.012, 0.03)]), 0.0017, 12), m)
 		var jack := dmm.global_position + dmm.global_transform.basis * Vector3(-0.02 if which == "red" else 0.02, 0.02, 0.06)
-		MeshKit.add(n, MeshKit.tube(_catenary(top + Vector3(0.004, 0.012, 0.03), jack, 0.05), 0.0018, 8), m)
+		MeshKit.add(n, MeshKit.tube(_catenary(top + Vector3(0.004, 0.012, 0.03), jack, 0.05), 0.0011, 8), m)
 
 func _catenary(a: Vector3, b: Vector3, sag: float, n := 24) -> PackedVector3Array:
 	var out := PackedVector3Array()
@@ -555,9 +565,11 @@ func _cables() -> void:
 	var red := MeshKit.mat(Color(0.6, 0.06, 0.05), 0.45, 0.0, {"clearcoat": 0.3}); var blk := MeshKit.mat(Color(0.04, 0.04, 0.045), 0.45, 0.0, {"clearcoat": 0.3})
 	var add := func(a: Vector3, b: Vector3, m: Material, sag: float) -> void:
 		if a == Vector3.INF or b == Vector3.INF: return
-		MeshKit.add(cables_root, MeshKit.tube(_catenary(a, b, sag), 0.0021, 8), m)
-		var clip := MeshKit.rounded_box(Vector3(0.006, 0.014, 0.006), 0.002)
-		MeshKit.add(cables_root, clip, m, b + Vector3(0, 0.004, 0))
+		MeshKit.add(cables_root, MeshKit.tube(_catenary(a, b + Vector3(0, 0.012, 0), sag), 0.0011, 8), m)
+		# minigrabber clip: dark body, coloured collar, steel hook onto the post
+		MeshKit.add(cables_root, MeshKit.tube(PackedVector3Array([b + Vector3(0, 0.012, 0), b + Vector3(0, 0.003, 0)]), 0.0017, 12), MeshKit.m("black_plastic"))
+		MeshKit.add(cables_root, MeshKit.tube(PackedVector3Array([b + Vector3(0, 0.0115, 0), b + Vector3(0, 0.0095, 0)]), 0.0019, 12), m)
+		MeshKit.add(cables_root, MeshKit.tube(PackedVector3Array([b + Vector3(0, 0.003, 0), b + Vector3(0.0012, 0.001, 0)]), 0.0003, 6), MeshKit.m("steel"))
 	var pr: Vector3 = _call(psu, "post_world", [0]) if psu and psu.has_method("post_world") else Vector3(0.28, 0.04, -0.17)
 	var pb: Vector3 = _call(psu, "post_world", [1]) if psu and psu.has_method("post_world") else Vector3(0.31, 0.04, -0.17)
 	add.call(pr, post.call("V12"), red, 0.06)
@@ -769,6 +781,7 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_2: set_view(2)
 			KEY_3: set_view(3)
 			KEY_4: set_view(4)
+			KEY_5: set_view(5)
 			KEY_TAB: ui.toggle_schematic()
 			KEY_W: set_tool("wire")
 			KEY_P: set_tool("probe")

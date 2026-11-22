@@ -31,7 +31,7 @@ func build(path: Array, color: Color, fixed: bool, board: Board3D, lift := 0.0) 
 				soft.append(a.lerp(b, t) + Vector3(0, sin(t * PI) * minf(L * 0.04, 0.0022), 0))
 		soft.append(b)
 	var body := MeshKit.round_corners(soft, 0.0022, 4)
-	var r := 0.00045 if fixed else 0.0011
+	var r := 0.0004 if fixed else 0.0007
 	if fixed:
 		_mat = MeshKit.m("tin")
 	else:
