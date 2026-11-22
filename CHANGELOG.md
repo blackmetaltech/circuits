@@ -2,6 +2,32 @@
 
 All notable changes to CIRCUITS (called NODE until v0.1.0). The release workflow publishes the section whose heading contains `[x.y.z]`.
 
+## [0.3.0] - 2026-11-23 · "Workbench"
+A new look: a 3D repair bench. Chapter 1 and the 5-1 fan repair play in it; chapters 2 to 5 stay in the classic 2D stall behind a labelled switch on both title screens. Saves from 0.2.0 load unchanged.
+
+### Added
+- The workbench: a lamp-lit desk with an oscilloscope, bench supply, multimeter and parts drawers, real 3D parts (resistors with colour bands, LEDs that light, a PP3 battery, an aquarium heater, transistors, diodes), wires with stripped ends, a scope trace that runs live, smoke and scorch when a part burns. Camera views on keys 1 to 5; right drag orbits, wheel zooms.
+- Repair tickets: 1-1 torch, 1-2 bike light, 1-3 heater, 1-4 toy car and 5-1 fan arrive as the customer's faulty device in a case. Open it, probe the old work, fix it, close it and hand it back. The customer's words and thanks are on the paper ticket.
+- Burnt parts cost money: a part you burn is billed at its price and comes out of the job's pay (the ticket shows the bill). Parts that arrived burnt are free.
+- Free bench: any part from the catalogue on an open board, the supply, scope and meter; save and load builds in three slots.
+- Instrument-style controls: a paper repair ticket, a bench control plate with LCD readouts, a parts tray of labelled 3D renders, and a tool rail of keycaps.
+- Quality tiers: high (RTX class: shadows, SSR, SSIL, fog, TAA and 4x MSAA), medium, low (integrated GPUs: Compatibility renderer, 75 % 3D scale, FXAA). Measured: RTX 4090 high 6.4 ms at 1920x1080; Ryzen 9900X iGPU low 15.0 ms avg, 18.9 ms p95 at 1280x800.
+- Tests: `src/engine/repair.test.ts`, `src/engine/bench-memo.test.ts`, `src/look2-textures.test.ts`, `godot/tests/look2_ch1_flow.gd` (chapter 1 end to end in the new look, 64 checks).
+
+### Changed
+- Level search is about 17x faster on 5-1 and 2x on 4-4: the bench result is memoised exactly, and a board missing a part the specs measure fails without simulating. The whole test suite runs in about 7 minutes on 4 workers (was about 30).
+- A bench on an incomplete board names only the missing parts (no rating lines, no smoke). The two 0-0 idle trajectory goldens were regenerated for this, in their own commit.
+- Every 3D texture is mipmapped and VRAM-compressed; the screen-space roughness limiter is on.
+
+### Fixed
+- The meter read "-305 V" for -305 mV (the prefix was dropped) in both looks.
+
+### Known gaps
+- Chapters 2 to 5 are not yet in the new look (classic only; 5-1 is the one showcase).
+- No sound in the new look. No gamepad in the new look.
+- The meter shows the instant value on a switching node (a real meter averages).
+- One hand play by an agent persona; no human has played the new look.
+
 ## [0.2.0] - 2026-11-22 · "Switches & Gain"
 Chapter 5 (five tickets) and the fixes from the 0.1 play-test and screenshot review. Saves from 0.1.0 load unchanged (chapter 5 is simply unlocked by chapter 4).
 

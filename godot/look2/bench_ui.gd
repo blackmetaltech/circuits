@@ -231,6 +231,7 @@ func _title() -> void:
 	_lab(v, "Chapters 2 to 5 are in the classic 2D stall for now. Its title has the way back.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
 	b1.call_deferred("grab_focus")
 	_lab(v, "Right drag orbits   Middle drag pans   Wheel zooms   Keys 1-5 views   Tab schematic", 17, Color(0.72, 0.75, 0.78), f_mono)
+	_lab(v, "v%s" % str(ProjectSettings.get_setting("application/config/version", "")), 15, Color(0.56, 0.60, 0.65), f_mono)
 
 func _job_card() -> void:
 	var t: Dictionary = bench.backend.ticket
@@ -382,7 +383,7 @@ func _tile_name(fam: String, pid: String) -> String:
 	for pre in ["2N", "1N", "BC", "TIP", "IRL", "IRF", "LM", "NE", "BZX"]:
 		if up.begins_with(pre): return up.get_slice("-", 0)
 	if pid.begins_with("led-"): return "LED " + pid.get_slice("-", 1)
-	if pid.begins_with("res-ww"): return "Wirewound R"
+	if pid.begins_with("res-ww"): return "Wirewound"
 	if pid.begins_with("res-"): return "Resistor"
 	if pid.begins_with("cap-el"): return "Electrolytic"
 	if pid.begins_with("cap-"): return "Capacitor"
