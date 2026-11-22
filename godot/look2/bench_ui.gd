@@ -419,14 +419,22 @@ func _drawer() -> void:
 		if items.size() > 1:
 			var k2 := key; var n := items.size()
 			var prev := Button.new(); prev.text = "‹"; prev.flat = true; prev.focus_mode = Control.FOCUS_NONE; prev.add_theme_font_size_override("font_size", fs(18))
-			prev.pressed.connect(func(): _fam_idx[k2] = posmod(idx - 1, n); _rebuild())
+			prev.pressed.connect(func(): _fam_step(k2, items, posmod(idx - 1, n)))
 			var nx := Button.new(); nx.text = "›"; nx.flat = true; nx.focus_mode = Control.FOCUS_NONE; nx.add_theme_font_size_override("font_size", fs(18))
-			nx.pressed.connect(func(): _fam_idx[k2] = posmod(idx + 1, n); _rebuild())
+			nx.pressed.connect(func(): _fam_step(k2, items, posmod(idx + 1, n)))
 			under.add_child(prev); _lab(under, val_txt, 15, AMBER, f_mono); under.add_child(nx)
 		else:
 			_lab(under, val_txt, 15, Color(0.70, 0.72, 0.75), f_mono)
 	pc.position.x = (1920 - pc.get_combined_minimum_size().x) * 0.5
 	pc.position.y = _canvas_h() - 118.0 - pc.get_combined_minimum_size().y
+
+## The tray arrows step a family's value. If a part of that family is in hand, the part in hand changes too: the tile showed
+## 2 Ω while a click placed the 6 Ω picked earlier (Noor, 1-5).
+func _fam_step(k: String, items: Array, i: int) -> void:
+	_fam_idx[k] = i
+	var held: Dictionary = bench.place_item if bench.tool == "place" else {}
+	if not held.is_empty() and str(held.get("partId", "")) == str(items[i].partId): bench.pick_part(items[i])
+	_rebuild()
 
 ## A short tile name that fits under a 130 px tile: the part number for semiconductors, the family word otherwise.
 func _tile_name(fam: String, pid: String) -> String:

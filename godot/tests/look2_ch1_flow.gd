@@ -72,6 +72,13 @@ func _run() -> void:
 			(boxes[0] as LineEdit).text = "6.667"; (boxes[1] as LineEdit).text = "0.5556"
 			(boxes[1] as LineEdit).text_submitted.emit("0.5556"); await _frames(3)
 			ok(wb.backend.predictions_done(), "Enter in a box locks the predictions in: %s" % wb.note)
+		if id == "1-5":
+			# the tray arrows change the part in hand, not only the label (Noor placed a 6 ohm while the tile showed 2 ohm)
+			var fam: Array = wb.drawer().filter(func(d): return str(d.partId) == "res-exact")
+			wb.pick_part(fam[1]); await _frames(2)
+			wb.ui._fam_step("res-exact", fam, 2); await _frames(2)
+			ok(float(wb.place_item.get("value", 0)) == float(fam[2].value), "stepping the tray changes the resistor in hand (%s ohm)" % str(wb.place_item.get("value")))
+			wb.set_tool("select")
 		ok(wb.backend.build_ref(id), "the reference build goes on (the old work is cleared first)")
 		wb.sync_board(); await _frames(3)
 		var left := 0

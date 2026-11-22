@@ -15,7 +15,7 @@ A new look: a 3D repair bench. Chapter 1 and the 5-1 fan repair play in it; chap
 - Saves: chapter 1 progress and the wallet are saved after each job in the new look and continue next time; the new look and the classic stall share one save.
 - A Quit key on the new-look title.
 - The site (circuits.blackmetal.tech) shows the workbench, and a player wiki is generated from the game's own text (`src/wiki.ts`; a test fails when it is stale): every ticket, its specs, its parts and what a repair arrives with, plus the controls.
-- Tests: `src/engine/repair.test.ts`, `src/engine/bench-memo.test.ts`, `src/look2-textures.test.ts`, `src/wiki.test.ts`, `godot/tests/look2_ch1_flow.gd` (chapter 1 end to end in the new look, 67 checks), `godot/tests/look2_save_flow.gd` (save and continue). CI runs both flows; the release smoke check now also opens 1-1 on the workbench.
+- Tests: `src/engine/repair.test.ts`, `src/engine/bench-memo.test.ts`, `src/look2-textures.test.ts`, `src/wiki.test.ts`, `godot/tests/look2_ch1_flow.gd` (chapter 1 end to end in the new look, 74 checks), `godot/tests/look2_save_flow.gd` (save and continue). CI runs both flows; the release smoke check now also opens 1-1 on the workbench.
 
 ### Changed
 - Level search is about 17x faster on 5-1 and 2x on 4-4: the bench result is memoised exactly, and a board missing a part the specs measure fails without simulating. The whole test suite runs in about 7 minutes on 4 workers (was about 30).
@@ -24,13 +24,15 @@ A new look: a 3D repair bench. Chapter 1 and the 5-1 fan repair play in it; chap
 
 ### Fixed
 - The meter read "-305 V" for -305 mV (the prefix was dropped) in both looks.
+- From the hand plays: a click on a part's body as drawn finds it (clicks used to land 10 to 14 px low); wires and meter leads snap to the leg you aim at; the 1-5 exam can be answered on the ticket (one box per prediction, Lock in) and the ticket states the problem; the hand-back key sits under the PASSED stamp (key H); a bench verdict clears when the board changes; the tray arrows change the part in hand; resistor tiles show their wattage; the meter says why it has no reading.
 - From the art and fun reviews: burnt parts are drawn as cold char on every surface (a burnt resistor kept its colour bands); the burn bill shows the moment a part burns; power and meter readouts no longer share one line on the free bench; the case tag and plates no longer glow under the lamp; the arrival tag leaves the desk once the case is open; the work camera shows more of the room.
 
 ### Known gaps
 - Chapters 2 to 5 are not yet in the new look (classic only; 5-1 is the one showcase).
 - No sound in the new look. No gamepad in the new look.
 - The meter shows the instant value on a switching node (a real meter averages).
-- One hand play by an agent persona; no human has played the new look.
+- Four hand plays by an agent persona (1-1 to 1-4 won in one session, the 1-5 exam with 3 stars in the next); no human has played the new look.
+- Wires onto legs under tall bodies (the exam's sources) can take several tries; removing a part removes its wires without saying so; the exam's marked working is shown only in the classic stall.
 - The bench control plate, parts tray and tool rail still sit as a band of panels across the bottom of the screen (the art review's top finding); they should become objects on the bench.
 - The burn bill is small next to the pay (a $0.04 transistor against a $10 job): it informs but does not yet hurt.
 - 5-1 switching at 100 Hz costs 23 to 28 ms a frame on a fast desktop: the live simulation needs work before chapter 5 moves to the new look.
