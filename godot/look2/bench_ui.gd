@@ -278,8 +278,16 @@ func _job_card() -> void:
 		var st := Stamp.new(); st.font = f_engr; st.custom_minimum_size = Vector2(0, 90); st.mouse_filter = Control.MOUSE_FILTER_IGNORE; v.add_child(st)
 		_key(v, "Next job", func(): bench.next_job(), "", true)
 		return
+	var short := _canvas_h() < 1000.0   # 1280x800 and smaller: the ticket must stop above the bench panels
+	if bench.backend.passed:
+		# the way out first, where it can never sit under the bench panels (Noor: hidden behind Bench Control at 1280x800)
+		var st2 := Stamp.new(); st2.font = f_engr; st2.custom_minimum_size = Vector2(0, 56 if short else 80); st2.mouse_filter = Control.MOUSE_FILTER_IGNORE; v.add_child(st2)
+		_key(v, "Close up and hand back", func(): bench.hand_back(), "H", true)
 	var sep := ColorRect.new(); sep.color = Color(0.3, 0.27, 0.22, 0.5); sep.custom_minimum_size = Vector2(0, 2); v.add_child(sep)   # 2 px: 1 px broke into dashes at 1280x800
+	var pred_ids := {}
+	for pr in t.get("predictions", []) + t.get("answers", []): pred_ids[str(pr.id)] = true
 	for s in t.get("specs", []):
+		if pred_ids.has(str(s.get("id", ""))): continue   # predictions have their own boxes on the slip below
 		var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 10); v.add_child(row)
 		var mark := _ink(row, "[ ]", 18, INK, f_type, false)
 		var nm := _ink(row, _short(str(s.get("id", "")), str(s.get("name", ""))), 18, INK, f_sans, true); nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -287,22 +295,47 @@ func _job_card() -> void:
 		_spec_vals[str(s.id)] = [mark, val]
 	_ink(v, "Pays %s." % str(t.get("pay_text", "")).trim_prefix("fee "), 17, Color(0.30, 0.28, 0.25), f_sans)
 	_ink(v, "Parts %s   Burnt parts %s   Wallet %s" % [str(bench.backend.last_result.get("costText", "$0.00")), bench.burn_cost_text(), bench.backend.wallet_text], 17, Color(0.30, 0.28, 0.25), f_sans)
-	if bench.backend.passed:
-		var st2 := Stamp.new(); st2.font = f_engr; st2.custom_minimum_size = Vector2(0, 80); st2.mouse_filter = Control.MOUSE_FILTER_IGNORE; v.add_child(st2)
-		_key(v, "Close up and hand back", func(): bench.hand_back(), "", true)
+	_predict_slip(v, t)
 	var f: Dictionary = bench.last_failure
-	if not f.is_empty():
+	if not f.is_empty() and not bench.backend.passed:
 		var sep2 := ColorRect.new(); sep2.color = RED_INK; sep2.custom_minimum_size = Vector2(0, 2); v.add_child(sep2)
 		_ink(v, str(f.get("title", "")), 20, RED_INK, f_semi)
 		var full := str(f.get("text", ""))
 		var cut := full.find(". ")
 		_ink(v, full.substr(0, cut + 1) if cut > 0 and cut < full.length() - 2 else full, 17, INK, f_sans)   # the cause in one sentence; the scope shows the rest
 		if cut > 0 and cut < full.length() - 2: _ink(v, "Why: " + full.substr(cut + 2).strip_edges(), 15, Color(0.30, 0.28, 0.25), f_sans)
-		_ink(v, "Ctrl+Z puts in a fresh part with the power off.", 15, Color(0.30, 0.28, 0.25), f_sans)
+		if not short: _ink(v, "Ctrl+Z puts in a fresh part with the power off.", 15, Color(0.30, 0.28, 0.25), f_sans)
 	elif bench.note != "":
 		_ink(v, bench.note, 17, Color(0.14, 0.20, 0.42), f_sans)
 	# the bench control plate: power key with its lamp, the ticket's switches, and the readings in LCD windows
 	_control_plate(Vector2(30, 0), v.get_parent())
+
+## Exam tickets: predict first. One field per prediction on the paper ticket; "Lock in" sends them to the engine, and the band
+## and the test cell's volts stay hidden until every one is in (Noor could not find where to answer 1-5).
+func _predict_slip(v: Control, t: Dictionary) -> void:
+	var preds: Array = t.get("predictions", []) + t.get("answers", [])
+	if preds.is_empty(): return
+	var open := false
+	for pr in preds: if pr.get("entered", null) == null: open = true
+	var sepp := ColorRect.new(); sepp.color = Color(0.3, 0.27, 0.22, 0.5); sepp.custom_minimum_size = Vector2(0, 2); v.add_child(sepp)
+	if not open:
+		for pr in preds: _ink(v, "%s: %s %s" % [str(pr.name).trim_prefix("Your prediction: "), str(pr.entered), str(pr.get("unit", ""))], 16, Color(0.14, 0.20, 0.42), f_hand)
+		return
+	_ink(v, "Predict first: work it out, write it here, then build.", 18, RED_INK, f_semi)
+	var fields: Array = []
+	for pr in preds:
+		_ink(v, str(pr.name).trim_prefix("Your prediction: "), 16, INK, f_sans)
+		var le := LineEdit.new(); le.placeholder_text = "a number in %s" % str(pr.get("unit", "")) if str(pr.get("unit", "")) != "" else "a number"
+		le.add_theme_font_override("font", f_type); le.add_theme_font_size_override("font_size", 18)
+		le.add_theme_color_override("font_color", INK); le.add_theme_color_override("font_placeholder_color", Color(0.45, 0.42, 0.38))
+		var sb := StyleBoxFlat.new(); sb.bg_color = Color(0.90, 0.86, 0.76); sb.border_color = Color(0.3, 0.27, 0.22); sb.set_border_width_all(1); sb.set_content_margin_all(6)
+		le.add_theme_stylebox_override("normal", sb); le.add_theme_stylebox_override("focus", sb)
+		if pr.get("entered", null) != null: le.text = str(pr.entered)
+		v.add_child(le); fields.append([str(pr.id), le])
+	var lock := func() -> void: bench.lock_predictions(fields.map(func(fl): return [fl[0], (fl[1] as LineEdit).text]))
+	for fl in fields: (fl[1] as LineEdit).text_submitted.connect(func(_tx): lock.call())
+	_key(v, "Lock in", lock, "", true)
+	if not fields.is_empty(): (fields[0][1] as LineEdit).call_deferred("grab_focus")
 
 func _control_plate(pos: Vector2, above: Control) -> void:
 	var cv := _plate(pos, "Bench control")
@@ -373,7 +406,10 @@ func _drawer() -> void:
 		var pick: Dictionary = it
 		b.pressed.connect(func(): bench.pick_part(pick))
 		col.add_child(b)
-		var nm := _lab(col, _tile_name(str(f.name), str(it.partId)), 15, TXT, f_semi); nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; nm.custom_minimum_size = Vector2(130, 0); nm.clip_text = true
+		var tname := _tile_name(str(f.name), str(it.partId))
+		var vr := str(it.get("variant", ""))
+		if str(it.partId).begins_with("res") and vr.ends_with("W"): tname += " " + {"0.25W": "¼ W", "0.5W": "½ W"}.get(vr, vr.trim_suffix("W") + " W")   # two 47 Ω tiles were told apart only by the schematic
+		var nm := _lab(col, tname, 15, TXT, f_semi); nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; nm.custom_minimum_size = Vector2(130, 0); nm.clip_text = true
 		var under := HBoxContainer.new(); under.alignment = BoxContainer.ALIGNMENT_CENTER; col.add_child(under)
 		var val_txt := str(it.label).get_slice("  ", 0).replace(" ", "") if it.value != null else str(it.get("price_text", ""))
 		if items.size() > 1:

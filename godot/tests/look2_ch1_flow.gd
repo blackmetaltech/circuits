@@ -56,6 +56,19 @@ func _run() -> void:
 			wb.run_test(); await _frames(3)
 			ok(not wb.backend.passed, "the bench fails the device as it came in")
 			if wb.backend.powered: wb.toggle_power()
+		if id == "1-5":
+			# the exam: the paper ticket carries one box per prediction; the bench refuses until they are locked in
+			wb.changed.emit(); await _frames(3)
+			var boxes := wb.find_children("*", "LineEdit", true, false)
+			ok(boxes.size() == 2, "the exam ticket has a box per prediction (%d)" % boxes.size())
+			wb.run_test(); await _frames(2)
+			ok(not wb.backend.passed and wb.note.begins_with("Predict first"), "the bench asks for predictions first: %s" % wb.note)
+			wb.lock_predictions([["pva", "abc"], ["pie2", "0.5"]]); await _frames(2)
+			ok(not wb.backend.predictions_done() and wb.note.contains("not a number"), "a non-number is refused: %s" % wb.note)
+			boxes = wb.find_children("*", "LineEdit", true, false)   # the ticket was rebuilt
+			(boxes[0] as LineEdit).text = "6.667"; (boxes[1] as LineEdit).text = "0.5556"
+			(boxes[1] as LineEdit).text_submitted.emit("0.5556"); await _frames(3)
+			ok(wb.backend.predictions_done(), "Enter in a box locks the predictions in: %s" % wb.note)
 		ok(wb.backend.build_ref(id), "the reference build goes on (the old work is cleared first)")
 		wb.sync_board(); await _frames(3)
 		var left := 0
@@ -68,7 +81,17 @@ func _run() -> void:
 		wb.backend.set_dial("V"); wb.backend.set_probe("red", cs[0].pad); wb.backend.set_probe("black", cs[1].pad); await _step(0.2)
 		wb.run_test(); await _frames(5)
 		ok(wb.backend.passed, "the bench passes %s" % id)
-		ok(wb.paid_text() != "nothing", "the pay is noted: %s (result pay %s, burn bill %s)" % [wb.paid_text(), str(wb.backend.last_result.get("pay", "?")), wb.burn_cost_text()])
+		wb.changed.emit(); await _frames(3)
+		var hb: Button = null
+		for b in wb.find_children("*", "Button", true, false): if (b as Button).text.begins_with("Close up and hand back"): hb = b
+		# the hand-back key comes before the spec rows on the paper ticket, so a tall ticket can never push it under the bench panels
+		var first_spec := 99999
+		if hb != null:
+			var par := hb.get_parent()
+			for i in par.get_child_count():
+				var c := par.get_child(i)
+				if c is HBoxContainer and c.get_child_count() >= 3 and str((c.get_child(0) as Label).text if c.get_child(0) is Label else "").begins_with("["): first_spec = mini(first_spec, i)
+		ok(hb != null and hb.get_index() < first_spec, "the hand-back key sits above the spec rows on the ticket (key at %d, first spec at %d)" % [hb.get_index() if hb else -1, first_spec])
 		if wallet0 >= 0: ok(wb.backend.wallet_minor > wallet0, "the wallet grows (%d -> %d)" % [wallet0, wb.backend.wallet_minor])
 		wallet0 = wb.backend.wallet_minor
 		wb.hand_back(); await _frames(5)
@@ -97,7 +120,14 @@ func _run() -> void:
 	# right-click on the middle of the resistor's body (not a leg) removes it
 	wb.set_view(5, true); await _frames(3)
 	var n_before: int = wb.backend.parts.size()
-	wb._right_click(wb.cam.unproject_position(wb.board.pad_world(10, 11)))
+	var body_uid := ""
+	for p in wb.backend.parts: if str(p.partId) == "res-cf": body_uid = str(p.uid)
+	var body: Part3D = wb.parts3d.get(body_uid, null)
+	var bm := body.body_meshes[0] as MeshInstance3D
+	var ab: AABB = bm.global_transform * bm.get_aabb()
+	var top: Vector3 = ab.get_center() + Vector3(0, ab.size.y * 0.5, 0)   # the top of the body, as the player sees it
+	ok(top.y - wb.board.global_position.y > 0.002, "the resistor body stands above the board (%.4f m)" % (top.y - wb.board.global_position.y))
+	wb._right_click(wb.cam.unproject_position(top))
 	ok(wb.backend.parts.size() == n_before - 1 and wb.note.begins_with("Removed"), "right-click on a part's body removes it: %s" % wb.note)
 	wb.back_to_title(); await _frames(5)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(wb._build_path(1)))

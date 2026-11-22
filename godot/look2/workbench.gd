@@ -843,7 +843,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 			if int(data.get("pay", 0)) > 0 or _paid_text == "":   # a repeat pass pays nothing: keep the first pay on the ticket
 				_paid_text = str(data.get("pay_text", "")) if int(data.get("pay", 0)) > 0 else "nothing more (already paid)"
 				if int(data.get("burnt", 0)) > 0: _paid_text += " after %s for burnt parts" % burn_cost_text()
-			note = "Bench test passed. Paid %s: the %s fee%s." % [str(data.get("pay_text", "")), str(backend.ticket.get("price_text", "")), (" and %d new star%s" % [st, "" if st == 1 else "s"]) if st > 0 else ""]
+			if int(data.get("pay", 0)) > 0: note = "Bench test passed. Paid %s: the %s fee%s." % [str(data.get("pay_text", "")), str(backend.ticket.get("price_text", "")), (" and %d new star%s" % [st, "" if st == 1 else "s"]) if st > 0 else ""]
+			else: note = "Bench test passed again. This job is already paid."   # was "Paid : the $4.00 fee" with the amount missing
 			last_failure = {}; changed.emit()
 		"power", "lock", "wired", "placed", "deleted":
 			changed.emit()
@@ -898,7 +899,31 @@ func ray_pad(mp: Vector2) -> Vector2i:
 	var o := cam.project_ray_origin(mp); var d := cam.project_ray_normal(mp)
 	var hit = board.plane_world().intersects_ray(o, d)
 	if hit == null: return Vector2i(-1, -1)
-	return board.pad_at_world(hit)
+	var pad: Vector2i = board.pad_at_world(hit)
+	# wires and leads go onto legs: a player aims at the leg as drawn, which stands above its pad. If the board-level pad is empty
+	# and the ray at leg height lands on a pad with a leg or a wire end, take that one (Noor: clicks landed "one row short").
+	if tool in ["wire", "red", "black", "probe"] and not _pad_used(pad):
+		for h in [0.003, 0.006]:
+			var hit2 = _plane_at(h).intersects_ray(o, d)
+			if hit2 == null: continue
+			var pad2: Vector2i = board.pad_at_world(hit2 - board.global_transform.basis.y.normalized() * h)
+			if _pad_used(pad2): return pad2
+	return pad
+
+## The board plane raised by h metres (a part body or a leg top sits above the pads).
+func _plane_at(h: float) -> Plane:
+	var n: Vector3 = board.global_transform.basis.y.normalized()
+	return Plane(n, board.global_position + n * h)
+
+func _pad_used(pad: Vector2i) -> bool:
+	if pad.x < 0: return false
+	for p in backend._all_parts:
+		for q in p.pins: if int(q[0]) == pad.x and int(q[1]) == pad.y: return true
+	for w in backend.wires:
+		var path: Array = w.path
+		if path.is_empty(): continue
+		for e in [path[0], path[path.size() - 1]]: if int(e[0]) == pad.x and int(e[1]) == pad.y: return true
+	return false
 
 func ray_hit(mp: Vector2) -> String:
 	var o := cam.project_ray_origin(mp); var d := cam.project_ray_normal(mp)
@@ -970,6 +995,7 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_R:
 				if tool == "place": place_rot = (place_rot + 1) % 4; _hover(get_viewport().get_mouse_position())
 			KEY_O: open_case()
+			KEY_H: if backend.passed and not handed: hand_back()
 			KEY_SPACE: toggle_power()
 			KEY_ENTER, KEY_KP_ENTER: run_test()
 			KEY_Z:
@@ -1042,26 +1068,37 @@ func _right_click(mp: Vector2) -> void:
 ## last leg) within 0.7 pad, else the nearest wire within 0.45 pad. Used for right-click removal and its hover highlight.
 func _pick_item(mp: Vector2) -> Dictionary:
 	if board == null: return {}
-	var hit = board.plane_world().intersects_ray(cam.project_ray_origin(mp), cam.project_ray_normal(mp))
-	if hit == null: return {}
-	var l: Vector3 = board.to_local(hit)
-	var q := Vector2(l.x / P, l.z / P)
+	var o := cam.project_ray_origin(mp); var dir := cam.project_ray_normal(mp)
+	# a part's body stands above its pads: test the ray at several heights so a click on the body as drawn finds it
+	# (at board level alone the hit fell behind the part and the player had to click 10 to 14 px low)
 	var best := {}; var bd := 0.7
+	var qs: Array = []
+	for h in [0.0, 0.002, 0.004, 0.006, 0.008, 0.010, 0.013]:
+		var hit = _plane_at(h).intersects_ray(o, dir)
+		if hit == null: continue
+		var l: Vector3 = board.to_local(hit - board.global_transform.basis.y.normalized() * h)
+		qs.append([h, Vector2(l.x / P, l.z / P)])
+	if qs.is_empty(): return {}
 	for p in backend.parts:
 		if bool(p.get("fixed", false)): continue
 		var pins: Array = p.pins
-		for i in maxi(1, pins.size() - 1):
-			var a := Vector2(float(pins[i][0]), float(pins[i][1])); var b := Vector2(float(pins[mini(i + 1, pins.size() - 1)][0]), float(pins[mini(i + 1, pins.size() - 1)][1]))
-			var d := q.distance_to(Geometry2D.get_closest_point_to_segment(q, a, b))
-			if d < bd: bd = d; best = {"kind": "part", "id": str(p.uid), "label": str(p.get("label", p.partId))}
+		for hq in qs:
+			var q: Vector2 = hq[1]
+			for i in maxi(1, pins.size() - 1):
+				var a := Vector2(float(pins[i][0]), float(pins[i][1])); var b := Vector2(float(pins[mini(i + 1, pins.size() - 1)][0]), float(pins[mini(i + 1, pins.size() - 1)][1]))
+				var d := q.distance_to(Geometry2D.get_closest_point_to_segment(q, a, b))
+				if d < bd: bd = d; best = {"kind": "part", "id": str(p.uid), "label": str(p.get("label", p.partId))}
 	if not best.is_empty(): return best
 	bd = 0.45
 	for w in backend.wires:
 		if bool(w.get("fixed", false)): continue
 		var path: Array = w.path
-		for i in path.size() - 1:
-			var d2 := q.distance_to(Geometry2D.get_closest_point_to_segment(q, Vector2(float(path[i][0]), float(path[i][1])), Vector2(float(path[i + 1][0]), float(path[i + 1][1]))))
-			if d2 < bd: bd = d2; best = {"kind": "wire", "id": str(w.wid)}
+		for hq in qs:
+			if float(hq[0]) > 0.002: continue   # wires lie on the board
+			var q: Vector2 = hq[1]
+			for i in path.size() - 1:
+				var d2 := q.distance_to(Geometry2D.get_closest_point_to_segment(q, Vector2(float(path[i][0]), float(path[i][1])), Vector2(float(path[i + 1][0]), float(path[i + 1][1]))))
+				if d2 < bd: bd = d2; best = {"kind": "wire", "id": str(w.wid)}
 	return best
 
 var _pick_hl := {}
@@ -1106,6 +1143,8 @@ func set_pin(i: int) -> void:
 func run_test() -> void:
 	if backend.passed and mode == "job":
 		note = "Already passed and paid. Close up and hand it back."; changed.emit(); return
+	if bool(backend.ticket.get("eb", false)) and not backend.predictions_done():
+		note = "Predict first: write your numbers on the ticket and press Lock in."; changed.emit(); return
 	backend.run_bench(); changed.emit()
 
 func undo() -> void:
@@ -1154,6 +1193,17 @@ func next_job() -> void:
 	start_job(nx)
 
 var _paid_text := ""
+## The exam slip's Lock in: every field must be a number; the engine records them and the hidden band appears.
+func lock_predictions(fields: Array) -> void:
+	for fl in fields:
+		var tx := str(fl[1]).strip_edges().replace(",", ".")
+		if not tx.is_valid_float(): note = "'%s' is not a number. Write a number in each box." % tx if tx != "" else "Write a number in each box first."; changed.emit(); return
+	for fl in fields:
+		var r: Dictionary = backend.predict(str(fl[0]), float(str(fl[1]).strip_edges().replace(",", ".")))
+		if not r.ok: note = str(r.msg); changed.emit(); return
+	note = "Predictions locked in. Now build it and measure."
+	changed.emit()
+
 func paid_text() -> String: return _paid_text if _paid_text != "" else "nothing"
 
 func burn_cost_text() -> String:
@@ -1168,6 +1218,10 @@ func meter_text() -> String:
 	var d: Dictionary = backend.dmm()
 	if str(d.get("mode", "OFF")) == "OFF": return "off  (M for leads)"
 	if backend.probes.get("red") == null or backend.probes.get("black") == null: return "%s  leads not placed" % str(d.get("mode", ""))
+	if str(d.get("text", "")) == "----":   # say why there is no reading (Noor saw "----" and nothing else)
+		if not backend.powered: return "%s ----  power is off" % str(d.get("mode", ""))
+		var why := str(d.get("note", ""))
+		return "%s ----  %s" % [str(d.get("mode", "")), why if why != "" else "a lead is on an empty pad"]
 	return "%s %s" % [str(d.get("text", "----")), str(d.get("unit", ""))]
 
 ## One line of live numbers for the bench control plate.
