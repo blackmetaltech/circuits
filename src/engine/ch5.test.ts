@@ -194,3 +194,9 @@ describe('5-5 EB: CE Amplifier', () => {
     const b2 = bench(exam(R.predictions!, (p) => { p[0]![1] = 470e3; })); expect(b2.pass).toBe(false); expect(texts(b2)).toMatch(/IB = \(12 - 0\.7 V\) \/ 470 kΩ = 24 uA/); expect(texts(b2)).toMatch(/IC = 100 x IB = 2\.4 mA/);
   });
 });
+describe('5-4 scope', () => {
+  it('the scope shows the live sine on OUT as a time trace against the amber tube and locks on the gain', () => {
+    const e = mk('5-4'); ok(e, 'attachProbe', 1, [22, 8]); ok(e, 'power', true); for (let i = 0; i < 60; i++) ok(e, 'advance', 8);
+    const sc = q(e, 'scope'); expect(sc.trace.complete).toBe(true); expect(Math.max(...sc.trace.v)).toBeGreaterThan(0.9); expect(Math.min(...sc.trace.v)).toBeLessThan(-0.9); expect(sc.lock).toBe(true);
+  });
+});

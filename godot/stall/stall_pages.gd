@@ -206,7 +206,7 @@ func _map(a: float) -> void:
 	if map_chapter == 2: note = map_blurb + "\n\nA voltage divider is only as good as what hangs on it. A bridge asks nothing of the cable but a balance. Measure first, then build."
 	elif map_chapter == 3: note = map_blurb + "\n\nNothing here settles at once. A capacitor fills at a pace set by R times C, and a coil rises at L over R: watch the curve form, and keep it inside the amber tube."
 	elif map_chapter == 4: note = map_blurb + "\n\nThe rain is loud on the awnings tonight. Volts you can feel are volts you respect: on the mains tickets the bench is simulated and the dangerous side is fenced off in red."
-	elif map_chapter == 5: note = map_blurb + "\n\nA transistor is a valve with a tiny handle: a trickle at the base decides a flood at the collector. Shove it hard enough and it is a switch; ease it and it is an amplifier. Mind the heat either way."
+	elif map_chapter == 5: note = map_blurb + "\n\nA transistor is a valve with a tiny handle: shove it hard and it is a switch, ease it and it is an amplifier."
 	S.text(self, f, note, lp + Vector2(0, 124), 24, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, half - 130)
 	# the chapter's idea, sketched large in the free part of the left page, between the note and the star key
 	var note_end := lp.y + 124.0 + S.wrapped_h(f, note, 24, half - 130.0)
@@ -446,8 +446,8 @@ func _predict(a: float) -> void:
 		var pot := str(fig.get("kind", "node")) == "pot"
 		var caps := str(fig.get("kind", "node")) == "caps"
 		var zen := str(fig.get("kind", "node")) == "zener"
-		ExamFigure.draw(self, fr.grow(-10), fig, S.INK, ["Q, U", "V, energy lost"] if caps else (["gradient, EMF, r"] if pot else (["Iz", "RL(min)", "Pz"] if zen else ["V(%s)" % str(fig.get("node", "A")), "I(E2)"])))
-		S.text(self, f, "exact capacitors, ideal source" if caps else ("ideal driver cell, exact rheostat" if pot else "ideal sources, exact resistors"), Vector2(fr.position.x + 10, fr.end.y - 8), 14, Color(S.INK, 0.5))
+		ExamFigure.draw(self, fr.grow(-10), fig, S.INK, ["Q, U", "V, energy lost"] if caps else (["gradient, EMF, r"] if pot else (["Iz", "RL(min)", "Pz"] if zen else (["IB", "IC", "VCE", "Av"] if str(fig.get("kind", "node")) == "amp" else ["V(%s)" % str(fig.get("node", "A")), "I(E2)"]))))
+		S.text(self, f, "exact capacitors, ideal source" if caps else ("ideal driver cell, exact rheostat" if pot else ("textbook transistor, exact resistors" if str(fig.get("kind", "node")) == "amp" else "ideal sources, exact resistors")), Vector2(fr.position.x + 10, fr.end.y - 8), 14, Color(S.INK, 0.5))
 		if star_rule != "": S.text(self, f, "Marking: " + star_rule, Vector2(fr.position.x, fr.end.y + 24), 15, Color(S.INK_RED, 0.9), HORIZONTAL_ALIGNMENT_LEFT, fr.size.x)
 	var brief_h := S.wrapped_h(f, str(coach_ticket.get("brief", "")), 19, col_w)
 	var y := maxf(q.position.y + (q.size.y * 0.5 - 40.0 if wide else 200.0), q.position.y + 106.0 + brief_h + 30.0)   # the first question starts under however long the problem is
@@ -518,7 +518,7 @@ func _debrief(a: float) -> void:
 	if y + S.wrapped_h(f, str(coach_ticket.get("star_rule", "")), 16, lw) < q.end.y - 96.0: S.text(self, f, str(coach_ticket.get("star_rule", "")), Vector2(lx, y), 16, Color(S.INK, 0.6), HORIZONTAL_ALIGNMENT_LEFT, lw)   # (the buttons sit at the bottom: the marking rule gives way on a short page)
 	# right: the KCL working
 	var rx := q.position.x + half + 10.0; var rw := half - 46.0; var ry := q.position.y + 112.0
-	S.text(self, f, "The potentiometer, worked out" if str(d.get("node", "A")) == "wire" else ("The capacitor bank, worked out" if str(d.get("node", "A")) == "bank" else ("The Zener regulator, worked out" if str(d.get("node", "A")) == "zener" else "KCL at node %s: currents in = currents out" % str(d.get("node", "A")))), Vector2(rx, ry), 24, S.INK_RED, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += 40.0
+	S.text(self, f, "The potentiometer, worked out" if str(d.get("node", "A")) == "wire" else ("The capacitor bank, worked out" if str(d.get("node", "A")) == "bank" else ("The Zener regulator, worked out" if str(d.get("node", "A")) == "zener" else ("The amplifier, worked out" if str(d.get("node", "A")) == "amp" else "KCL at node %s: currents in = currents out" % str(d.get("node", "A"))))), Vector2(rx, ry), 24, S.INK_RED, HORIZONTAL_ALIGNMENT_LEFT, rw); ry += 40.0
 	# what fits above the buttons: the equation line and the closing remark go first when the (handheld's bigger) text would run off the paper
 	var avail := q.end.y - 96.0 - ry
 	var eq_h := S.wrapped_h(S.mono(), str(d.get("equation", "")), 20, rw) + 10.0

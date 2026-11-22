@@ -13,6 +13,7 @@ static func draw(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, asks: Ar
 	if str(fig.get("kind", "node")) == "pot": _draw_pot(ci, r, fig, ink, asks, small); return
 	if str(fig.get("kind", "node")) == "caps": _draw_caps(ci, r, fig, ink, asks, small); return
 	if str(fig.get("kind", "node")) == "zener": _draw_zener(ci, r, fig, ink, asks, small); return
+	if str(fig.get("kind", "node")) == "amp": _draw_amp(ci, r, fig, ink, asks, small); return
 	var k := minf(r.size.x / DESIGN.x, r.size.y / DESIGN.y)
 	var o := r.position + (r.size - DESIGN * k) * 0.5
 	var P := func(x: float, y: float) -> Vector2: return o + Vector2(x, y) * k
@@ -199,6 +200,33 @@ static func _draw_zener(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, a
 	S.text(ci, f, "RL =", P.call(352, 232), fs, ink); S.text(ci, f, "%s \u03a9" % EngineBench._g(float(z.get("rl", 1000))), P.call(352, 256), fs, ink)
 	_wire(ci, [P.call(56, by), P.call(340, by)], ink, w); _gnd(ci, P.call(200, by), k, ink, w)
 	if not asks.is_empty() and not small: S.text(ci, f, "find:  " + "   ".join(asks), P.call(40, 40), fs, S.INK_RED)
+
+## The 5-5 figure: the supply rail, RB to the base, RC to the collector (the M pad), the emitter to ground, with beta and VBE printed. All numbers are the engine's (figure.amp).
+static func _draw_amp(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, asks: Array, small: bool) -> void:
+	var a: Dictionary = fig.get("amp", {})
+	var k := minf(r.size.x / DESIGN.x, r.size.y / DESIGN.y)
+	var o := r.position + (r.size - DESIGN * k) * 0.5
+	var P := func(x: float, y: float) -> Vector2: return o + Vector2(x, y) * k
+	var w := maxf(1.6, 3.0 * k); var f := S.hand()
+	var fs := int(maxf(9.0, (22.0 if not small else 32.0) * k))
+	var kohm := func(v: float) -> String: return "%s k\u03a9" % EngineBench._g(v / 1000.0)
+	_wire(ci, [P.call(60, 78), P.call(330, 78)], ink, w)
+	S.text(ci, f, "VCC = %s V" % EngineBench._g(float(a.get("vcc", 12))), P.call(62, 58), fs, ink)
+	# RB: from the rail down to the base lead
+	_wire(ci, [P.call(130, 78), P.call(130, 120)], ink, w); _zig(ci, P.call(130, 120), P.call(130, 200), 9.0 * k, ink, w); _wire(ci, [P.call(130, 200), P.call(130, 236), P.call(178, 236)], ink, w)
+	S.text(ci, f, "RB", P.call(70, 160), fs, ink); S.text(ci, f, kohm.call(float(a.get("rb", 565000))), P.call(60, 184), int(fs * 0.9), ink)
+	# the transistor: a base bar, a collector lead up and an emitter lead down with its arrow
+	ci.draw_line(P.call(178, 212), P.call(178, 260), ink, w * 1.8)
+	_wire(ci, [P.call(178, 224), P.call(212, 200), P.call(212, 160)], ink, w)
+	_wire(ci, [P.call(178, 248), P.call(212, 272), P.call(212, 330)], ink, w)
+	ci.draw_colored_polygon(PackedVector2Array([P.call(212, 272), P.call(194, 268), P.call(202, 256)]), ink)
+	# RC: from the rail to the collector; the M pad sits on the collector
+	_wire(ci, [P.call(212, 78), P.call(212, 96)], ink, w); _zig(ci, P.call(212, 96), P.call(212, 150), 9.0 * k, ink, w); _wire(ci, [P.call(212, 150), P.call(212, 160)], ink, w)
+	S.text(ci, f, "RC", P.call(236, 118), fs, ink); S.text(ci, f, kohm.call(float(a.get("rc", 3000))), P.call(236, 142), int(fs * 0.9), ink)
+	ci.draw_circle(P.call(212, 180), 6.0 * k + 1.0, ink); S.text(ci, f, "M pad", P.call(228, 188), int(fs * 0.9), ink)
+	_gnd(ci, P.call(212, 330), k, ink, w)
+	S.text(ci, f, "\u03b2 = %s,  VBE = %s V" % [EngineBench._g(float(a.get("beta", 100))), EngineBench._g(float(a.get("vbe", 0.7)))], P.call(60, 384), int(fs * 0.9), ink)
+	if not asks.is_empty() and not small: S.text(ci, f, "find:  " + "   ".join(asks), P.call(60, 22), fs, S.INK_RED)
 
 ## A capacitor symbol (two plates) centred at `c`: horizontal flow (plates vertical) or vertical flow (plates horizontal); `c` is the first plate's centre, the second plate sits 14 design px further along the flow.
 static func _cap_h(ci: CanvasItem, c: Vector2, k: float, ink: Color, w: float) -> void:

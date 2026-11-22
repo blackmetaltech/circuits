@@ -1,7 +1,7 @@
 // Chapter 5 "Switches & Gain" (tickets 5-1 .. 5-5): cards, specs, hints, Wren's coach steps, the plain-words explainers and the exam debrief. `{name}` marks a variable.
 export const ch5En: Record<string, string> = {
   'chapter.5.title': 'Switches & Gain',
-  'chapter.5.blurb': "{mentor}'s fifth page: five jobs from the maker space on {lane}. A 5 V pin has to run a 12 V fan, a 3.3 V board has to light a strip, a robotics club wants a NAND gate from loose parts, a music shop wants a line-out turned up tenfold, and the exam desk asks what a transistor does when you only have a pencil.",
+  'chapter.5.blurb': "{mentor}'s fifth page: five jobs from the maker space on {lane}. A pin runs a fan, a 3.3 V board lights a strip, loose parts become a NAND gate, a synth gets a preamp, and the exam desk asks about gain.",
   // ---- 5-1 Fan Driver
   'ticket.5-1.title': 'Fan Driver',
   'ticket.5-1.brief': "{customer}'s maker space has a microcontroller whose pin gives 5 V through 25 ohm and must never give more than 20 mA here. It has to switch a 12 V fan (60 ohm and a 10 mH winding: 200 mA). A pin cannot do that alone, so a transistor does the heavy lifting: the pin gives a small base current and the transistor lets a hundred times more through the fan. The fan must see at least 11.0 V with the pin high and at most 0.5 V with it low, and the bench also switches it on and off at 100 Hz.",

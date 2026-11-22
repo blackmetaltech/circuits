@@ -68,6 +68,11 @@ export const L5_4: LevelDef = {
       [[12, 7], [12, 8]], [[12, 8], [14, 8]], [[16, 8], [22, 8]], [[12, 10], [12, 11]], [[12, 15], [22, 15], [22, 14]], [[8, 13], [8, 15], [12, 15]],
     ],
   },
+  trace: {
+    probe: 'v(out)', mode: 'clip', unit: 'V', scale: 1, clip: 'OUT', vdiv: 0.5, label: 'OUT', times: [0.5e-3, 1e-3, 2e-3],
+    tube: { kind: 'windows', windows: [{ t0: 0, t1: 1, lo: -1.12, hi: 1.12 }] },   // the swing may not pass 2.2 Vpp (the gain band's top); the lower edge (1.7 Vpp) is the gain spec's
+    lockSpecs: ['gain'],   // (the distortion is checked by the formal bench: its FFT needs whole periods)
+  },
   specShort: 'ticket.5-4.short',
   scope: 'must',
   after: ['5-1'],

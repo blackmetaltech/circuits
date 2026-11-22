@@ -9,7 +9,7 @@ func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color("#120c08"))
 	scene = StallScene.new(); add_child(scene)
 	if OS.get_environment("CB_SHOTS") != "":
-		var sh = load("res://tests/ch4_shots.gd" if OS.get_environment("CB_SHOTS") == "ch4" else "res://tests/ch3_shots.gd" if OS.get_environment("CB_SHOTS") == "ch3" else ("res://tests/ch2_shots.gd" if OS.get_environment("CB_SHOTS") == "ch2" else "res://tests/stall_shots.gd")).new(); add_child(sh); sh.run(scene)
+		var sh = load("res://tests/ch5_shots.gd" if OS.get_environment("CB_SHOTS") == "ch5" else "res://tests/ch4_shots.gd" if OS.get_environment("CB_SHOTS") == "ch4" else "res://tests/ch3_shots.gd" if OS.get_environment("CB_SHOTS") == "ch3" else ("res://tests/ch2_shots.gd" if OS.get_environment("CB_SHOTS") == "ch2" else "res://tests/stall_shots.gd")).new(); add_child(sh); sh.run(scene)
 	if OS.get_environment("CB_SMOKE") != "": _smoke()
 	if OS.get_environment("CB_SHOT") != "":   # one screenshot after CB_SHOT_AT seconds, then quit
 		var at := float(OS.get_environment("CB_SHOT_AT")) if OS.get_environment("CB_SHOT_AT") != "" else 4.0

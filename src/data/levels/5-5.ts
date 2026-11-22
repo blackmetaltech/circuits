@@ -29,7 +29,7 @@ export const L5_5: LevelDef = {
       { kind: 'predict', id: 'pib', entered: 0, of: { probe: 'v(m)', metric: 'mean' }, truth: 20, unit: 'µA' },
       { kind: 'predict', id: 'pic', entered: 0, of: { probe: 'v(m)', metric: 'mean' }, truth: 2, unit: 'mA' },
       { kind: 'predict', id: 'pvce', entered: 0, of: { probe: 'v(m)', metric: 'mean' }, truth: 6, unit: 'V' },
-      { kind: 'predict', id: 'pav', entered: 0, of: { probe: 'v(m)', metric: 'mean' }, truth: -232, unit: '' },
+      { kind: 'predict', id: 'pav', entered: 0, of: { probe: 'v(m)', metric: 'mean' }, truth: -232, unit: 'V/V' },
       { kind: 'metric', id: 'ic', probe: 'i(@npn-textbook#1)', metric: 'peak', lo: 0.00198, hi: 0.00202 },
       { kind: 'metric', id: 'vce', probe: 'v(m)', metric: 'mean', lo: 5.94, hi: 6.06 },
       { kind: 'rating', id: 'ratings' },

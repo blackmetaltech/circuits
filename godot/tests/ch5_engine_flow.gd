@@ -231,7 +231,7 @@ func _run() -> void:
 	print("== 5-5 EB: CE Amplifier")
 	await _start("5-5")
 	ok(sc.pages.mode == "predict" and sc.pages.pred_fields.size() == 4, "the exam slip opens first with four questions")
-	ok(str(sc.pages.pred_fields.map(func(f): return f.unit)) == str(["µA", "mA", "V", ""]), "units on the slip: %s" % str(sc.pages.pred_fields.map(func(f): return f.unit)))
+	ok(str(sc.pages.pred_fields.map(func(f): return f.unit)) == str(["µA", "mA", "V", "V/V"]), "units on the slip: %s" % str(sc.pages.pred_fields.map(func(f): return f.unit)))
 	ok(str(sc.props.exam_fig.get("kind", "")) == "amp", "the figure is the CE card")
 	ok(not JSON.stringify(bk.ticket).contains("232") and not str(bk.ticket.get("spec", "")).contains("2.00"), "no answer is on the card before the predictions are locked")
 	_type("20"); _key(KEY_TAB); _type("2"); _key(KEY_TAB); _type("6"); _key(KEY_TAB); _type("-232"); _key(KEY_ENTER); await _frames(2)
