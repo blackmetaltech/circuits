@@ -98,3 +98,13 @@ Asset gaps: CC0 props (hand tools, a mug model, cable ties), a smoke flipbook, a
 - **Performance on the Deck:** the Low tier has to stay at 60 fps. This is unverified until a Deck run.
 - **Honesty:** the failure spike on the scope is drawn as an off-scale marker labelled with the engine's computed peak. It is not an invented waveform.
 - **Tests:** the old stall stays in the repo and the flows still drive it. The new bench needs its own flow before it becomes the default on master.
+
+## Phase B (v0.3.0): round 3, chapter 1, repairs
+- **Chapter:** chapter 1, not 5 (Priya, product; factory DECISIONS 11-22): a new player and every site visitor start there. 5-1 stays as a showcase on the title. Chapters 2 to 5 play in the classic stall; both titles carry the switch, and the choice is remembered.
+- **Round 3 UI:** machined faceplates with screws and engraved labels, LCD windows for readings, keycaps with depth for tools, a paper repair ticket with a PASSED stamp. Nothing on the right half: the scope and the meter stay clear. Views 3 (scope) and 4 (device) fold the ticket and hide the tray. Tray tiles carry name and value. Shots: `docs/look2/r3/`.
+- **Smoke:** a thin unshaded grey wisp. The old one looked like cream puffs because its colour ramp ended in opaque white (`Gradient.set_color(1)` after `add_point` edits the second point, not the last).
+- **Repairs (decision 10b):** `LevelDef.fault` is the device as it arrives (1-1, 1-2, 1-3, 1-4, 5-1). Each device has its own case colours, brand and model plate. Burnt parts are billed and come out of the pay.
+- **Textures:** mipmaps and VRAM compression on every 3D texture (normal maps RGTC), import files tracked, a test guards it; roughness limiter on; AA per tier.
+- **Speed:** exact bench memo and a missing-part precondition: checkLevel 5-1 111 s to 6.5 s, 4-4 132 s to 61 s, reports byte-identical; vitest 399 s on 4 workers.
+- **Measured:** RTX 4090 high 6.4 ms (phase A figure, the scene grew a little since and was not re-measured); Ryzen 9900X iGPU low tier, Compatibility, 1280x800: 15.0 ms avg, 18.9 ms p95 (was 9.3 ms in round 2 before FXAA and the new panels).
+- **Clips:** `docs/readme/wb-*.gif`, made with Godot's movie maker on the 4090 at a fixed 30 fps (the clip hooks CB_POWER_AT, CB_OPEN_AT, CB_VIEW_AT set the moments).
