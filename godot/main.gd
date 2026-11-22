@@ -7,10 +7,15 @@ func _ready() -> void:
 	if OS.get_environment("CB_SMOKE") != "": OS.set_environment("CB_NOSAVE", "1")   # a smoke run never touches the player's save
 	SaveMigrate.run_default()   # the game was called NODE: carry an old save folder over before anything reads user://
 	RenderingServer.set_default_clear_color(Color("#120c08"))
+	if OS.get_environment("CB_LOOK2_DEV") != "":   # LOOK2 dev scenes: CB_LOOK2_DEV=<name> runs res://look2/dev/<name>_test.gd
+		add_child(load("res://look2/dev/%s_test.gd" % OS.get_environment("CB_LOOK2_DEV")).new()); _shot_hook(); return
 	scene = StallScene.new(); add_child(scene)
 	if OS.get_environment("CB_SHOTS") != "":
 		var sh = load("res://tests/ch5_shots.gd" if OS.get_environment("CB_SHOTS") == "ch5" else "res://tests/ch4_shots.gd" if OS.get_environment("CB_SHOTS") == "ch4" else "res://tests/ch3_shots.gd" if OS.get_environment("CB_SHOTS") == "ch3" else ("res://tests/ch2_shots.gd" if OS.get_environment("CB_SHOTS") == "ch2" else "res://tests/stall_shots.gd")).new(); add_child(sh); sh.run(scene)
 	if OS.get_environment("CB_SMOKE") != "": _smoke()
+	_shot_hook()
+
+func _shot_hook() -> void:
 	if OS.get_environment("CB_SHOT") != "":   # one screenshot after CB_SHOT_AT seconds, then quit
 		var at := float(OS.get_environment("CB_SHOT_AT")) if OS.get_environment("CB_SHOT_AT") != "" else 4.0
 		get_tree().create_timer(at).timeout.connect(func(): get_viewport().get_texture().get_image().save_png(OS.get_environment("CB_SHOT")); get_tree().quit())

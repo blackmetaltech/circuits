@@ -1,0 +1,76 @@
+{
+  "result": {
+    "badSamples": {},
+    "costText": "$0.06",
+    "debrief": null,
+    "failures": [
+      {
+        "key": "smoke.refused",
+        "text": "The 2N2222A NPN is burnt and cannot be accepted. Replace it with a fresh part.",
+        "vars": {
+          "part": "p2"
+        }
+      }
+    ],
+    "measured": {},
+    "metrics": {
+      "area": 231.0,
+      "cost": 6.0,
+      "parts": 2.0,
+      "power": 0.0
+    },
+    "pass": false,
+    "pay": 0.0,
+    "payText": "",
+    "predictions": [],
+    "retry": false,
+    "smoked": [
+      "p2"
+    ],
+    "specs": [
+      {
+        "id": "fanhi",
+        "key": "ticket.5-1.spec.fanhi",
+        "margin": -1.0,
+        "name": "The fan gets at least 11.0 V when the pin is high",
+        "pass": false
+      },
+      {
+        "id": "fanlo",
+        "key": "ticket.5-1.spec.fanlo",
+        "margin": -1.0,
+        "name": "The fan gets at most 0.5 V when the pin is low",
+        "pass": false
+      },
+      {
+        "id": "ipin",
+        "key": "ticket.5-1.spec.ipin",
+        "margin": -1.0,
+        "name": "The pin gives at most 20 mA when it is high",
+        "pass": false
+      },
+      {
+        "id": "ratings",
+        "key": "bench.spec.ratings",
+        "margin": -1.0,
+        "name": "No part over its rating",
+        "pass": false
+      }
+    ],
+    "stars": 0.0,
+    "thanks": ""
+  },
+  "run": {
+    "autoPowered": false,
+    "message": "Bench failed for ticket 5-1: 1 problem. Open the bench report to see what to fix.",
+    "metrics": {
+      "area": 231.0,
+      "cost": 6.0,
+      "parts": 2.0,
+      "power": 0.0
+    },
+    "ok": true,
+    "pass": false,
+    "stars": 0.0
+  }
+}

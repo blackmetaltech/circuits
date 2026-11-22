@@ -1,0 +1,1441 @@
+{
+  "bench": {
+    "benched": null,
+    "boardErrors": [],
+    "connectors": [
+      {
+        "id": "V12",
+        "pad": [
+          2.0,
+          2.0
+        ],
+        "role": "source"
+      },
+      {
+        "id": "PIN",
+        "pad": [
+          2.0,
+          7.0
+        ],
+        "role": "source"
+      },
+      {
+        "id": "COLL",
+        "pad": [
+          22.0,
+          4.0
+        ],
+        "role": "load"
+      },
+      {
+        "id": "GND",
+        "pad": [
+          22.0,
+          14.0
+        ],
+        "role": "ground"
+      }
+    ],
+    "crossings": [],
+    "dangling": [],
+    "h": 16.0,
+    "instruments": {
+      "dmm": {
+        "black": null,
+        "label": "off",
+        "mode": "off",
+        "red": null
+      },
+      "gen": null,
+      "paused": false,
+      "powered": false,
+      "scope": {
+        "probes": [],
+        "timePerDiv": 0.002,
+        "trigger": {
+          "edge": "rise",
+          "level": 0.0,
+          "mode": "auto",
+          "source": 1.0
+        },
+        "voltsPerDiv": [
+          5.0,
+          5.0
+        ]
+      },
+      "supply": {
+        "ilim": 1.0,
+        "on": false,
+        "v": 12.0
+      }
+    },
+    "issues": [],
+    "joins": [
+      {
+        "n": 2.0,
+        "pad": [
+          14.0,
+          2.0
+        ]
+      }
+    ],
+    "keepOut": [],
+    "marks": [],
+    "openPins": [],
+    "parts": [
+      {
+        "fixed": true,
+        "flip": false,
+        "kind": "MOTOR",
+        "name": "DC fan",
+        "partId": "fan-dc",
+        "pins": [
+          {
+            "label": "+",
+            "name": "+",
+            "pad": [
+              16.0,
+              2.0
+            ]
+          },
+          {
+            "label": "-",
+            "name": "-",
+            "pad": [
+              22.0,
+              2.0
+            ]
+          }
+        ],
+        "pos": null,
+        "ratings": {
+          "Vrated": 12.0
+        },
+        "rot": 0.0,
+        "smoked": false,
+        "uid": "f1",
+        "value": null,
+        "valueText": "",
+        "variant": "12V",
+        "x": 16.0,
+        "y": 2.0
+      }
+    ],
+    "redoDepth": 0.0,
+    "selectors": [
+      {
+        "id": "pin",
+        "index": 0.0,
+        "label": "PIN",
+        "options": [
+          "high",
+          "low",
+          "100 Hz"
+        ]
+      }
+    ],
+    "slots": [],
+    "status": "ok",
+    "ticket": "5-1",
+    "undoDepth": 0.0,
+    "w": 24.0,
+    "wires": [
+      {
+        "fixed": true,
+        "path": [
+          [
+            2.0,
+            2.0
+          ],
+          [
+            14.0,
+            2.0
+          ]
+        ],
+        "wid": "fw1"
+      },
+      {
+        "fixed": true,
+        "path": [
+          [
+            14.0,
+            2.0
+          ],
+          [
+            16.0,
+            2.0
+          ]
+        ],
+        "wid": "fw2"
+      },
+      {
+        "fixed": true,
+        "path": [
+          [
+            22.0,
+            2.0
+          ],
+          [
+            22.0,
+            4.0
+          ]
+        ],
+        "wid": "fw3"
+      }
+    ]
+  },
+  "bin": [
+    {
+      "footprint": "to92",
+      "i": 0,
+      "kind": "NPN",
+      "label": "2N2222A NPN",
+      "left": 1,
+      "partId": "2n2222a",
+      "price": 4,
+      "price_text": "$0.04",
+      "tag": "",
+      "value": null,
+      "variant": "TO92"
+    },
+    {
+      "footprint": "to92",
+      "i": 1,
+      "kind": "NPN",
+      "label": "BC547B NPN",
+      "left": 1,
+      "partId": "bc547b",
+      "price": 3,
+      "price_text": "$0.03",
+      "tag": "",
+      "value": null,
+      "variant": "TO92"
+    },
+    {
+      "footprint": "to220",
+      "i": 2,
+      "kind": "DARLINGTON",
+      "label": "TIP120",
+      "left": 1,
+      "partId": "tip120",
+      "price": 25,
+      "price_text": "$0.25",
+      "tag": "",
+      "value": null,
+      "variant": "TO220"
+    },
+    {
+      "footprint": "axial2",
+      "i": 3,
+      "kind": "D",
+      "label": "1N4007 rectifier diode",
+      "left": 1,
+      "partId": "1n4007",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "",
+      "value": null,
+      "variant": "DO41"
+    },
+    {
+      "footprint": "axial2",
+      "i": 4,
+      "kind": "D",
+      "label": "1N4148 signal diode",
+      "left": 1,
+      "partId": "1n4148",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "diode",
+      "value": null,
+      "variant": "DO35"
+    },
+    {
+      "footprint": "axial2",
+      "i": 5,
+      "kind": "R",
+      "label": "47 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 47.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 6,
+      "kind": "R",
+      "label": "56 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 56.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 7,
+      "kind": "R",
+      "label": "68 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 68.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 8,
+      "kind": "R",
+      "label": "82 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 82.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 9,
+      "kind": "R",
+      "label": "100 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 100.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 10,
+      "kind": "R",
+      "label": "120 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 120.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 11,
+      "kind": "R",
+      "label": "150 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 150.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 12,
+      "kind": "R",
+      "label": "180 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 180.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 13,
+      "kind": "R",
+      "label": "220 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 220.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 14,
+      "kind": "R",
+      "label": "270 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 270.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 15,
+      "kind": "R",
+      "label": "330 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 330.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 16,
+      "kind": "R",
+      "label": "390 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 390.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 17,
+      "kind": "R",
+      "label": "470 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 470.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 18,
+      "kind": "R",
+      "label": "560 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 560.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 19,
+      "kind": "R",
+      "label": "680 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 680.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 20,
+      "kind": "R",
+      "label": "820 Ω",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 820.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 21,
+      "kind": "R",
+      "label": "1 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 1000.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 22,
+      "kind": "R",
+      "label": "1.2 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 1200.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 23,
+      "kind": "R",
+      "label": "1.5 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 1500.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 24,
+      "kind": "R",
+      "label": "1.8 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 1800.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 25,
+      "kind": "R",
+      "label": "2.2 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 2200.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 26,
+      "kind": "R",
+      "label": "2.7 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 2700.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 27,
+      "kind": "R",
+      "label": "3.3 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 3300.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 28,
+      "kind": "R",
+      "label": "3.9 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 3900.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 29,
+      "kind": "R",
+      "label": "4.7 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 4700.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 30,
+      "kind": "R",
+      "label": "5.6 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 5600.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 31,
+      "kind": "R",
+      "label": "6.8 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 6800.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 32,
+      "kind": "R",
+      "label": "8.2 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 8200.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 33,
+      "kind": "R",
+      "label": "10 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 10000.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 34,
+      "kind": "R",
+      "label": "12 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 12000.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 35,
+      "kind": "R",
+      "label": "15 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 15000.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 36,
+      "kind": "R",
+      "label": "18 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 18000.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 37,
+      "kind": "R",
+      "label": "22 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 22000.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 38,
+      "kind": "R",
+      "label": "27 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 27000.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 39,
+      "kind": "R",
+      "label": "33 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 33000.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 40,
+      "kind": "R",
+      "label": "39 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 39000.0,
+      "variant": "0.25W"
+    },
+    {
+      "footprint": "axial2",
+      "i": 41,
+      "kind": "R",
+      "label": "47 kΩ",
+      "left": 2,
+      "partId": "res-cf",
+      "price": 2,
+      "price_text": "$0.02",
+      "tag": "¼ W",
+      "value": 47000.0,
+      "variant": "0.25W"
+    }
+  ],
+  "card": {
+    "ambientC": 25.0,
+    "answers": [],
+    "bin": [
+      {
+        "max": 1.0,
+        "partId": "2n2222a",
+        "values": null,
+        "variants": [
+          "TO92"
+        ]
+      },
+      {
+        "max": 1.0,
+        "partId": "bc547b",
+        "values": null,
+        "variants": [
+          "TO92"
+        ]
+      },
+      {
+        "max": 1.0,
+        "partId": "tip120",
+        "values": null,
+        "variants": [
+          "TO220"
+        ]
+      },
+      {
+        "max": 1.0,
+        "partId": "1n4007",
+        "values": null,
+        "variants": [
+          "DO41"
+        ]
+      },
+      {
+        "max": 1.0,
+        "partId": "1n4148",
+        "values": null,
+        "variants": [
+          "DO35"
+        ]
+      },
+      {
+        "max": 2.0,
+        "partId": "res-cf",
+        "values": [
+          47.0,
+          56.0,
+          68.0,
+          82.0,
+          100.0,
+          120.0,
+          150.0,
+          180.0,
+          220.0,
+          270.0,
+          330.0,
+          390.0,
+          470.0,
+          560.0,
+          680.0,
+          820.0,
+          1000.0,
+          1200.0,
+          1500.0,
+          1800.0,
+          2200.0,
+          2700.0,
+          3300.0,
+          3900.0,
+          4700.0,
+          5600.0,
+          6800.0,
+          8200.0,
+          10000.0,
+          12000.0,
+          15000.0,
+          18000.0,
+          22000.0,
+          27000.0,
+          33000.0,
+          39000.0,
+          47000.0
+        ],
+        "variants": [
+          "0.25W"
+        ]
+      }
+    ],
+    "brief": "Kit's maker space has a microcontroller whose pin gives 5 V through 25 ohm and must never give more than 20 mA here. It has to switch a 12 V fan (60 ohm and a 10 mH winding: 200 mA). A pin cannot do that alone, so a transistor does the heavy lifting: the pin gives a small base current and the transistor lets a hundred times more through the fan. The fan must see at least 11.0 V with the pin high and at most 0.5 V with it low, and the bench also switches it on and off at 100 Hz.",
+    "camera": false,
+    "chapter": 5.0,
+    "chit": {
+      "x": 0.3,
+      "y": 0.3
+    },
+    "conditions": [
+      {
+        "ambientC": 25.0,
+        "id": "pin high",
+        "set": [
+          {
+            "key": "v",
+            "target": "pin",
+            "value": 5.0
+          },
+          {
+            "key": "pwm",
+            "target": "pin",
+            "value": 0.0
+          }
+        ]
+      },
+      {
+        "ambientC": 25.0,
+        "id": "pin low",
+        "set": [
+          {
+            "key": "v",
+            "target": "pin",
+            "value": 0.0
+          },
+          {
+            "key": "pwm",
+            "target": "pin",
+            "value": 0.0
+          }
+        ]
+      },
+      {
+        "ambientC": 25.0,
+        "id": "100 Hz PWM",
+        "set": [
+          {
+            "key": "v",
+            "target": "pin",
+            "value": 5.0
+          },
+          {
+            "key": "pwm",
+            "target": "pin",
+            "value": 1.0
+          }
+        ]
+      }
+    ],
+    "customer": "Kit",
+    "customerId": "maker",
+    "eb": false,
+    "examHidden": false,
+    "fee": 1000.0,
+    "feeText": "$10.00",
+    "figure": null,
+    "gauge": {
+      "spec": "ipin",
+      "unit": "A"
+    },
+    "hasHints": true,
+    "hintRung": 0.0,
+    "id": "5-1",
+    "instruments": {
+      "gen": false,
+      "scope": true,
+      "supply": true
+    },
+    "lane": "Lantern Lane",
+    "mains": null,
+    "maxParts": 5.0,
+    "mentor": "Wren",
+    "payText": "fee $10.00 + $2.50 per new star",
+    "predictions": [],
+    "selectors": [
+      {
+        "id": "pin",
+        "index": 0.0,
+        "label": "PIN",
+        "options": [
+          "high",
+          "low",
+          "100 Hz"
+        ]
+      }
+    ],
+    "shoebox": [
+      {
+        "footprint": "to92",
+        "kind": "NPN",
+        "max": 1.0,
+        "name": "2N2222A NPN",
+        "partId": "2n2222a",
+        "pins": [
+          "E",
+          "B",
+          "C"
+        ],
+        "placed": 0.0,
+        "unit": "",
+        "values": null,
+        "variants": [
+          {
+            "id": "TO92",
+            "price": 4.0,
+            "priceText": "$0.04",
+            "ratings": {
+              "Ic": 0.6,
+              "Ptot": 0.625,
+              "Vceo": 40.0
+            }
+          }
+        ]
+      },
+      {
+        "footprint": "to92",
+        "kind": "NPN",
+        "max": 1.0,
+        "name": "BC547B NPN",
+        "partId": "bc547b",
+        "pins": [
+          "C",
+          "B",
+          "E"
+        ],
+        "placed": 0.0,
+        "unit": "",
+        "values": null,
+        "variants": [
+          {
+            "id": "TO92",
+            "price": 3.0,
+            "priceText": "$0.03",
+            "ratings": {
+              "Ic": 0.1,
+              "Ptot": 0.5,
+              "Vceo": 45.0,
+              "hFEmax": 450.0,
+              "hFEmin": 200.0
+            }
+          }
+        ]
+      },
+      {
+        "footprint": "to220",
+        "kind": "DARLINGTON",
+        "max": 1.0,
+        "name": "TIP120",
+        "partId": "tip120",
+        "pins": [
+          "B",
+          "C",
+          "E"
+        ],
+        "placed": 0.0,
+        "unit": "",
+        "values": null,
+        "variants": [
+          {
+            "id": "TO220",
+            "price": 25.0,
+            "priceText": "$0.25",
+            "ratings": {
+              "Ic": 5.0,
+              "IcPeak": 8.0,
+              "Ptot": 65.0,
+              "PtotAir": 2.0,
+              "VceSatMax": 2.0,
+              "Vceo": 60.0,
+              "hFEmin": 1000.0
+            }
+          }
+        ]
+      },
+      {
+        "footprint": "axial2",
+        "kind": "D",
+        "max": 1.0,
+        "name": "1N4007 rectifier diode",
+        "partId": "1n4007",
+        "pins": [
+          "A",
+          "K"
+        ],
+        "placed": 0.0,
+        "unit": "",
+        "values": null,
+        "variants": [
+          {
+            "id": "DO41",
+            "price": 2.0,
+            "priceText": "$0.02",
+            "ratings": {
+              "I2t": 3.7,
+              "IFAV": 1.0,
+              "IFSM": 30.0,
+              "VFtyp": 1.1,
+              "VR": 1000.0,
+              "VRRM": 1000.0
+            }
+          }
+        ]
+      },
+      {
+        "footprint": "axial2",
+        "kind": "D",
+        "max": 1.0,
+        "name": "1N4148 signal diode",
+        "partId": "1n4148",
+        "pins": [
+          "A",
+          "K"
+        ],
+        "placed": 0.0,
+        "unit": "",
+        "values": null,
+        "variants": [
+          {
+            "id": "DO35",
+            "price": 2.0,
+            "priceText": "$0.02",
+            "ratings": {
+              "IF": 0.3,
+              "IFAV": 0.15,
+              "IFRM": 0.5,
+              "IFSM": 2.0,
+              "Ptot": 0.5,
+              "VFmax10mA": 1.0,
+              "VR": 75.0,
+              "VRRM": 100.0
+            }
+          }
+        ]
+      },
+      {
+        "footprint": "axial2",
+        "kind": "R",
+        "max": 2.0,
+        "name": "Carbon-film resistor 5 %",
+        "partId": "res-cf",
+        "pins": [
+          "1",
+          "2"
+        ],
+        "placed": 0.0,
+        "unit": "Ω",
+        "values": [
+          47.0,
+          56.0,
+          68.0,
+          82.0,
+          100.0,
+          120.0,
+          150.0,
+          180.0,
+          220.0,
+          270.0,
+          330.0,
+          390.0,
+          470.0,
+          560.0,
+          680.0,
+          820.0,
+          1000.0,
+          1200.0,
+          1500.0,
+          1800.0,
+          2200.0,
+          2700.0,
+          3300.0,
+          3900.0,
+          4700.0,
+          5600.0,
+          6800.0,
+          8200.0,
+          10000.0,
+          12000.0,
+          15000.0,
+          18000.0,
+          22000.0,
+          27000.0,
+          33000.0,
+          39000.0,
+          47000.0
+        ],
+        "variants": [
+          {
+            "id": "0.25W",
+            "price": 2.0,
+            "priceText": "$0.02",
+            "ratings": {
+              "P": 0.25,
+              "Tamb": 70.0,
+              "Vmax": 250.0
+            }
+          }
+        ]
+      }
+    ],
+    "sources": [],
+    "specShort": "Fan 11 V or more with the pin high, 0.5 V or less with it low, pin 20 mA at most",
+    "specs": [
+      {
+        "id": "fanhi",
+        "name": "The fan gets at least 11.0 V when the pin is high"
+      },
+      {
+        "id": "fanlo",
+        "name": "The fan gets at most 0.5 V when the pin is low"
+      },
+      {
+        "id": "ipin",
+        "name": "The pin gives at most 20 mA when it is high"
+      }
+    ],
+    "stall": "Stall 14",
+    "starRule": "",
+    "stars": {
+      "head": "cost",
+      "par": {
+        "area": 120.0,
+        "cost": 8.0,
+        "parts": 3.0,
+        "power": 1000000000.0
+      }
+    },
+    "supplies": [
+      {
+        "fixed": 12.0,
+        "id": "psu12",
+        "kind": "bench",
+        "minus": "GND",
+        "plus": "V12"
+      },
+      {
+        "duty": 0.5,
+        "f": 100.0,
+        "id": "pin",
+        "kind": "pin",
+        "minus": "GND",
+        "plus": "PIN",
+        "rOut": 25.0,
+        "v": 5.0
+      }
+    ],
+    "targets": [
+      {
+        "hi": 12.5,
+        "id": "fanhi",
+        "lo": 11.0,
+        "name": "The fan gets at least 11.0 V when the pin is high"
+      },
+      {
+        "hi": 0.5,
+        "id": "fanlo",
+        "lo": -0.5,
+        "name": "The fan gets at most 0.5 V when the pin is low"
+      },
+      {
+        "hi": 0.02,
+        "id": "ipin",
+        "lo": -0.001,
+        "name": "The pin gives at most 20 mA when it is high"
+      }
+    ],
+    "title": "Fan Driver"
+  },
+  "coach": {
+    "back": false,
+    "cur": 0,
+    "step_no": 1,
+    "step_total": 7,
+    "steps": [
+      {
+        "done": false,
+        "id": "place",
+        "optional": false,
+        "shown": true,
+        "target": "box:2n2222a",
+        "text": "Kit's fan board. Drag a transistor from the shoebox onto the board: the 2N2222A is rated for 600 mA, the BC547B only for 100."
+      },
+      {
+        "done": false,
+        "id": "base",
+        "optional": false,
+        "shown": false,
+        "target": "pad:2,7",
+        "text": "A resistor goes from the PIN pad to the transistor's base: it sets how much base current the pin gives."
+      },
+      {
+        "done": false,
+        "id": "wire",
+        "optional": false,
+        "shown": false,
+        "target": "pad:22,4",
+        "text": "Wire the PIN pad through the resistor to the base, the emitter to GND and the collector to the COLL pad (the fan's low end)."
+      },
+      {
+        "done": false,
+        "id": "diode",
+        "optional": true,
+        "shown": false,
+        "target": "box:1n4007",
+        "text": "A diode across the fan, its banded end on the 12 V side, gives the fan's current somewhere to go when the transistor turns off."
+      },
+      {
+        "done": false,
+        "id": "diode-burn",
+        "optional": false,
+        "shown": false,
+        "target": "box:1n4007",
+        "text": "The transistor burned when the fan switched off: a fan is a coil, and a coil's current cannot stop at once. Put a diode across the fan, its banded end on the 12 V side, before you try again."
+      },
+      {
+        "done": false,
+        "id": "power",
+        "optional": false,
+        "shown": false,
+        "target": "rocker",
+        "text": "Switch the bench on. The PIN switch turns the pin high, low or 100 Hz."
+      },
+      {
+        "done": false,
+        "id": "run-bench",
+        "optional": false,
+        "shown": false,
+        "target": "bench",
+        "text": "Run the bench: it tries the pin high, low and switching at 100 Hz."
+      },
+      {
+        "done": true,
+        "id": "done",
+        "optional": false,
+        "shown": false,
+        "target": "chit",
+        "text": "Kit's fan spins from a pin, and stays whole when it is switched off."
+      }
+    ]
+  },
+  "ticket": {
+    "answers": [],
+    "ask": "My pin cannot run this fan.",
+    "board": {
+      "connectors": [
+        {
+          "id": "V12",
+          "pad": [
+            2,
+            2
+          ],
+          "role": "supply"
+        },
+        {
+          "id": "PIN",
+          "pad": [
+            2,
+            7
+          ],
+          "role": "supply"
+        },
+        {
+          "id": "COLL",
+          "pad": [
+            22,
+            4
+          ],
+          "role": "load"
+        },
+        {
+          "id": "GND",
+          "pad": [
+            22,
+            14
+          ],
+          "role": "ground"
+        }
+      ],
+      "h": 16,
+      "w": 24
+    },
+    "brief": "Kit's maker space has a microcontroller whose pin gives 5 V through 25 ohm and must never give more than 20 mA here. It has to switch a 12 V fan (60 ohm and a 10 mH winding: 200 mA). A pin cannot do that alone, so a transistor does the heavy lifting: the pin gives a small base current and the transistor lets a hundred times more through the fan. The fan must see at least 11.0 V with the pin high and at most 0.5 V with it low, and the bench also switches it on and off at 100 Hz.",
+    "chapter": 5,
+    "conditions": [
+      {
+        "ambientC": 25.0,
+        "id": "pin high",
+        "set": [
+          {
+            "key": "v",
+            "target": "pin",
+            "value": 5.0
+          },
+          {
+            "key": "pwm",
+            "target": "pin",
+            "value": 0.0
+          }
+        ]
+      },
+      {
+        "ambientC": 25.0,
+        "id": "pin low",
+        "set": [
+          {
+            "key": "v",
+            "target": "pin",
+            "value": 0.0
+          },
+          {
+            "key": "pwm",
+            "target": "pin",
+            "value": 0.0
+          }
+        ]
+      },
+      {
+        "ambientC": 25.0,
+        "id": "100 Hz PWM",
+        "set": [
+          {
+            "key": "v",
+            "target": "pin",
+            "value": 5.0
+          },
+          {
+            "key": "pwm",
+            "target": "pin",
+            "value": 1.0
+          }
+        ]
+      }
+    ],
+    "customer": "Kit",
+    "eb": false,
+    "figure": null,
+    "gadget": "fan",
+    "id": "5-1",
+    "mains": {},
+    "pay_text": "fee $10.00 + $2.50 per new star",
+    "predictions": [],
+    "price": 1000,
+    "price_text": "$10.00",
+    "scope": {
+      "attached": true,
+      "clip_name": "",
+      "clip_pad": null,
+      "clipped": false,
+      "hi": 20.0,
+      "hidden": false,
+      "label": "CURRENT",
+      "lo": 0.0,
+      "mode": "gauge",
+      "name": "The pin gives at most 20 mA when it is high",
+      "nogauge": false,
+      "scale": 1000.0,
+      "text": "",
+      "unit": "mA",
+      "value": 0.0,
+      "vdiv": 5.0
+    },
+    "spec": "Fan 11 V or more with the pin high, 0.5 V or less with it low, pin 20 mA at most",
+    "spec_full": "Fan 11 V or more with the pin high, 0.5 V or less with it low, pin 20 mA at most",
+    "specs": [
+      {
+        "id": "fanhi",
+        "name": "The fan gets at least 11.0 V when the pin is high"
+      },
+      {
+        "id": "fanlo",
+        "name": "The fan gets at most 0.5 V when the pin is low"
+      },
+      {
+        "id": "ipin",
+        "name": "The pin gives at most 20 mA when it is high"
+      }
+    ],
+    "star_rule": "",
+    "supply": {
+      "adjustable": false,
+      "kind": "bench",
+      "label": "12 V supply",
+      "tired": false,
+      "volts": 12.0
+    },
+    "targets": [
+      {
+        "hi": 12.5,
+        "id": "fanhi",
+        "lo": 11.0,
+        "name": "The fan gets at least 11.0 V when the pin is high"
+      },
+      {
+        "hi": 0.5,
+        "id": "fanlo",
+        "lo": -0.5,
+        "name": "The fan gets at most 0.5 V when the pin is low"
+      },
+      {
+        "hi": 0.02,
+        "id": "ipin",
+        "lo": -0.001,
+        "name": "The pin gives at most 20 mA when it is high"
+      }
+    ],
+    "thanks": "The fan spins and the pin stays cool.",
+    "title": "Fan Driver"
+  }
+}
