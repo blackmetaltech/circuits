@@ -114,8 +114,8 @@ export const mIrf540n: PartDef = {
 /** Textbook NPN (ticket 5-5): a constant 0.700 V base-emitter drop when on, collector current exactly beta times the base current, saturation at 0.2 V. Textbook bins only. */
 export const npnTextbook: PartDef = {
   id: 'npn-textbook', kind: 'NPN', nameKey: 'part.npn-textbook.name', footprint: 'to92', pins: ['C', 'B', 'E'],
-  variants: [variant('ideal', {}, { thetaJA: 1, tauS: 1, tMax: 1000, tFail: 2000 })],
-  model: { ideal: 1, bf: 100, vf: 0.7, vcesat: 0.2 },
+  variants: [variant('ideal', { Vceo: 1000 }, { thetaJA: 1, tauS: 1, tMax: 1000, tFail: 2000 })],
+  model: { ideal: 1, Is: 1e-14, Bf: 100, Vaf: 1e6, vf: 0.7, vcesat: 0.2 },
   source: { doc: 'Textbook ideal element, defined by its constitutive equation (no datasheet, no physical data)', definition: true, note: 'Vbe = 0.700 V when on, Ic = beta x Ib with beta = 100, Vce(sat) = 0.2 V. Textbook bins only (DESIGN ticket 5-5: "fixed-0.7 V BJT model"). [R] no thermal model.' },
   verified: true, scope: 'campaign', simplifications: ['part.simplify.bjt-textbook'],
 };

@@ -139,7 +139,7 @@ function explainCtx(tk: TicketState | null, def: LevelDef | undefined, prior = 0
   const cn = rig.conn.connectorNodes;
   if (def.explain === 'switch' && q5 && qd) {
     const pinSupply = def.supplies.find((x) => x.kind === 'pin'), rb = resistors.filter((p) => !p.fixed).reduce((a, p) => a + (p.value ?? 0), 0), v = qd.variants.find((x) => x.id === q5.variant) ?? qd.variants[0]!;
-    ctx.sw = { rb, rpin: pinSupply?.kind === 'pin' ? pinSupply.rOut : 25, vpin: pinSupply?.kind === 'pin' ? pinSupply.v : 5, vfan: 12, rfan: 60, beta: qd.model.Bf ?? qd.model.bf ?? (qd.model.hFEmin ?? 100), icLimit: v.ratings.Ic ?? 0.2, pRated: v.ratings.Ptot ?? 0.625, part: q5.uid };
+    ctx.sw = { loadName: t('name.load.fan'), rb, rpin: pinSupply?.kind === 'pin' ? pinSupply.rOut : 25, vpin: pinSupply?.kind === 'pin' ? pinSupply.v : 5, vfan: 12, rfan: 60, beta: qd.model.Bf ?? qd.model.bf ?? (qd.model.hFEmin ?? 100), icLimit: v.ratings.Ic ?? 0.2, pRated: v.ratings.Ptot ?? 0.625, part: q5.uid };
     if (qd.kind === 'NPN' && qd.model.Bf !== undefined) ctx.sw.beta = qd.model.Bf;
   }
   if (def.explain === 'fet') {

@@ -250,7 +250,7 @@ function explainChapter5(f: BenchFailure, ctx: ExplainContext): Explained | null
     if (id === 'fanlo') return { key: 'explain.sw.leak', vars: { value: sig(Math.max(0, value), 3), hi: sig(num('hi'), 2) } };
     if (f.key === 'rating.bjt.vceo' || f.key === 'smoke.bjt.avalanche') {
       const peak = f.key === 'rating.bjt.vceo' ? num('value') : num('vce'), lim = f.key === 'rating.bjt.vceo' ? num('limit') : num('vceo');
-      return explainInductiveKick({ part: String(v.part), load: 'the fan', vPeak: peak, vceo: lim });
+      return explainInductiveKick({ part: String(v.part), load: w.loadName, vPeak: peak, vceo: lim });
     }
     if (f.key === 'rating.bjt.ic') return { key: 'explain.sw.ic', vars: { ...pn(String(v.part)), value: sig(num('value') * 1000, 3), limit: sig(num('limit') * 1000, 3), need: sig(need * 1000, 3) } };
     if (f.key === 'rating.thermal.tj' || f.key === 'smoke.thermal') {
@@ -290,7 +290,7 @@ function explainChapter5(f: BenchFailure, ctx: ExplainContext): Explained | null
   }
   if (mode === 'amplifierexam' && ctx.ce && (id === 'ic' || id === 'vce') && (f.key === 'bench.metric.fail' || f.key === 'bench.metric.nan')) {
     const c = ctx.ce, ib = (c.vcc - c.vbe) / c.rb, ic = c.beta * ib, vce = c.vcc - ic * c.rc;
-    return { key: 'explain.ceexam.miss', vars: { rb: si(c.rb, 'Ω'), rc: si(c.rc, 'Ω'), ib: sig(ib * 1e6, 3), ic: sig(ic * 1000, 3), vce: sig(Math.max(vce, 0.2), 3), vcc: c.vcc, vbe: c.vbe, beta: c.beta, value: sig(Number.isFinite(value) ? value : 0, 3), lo: sig(num('lo'), 3), hi: sig(num('hi'), 3), which: id === 'ic' ? 'collector current (mA)' : 'collector voltage (V)' } };
+    return { key: 'explain.ceexam.miss', vars: { rb: si(c.rb, 'Ω'), rc: si(c.rc, 'Ω'), ib: sig(ib * 1e6, 3), ic: sig(ic * 1000, 3), vce: sig(Math.max(vce, 0.2), 3), vcc: c.vcc, vbe: c.vbe, beta: c.beta } };
   }
   return null;
 }
@@ -435,7 +435,7 @@ export interface ExplainContext {
   reg?: { rpre: number; vrail: number; vout: number; theta: number; ta: number; tjMax: number };
   lm317?: { r1: number; r2: number };
   /** Chapter 5: the fan driver (5-1), the 3.3 V gate (5-2), the NAND gate (5-3), the common-emitter amplifier (5-4) and its exam (5-5) as the player built them. */
-  sw?: { rb: number; rpin: number; vpin: number; vfan: number; rfan: number; beta: number; icLimit: number; pRated: number; part: string };
+  sw?: { loadName: string; rb: number; rpin: number; vpin: number; vfan: number; rfan: number; beta: number; icLimit: number; pRated: number; part: string };
   fet?: { part: string; vgs: number; vstrip: number; rstrip: number; vth: { minimum: number; typical: number; maximum: number }; theta: number; vleak: number; rpd: number };
   gate?: { nDiodes: number; rc: number; rl: number; vcc: number; vlow: number; hasPulldown: boolean };
   amp?: { r1: number; r2: number; rc: number; re: number; vcc: number; rsrc: number; rload: number; beta: { low: number; mid: number; high: number } };

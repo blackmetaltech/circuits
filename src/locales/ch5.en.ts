@@ -94,6 +94,7 @@ export const ch5En: Record<string, string> = {
   'coach.5-5.s3': 'RB from VCC to the base, RC from VCC to the collector (the M pad is the collector), the emitter to GND.',
   'coach.5-5.s4': 'Run the bench: it measures IC and the collector voltage and grades your predictions.',
   'coach.5-5.s5': 'The exam desk marks your slip. Read the working on the page.',
+  'name.load.fan': 'the fan',
   // ---- the chapter 5 explainers (plain words first, then the arithmetic)
   'explain.sw.weak.first': 'The fan only got {value} V (it needs {lo} V). The transistor was not fully on: the pin pushes (5 - 0.7 V) through {rb} and its own {rpin}, which is {ib} mA into the base. With a gain of about {beta} that lets at most {icMax} mA through the collector, and the fan wants {need} mA. The transistor dropped {vce} V itself instead of nearly nothing. A switch needs a hard push: about a tenth of the load current at the base.',
   'explain.sw.weak.again': 'The fan got {value} V. Ib = ({vpin} - 0.7 V) / ({rb} + {rpin}) = {ib} mA, so Ic can be at most {beta} x {ib} mA = {icMax} mA, not the {need} mA the fan needs. To be saturated the base needs about {ibNeed} mA: a base resistor of {rbMax} or less, but the pin must stay under 20 mA.',
