@@ -398,7 +398,7 @@ func set_view(v: int, snap := false) -> void:
 			var bb := _used_bounds()
 			g_tgt = bb.get_center() + Vector3(-0.022, 0.0, 0.004); g_yaw = 0.0; g_pitch = deg_to_rad(-62.0); g_dist = clampf(bb.size.length() * 2.3, 0.2, 0.31)
 		2: g_tgt = Vector3(0.02, 0.04, -0.03); g_yaw = deg_to_rad(16.0); g_pitch = deg_to_rad(-26.0); g_dist = 0.92
-		3: g_tgt = (scope.global_position + Vector3(0, 0.08, 0)) if scope else Vector3(-0.3, 0.08, -0.25); g_yaw = deg_to_rad(14.0); g_pitch = deg_to_rad(-10.0); g_dist = 0.48
+		3: g_tgt = (scope.global_position + Vector3(-0.06, 0.075, 0)) if scope else Vector3(-0.3, 0.08, -0.25); g_yaw = deg_to_rad(14.0); g_pitch = deg_to_rad(-10.0); g_dist = 0.48
 		4: g_tgt = (fan.global_position + Vector3(0, 0.07, 0)) if fan else Vector3(0.03, 0.07, -0.24); g_yaw = deg_to_rad(-20.0); g_pitch = deg_to_rad(-14.0); g_dist = 0.42
 	if snap: tgt = g_tgt; yaw = g_yaw; pitch = g_pitch; dist = g_dist
 	if ui: ui.call_deferred("_rebuild")
@@ -433,6 +433,14 @@ func start_job(id := "") -> void:
 		backend.set_probe("ch1", [16, 8]); backend.set_dial("V"); backend.set_probe("red", [16, 2]); backend.set_probe("black", [22, 2])
 	if OS.get_environment("CB_PIN") != "": backend.set_selector("pin", int(OS.get_environment("CB_PIN")))
 	if OS.get_environment("CB_POWER") == "1": backend.set_power(true)
+	if OS.get_environment("CB_POWER_AT") != "":   # QA/clip hook: switch the bench on after N seconds (the clip shows the moment)
+		get_tree().create_timer(float(OS.get_environment("CB_POWER_AT"))).timeout.connect(func(): toggle_power())
+	if OS.get_environment("CB_OPEN_AT") != "":    # QA/clip hook: open the case after N seconds
+		get_tree().create_timer(float(OS.get_environment("CB_OPEN_AT"))).timeout.connect(func(): open_case())
+	if OS.get_environment("CB_VIEW_AT") != "":    # QA/clip hook: "view@seconds,view@seconds" camera moves
+		for part in OS.get_environment("CB_VIEW_AT").split(","):
+			var vv := int(part.get_slice("@", 0)); var tt := float(part.get_slice("@", 1))
+			get_tree().create_timer(tt).timeout.connect(func(): set_view(vv))
 	if OS.get_environment("CB_VIEW") != "": set_view(int(OS.get_environment("CB_VIEW")), true)
 	else: set_view(1)
 	sync_board(); changed.emit()
@@ -805,8 +813,9 @@ func _on_event(name: String, data: Dictionary) -> void:
 			changed.emit()
 		"paid":
 			var st := int(data.get("stars", 0))
-			_paid_text = str(data.get("pay_text", ""))
-			if int(data.get("burnt", 0)) > 0: _paid_text += " after %s for burnt parts" % burn_cost_text()
+			if int(data.get("pay", 0)) > 0 or _paid_text == "":   # a repeat pass pays nothing: keep the first pay on the ticket
+				_paid_text = str(data.get("pay_text", "")) if int(data.get("pay", 0)) > 0 else "nothing more (already paid)"
+				if int(data.get("burnt", 0)) > 0: _paid_text += " after %s for burnt parts" % burn_cost_text()
 			note = "Bench test passed. Paid %s: the %s fee%s." % [str(data.get("pay_text", "")), str(backend.ticket.get("price_text", "")), (" and %d new star%s" % [st, "" if st == 1 else "s"]) if st > 0 else ""]
 			last_failure = {}; changed.emit()
 		"power", "lock", "wired", "placed", "deleted":

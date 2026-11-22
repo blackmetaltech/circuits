@@ -60,7 +60,7 @@ func _run() -> void:
 		wb.backend.set_dial("V"); wb.backend.set_probe("red", cs[0].pad); wb.backend.set_probe("black", cs[1].pad); await _step(0.2)
 		wb.run_test(); await _frames(5)
 		ok(wb.backend.passed, "the bench passes %s" % id)
-		ok(wb.paid_text() != "nothing", "the pay is noted: %s" % wb.paid_text())
+		ok(wb.paid_text() != "nothing", "the pay is noted: %s (result pay %s, burn bill %s)" % [wb.paid_text(), str(wb.backend.last_result.get("pay", "?")), wb.burn_cost_text()])
 		if wallet0 >= 0: ok(wb.backend.wallet_minor > wallet0, "the wallet grows (%d -> %d)" % [wallet0, wb.backend.wallet_minor])
 		wallet0 = wb.backend.wallet_minor
 		wb.hand_back(); await _frames(5)

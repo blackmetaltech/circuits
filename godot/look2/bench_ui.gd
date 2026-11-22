@@ -198,17 +198,21 @@ var _spec_vals := {}
 var _status: Label
 var _readout: Label
 var _meter: Label
+var _ctl_plate: Control
 
 func _rebuild() -> void:
 	if _root: _root.queue_free()
 	_root = Control.new(); add_child(_root); _root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_spec_vals.clear(); _drawer_sig = ""; _status = null; _readout = null; _meter = null
+	_spec_vals.clear(); _drawer_sig = ""; _status = null; _readout = null; _meter = null; _ctl_plate = null
 	if bench.mode == "title": _title(); return
 	if schem:
 		var sv := SchematicView.new(); sv.bench = bench; sv.ui = self; _root.add_child(sv); sv.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); sv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_job_card()
-	_drawer()
+	if not _focus_view(): _drawer()
 	_tools()
+
+## Views 3 (scope) and 4 (device) are for looking: the tray goes away and the ticket folds to its heading, so nothing covers them.
+func _focus_view() -> bool: return bench.view in [3, 4] and bench.mode == "job"
 
 func _title() -> void:
 	_fonts2()
@@ -250,6 +254,10 @@ func _job_card() -> void:
 	var h1 := _ink(head, "REPAIR TICKET  %s" % str(t.get("id", "")), 17, RED_INK, f_type, false); h1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_ink(head, str(t.get("price_text", "")), 17, INK, f_type, false)
 	_ink(v, str(t.get("title", "")), 28, INK, f_semi, false)
+	if _focus_view():
+		if not bench.last_failure.is_empty(): _ink(v, str(bench.last_failure.get("title", "")), 18, RED_INK, f_semi)
+		_ink(v, "Key 1 returns to the work view.", 15, Color(0.30, 0.28, 0.25), f_sans)
+		return
 	_ink(v, "%s: \"%s\"" % [str(t.get("customer", "")), str(t.get("ask", ""))], 21, Color(0.14, 0.20, 0.42), f_hand)
 	if bench.case_closed() and not bench.handed:
 		_ink(v, bench.arrival_line(), 18, INK, f_sans)
@@ -300,6 +308,7 @@ func _control_plate(pos: Vector2, above: Control) -> void:
 	_meter = _lcd(cv, "", 20, Color(0.62, 0.95, 0.66))
 	var pc: Control = cv.get_parent()
 	pc.position.y = _canvas_h() - 16.0 - pc.get_combined_minimum_size().y   # bottom left, beside the tool rail; never under the ticket's wrapped text
+	_ctl_plate = pc
 
 class Lamp extends Control:
 	var on := false
@@ -410,6 +419,9 @@ func _tools() -> void:
 	var vk := _eng(h, "Views 1-5", 14); vk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	pc.position.x = (1920 - pc.get_combined_minimum_size().x) * 0.5
 	pc.position.y = _canvas_h() - 16.0 - pc.get_combined_minimum_size().y
+	# a narrow window: the rail reaches under the bench control plate, so the plate stands on top of the rail instead
+	if _ctl_plate and is_instance_valid(_ctl_plate) and pc.position.x < _ctl_plate.position.x + _ctl_plate.get_combined_minimum_size().x + 12.0:
+		_ctl_plate.position.y = pc.position.y - 14.0 - _ctl_plate.get_combined_minimum_size().y
 
 func _refresh_live() -> void:
 	var b = bench.backend

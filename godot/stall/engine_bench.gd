@@ -659,7 +659,8 @@ func dmm() -> Dictionary:
 	if not bool(dmm_q.get("valid", false)): return {"text": "----", "unit": unit, "mode": dial, "note": str(dmm_q.get("note", ""))}
 	var disp: Dictionary = dmm_q.get("display", {})
 	var s := str(disp.get("text", "")); var sp := s.rfind(" ")
-	return {"text": s.substr(0, sp) if sp > 0 else s, "value": disp.get("value", null), "unit": str(disp.get("unit", unit)), "mode": dial, "negative": bool(dmm_q.get("negative", false))}
+	# the unit is the text's own suffix ("-305 mV" -> "mV"): display.unit is the base unit and dropped the milli prefix ("-305 V")
+	return {"text": s.substr(0, sp) if sp > 0 else s, "value": disp.get("value", null), "unit": s.substr(sp + 1) if sp > 0 else str(disp.get("unit", unit)), "mode": dial, "negative": bool(dmm_q.get("negative", false))}
 
 ## ------------------------------------------------------------------------------------------------------------------ chapter 2 controls
 
