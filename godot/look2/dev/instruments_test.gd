@@ -9,7 +9,7 @@ func _ready() -> void:
 	var e := Environment.new(); e.background_mode = Environment.BG_SKY; e.sky = sky
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY; e.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	e.tonemap_mode = Environment.TONE_MAPPER_AGX; e.tonemap_exposure = 1.0
-	e.ssao_enabled = true; e.ssao_radius = 0.08; e.ssao_intensity = 2.0; e.ssao_power = 1.6
+	e.ssao_enabled = true; e.ssao_radius = 0.05; e.ssao_intensity = 1.2; e.ssao_power = 1.3
 	e.glow_enabled = true; e.glow_intensity = 0.6; e.glow_strength = 1.0; e.glow_bloom = 0.05; e.glow_hdr_threshold = 1.4
 	var we := WorldEnvironment.new(); we.environment = e; add_child(we)
 	# desk
@@ -45,5 +45,9 @@ func _ready() -> void:
 		cam.position = scope.to_global(Vector3(0.0, 0.2, 0.42)); cam.look_at(scope.to_global(Vector3(-0.03, 0.09, 0.07))); cam.fov = 32.0
 	elif which == "fan":
 		cam.position = fan.to_global(Vector3(0.12, 0.17, 0.33)); cam.look_at(fan.to_global(Vector3(0.0, 0.085, 0.0))); cam.fov = 34.0
+	elif which == "psu":
+		cam.position = psu.to_global(Vector3(0.05, 0.14, 0.5)); cam.look_at(psu.to_global(Vector3(0.0, 0.08, 0.14))); cam.fov = 32.0
+	elif which == "dmm":
+		cam.position = dmm.to_global(Vector3(0.0, 0.2, 0.3)); cam.look_at(dmm.to_global(Vector3(0.0, 0.07, 0.0))); cam.fov = 32.0
 	else:
 		cam.position = Vector3(0.28, 0.5, 0.78); cam.look_at(Vector3(-0.02, 0.05, -0.02))

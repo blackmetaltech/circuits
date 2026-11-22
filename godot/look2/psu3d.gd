@@ -25,7 +25,7 @@ func _make_panel() -> Instruments3D.SegPanel:
 
 func _init() -> void:
 	var shell := MeshKit.mat(Color(0.11, 0.115, 0.125), 0.5, 0.4, {"normal": 0.1})
-	MeshKit.add(self, MeshKit.rounded_box(Vector3(W, H, D), 0.006, 3), shell, Vector3(0, CY, 0))
+	MeshKit.add(self, MeshKit.rounded_box(Vector3(W, H, D - 0.006), 0.006, 3), shell, Vector3(0, CY, -0.003))
 	MeshKit.add(self, MeshKit.rounded_box(Vector3(W - 0.004, H - 0.004, 0.006), 0.003, 2), MeshKit.m("anodised"), Vector3(0, CY, D * 0.5 - 0.005))
 	for fx in [-0.05, 0.05]:
 		for fz in [-0.1, 0.1]:
@@ -41,7 +41,7 @@ func _init() -> void:
 		else: _apanel = p
 		p.extras = [["V" if k == 0 else "A", Vector2(204, 106), 30, Color(1.0, 0.16, 0.08, 0.9), false]]
 		p.size = Vector2(256, 128)
-		Instruments3D.screen_quad(self, p, Vector2i(256, 128), Vector2(0.05, 0.025), Vector3(x, CY + 0.04, Z0 + 0.0016), 2.6, true)
+		Instruments3D.screen_quad(self, p, Vector2i(256, 128), Vector2(0.05, 0.025), Vector3(x, CY + 0.04, Z0 + 0.0016), 4.0, true)
 		MeshKit.label(self, "VOLTS" if k == 0 else "AMPS", 0.00006, Vector3(x, CY + 0.0615, Z0 + 0.0001), Color(0.6, 0.62, 0.64), false, Vector3.ZERO)
 	# knobs
 	var cap := MeshKit.mat(Color(0.2, 0.21, 0.22), 0.3, 0.9, {"normal": 0.0, "rough_tex": false})
@@ -63,7 +63,7 @@ func _init() -> void:
 	for k in 2:
 		var px := 0.0 if k == 0 else 0.035
 		var py := CY - 0.0525
-		var col := MeshKit.mat(Color(0.78, 0.07, 0.06) if k == 0 else Color(0.035, 0.035, 0.04), 0.4, 0.0, {"normal": 0.05})
+		var col := MeshKit.mat(Color(0.55, 0.035, 0.03) if k == 0 else Color(0.035, 0.035, 0.04), 0.4, 0.0, {"normal": 0.05})
 		Instruments3D.cyl(self, 0.0092, 0.004, MeshKit.m("steel"), Vector3(px, py, Z0 + 0.002), Vector3(PI / 2, 0, 0))
 		Instruments3D.cyl(self, 0.0075, 0.012, col, Vector3(px, py, Z0 + 0.006), Vector3(PI / 2, 0, 0))
 		var kn := Node3D.new(); kn.position = Vector3(px, py, Z0 + 0.0125); kn.rotation.x = PI / 2; add_child(kn)
@@ -84,7 +84,6 @@ func set_values(volts: float, amps: float) -> void:
 func set_output(on: bool) -> void:
 	_led_mat.emission_energy_multiplier = 3.0 if on else 0.0
 	_led_mat.albedo_color = Color(0.1, 0.55, 0.2) if on else Color(0.05, 0.2, 0.08)
-	_led_light.light_energy = 0.03 if on else 0.0
 
 ## World position of the front tip of a binding post (0 red, 1 black).
 func post_world(i: int) -> Vector3:

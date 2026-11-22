@@ -78,7 +78,7 @@ static func screen_quad(parent: Node3D, content: Control, px: Vector2i, size: Ve
 	var qm := QuadMesh.new(); qm.size = size
 	var m := StandardMaterial3D.new(); m.roughness = 0.35; m.metallic_specular = 0.6
 	if energy > 0.0:   # self-lit screen
-		m.albedo_color = Color(0, 0, 0); m.metallic_specular = 0.12
+		m.albedo_color = Color(0, 0, 0); m.metallic_specular = 0.0
 		m.emission_enabled = true; m.emission_texture = vp.get_texture(); m.emission_energy_multiplier = energy
 	else:   # reflective LCD, lit by the room
 		m.albedo_texture = vp.get_texture(); m.roughness = 0.28
@@ -86,7 +86,7 @@ static func screen_quad(parent: Node3D, content: Control, px: Vector2i, size: Ve
 	var q := MeshKit.add(parent, qm, m, pos)
 	q.set_meta("vp", vp)
 	if glass:
-		var gm := MeshKit.mat(Color(0.7, 0.8, 0.9, 0.07), 0.04, 0.0, {"alpha": 0.05, "normal": 0.0, "rough_tex": false})
+		var gm := MeshKit.mat(Color(0.7, 0.8, 0.9, 0.07), 0.04, 0.0, {"alpha": 0.03, "normal": 0.0, "rough_tex": false})
 		gm.metallic_specular = 0.8
 		var g := MeshKit.add(parent, qm, gm, pos + Vector3(0, 0, 0.0007)); g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return q
