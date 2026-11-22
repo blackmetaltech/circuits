@@ -14,7 +14,7 @@ of its own.
 > **v0.2.0, pre-alpha.** Chapters 1 to 5 (23 tickets) are playable end to end on desktop and at Steam Deck size (1280x800). Chapters 1 to 3
 > were each won by a fresh play-tester from in-game guidance alone; chapters 4 and 5 are verified through the UI with the reference designs and
 > the designed failures, and were hand-played only by the build agent. Chapters 6 to 8 are designed, not built. No phone build, no sound pass and
-> no gamepad pass yet. The [v0.2.0 release](https://github.com/ixaxaar/circuits/releases/tag/v0.2.0) is a Linux x86_64 build.
+> no gamepad pass yet. The [v0.2.0 release](https://github.com/blackmetaltech/circuits/releases/tag/v0.2.0) is a Linux x86_64 build.
 
 ![A fixed torch: the trace locks, the customer is happy](docs/readme/hero-lock.png)
 
@@ -73,13 +73,13 @@ something gets hot. Every cute element shows a physical quantity; none hides one
 
 ## Run from source
 ```
-git clone --recursive https://github.com/ixaxaar/circuits   # core/ is a private submodule (cobanana-core): building needs access to it
+git clone --recursive https://github.com/blackmetaltech/circuits   # core/ is a private submodule (cobanana-core): building needs access to it
 pnpm install
 pnpm bridge                              # builds the engine sidecar → godot/sidecar/bridge.mjs
 godot --headless --path godot --import   # once, and after adding class_name scripts
 godot --path godot                       # play
 ```
-Needs Node.js 18+ and Godot 4.7.2. To just play, take the Linux zip from the [releases page](https://github.com/ixaxaar/circuits/releases) (Node.js is bundled).
+Needs Node.js 18+ and Godot 4.7.2. To just play, take the Linux zip from the [releases page](https://github.com/blackmetaltech/circuits/releases) (Node.js is bundled).
 
 ## Architecture
 ```

@@ -45,6 +45,6 @@ printf '\n---\nBuilt locally from tag %s. Extract and run; Node.js is bundled.\n
 ls -la "$out/dist"
 if [ $upload = 1 ]; then
   title=$(grep -m1 "^## \[$v\]" CHANGELOG.md | sed -E 's/^## \[[^]]*\] - //; s/ \(tag.*//')
-  gh release create "$ver" -R ixaxaar/circuits --title "CIRCUITS $v $title" --notes-file "$out/notes.md" "$out"/dist/*
+  gh release create "$ver" -R blackmetaltech/circuits --title "CIRCUITS $v $title" --notes-file "$out/notes.md" "$out"/dist/*
   log "released"
 fi
