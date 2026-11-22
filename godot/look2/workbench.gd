@@ -82,6 +82,7 @@ func _ready() -> void:
 	if start == "job": start_job()
 	elif start == "free": start_free()
 	else: mode = "title"; changed.emit()
+	if OS.get_environment("CB_MAXFPS") != "": Engine.max_fps = int(OS.get_environment("CB_MAXFPS"))   # software-rendered harness runs: cap the CPU
 	if OS.get_environment("CB_FRAMETIME") != "":
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	_aa()
