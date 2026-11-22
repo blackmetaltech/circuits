@@ -37,7 +37,8 @@ export interface SelectorDef {
   id: string;
   /** i18n key of the switch's name ("MAINS", "LOAD"). */
   labelKey: string;
-  options: { labelKey: string; set: { target: string; key: string; value: number }[] }[];
+  /** `cond`: the fragment of the bench condition id this position stands for (5-1: 'pin high'; 5-3: 'A low' and 'B high' make 'A low, B high'). The live LOCK and gauge then use only the specs that apply in that condition (`BenchPlan.only`). */
+  options: { labelKey: string; cond?: string; set: { target: string; key: string; value: number }[] }[];
   /** Index of the position the ticket starts on. */
   initial: number;
 }

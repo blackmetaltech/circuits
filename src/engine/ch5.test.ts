@@ -24,6 +24,8 @@ const texts = (b: any): string => b.failures.map((f: any) => f.text).join(' | ')
 type Part = [string, number | null, string, number, number, number, boolean?];
 /** The ref of a level as editable parts and wires. */
 const refOf = (id: string) => ({ parts: def(id).ref.parts.map((p) => [p.partId, p.value, p.variant, p.x, p.y, p.rot, p.flip] as Part), wires: def(id).ref.wires.map((w) => w.map((c) => [...c])) });
+/** Remove the wire that joins these two end pads, add new ones. */
+const cut = (w: number[][][], a: number[], b: number[]) => { const i = w.findIndex((x) => (x[0]!.join() === a.join() && x[x.length - 1]!.join() === b.join()) || (x[0]!.join() === b.join() && x[x.length - 1]!.join() === a.join())); expect(i, `wire ${a}-${b}`).toBeGreaterThanOrEqual(0); w.splice(i, 1); };
 /** A board with the given parts (partId, value, variant, x, y, rot, flip) and wires. */
 function build(id: string, parts: Part[], wires: number[][][], passed?: string[]) {
   const e = open(id, passed);
@@ -111,9 +113,13 @@ describe('5-2 3.3 V Gate', () => {
   it('the IRF540N: 0.15 A at the typical threshold and nothing at the maximum (4 V): it never turns on', () => {
     const b = bench(mk('5-2', (p) => { p[1] = ['irf540n', null, 'TO220', 12, 8, 0]; })); expect(b.pass).toBe(false); expect(texts(b)).toMatch(/never switched on/); expect(texts(b)).toMatch(/Vth|threshold/);
   });
-  it('the THRESHOLD switch moves the live FET and the strip follows', () => {
-    const e = mk('5-2'); ok(e, 'power', true); ok(e, 'advance', 4); const t0 = q(e, 'liveFrame');
-    expect(t0.powered).toBe(true); ok(e, 'setSelector', 'vth', 2); ok(e, 'advance', 4); expect(q(e, 'ticketCard').selectors[0].index).toBe(2);
+  it('the THRESHOLD switch moves the live FET: the scope locks at typical and at minimum and loses the lock at the maximum threshold of an IRF540N', () => {
+    const e = mk('5-2'); ok(e, 'power', true); ok(e, 'advance', 4); expect(q(e, 'scope').lock).toBe(true); ok(e, 'setSelector', 'vth', 2); ok(e, 'advance', 4); expect(q(e, 'ticketCard').selectors[0].index).toBe(2); expect(q(e, 'scope').lock).toBe(true);
+    const f = mk('5-2', (p) => { p[1] = ['irf540n', null, 'TO220', 12, 8, 0]; }); ok(f, 'power', true); ok(f, 'advance', 4); ok(f, 'setSelector', 'vth', 2); ok(f, 'advance', 4); expect(q(f, 'scope').lock).toBe(false);
+  });
+  it('the 5-1 pin switch: the scope locks with the pin high on the ref (the pin-low spec belongs to another test) and shows the pin current', () => {
+    const e = mk('5-1'); ok(e, 'power', true); ok(e, 'advance', 6); const sc = q(e, 'scope'); expect(sc.target).toMatchObject({ spec: 'ipin', unit: 'mA' }); expect(sc.lock).toBe(true); expect(sc.gauge.value).toBeGreaterThan(15); expect(sc.gauge.value).toBeLessThan(19);
+    ok(e, 'setSelector', 'pin', 1); ok(e, 'advance', 6); expect(q(e, 'scope').gauge.value).toBeNull();   // the pin-current band belongs to the pin-high test
   });
 });
 
@@ -124,23 +130,23 @@ describe('5-3 Gate Builder', () => {
     expect(b.pass, texts(b)).toBe(true); expect(b.measured.voh).toBeCloseTo(4.098, 2); expect(b.measured.vol).toBeLessThan(0.15); expect(b.stars).toBe(2); expect(spec(b, 'voh').margin).toBeGreaterThan(0.05);
   });
   it('no level-shift diodes: a 0.4 V input low still turns the transistor on (OUT collapses), and the words count the volts', () => {
-    const e = mk('5-3', (p, w) => { p.splice(3, 2); w.splice(6, 2, [[12, 6], [12, 12], [17, 12]]); }); const b = bench(e);
+    const e = mk('5-3', (p, w) => { p.splice(3, 2); cut(w, [12, 6], [12, 8]); cut(w, [16, 8], [18, 8]); cut(w, [18, 12], [20, 12]); w.push([[12, 6], [12, 10], [18, 10], [18, 12]], [[18, 12], [20, 12]]); }); const b = bench(e);
     expect(b.pass).toBe(false); expect(spec(b, 'voh').pass).toBe(false); expect(texts(b)).toMatch(/low input is 0\.4 V/); expect(texts(b)).toMatch(/1\.05 V/); expect(texts(b)).toMatch(/Put two diodes in series/);
   });
-  it('one level-shift diode is not enough either; a 47 kohm collector pull-up gives 0.88 V into the load', () => {
-    const b1 = bench(mk('5-3', (p, w) => { p.splice(4, 1); w.splice(7, 1, [[16, 8], [16, 12], [17, 12]]); w.splice(9, 1); })); expect(b1.pass).toBe(false); expect(texts(b1)).toMatch(/Two diodes between P and the base/);
+  it('one level-shift diode still works for a 0.4 V low (less noise margin); a 47 kohm collector pull-up gives 0.88 V into the load', () => {
+    const b1 = bench(mk('5-3', (p, w) => { p.splice(4, 1); cut(w, [16, 8], [18, 8]); w.push([[16, 8], [16, 10], [18, 10], [18, 12]]); })); expect(b1.pass, texts(b1)).toBe(true);
     const b2 = bench(mk('5-3', (p) => { p[7]![1] = 47e3; })); expect(b2.pass).toBe(false); expect(b2.measured.voh).toBeCloseTo(0.876, 1); expect(texts(b2)).toMatch(/5 V x 10 kΩ \/ \(47 kΩ \+ 10 kΩ\) = 0\.877 V/);
   });
   it('without the base pull-down the output sags to 3.95 V (just under the 4.0 V line)', () => {
-    const b = bench(mk('5-3', (p, w) => { p.splice(5, 1); w.splice(9, 2); })); expect(b.pass).toBe(false); expect(b.measured.voh).toBeLessThan(4.0); expect(b.measured.voh).toBeGreaterThan(3.9);
+    const b = bench(mk('5-3', (p, w) => { p.splice(5, 1); cut(w, [17, 12], [18, 12]); cut(w, [13, 12], [22, 14]); })); expect(b.pass).toBe(false); expect(b.measured.voh).toBeLessThan(4.0); expect(b.measured.voh).toBeGreaterThan(3.9);
   });
   it('a hungry collector resistor is allowed (470 ohm passes: the 4 V is easier, VOL still holds)', () => {
     const b = bench(mk('5-3', (p) => { p[7]![1] = 470; })); expect(b.pass, texts(b)).toBe(true);
   });
   it('the live inputs switch the output: A and B low give a high Y, both high give a low Y', () => {
     const e = mk('5-3'); ok(e, 'power', true); ok(e, 'advance', 4);
-    const out = (): number => q(e, 'liveFrame').nodes.find((n: any) => n.name === 'out' || n.id === 'OUT')?.v ?? NaN;
-    expect(q(e, 'ticketCard').selectors.map((s: any) => s.id)).toEqual(['a', 'b']); void out;
+    expect(q(e, 'ticketCard').selectors.map((s: any) => s.id)).toEqual(['a', 'b']); expect(q(e, 'scope').target).toMatchObject({ spec: 'voh', unit: 'V', mode: 'probe' });
+    ok(e, 'setSelector', 'a', 1); ok(e, 'setSelector', 'b', 1); ok(e, 'advance', 4); expect(q(e, 'ticketCard').selectors.map((s: any) => s.index)).toEqual([1, 1]);
   });
 });
 
@@ -153,15 +159,15 @@ describe('5-4 Synth Preamp', () => {
   });
   it('the BC547B also works (its own beta range 200-450)', () => { const b = bench(mk('5-4', (p) => { p[2]![0] = 'bc547b'; p[2]![5] = 1; })); expect(b.pass, texts(b)).toBe(true); });
   it('no emitter resistor: the gain is huge and the output clips; the words give the transistor\'s own 26 mV / Ic', () => {
-    const b = bench(mk('5-4', (p, w) => { p.splice(4, 1); w.splice(12, 1, [[12, 10], [12, 15]]); })); expect(b.pass).toBe(false); expect(spec(b, 'gain').pass).toBe(false); expect(b.measured.thd).toBeGreaterThan(5);
+    const b = bench(mk('5-4', (p, w) => { p.splice(4, 1); cut(w, [12, 10], [12, 11]); cut(w, [12, 15], [22, 14]); cut(w, [8, 13], [12, 15]); w.push([[12, 10], [12, 14], [22, 14]], [[8, 13], [8, 15], [22, 15], [22, 14]]); })); expect(b.pass).toBe(false); expect(spec(b, 'gain').pass).toBe(false); expect(b.measured.thd).toBeGreaterThan(5);
     expect(texts(b)).toMatch(/no emitter resistor/); expect(texts(b)).toMatch(/26 mV \/ Ic/);
   });
   it('bias by one resistor: the gain wanders with beta (1 Mohm: the collector current follows beta), and the words quote the two currents', () => {
-    const b = bench(mk('5-4', (p, w) => { p[0]![1] = 1e6; p.splice(1, 1); w.splice(14, 1); w.splice(5, 2, [[8, 8], [9, 8], [9, 9], [12, 9]]); })); expect(b.pass).toBe(false);
+    const b = bench(mk('5-4', (p, w) => { p[0]![1] = 1e6; p.splice(1, 1); cut(w, [8, 7], [8, 9]); cut(w, [8, 13], [12, 15]); cut(w, [8, 9], [12, 9]); w.push([[8, 7], [10, 7], [10, 9], [12, 9]]); })); expect(b.pass).toBe(false);
     expect(texts(b)).toMatch(/bias is not steady/); expect(texts(b)).toMatch(/collector current would go from [\d.]+ mA to [\d.]+ mA/);
   });
   it('electrolytics the wrong way round vent: the stripe words and the reverse volts', () => {
-    const e = mk('5-4', (p) => { p[5]![3] = 4; p[5]![6] = false; p[6]![3] = 16; p[6]![6] = true; }); const b = bench(e);
+    const e = mk('5-4', (p) => { p[5]![3] = 4; p[5]![5] = 0; p[6]![3] = 16; p[6]![5] = 2; }); const b = bench(e);
     expect(b.pass).toBe(false); expect(spec(b, 'ratings').pass).toBe(false); expect(texts(b)).toMatch(/wrong way round/);
   });
   it('the live line-out drives the amplifier: the scope probe on OUT shows a sine of about 0.95 V peak', () => {

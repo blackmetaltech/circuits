@@ -1,7 +1,7 @@
 // Ticket 5-3 "Gate Builder" (DESIGN §2.8 chapter 5). Dev's robotics club needs a NAND gate Y = NOT(A AND B) from loose parts. The bench drives A and B with a real logic low (0.4 V, NOT 0 V) or a high (5 V) through 50 ohm and tries all four vectors: with the output high
 // (three vectors) it must hold at least 4.0 V while a 10 kohm fan-out load pulls it down, and with the output low (A = B = 5 V) it must hold at most 0.4 V while a 4.6 kohm resistor from the 5 V rail makes it sink 1 mA.
 // Numbers (src/engine/ch5.test.ts against the solver): ref = diode-transistor logic: two input 1N4148 into node P, a 4.7 kohm pull-up to P, two series 1N4148 to the base, 10 kohm base to GND, 2N3904 with a 2.2 kohm collector pull-up: VOH 4.1 V (10 kohm load),
-// VOL 0.1 V (1 mA sunk); no level-shift diodes: a 0.4 V input low still turns the transistor on, VOH collapses; a 47 kohm collector pull-up gives VOH under the 10 kohm load of 0.9 V.
+// VOL 0.06 V (1 mA sunk); one level-shift diode already holds a 0.4 V low (P = 0.4 + 0.65 V, the base sees 0.4 V; the second diode is the noise margin, up to a 0.8 V low); no level-shift diodes: a 0.4 V input low still turns the transistor on, VOH collapses; a 47 kohm collector pull-up gives VOH under the 10 kohm load of 0.9 V.
 // DEVIATIONS from DESIGN (each documented; none changes the lesson):
 //  1. The four input vectors are four bench conditions; the output high / low specs are tied to their conditions (`BenchPlan.only`); the 10 kohm fan-out load and the 1 mA sink are bench test loads (`testLoads`), the board has the 5 V rail as a fixed bench supply.
 //  2. The bin has five 1N4148, one 2N3904 and E12 resistors 100 ohm - 100 kohm (at most four); "base pull-down missing: slow or weak turn-off" is a dynamic effect the DC truth table cannot show, so it is a Codex note, not a failing build.
@@ -50,8 +50,8 @@ export const L5_3: LevelDef = {
   },
   live: { frameSim: 0.004, h: 1e-3, thermalSpeed: 6 },
   selectors: [
-    { id: 'a', labelKey: 'ticket.5-3.sel.a', initial: 0, options: [{ labelKey: 'ticket.5-3.sel.low', set: [{ target: 'pa', key: 'v', value: LO }] }, { labelKey: 'ticket.5-3.sel.high', set: [{ target: 'pa', key: 'v', value: HI }] }] },
-    { id: 'b', labelKey: 'ticket.5-3.sel.b', initial: 0, options: [{ labelKey: 'ticket.5-3.sel.low', set: [{ target: 'pb', key: 'v', value: LO }] }, { labelKey: 'ticket.5-3.sel.high', set: [{ target: 'pb', key: 'v', value: HI }] }] },
+    { id: 'a', labelKey: 'ticket.5-3.sel.a', initial: 0, options: [{ labelKey: 'ticket.5-3.sel.low', cond: 'A low', set: [{ target: 'pa', key: 'v', value: LO }] }, { labelKey: 'ticket.5-3.sel.high', cond: 'A high', set: [{ target: 'pa', key: 'v', value: HI }] }] },
+    { id: 'b', labelKey: 'ticket.5-3.sel.b', initial: 0, options: [{ labelKey: 'ticket.5-3.sel.low', cond: 'B low', set: [{ target: 'pb', key: 'v', value: LO }] }, { labelKey: 'ticket.5-3.sel.high', cond: 'B high', set: [{ target: 'pb', key: 'v', value: HI }] }] },
   ],
   stars: { head: 'parts', par: { cost: 99, parts: 8, power: 1e9, area: 200 } },
   explain: 'gate',
@@ -61,22 +61,22 @@ export const L5_3: LevelDef = {
   },
   ref: {
     parts: [
-      { partId: '1n4148', value: null, variant: 'DO35', x: 8, y: 3, rot: 0, flip: true },
-      { partId: '1n4148', value: null, variant: 'DO35', x: 8, y: 6, rot: 0, flip: true },
+      { partId: '1n4148', value: null, variant: 'DO35', x: 8, y: 3, rot: 2, flip: false },
+      { partId: '1n4148', value: null, variant: 'DO35', x: 8, y: 6, rot: 2, flip: false },
       { partId: 'res-cf', value: 4.7e3, variant: '0.25W', x: 12, y: 2, rot: 1, flip: false },
       { partId: '1n4148', value: null, variant: 'DO35', x: 12, y: 8, rot: 0, flip: false },
-      { partId: '1n4148', value: null, variant: 'DO35', x: 17, y: 8, rot: 1, flip: false },
-      { partId: 'res-cf', value: 10e3, variant: '0.25W', x: 13, y: 13, rot: 0, flip: false },
-      { partId: '2n3904', value: null, variant: 'TO92', x: 19, y: 11, rot: 1, flip: false },
-      { partId: 'res-cf', value: 2.2e3, variant: '0.25W', x: 19, y: 5, rot: 1, flip: false },
+      { partId: '1n4148', value: null, variant: 'DO35', x: 18, y: 8, rot: 1, flip: false },
+      { partId: 'res-cf', value: 10e3, variant: '0.25W', x: 13, y: 12, rot: 0, flip: false },
+      { partId: '2n3904', value: null, variant: 'TO92', x: 20, y: 11, rot: 1, flip: false },
+      { partId: 'res-cf', value: 2.2e3, variant: '0.25W', x: 20, y: 5, rot: 1, flip: false },
     ],
+    // (every wire joins two legs or a pad and a leg: a drop one pad off a leg snaps to the leg, so no junction pad sits next to a pin)
     wires: [
-      [[2, 3], [4, 3]], [[2, 6], [4, 6]], [[8, 3], [10, 3]], [[10, 3], [10, 6]], [[8, 6], [10, 6]], [[10, 6], [12, 6]], [[12, 6], [12, 8]],
-      [[16, 8], [17, 8]], [[17, 12], [19, 12]], [[17, 12], [17, 13]], [[13, 13], [13, 15], [22, 15], [22, 14]],
-      [[2, 1], [12, 1]], [[12, 1], [12, 2]], [[12, 1], [19, 1]], [[19, 1], [19, 5]],
-      [[19, 9], [19, 11]], [[19, 9], [21, 9], [21, 6], [22, 6]], [[19, 13], [19, 14], [22, 14]],
+      [[2, 3], [4, 3]], [[2, 6], [4, 6]], [[8, 3], [8, 6]], [[8, 6], [12, 6]], [[12, 6], [12, 8]], [[16, 8], [18, 8]], [[18, 12], [20, 12]], [[17, 12], [18, 12]], [[13, 12], [13, 15], [22, 15], [22, 14]],
+      [[2, 1], [12, 1], [12, 2]], [[12, 2], [20, 2], [20, 5]], [[20, 9], [20, 11]], [[20, 9], [22, 9], [22, 6]], [[20, 13], [20, 14], [22, 14]],
     ],
   },
+  gauge: { spec: 'voh', unit: 'V', clip: 'OUT' },
   specShort: 'ticket.5-3.short',
   scope: 'must',
   after: ['5-1'],

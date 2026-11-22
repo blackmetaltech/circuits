@@ -89,6 +89,11 @@ static func _body(ci: CanvasItem, part: Dictionary, p: float, st: Dictionary, sh
 			if not sh and (str(part.partId).begins_with("1n47") or str(part.partId).begins_with("bzx") or str(part.partId).begins_with("zener")): PartArt4.zener_bar(ci, p)
 		"REG": PartArt4.regulator(ci, lp, p, sh, str(part.get("variant", "")), float(st.get("hot", 0.0)), bool(st.get("reg_off", false)), smoked, str(part.get("label", "")))
 		"NPN", "PNP": _bjt(ci, lp, p, sh, smoked)
+		"NMOS":
+			if str(part.partId) == "2n7000": _bjt(ci, lp, p, sh, smoked)
+			else: PartArt4.regulator(ci, lp, p, sh, "TO220", float(st.get("hot", 0.0)), false, smoked, str(part.get("label", "")))
+		"DARLINGTON": PartArt4.regulator(ci, lp, p, sh, "TO220", float(st.get("hot", 0.0)), false, smoked, str(part.get("label", "")))
+		"MOTOR": PartArt5.fan(ci, lp, p, sh, float(st.get("cur", 0.0)), float(st.get("hot", 0.0)), smoked)
 		"XFMR": _xfmr(ci, p, sh)
 		"BAT":
 			if str(part.partId) == "cell-test": PartArt2.dry_cell(ci, lp, p, sh)
@@ -102,6 +107,7 @@ static func _body(ci: CanvasItem, part: Dictionary, p: float, st: Dictionary, sh
 				"pullup-10k": PartArt3.pullup(ci, lp, p, sh)
 				"logic-in": PartArt3.logic_in(ci, lp, p, sh)
 				"load-cc": PartArt4.cc_load(ci, lp, p, sh)
+				"led-strip": PartArt5.strip(ci, lp, p, sh, float(st.get("cur", 0.0)))
 				_: _load(ci, lp, p, sh, float(st.get("hot", 0.0)))
 		"GALVO": PartArt2.galvo(ci, lp, p, sh, float(st.get("needle", 0.0)))
 		"SLIDE": PartArt2.slide(ci, part, lp, p, sh)

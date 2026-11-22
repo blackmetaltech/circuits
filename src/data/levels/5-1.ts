@@ -48,7 +48,7 @@ export const L5_1: LevelDef = {
   },
   live: { frameSim: 0.004, h: 5e-5, thermalSpeed: 6 },
   selectors: [
-    { id: 'pin', labelKey: 'ticket.5-1.sel.pin', initial: 0, options: [{ labelKey: 'ticket.5-1.sel.pin.high', set: pin(5) }, { labelKey: 'ticket.5-1.sel.pin.low', set: pin(0) }, { labelKey: 'ticket.5-1.sel.pin.pwm', set: pin(5, 1) }] },
+    { id: 'pin', labelKey: 'ticket.5-1.sel.pin', initial: 0, options: [{ labelKey: 'ticket.5-1.sel.pin.high', cond: 'pin high', set: pin(5) }, { labelKey: 'ticket.5-1.sel.pin.low', cond: 'pin low', set: pin(0) }, { labelKey: 'ticket.5-1.sel.pin.pwm', cond: '100 Hz PWM', set: pin(5, 1) }] },
   ],
   stars: { head: 'cost', par: { cost: 8, parts: 3, power: 1e9, area: 120 } },
   explain: 'switch',
@@ -64,6 +64,7 @@ export const L5_1: LevelDef = {
     ],
     wires: [[[2, 7], [4, 7]], [[8, 7], [15, 7], [15, 8]], [[14, 8], [14, 14], [22, 14]], [[16, 8], [16, 6]], [[16, 6], [22, 6], [22, 4]], [[10, 4], [10, 6], [16, 6]], [[14, 4], [14, 2]]],
   },
+  gauge: { spec: 'ipin', unit: 'A' },
   specShort: 'ticket.5-1.short',
   scope: 'must',
   after: ['4-3|4-4'],

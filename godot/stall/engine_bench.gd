@@ -33,9 +33,14 @@ const FLAVOUR := {
 	"4-3": {"gadget": "printer", "ask": "The regulator is cooking my printer board.", "thanks": "Cool and steady. Print away."},
 	"4-4": {"gadget": "bench", "ask": "A 3.3 V supply for your own bench.", "thanks": "3.3 volts, steady at every load."},
 	"4-5": {"gadget": "exam", "ask": "Predict first, then probe.", "thanks": "The numbers agree!"},
+	"5-1": {"gadget": "fan", "ask": "My pin cannot run this fan.", "thanks": "The fan spins and the pin stays cool."},
+	"5-2": {"gadget": "strip", "ask": "My strip stays dark on 3.3 volts.", "thanks": "The strip glows, whichever FET batch."},
+	"5-3": {"gadget": "gate", "ask": "We need a NAND and have no chips.", "thanks": "A NAND from loose parts. Now we can build anything."},
+	"5-4": {"gadget": "synth", "ask": "My synth is too quiet.", "thanks": "Ten times louder and clean."},
+	"5-5": {"gadget": "exam", "ask": "Predict first, then probe.", "thanks": "The numbers agree!"},
 }
-const CHAPTER_TICKETS := {1: ["1-1", "1-2", "1-3", "1-4", "1-5"], 2: ["2-1", "2-2", "2-3", "2-4"], 3: ["3-1", "3-2", "3-3", "3-4"], 4: ["4-1", "4-2", "4-3", "4-4", "4-5"]}
-const ALL_TICKETS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4", "4-1", "4-2", "4-3", "4-4", "4-5"]
+const CHAPTER_TICKETS := {1: ["1-1", "1-2", "1-3", "1-4", "1-5"], 2: ["2-1", "2-2", "2-3", "2-4"], 3: ["3-1", "3-2", "3-3", "3-4"], 4: ["4-1", "4-2", "4-3", "4-4", "4-5"], 5: ["5-1", "5-2", "5-3", "5-4", "5-5"]}
+const ALL_TICKETS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4", "4-1", "4-2", "4-3", "4-4", "4-5", "5-1", "5-2", "5-3", "5-4", "5-5"]
 ## The parts of chapter 2 that read better with a word under the value in the shoebox (presentation only).
 const PART_TAG := {"res-box": "box plug", "trimmer": "trimmer", "rheostat": "rheostat", "cap-cer": "ceramic", "cap-ideal": "exact", "1n4148": "diode", "zener-6v-ideal": "ideal Zener"}
 const DIAL_ENGINE := {"OFF": "off", "V": "dcv", "mA": "dca", "Ω": "ohm"}
@@ -888,9 +893,17 @@ const REFS_CH4 := {
 		"wires": [[[2, 2], [4, 2]], [[8, 2], [10, 2]], [[10, 2], [12, 2]], [[12, 6], [12, 12], [10, 12]]], "pred": {"piz": 14.0, "prl": 333.33, "ppz": 120.0}},
 }
 
+const REFS_CH5 := {
+	"5-1": {"parts": [["res-cf",220,"0.25W",4,7,0],["2n2222a",null,"TO92",14,8,0],["1n4007",null,"DO41",10,4,0]], "wires": [[[2,7],[4,7]],[[8,7],[15,7],[15,8]],[[14,8],[14,14],[22,14]],[[16,8],[16,6]],[[16,6],[22,6],[22,4]],[[10,4],[10,6],[16,6]],[[14,4],[14,2]]]},
+	"5-2": {"parts": [["res-cf",100,"0.25W",4,8,0],["irlz44n",null,"TO220",12,8,0],["res-cf",100000,"0.25W",10,10,1]], "wires": [[[2,8],[4,8]],[[8,8],[10,8]],[[10,8],[12,8]],[[10,8],[10,10]],[[10,14],[16,14]],[[16,8],[16,14]],[[16,14],[22,14]],[[14,8],[14,6],[22,6],[22,4]]]},
+	"5-3": {"parts": [["1n4148",null,"DO35",8,3,2],["1n4148",null,"DO35",8,6,2],["res-cf",4700,"0.25W",12,2,1],["1n4148",null,"DO35",12,8,0],["1n4148",null,"DO35",18,8,1],["res-cf",10000,"0.25W",13,12,0],["2n3904",null,"TO92",20,11,1],["res-cf",2200,"0.25W",20,5,1]], "wires": [[[2,3],[4,3]],[[2,6],[4,6]],[[8,3],[8,6]],[[8,6],[12,6]],[[12,6],[12,8]],[[16,8],[18,8]],[[18,12],[20,12]],[[17,12],[18,12]],[[13,12],[13,15],[22,15],[22,14]],[[2,1],[12,1],[12,2]],[[12,2],[20,2],[20,5]],[[20,9],[20,11]],[[20,9],[22,9],[22,6]],[[20,13],[20,14],[22,14]]], "clip": [22, 6]},
+	"5-4": {"parts": [["res-cf",68000,"0.25W",8,3,1],["res-cf",10000,"0.25W",8,9,1],["2n3904",null,"TO92",12,8,1],["res-cf",4700,"0.25W",12,3,1],["res-cf",390,"0.25W",12,11,1],["cap-el",0.00001,"16V",6,8,2],["cap-el",0.00001,"16V",14,8,0]], "wires": [[[2,1],[8,1],[8,3]],[[8,3],[12,3]],[[8,7],[8,9]],[[8,9],[12,9]],[[6,8],[6,7],[8,7]],[[2,8],[4,8]],[[12,7],[12,8]],[[12,8],[14,8]],[[16,8],[22,8]],[[12,10],[12,11]],[[12,15],[22,15],[22,14]],[[8,13],[8,15],[12,15]]], "clip": [22, 8]},
+	"5-5": {"parts": [["res-exact",565000,"ideal",4,4,0],["res-exact",3000,"ideal",11,2,1],["npn-textbook",null,"ideal",11,10,0]], "wires": [[[2,2],[2,4],[4,4]],[[2,2],[11,2]],[[8,4],[12,4],[12,10]],[[11,6],[11,8]],[[11,8],[11,10]],[[13,10],[13,14],[10,14]]], "pred": {"pib":20,"pic":2,"pvce":6,"pav":-232}},
+}
+
 ## Build the reference design for the open ticket straight through the engine (no UI). Returns true when every step was accepted.
 func build_ref(id: String) -> bool:
-	var R: Dictionary = REFS.get(id, REFS_CH2.get(id, REFS_CH3.get(id, REFS_CH4.get(id, {}))))
+	var R: Dictionary = REFS.get(id, REFS_CH2.get(id, REFS_CH3.get(id, REFS_CH4.get(id, REFS_CH5.get(id, {})))))
 	if R.is_empty(): return false
 	var ok := true
 	if R.has("pred"): for k in R.pred: ok = predict(str(k), float(R.pred[k])).ok and ok

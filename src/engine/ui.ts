@@ -121,10 +121,15 @@ function resolveAnchor(a: CoachAnchor, tk: TicketState, def: LevelDef): Record<s
 const modeLabel = (m: string): string => (m === 'dcv' ? 'V' : m === 'dca' ? 'mA' : m === 'ohm' ? 'Ω' : m === 'acv' ? 'V~' : 'off');
 
 /** Value of every `level` spec at the live solution (the bench's own probes, resolved on the player's board). */
-function liveSpecs(sol: Sol, def: LevelDef): { id: string; value: number | null; lo: number; hi: number; inBand: boolean }[] {
+/** The bench condition the live switches stand for (their `cond` fragments joined by ', '); '' when the ticket has none. */
+export function liveCond(tk: TicketState, def: LevelDef): string {
+  return (def.selectors ?? []).map((sd) => sd.options[tk.sel?.[sd.id] ?? sd.initial]?.cond ?? '').filter((x) => x !== '').join(', ');
+}
+function liveSpecs(sol: Sol, def: LevelDef, cond = ''): { id: string; value: number | null; lo: number; hi: number; inBand: boolean }[] {
   const out: { id: string; value: number | null; lo: number; hi: number; inBand: boolean }[] = [];
   for (const sp of def.bench.specs) {
     if (sp.kind !== 'level') continue;
+    const only = def.bench.only?.[sp.id]; if (only && cond !== '' && !only.includes(cond)) continue;   // belongs to another test condition (5-1 pin low, 5-2 reset)
     const r = sol.rig.resolve(sp.probe);
     let v: number | null = null;
     if (r !== null) { try { v = makeProbe(sol.ckt, r)(sol.x, sol.state); } catch { v = null; } }
@@ -139,7 +144,7 @@ const GAUGE_UNIT: Record<string, { display: string; scale: number }> = { A: { di
 /** The scope's target band and lock for the open ticket (null when the ticket has no gauge). */
 export function scopeTarget(s: NodeState, tk: TicketState, def: LevelDef, sol: Sol | null): Record<string, unknown> {
   if (def.trace) return traceTarget(tk, def);
-  const specs = sol ? liveSpecs(sol, def) : [];
+  const specs = sol ? liveSpecs(sol, def, liveCond(tk, def)) : [];
   const g = def.gauge, sp = g ? specs.find((x) => x.id === g.spec) : undefined, spec = g ? def.bench.specs.find((x) => x.id === g.spec) : undefined;
   const live = tk.live.powered && !!sol && tk.live.status !== 'noconv' && tk.live.smoked.length === 0;
   const lockSpecs: Record<string, boolean> = {};

@@ -63,7 +63,7 @@ var _flow_log: Array = []
 var hover_wire := ""                 ## wid of the wire under the pointer (highlighted; right-click removes it)
 var map_chapter := 1                 ## the chapter whose notebook page the map shows
 const CONN_NAME := {"VP": "battery + (V+)", "GND": "GND", "IN": "IN", "OUT": "OUT", "BOX": "BOX terminal"}
-const CODEX_AT := {"1-1": 0, "1-2": 1, "1-3": 3, "1-4": 4, "1-5": 6, "2-1": 9, "2-2": 11, "2-3": 10, "2-4": 13, "3-1": 16, "3-2": 20, "3-3": 21, "3-4": 15, "4-1": 27, "4-2": 29, "4-3": 30, "4-4": 31, "4-5": 29}   ## the notebook opens on the page that belongs to the ticket
+const CODEX_AT := {"1-1": 0, "1-2": 1, "1-3": 3, "1-4": 4, "1-5": 6, "2-1": 9, "2-2": 11, "2-3": 10, "2-4": 13, "3-1": 16, "3-2": 20, "3-3": 21, "3-4": 15, "4-1": 27, "4-2": 29, "4-3": 30, "4-4": 31, "4-5": 29, "5-1": 32, "5-2": 34, "5-3": 36, "5-4": 37, "5-5": 39}   ## the notebook opens on the page that belongs to the ticket
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP

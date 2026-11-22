@@ -49,7 +49,7 @@ export const L5_2: LevelDef = {
   },
   live: { frameSim: 0.004, h: 1e-3, thermalSpeed: 6 },
   selectors: [
-    { id: 'vth', labelKey: 'ticket.5-2.sel.vth', initial: 0, options: [{ labelKey: 'ticket.5-2.sel.vth.typ', set: tol(0) }, { labelKey: 'ticket.5-2.sel.vth.min', set: tol(-1) }, { labelKey: 'ticket.5-2.sel.vth.max', set: tol(1) }] },
+    { id: 'vth', labelKey: 'ticket.5-2.sel.vth', initial: 0, options: [{ labelKey: 'ticket.5-2.sel.vth.typ', cond: 'Vth typical', set: tol(0) }, { labelKey: 'ticket.5-2.sel.vth.min', cond: 'Vth minimum', set: tol(-1) }, { labelKey: 'ticket.5-2.sel.vth.max', cond: 'Vth maximum', set: tol(1) }] },
   ],
   stars: { head: 'cost', par: { cost: 56, parts: 3, power: 1e9, area: 120 } },
   explain: 'fet',
@@ -65,6 +65,7 @@ export const L5_2: LevelDef = {
     ],
     wires: [[[2, 8], [4, 8]], [[8, 8], [10, 8]], [[10, 8], [12, 8]], [[10, 8], [10, 10]], [[10, 14], [16, 14]], [[16, 8], [16, 14]], [[16, 14], [22, 14]], [[14, 8], [14, 6], [22, 6], [22, 4]]],
   },
+  gauge: { spec: 'istrip', unit: 'A' },
   specShort: 'ticket.5-2.short',
   scope: 'must',
   after: ['5-1'],

@@ -9,8 +9,8 @@ var bk: EngineBench
 var fails := 0
 var checks := 0
 var verbose := OS.get_environment("CB_VERBOSE") != ""
-const CHAPTERS := 4
-const IDS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4", "4-1", "4-2", "4-3", "4-4", "4-5"]
+const CHAPTERS := 5
+const IDS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4", "4-1", "4-2", "4-3", "4-4", "4-5", "5-1", "5-2", "5-3", "5-4", "5-5"]
 
 func _initialize() -> void:
 	OS.set_environment("CB_NOSAVE", "1")
@@ -119,7 +119,7 @@ func _audit(id: String, res: Vector2i) -> void:
 	var tt: Rect2 = sc.props.tin_text_rect()
 	ok(tt.end.y <= H - 6.0, "%s the coin total is not clipped (bottom %.0f of %.0f)" % [tag, tt.end.y, H])
 	# the board view: every connector and every point of the reference design is on screen, and the pad pitch is not smaller than the whole board's
-	var ref: Dictionary = EngineBench.REFS.get(id, EngineBench.REFS_CH2.get(id, EngineBench.REFS_CH3.get(id, EngineBench.REFS_CH4.get(id, {}))))
+	var ref: Dictionary = EngineBench.REFS.get(id, EngineBench.REFS_CH2.get(id, EngineBench.REFS_CH3.get(id, EngineBench.REFS_CH4.get(id, EngineBench.REFS_CH5.get(id, {})))))
 	var pts: Array = []
 	for c in bk.ticket.board.connectors: pts.append(Vector2(c.pad[0], c.pad[1]))
 	for w in ref.get("wires", []): for q in w: pts.append(Vector2(q[0], q[1]))

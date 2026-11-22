@@ -502,7 +502,7 @@ func _draw_parts(ci: Control) -> void:
 	# parts
 	for pt in m.parts:
 		var i: float = absf(float(m.part_i.get(pt.uid, 0.0))) if live else 0.0
-		var st := {"lit": _led_lit(pt.uid, i, m) if pt.kind == "LED" else 0.0, "smoked": m.smoked.has(pt.uid),
+		var st := {"cur": i, "lit": _led_lit(pt.uid, i, m) if pt.kind == "LED" else 0.0, "smoked": m.smoked.has(pt.uid),
 			"hot": _heat_k(pt.uid, m) if live else 0.0, "needle": float(m.get("galvo", {}).get(pt.uid, 0.0)) if live else 0.0,
 			"bulge": float(m.get("cap_bulge", {}).get(pt.uid, 0.0)) if live else 0.0, "vent_t": float(_vent_t.get(pt.uid, 0.0)), "level": float(m.get("cap_level", {}).get(pt.uid, 1.0)) if live else 1.0,
 			"operated": bool(m.get("relay", {}).get(pt.uid, {}).get("operated", false)) if live else false, "click_t": float(_click_t.get(pt.uid, 9.0)),

@@ -493,6 +493,10 @@ func _customer() -> void:
 		"flash": cloth = Color("#7a5cc0"); hair = Color("#2a1a12"); skin = Color("#e6b48a"); kind = "glasses"   # the camera shop
 		"arcade": cloth = Color("#d63d7a"); hair = Color("#1f1612"); skin = Color("#d9a073"); kind = "cap"     # the arcade repairman
 		"relay": cloth = Color("#3f8f5a"); hair = Color("#3a2a20"); skin = Color("#c98e5e"); kind = "straw"   # the greenhouse
+		"fan": cloth = Color("#2f9a8f"); hair = Color("#2a1a12"); skin = Color("#d9a073"); kind = "glasses"     # the maker space
+		"strip": cloth = Color("#c9a02f"); hair = Color("#1f1612"); skin = Color("#e6b48a"); kind = "cap"
+		"gate": cloth = Color("#4a5bb5"); hair = Color("#3a2a20"); skin = Color("#c98e5e"); kind = "glasses"   # the robotics club
+		"synth": cloth = Color("#a0457a"); hair = Color("#14100d"); skin = Color("#b9784e"); kind = "beard"     # the music shop
 	match customer:
 		"Ash": cloth = Color("#e8c431"); hair = Color("#3a2a20"); kind = "helmet"
 		"Mr. Brook": cloth = Color("#4a6c7d"); hair = Color("#c9c9c9"); skin = Color("#c98e5e"); kind = "beard"
@@ -595,6 +599,33 @@ func _gadget(g: Vector2) -> void:
 			for i in 9: draw_line(g + Vector2(-30, -58 + i * 6), g + Vector2(-6, -56 + i * 6), Color("#c47a2a"), 3.5)
 			draw_line(g + Vector2(30, -60), g + Vector2(16, -8 if not ok else -30), Color("#b8bcc4"), 5.0); draw_circle(g + Vector2(16, -8 if not ok else -30), 5, Color("#d9b24a"))
 			if ok: S.glow(self, g + Vector2(-18, -30), 50.0, Color(1, 0.6, 0.25, 0.35))
+		"fan":   # a 12 V fan in a square frame: the blades turn when the job is right
+			S.rr(self, Rect2(g.x - 40, g.y - 76, 80, 80), 8, Color("#23262c")); draw_circle(g + Vector2(0, -36), 33, Color("#14161a"))
+			var ang := t * 9.0 if ok else 0.4
+			for k in 4: var a := ang + k * PI * 0.5; draw_colored_polygon(PackedVector2Array([g + Vector2(0, -36), g + Vector2(0, -36) + Vector2(cos(a - 0.35), sin(a - 0.35)) * 30.0, g + Vector2(0, -36) + Vector2(cos(a + 0.35), sin(a + 0.35)) * 30.0]), Color("#5fb3d9") if ok else Color("#6f7c86"))
+			draw_circle(g + Vector2(0, -36), 7, Color("#b8bcc4"))
+			if ok: S.glow(self, g + Vector2(0, -36), 52.0, Color(0.5, 0.85, 1, 0.25))
+		"strip":   # a coil of LED strip: warm dots, lit when the job is right
+			S.rr(self, Rect2(g.x - 44, g.y - 44, 88, 26), 5, Color("#1d1f24"))
+			for i in 8: draw_circle(g + Vector2(-36 + i * 10.5, -31), 4.2, Color("#ffd98a") if ok else Color("#6a5a3a"))
+			S.rr(self, Rect2(g.x - 44, g.y - 14, 88, 22), 5, Color("#1d1f24"))
+			for i in 8: draw_circle(g + Vector2(-36 + i * 10.5, -3), 4.2, Color("#ffd98a") if ok else Color("#6a5a3a"))
+			if ok: S.glow(self, g + Vector2(0, -22), 80.0, Color(1, 0.85, 0.5, 0.35))
+		"gate":   # a scrap of perfboard with a NAND symbol and the Y lamp
+			S.rr(self, Rect2(g.x - 44, g.y - 62, 88, 66), 5, Color("#2d5a3c"))
+			var gx := g + Vector2(-6, -30)
+			draw_polyline(PackedVector2Array([gx + Vector2(-16, -16), gx + Vector2(0, -16), gx + Vector2(0, 16), gx + Vector2(-16, 16), gx + Vector2(-16, -16)]), Color("#efe5c8"), 3.0)
+			draw_arc(gx + Vector2(0, 0), 16, -PI * 0.5, PI * 0.5, 10, Color("#efe5c8"), 3.0); draw_circle(gx + Vector2(20, 0), 4, Color("#efe5c8"))
+			draw_circle(g + Vector2(30, -30), 6, Color("#ff5a3a") if ok else Color("#4a1f18"))
+			S.text(self, S.mono(), "Y", g + Vector2(26, -14), 14, Color("#efe5c8"))
+		"synth":   # a mini keyboard; a sine rides above it when the job is right
+			S.rr(self, Rect2(g.x - 46, g.y - 40, 92, 44), 4, Color("#1b1c20"))
+			for i in 8: S.rr(self, Rect2(g.x - 42 + i * 10.6, g.y - 34, 9.2, 34), 2, Color("#efe5c8"))
+			for i in [0, 1, 3, 4, 5]: S.rr(self, Rect2(g.x - 36 + i * 10.6, g.y - 34, 6.2, 20), 1, Color("#14161a"))
+			if ok:
+				var pts := PackedVector2Array()
+				for k in 24: pts.append(g + Vector2(-40 + k * 3.5, -54 + sin(k * 0.8 + t * 6.0) * 8.0))
+				draw_polyline(pts, Color("#7cff6b"), 3.0, true)
 		"module":   # a small sealed box with pins
 			S.rr(self, Rect2(g.x - 40, g.y - 62, 80, 62), 6, Color("#14151a")); S.rr(self, Rect2(g.x - 30, g.y - 50, 60, 26), 3, Color("#efe5c8"))
 			S.text(self, S.hand(), "SEALED", g + Vector2(-26, -30), 16, Color(0.55, 0.1, 0.08))

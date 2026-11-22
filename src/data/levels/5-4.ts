@@ -59,14 +59,13 @@ export const L5_4: LevelDef = {
       { partId: '2n3904', value: null, variant: 'TO92', x: 12, y: 8, rot: 1, flip: false },
       { partId: 'res-cf', value: 4.7e3, variant: '0.25W', x: 12, y: 3, rot: 1, flip: false },
       { partId: 'res-cf', value: 390, variant: '0.25W', x: 12, y: 11, rot: 1, flip: false },
-      { partId: 'cap-el', value: 10e-6, variant: '16V', x: 6, y: 8, rot: 0, flip: true },
+      { partId: 'cap-el', value: 10e-6, variant: '16V', x: 6, y: 8, rot: 2, flip: false },
       { partId: 'cap-el', value: 10e-6, variant: '16V', x: 14, y: 8, rot: 0, flip: false },
     ],
+    // (every wire joins two legs or a pad and a leg: a drop one pad off a leg snaps to the leg, so no junction pad sits next to a pin)
     wires: [
-      [[2, 1], [8, 1]], [[8, 1], [8, 3]], [[8, 1], [12, 1]], [[12, 1], [12, 3]],
-      [[8, 7], [8, 8]], [[8, 8], [8, 9]], [[8, 9], [12, 9]], [[2, 8], [4, 8]], [[6, 8], [8, 8]],
-      [[12, 7], [12, 8]], [[12, 8], [14, 8]], [[16, 8], [22, 8]],
-      [[12, 10], [12, 11]], [[12, 15], [22, 15], [22, 14]], [[8, 13], [8, 15], [12, 15]],
+      [[2, 1], [8, 1], [8, 3]], [[8, 3], [12, 3]], [[8, 7], [8, 9]], [[8, 9], [12, 9]], [[6, 8], [6, 7], [8, 7]], [[2, 8], [4, 8]],
+      [[12, 7], [12, 8]], [[12, 8], [14, 8]], [[16, 8], [22, 8]], [[12, 10], [12, 11]], [[12, 15], [22, 15], [22, 14]], [[8, 13], [8, 15], [12, 15]],
     ],
   },
   specShort: 'ticket.5-4.short',

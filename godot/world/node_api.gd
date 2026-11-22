@@ -31,6 +31,7 @@ const FOOTPRINTS := {
 }
 ## partId prefix -> [kind, footprint]. First match wins. Only used when the board JSON lacks `kind` / `pins`.
 const PART_TABLE := [
+	["led-strip", "LOAD", "block2"], ["amp-load", "LOAD", "block2"], ["fan-", "MOTOR", "block2"], ["irlz", "NMOS", "to220"], ["irf", "NMOS", "to220"], ["2n7000", "NMOS", "to92"], ["npn-", "NPN", "to92"],
 	["cap-charged", "C", "block2"], ["cap-ideal", "C", "axial2"],
 	["res-", "R", "axial2"], ["pot-", "POT", "pot3"], ["led-", "LED", "radial2"], ["cap-el", "CE", "radial2"], ["cap-", "C", "axial2"],
 	["1n", "D", "axial2"], ["bzx", "D", "axial2"], ["bridge", "BRIDGE", ""], ["xfmr", "XFMR", "xfmr4"], ["2n3906", "PNP", "to92"],

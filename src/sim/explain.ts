@@ -273,7 +273,7 @@ function explainChapter5(f: BenchFailure, ctx: ExplainContext): Explained | null
   if (mode === 'gate' && ctx.gate && id === 'voh' && (f.key === 'bench.level.fail' || f.key === 'bench.metric.fail')) {
     const g = ctx.gate, vdiv = (g.vcc * g.rl) / (g.rc + g.rl), vars: Vars = { value: sig(Math.max(0, value), 3), lo: sig(num('lo'), 3), cond: condText, rc: si(g.rc, 'Ω'), rl: si(g.rl, 'Ω'), vcc: g.vcc, vdiv: sig(vdiv, 3), vlow: g.vlow, nDiodes: g.nDiodes, pLow: sig(g.vlow + 0.65, 3), pNeed: sig(0.65 * 3, 3) };
     if (vdiv < num('lo') + 0.05) return { key: 'explain.gate.pullup', vars };
-    if (g.nDiodes < 4) return { key: g.nDiodes <= 2 ? 'explain.gate.noshift' : 'explain.gate.fewshift', vars };
+    if (g.nDiodes <= 2) return { key: 'explain.gate.noshift', vars };
     return { key: 'explain.gate.base', vars };
   }
   if (mode === 'gate' && ctx.gate && id === 'vol' && (f.key === 'bench.level.fail' || f.key === 'bench.metric.fail')) {
