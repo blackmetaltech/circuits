@@ -11,13 +11,29 @@ func _ready() -> void:
 		add_child(load("res://look2/dev/%s_test.gd" % OS.get_environment("CB_LOOK2_DEV")).new()); _shot_hook(); return
 	# LOOK2 (branch look2): the 3D workbench is the default front end. The old stall stays for the smoke check, the shot runs,
 	# CB_SCREEN deep links and CB_LOOK=stall; every test flow builds StallScene itself and is unaffected.
-	if OS.get_environment("CB_LOOK") != "stall" and OS.get_environment("CB_SMOKE") == "" and OS.get_environment("CB_SHOTS") == "" and OS.get_environment("CB_SCREEN") == "":
+	var classic := FileAccess.file_exists(LOOK_FILE) and FileAccess.get_file_as_string(LOOK_FILE).strip_edges() == "classic"
+	if OS.get_environment("CB_LOOK") == "workbench": classic = false
+	if OS.get_environment("CB_LOOK") != "stall" and not classic and OS.get_environment("CB_SMOKE") == "" and OS.get_environment("CB_SHOTS") == "" and OS.get_environment("CB_SCREEN") == "":
 		add_child(Workbench.new()); _shot_hook(); return
 	scene = StallScene.new(); add_child(scene)
 	if OS.get_environment("CB_SHOTS") != "":
 		var sh = load("res://tests/ch5_shots.gd" if OS.get_environment("CB_SHOTS") == "ch5" else "res://tests/ch4_shots.gd" if OS.get_environment("CB_SHOTS") == "ch4" else "res://tests/ch3_shots.gd" if OS.get_environment("CB_SHOTS") == "ch3" else ("res://tests/ch2_shots.gd" if OS.get_environment("CB_SHOTS") == "ch2" else "res://tests/stall_shots.gd")).new(); add_child(sh); sh.run(scene)
 	if OS.get_environment("CB_SMOKE") != "": _smoke()
 	_shot_hook()
+
+## The look switch (title of either look): "workbench" = the 3D bench (chapter 1 and the 5-1 showcase in the new look),
+## "classic" = the 2D repair stall with all five chapters. Remembered in user://look.txt.
+const LOOK_FILE := "user://look.txt"
+func set_look(look: String) -> void:
+	var f := FileAccess.open(LOOK_FILE, FileAccess.WRITE)
+	if f: f.store_string(look); f.close()
+	for c in get_children(): c.queue_free()
+	scene = null
+	await get_tree().process_frame
+	if look == "classic":
+		scene = StallScene.new(); add_child(scene)
+	else:
+		add_child(Workbench.new())
 
 func _shot_hook() -> void:
 	if OS.get_environment("CB_SHOT") != "":   # one screenshot after CB_SHOT_AT seconds, then quit

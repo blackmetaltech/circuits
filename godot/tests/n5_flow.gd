@@ -77,7 +77,7 @@ func _rocker() -> void:
 
 func _start(id: String) -> void:
 	sc.size = Vector2(1920, 1080)
-	sc.start_ticket(id)
+	sc.start_ticket(id); sc.backend.clear_fault()
 	await _frames(4)
 
 ## The notebook path of a player: open the notebook, "ticket pages", tap the chit.

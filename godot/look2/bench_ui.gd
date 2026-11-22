@@ -221,7 +221,9 @@ func _title() -> void:
 	_key(v, "Free bench", func(): bench.start_free())
 	_lab(v, "Any part, the supply, scope and meter. Save a build and load it later.", 18, Color(0.72, 0.75, 0.78))
 	_key(v, "Showcase: 5-1 Fan Driver", func(): bench.start_job("5-1"))
-	_lab(v, "Chapter 5 slice in the new look. Chapters 2-5 play in the classic look (Menu > Classic).", 18, Color(0.72, 0.75, 0.78), f_sans, true)
+	_lab(v, "The chapter 5 fan repair in the new look.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
+	_key(v, "Classic look: all five chapters", func(): bench.get_parent().call("set_look", "classic") if bench.get_parent().has_method("set_look") else null)
+	_lab(v, "Chapters 2 to 5 are in the classic 2D stall for now. Its title has the way back.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
 	b1.call_deferred("grab_focus")
 	_lab(v, "Right drag orbits   Middle drag pans   Wheel zooms   Keys 1-5 views   Tab schematic", 17, Color(0.72, 0.75, 0.78), f_mono)
 
