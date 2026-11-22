@@ -59,15 +59,23 @@ You own a good electronics bench, and people bring you things that stopped worki
 - Exams ("predict first") become a calibration sheet on a clipboard, drawn in the same panel style.
 - Each device needs one model: about 20 devices for the 23 tickets (the exam boards share one).
 
+## Round 2 (same slice)
+- **Repair flow, presentation only:** the fan comes in with its driver board in a case with a work-order tag. **O** (or a click) lifts the lid off and sets it on the mat, and the board inside is the ticket's board. After the bench test passes, "Close up and hand back" puts the lid back on, and the fan goes home running on the pin. No level data or goldens changed.
+- **Part tray:** a slim row of small 3D renders above the tool strip. The name, value and price show on hover or focus, and arrows step resistor values. The text column is gone.
+- **Light:** a warmer, brighter lamp, a warm bounce off the desk, wood grain at real scale, a worn mat (edges, wipe marks, old solder burns), and a soft smoke plume. Godot's turbulence had clumped the particles into beads, so it is off.
+- **1280x800:** a 16 px text floor everywhere, bottom panels anchored to the real canvas height, and the failure panel moved off the board.
+
 ## Measured (phase A slice, ticket 5-1, whole-bench view, powered at 100 Hz)
 | GPU | Tier | 1920x1080 | 2560x1440 (3D render scale 1.333) |
 |---|---|---|---|
 | RTX 4090 (Forward+, PRIME offload) | high | 6.4 ms avg, 7.6 ms p95 | 5.8 ms avg, 6.7 ms p95 |
 | Ryzen 9900X iGPU (Radeon, 2 CU, Forward+) | medium | 71 ms | not run |
-| Ryzen 9900X iGPU | low | 43 ms | not run |
+| Ryzen 9900X iGPU | low (round 1) | 43 ms | not run |
+| Ryzen 9900X iGPU, Forward+ | low (round 2) | 1280x800: 17.0 ms avg (59 fps) | not run |
+| Ryzen 9900X iGPU, Compatibility (OpenGL) | low (round 2) | 1280x800: 9.3 ms avg, 11.5 ms p95 (107 fps) | not run |
 
 - The 4090 is not GPU-bound here: 1440p is no slower than 1080p. The per-frame engine step through the sidecar probably sets the floor. That is not yet profiled.
-- The iGPU is a 2-CU part, well below a Steam Deck (8 CU). Even so, the low tier has to get under 16.7 ms: shadows off, no glow, fewer pad instances, or the Compatibility renderer. That work is not done.
+- The iGPU is a 2-CU part, well below a Steam Deck (8 CU). The low tier now meets 30 fps with room to spare. It trades away the moon shadow and the soft lamp penumbra (one hard lamp shadow at a 1024 atlas), depth of field, SSAO, SSIL, SSR and fog, and it renders 3D at 75 % then scales up. It keeps the emissive screens, the LEDs, glow, the warm and cool light plan, and every model.
 
 ## Cost to bring the whole game to this look
 | Work | Estimate (agent hours) |
