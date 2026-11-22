@@ -457,7 +457,7 @@ func run_bench() -> Dictionary:
 	refresh_wallet()
 	if r.get("ok", false) and bool(r.get("pass", false)):
 		passed = true; ticket["stars"] = int(r.get("stars", 0))
-		event.emit("paid", {"pay": int(r.get("pay", 0)), "pay_text": str(last_result.get("payText", "")), "stars": int(r.get("stars", 0)), "result": last_result})
+		event.emit("paid", {"burnt": int(r.get("burnt", 0)), "pay": int(r.get("pay", 0)), "pay_text": str(last_result.get("payText", "")), "stars": int(r.get("stars", 0)), "result": last_result})
 	else:
 		var why := str(r.get("message", ""))
 		var fl: Array = last_result.get("failures", [])
@@ -659,7 +659,8 @@ func dmm() -> Dictionary:
 	if not bool(dmm_q.get("valid", false)): return {"text": "----", "unit": unit, "mode": dial, "note": str(dmm_q.get("note", ""))}
 	var disp: Dictionary = dmm_q.get("display", {})
 	var s := str(disp.get("text", "")); var sp := s.rfind(" ")
-	return {"text": s.substr(0, sp) if sp > 0 else s, "value": disp.get("value", null), "unit": str(disp.get("unit", unit)), "mode": dial, "negative": bool(dmm_q.get("negative", false))}
+	# the unit is the text's own suffix ("-305 mV" -> "mV"): display.unit is the base unit and dropped the milli prefix ("-305 V")
+	return {"text": s.substr(0, sp) if sp > 0 else s, "value": disp.get("value", null), "unit": s.substr(sp + 1) if sp > 0 else str(disp.get("unit", unit)), "mode": dial, "negative": bool(dmm_q.get("negative", false))}
 
 ## ------------------------------------------------------------------------------------------------------------------ chapter 2 controls
 
@@ -906,6 +907,7 @@ func build_ref(id: String) -> bool:
 	var R: Dictionary = REFS.get(id, REFS_CH2.get(id, REFS_CH3.get(id, REFS_CH4.get(id, REFS_CH5.get(id, {})))))
 	if R.is_empty(): return false
 	var ok := true
+	clear_fault()
 	if R.has("pred"): for k in R.pred: ok = predict(str(k), float(R.pred[k])).ok and ok
 	for p in R.parts: ok = bool(place({"partId": p[0], "value": p[1], "variant": p[2], "kind": "R"}, p[3], p[4], p[5]).ok) and ok
 	for w in R.wires: ok = _act("addWire", [w]).get("ok", false) and ok
@@ -917,6 +919,12 @@ func build_ref(id: String) -> bool:
 	return ok
 
 ## Pass every ticket before `id` with its reference design (unlocks `id` for the screenshot run and the tests), leaving `id` closed.
+## A repair ticket arrives with the customer's faulty board (parts x1.., wires xw..): take it apart, as the ref does.
+func clear_fault() -> void:
+	for w in wires.duplicate(): if str(w.wid).begins_with("xw"): _act("deleteWire", [str(w.wid)])
+	for p in _all_parts.duplicate(): if str(p.uid).begins_with("x"): _act("deletePart", [str(p.uid)])
+	_after_edit()
+
 func unlock_through(id: String) -> void:
 	for tk in ALL_TICKETS:
 		if tk == id: break

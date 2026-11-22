@@ -1,0 +1,2815 @@
+{
+  "bench": {
+    "benched": null,
+    "boardErrors": [],
+    "connectors": [
+      {
+        "id": "V12",
+        "pad": [
+          2.0,
+          2.0
+        ],
+        "role": "source"
+      },
+      {
+        "id": "PIN",
+        "pad": [
+          2.0,
+          7.0
+        ],
+        "role": "source"
+      },
+      {
+        "id": "COLL",
+        "pad": [
+          22.0,
+          4.0
+        ],
+        "role": "load"
+      },
+      {
+        "id": "GND",
+        "pad": [
+          22.0,
+          14.0
+        ],
+        "role": "ground"
+      }
+    ],
+    "crossings": [],
+    "dangling": [],
+    "h": 16.0,
+    "instruments": {
+      "dmm": {
+        "black": null,
+        "label": "off",
+        "mode": "off",
+        "red": null
+      },
+      "gen": null,
+      "paused": false,
+      "powered": false,
+      "scope": {
+        "probes": [],
+        "timePerDiv": 0.002,
+        "trigger": {
+          "edge": "rise",
+          "level": 0.0,
+          "mode": "auto",
+          "source": 1.0
+        },
+        "voltsPerDiv": [
+          5.0,
+          5.0
+        ]
+      },
+      "supply": {
+        "ilim": 1.0,
+        "on": false,
+        "v": 12.0
+      }
+    },
+    "issues": [],
+    "joins": [
+      {
+        "n": 2.0,
+        "pad": [
+          14.0,
+          2.0
+        ]
+      }
+    ],
+    "keepOut": [],
+    "marks": [],
+    "openPins": [],
+    "parts": [
+      {
+        "fixed": true,
+        "flip": false,
+        "kind": "MOTOR",
+        "name": "DC fan",
+        "partId": "fan-dc",
+        "pins": [
+          {
+            "label": "+",
+            "name": "+",
+            "pad": [
+              16.0,
+              2.0
+            ]
+          },
+          {
+            "label": "-",
+            "name": "-",
+            "pad": [
+              22.0,
+              2.0
+            ]
+          }
+        ],
+        "pos": null,
+        "ratings": {
+          "Vrated": 12.0
+        },
+        "rot": 0.0,
+        "smoked": false,
+        "uid": "f1",
+        "value": null,
+        "valueText": "",
+        "variant": "12V",
+        "x": 16.0,
+        "y": 2.0
+      }
+    ],
+    "redoDepth": 0.0,
+    "selectors": [
+      {
+        "id": "pin",
+        "index": 0.0,
+        "label": "PIN",
+        "options": [
+          "high",
+          "low",
+          "100 Hz"
+        ]
+      }
+    ],
+    "slots": [],
+    "status": "ok",
+    "ticket": "5-1",
+    "undoDepth": 0.0,
+    "w": 24.0,
+    "wires": [
+      {
+        "fixed": true,
+        "path": [
+          [
+            2.0,
+            2.0
+          ],
+          [
+            14.0,
+            2.0
+          ]
+        ],
+        "wid": "fw1"
+      },
+      {
+        "fixed": true,
+        "path": [
+          [
+            14.0,
+            2.0
+          ],
+          [
+            16.0,
+            2.0
+          ]
+        ],
+        "wid": "fw2"
+      },
+      {
+        "fixed": true,
+        "path": [
+          [
+            22.0,
+            2.0
+          ],
+          [
+            22.0,
+            4.0
+          ]
+        ],
+        "wid": "fw3"
+      }
+    ]
+  },
+  "open": true,
+  "parts": [
+    {
+      "footprint": "axial2",
+      "id": "res-cf",
+      "inBin": true,
+      "kind": "R",
+      "name": "Carbon-film resistor 5 %",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": [
+        1.0,
+        1.1,
+        1.2,
+        1.3,
+        1.5,
+        1.6,
+        1.8,
+        2.0,
+        2.2,
+        2.4,
+        2.7,
+        3.0,
+        3.3,
+        3.6,
+        3.9,
+        4.3,
+        4.7,
+        5.1,
+        5.6,
+        6.2,
+        6.8,
+        7.5,
+        8.2,
+        9.1,
+        10.0,
+        11.0,
+        12.0,
+        13.0,
+        15.0,
+        16.0,
+        18.0,
+        20.0,
+        22.0,
+        24.0,
+        27.0,
+        30.0,
+        33.0,
+        36.0,
+        39.0,
+        43.0,
+        47.0,
+        51.0,
+        56.0,
+        62.0,
+        68.0,
+        75.0,
+        82.0,
+        91.0,
+        100.0,
+        110.0,
+        120.0,
+        130.0,
+        150.0,
+        160.0,
+        180.0,
+        200.0,
+        220.0,
+        240.0,
+        270.0,
+        300.0,
+        330.0,
+        360.0,
+        390.0,
+        430.0,
+        470.0,
+        510.0,
+        560.0,
+        620.0,
+        680.0,
+        750.0,
+        820.0,
+        910.0,
+        1000.0,
+        1100.0,
+        1200.0,
+        1300.0,
+        1500.0,
+        1600.0,
+        1800.0,
+        2000.0,
+        2200.0,
+        2400.0,
+        2700.0,
+        3000.0,
+        3300.0,
+        3600.0,
+        3900.0,
+        4300.0,
+        4700.0,
+        5100.0,
+        5600.0,
+        6200.0,
+        6800.0,
+        7500.0,
+        8200.0,
+        9100.0,
+        10000.0,
+        11000.0,
+        12000.0,
+        13000.0,
+        15000.0,
+        16000.0,
+        18000.0,
+        20000.0,
+        22000.0,
+        24000.0,
+        27000.0,
+        30000.0,
+        33000.0,
+        36000.0,
+        39000.0,
+        43000.0,
+        47000.0,
+        51000.0,
+        56000.0,
+        62000.0,
+        68000.0,
+        75000.0,
+        82000.0,
+        91000.0,
+        100000.0,
+        110000.0,
+        120000.0,
+        130000.0,
+        150000.0,
+        160000.0,
+        180000.0,
+        200000.0,
+        220000.0,
+        240000.0,
+        270000.0,
+        300000.0,
+        330000.0,
+        360000.0,
+        390000.0,
+        430000.0,
+        470000.0,
+        510000.0,
+        560000.0,
+        620000.0,
+        680000.0,
+        750000.0,
+        820000.0,
+        910000.0,
+        1000000.0,
+        1100000.0,
+        1200000.0,
+        1300000.0,
+        1500000.0,
+        1600000.0,
+        1800000.0,
+        2000000.0,
+        2200000.0,
+        2400000.0,
+        2700000.0,
+        3000000.0,
+        3300000.0,
+        3600000.0,
+        3900000.0,
+        4300000.0,
+        4700000.0,
+        5100000.0,
+        5600000.0,
+        6200000.0,
+        6800000.0,
+        7500000.0,
+        8200000.0,
+        9100000.0,
+        10000000.0
+      ],
+      "variants": [
+        {
+          "id": "0.167W",
+          "price": 1.0,
+          "priceText": "$0.01",
+          "ratings": {
+            "P": 0.166666666666667,
+            "Tamb": 70.0,
+            "Vmax": 150.0
+          }
+        },
+        {
+          "id": "0.25W",
+          "price": 2.0,
+          "priceText": "$0.02",
+          "ratings": {
+            "P": 0.25,
+            "Tamb": 70.0,
+            "Vmax": 250.0
+          }
+        },
+        {
+          "id": "0.5W",
+          "price": 3.0,
+          "priceText": "$0.03",
+          "ratings": {
+            "P": 0.5,
+            "Tamb": 70.0,
+            "Vmax": 350.0
+          }
+        },
+        {
+          "id": "1W",
+          "price": 7.0,
+          "priceText": "$0.07",
+          "ratings": {
+            "P": 1.0,
+            "Tamb": 70.0,
+            "Vmax": 400.0
+          }
+        },
+        {
+          "id": "2W",
+          "price": 10.0,
+          "priceText": "$0.10",
+          "ratings": {
+            "P": 2.0,
+            "Tamb": 70.0,
+            "Vmax": 500.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "axial2",
+      "id": "res-ww5",
+      "inBin": true,
+      "kind": "R",
+      "name": "5 W wirewound resistor",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": [
+        1.0,
+        1.2,
+        1.5,
+        1.8,
+        2.2,
+        2.7,
+        3.3,
+        3.9,
+        4.7,
+        5.6,
+        6.8,
+        8.2,
+        10.0,
+        12.0,
+        15.0,
+        18.0,
+        22.0,
+        27.0,
+        33.0,
+        39.0,
+        47.0,
+        56.0,
+        68.0,
+        82.0,
+        100.0
+      ],
+      "variants": [
+        {
+          "id": "5W",
+          "price": 40.0,
+          "priceText": "$0.40",
+          "ratings": {
+            "P": 5.0,
+            "Tamb": 40.0,
+            "Vmax": 350.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "axial2",
+      "id": "res-mf",
+      "inBin": true,
+      "kind": "R",
+      "name": "Metal-film resistor 1 %",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": [
+        10.0,
+        11.0,
+        12.0,
+        13.0,
+        15.0,
+        16.0,
+        18.0,
+        20.0,
+        22.0,
+        24.0,
+        27.0,
+        30.0,
+        33.0,
+        36.0,
+        39.0,
+        43.0,
+        47.0,
+        51.0,
+        56.0,
+        62.0,
+        68.0,
+        75.0,
+        82.0,
+        91.0,
+        100.0,
+        110.0,
+        120.0,
+        130.0,
+        150.0,
+        160.0,
+        180.0,
+        200.0,
+        220.0,
+        240.0,
+        270.0,
+        300.0,
+        330.0,
+        360.0,
+        390.0,
+        430.0,
+        470.0,
+        510.0,
+        560.0,
+        620.0,
+        680.0,
+        750.0,
+        820.0,
+        910.0,
+        1000.0,
+        1100.0,
+        1200.0,
+        1300.0,
+        1500.0,
+        1600.0,
+        1800.0,
+        2000.0,
+        2200.0,
+        2400.0,
+        2700.0,
+        3000.0,
+        3300.0,
+        3600.0,
+        3900.0,
+        4300.0,
+        4700.0,
+        5100.0,
+        5600.0,
+        6200.0,
+        6800.0,
+        7500.0,
+        8200.0,
+        9100.0,
+        10000.0,
+        11000.0,
+        12000.0,
+        13000.0,
+        15000.0,
+        16000.0,
+        18000.0,
+        20000.0,
+        22000.0,
+        24000.0,
+        27000.0,
+        30000.0,
+        33000.0,
+        36000.0,
+        39000.0,
+        43000.0,
+        47000.0,
+        51000.0,
+        56000.0,
+        62000.0,
+        68000.0,
+        75000.0,
+        82000.0,
+        91000.0,
+        100000.0,
+        110000.0,
+        120000.0,
+        130000.0,
+        150000.0,
+        160000.0,
+        180000.0,
+        200000.0,
+        220000.0,
+        240000.0,
+        270000.0,
+        300000.0,
+        330000.0,
+        360000.0,
+        390000.0,
+        430000.0,
+        470000.0,
+        510000.0,
+        560000.0,
+        620000.0,
+        680000.0,
+        750000.0,
+        820000.0,
+        910000.0,
+        1000000.0
+      ],
+      "variants": [
+        {
+          "id": "0.25W",
+          "price": 3.0,
+          "priceText": "$0.03",
+          "ratings": {
+            "P": 0.25,
+            "Tamb": 70.0,
+            "Vmax": 250.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "pot3",
+      "id": "pot-trim",
+      "inBin": true,
+      "kind": "POT",
+      "name": "Trimmer potentiometer",
+      "pins": [
+        "A",
+        "W",
+        "B"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": [
+        1000.0,
+        10000.0,
+        100000.0,
+        500000.0
+      ],
+      "variants": [
+        {
+          "id": "0.5W",
+          "price": 30.0,
+          "priceText": "$0.30",
+          "ratings": {
+            "P": 0.5,
+            "Tamb": 85.0,
+            "Vmax": 300.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "pot3",
+      "id": "pot-panel",
+      "inBin": true,
+      "kind": "POT",
+      "name": "Panel potentiometer",
+      "pins": [
+        "A",
+        "W",
+        "B"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": [
+        1000.0,
+        10000.0,
+        100000.0,
+        500000.0
+      ],
+      "variants": [
+        {
+          "id": "0.25W",
+          "price": 15.0,
+          "priceText": "$0.15",
+          "ratings": {
+            "P": 0.25
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "axial2",
+      "id": "cap-cer",
+      "inBin": true,
+      "kind": "C",
+      "name": "Ceramic capacitor",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": [
+        0.00000000001,
+        0.000000000015,
+        0.000000000022,
+        0.000000000033,
+        0.000000000047,
+        0.000000000068,
+        0.0000000001,
+        0.00000000015,
+        0.00000000022,
+        0.00000000033,
+        0.00000000047,
+        0.00000000068,
+        0.000000001,
+        0.0000000015,
+        0.0000000022,
+        0.0000000033,
+        0.0000000047,
+        0.0000000068,
+        0.00000001,
+        0.000000015,
+        0.000000022,
+        0.000000033,
+        0.000000047,
+        0.000000068,
+        0.0000001,
+        0.00000015,
+        0.00000022,
+        0.00000033,
+        0.00000047,
+        0.00000068,
+        0.000001
+      ],
+      "variants": [
+        {
+          "id": "50V",
+          "price": 3.0,
+          "priceText": "$0.03",
+          "ratings": {
+            "Vrated": 50.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "axial2",
+      "id": "cap-x2",
+      "inBin": true,
+      "kind": "C",
+      "name": "X2 film capacitor",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": [
+        0.0000001,
+        0.00000015,
+        0.00000022,
+        0.00000033,
+        0.00000047
+      ],
+      "variants": [
+        {
+          "id": "275VAC",
+          "price": 15.0,
+          "priceText": "$0.15",
+          "ratings": {
+            "Vrated": 275.0,
+            "VratedAC": 275.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "radial2",
+      "id": "cap-el",
+      "inBin": true,
+      "kind": "CE",
+      "name": "Electrolytic capacitor",
+      "pins": [
+        "+",
+        "-"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": [
+        0.000001,
+        0.0000015,
+        0.0000022,
+        0.0000033,
+        0.0000047,
+        0.0000068,
+        0.00001,
+        0.000015,
+        0.000022,
+        0.000033,
+        0.000047,
+        0.000068,
+        0.0001,
+        0.00015,
+        0.00022,
+        0.00033,
+        0.00047,
+        0.00068,
+        0.001,
+        0.0015,
+        0.0022,
+        0.0033,
+        0.0047
+      ],
+      "variants": [
+        {
+          "id": "6.3V",
+          "price": 3.0,
+          "priceText": "$0.03",
+          "ratings": {
+            "Vrated": 6.3,
+            "VrevMax": 1.0
+          }
+        },
+        {
+          "id": "10V",
+          "price": 4.0,
+          "priceText": "$0.04",
+          "ratings": {
+            "Vrated": 10.0,
+            "VrevMax": 1.0
+          }
+        },
+        {
+          "id": "16V",
+          "price": 5.0,
+          "priceText": "$0.05",
+          "ratings": {
+            "Vrated": 16.0,
+            "VrevMax": 1.0
+          }
+        },
+        {
+          "id": "25V",
+          "price": 7.0,
+          "priceText": "$0.07",
+          "ratings": {
+            "Vrated": 25.0,
+            "VrevMax": 1.0
+          }
+        },
+        {
+          "id": "35V",
+          "price": 9.0,
+          "priceText": "$0.09",
+          "ratings": {
+            "Vrated": 35.0,
+            "VrevMax": 1.0
+          }
+        },
+        {
+          "id": "50V",
+          "price": 12.0,
+          "priceText": "$0.12",
+          "ratings": {
+            "Vrated": 50.0,
+            "VrevMax": 1.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "axial2",
+      "id": "cap-var",
+      "inBin": true,
+      "kind": "C",
+      "name": "Tuning capacitor",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "365pF",
+          "price": 150.0,
+          "priceText": "$1.50",
+          "ratings": {
+            "Vrated": 100.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "axial2",
+      "id": "cap-ideal",
+      "inBin": true,
+      "kind": "C",
+      "name": "Exact capacitor",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "ideal",
+          "price": 0.0,
+          "priceText": "$0.00",
+          "ratings": {}
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "block2",
+      "id": "cap-charged",
+      "inBin": true,
+      "kind": "C",
+      "name": "Charged capacitor, 4 µF at 100 V",
+      "pins": [
+        "+",
+        "-"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "4uF-100V",
+          "price": 100.0,
+          "priceText": "$1.00",
+          "ratings": {}
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "axial2",
+      "id": "ind-ax",
+      "inBin": true,
+      "kind": "L",
+      "name": "Axial inductor",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": [
+        0.00001,
+        0.000015,
+        0.000022,
+        0.000033,
+        0.000047,
+        0.000068,
+        0.0001,
+        0.00015,
+        0.00022,
+        0.00033,
+        0.00047,
+        0.00068,
+        0.001,
+        0.0015,
+        0.0022,
+        0.0033,
+        0.0047,
+        0.0068,
+        0.01,
+        0.015,
+        0.022,
+        0.033,
+        0.047,
+        0.068,
+        0.1
+      ],
+      "variants": [
+        {
+          "id": "0.1A",
+          "price": 12.0,
+          "priceText": "$0.12",
+          "ratings": {
+            "DCR": 5.0,
+            "Isat": 0.1
+          }
+        },
+        {
+          "id": "0.3A",
+          "price": 20.0,
+          "priceText": "$0.20",
+          "ratings": {
+            "DCR": 1.5,
+            "Isat": 0.3
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "axial2",
+      "id": "ind-pwr",
+      "inBin": true,
+      "kind": "L",
+      "name": "Power inductor",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": [
+        0.000047,
+        0.0001,
+        0.00022
+      ],
+      "variants": [
+        {
+          "id": "0.5A",
+          "price": 30.0,
+          "priceText": "$0.30",
+          "ratings": {
+            "DCR": 0.8,
+            "Isat": 0.5
+          }
+        },
+        {
+          "id": "1.0A",
+          "price": 45.0,
+          "priceText": "$0.45",
+          "ratings": {
+            "DCR": 0.4,
+            "Isat": 1.0
+          }
+        },
+        {
+          "id": "1.5A",
+          "price": 60.0,
+          "priceText": "$0.60",
+          "ratings": {
+            "DCR": 0.25,
+            "Isat": 1.5
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "axial2",
+      "id": "ind-coil",
+      "inBin": true,
+      "kind": "L",
+      "name": "Radio coil 220 uH",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": [
+        0.00022
+      ],
+      "variants": [
+        {
+          "id": "cheap",
+          "price": 25.0,
+          "priceText": "$0.25",
+          "ratings": {
+            "DCR": 25.0,
+            "Isat": 0.1
+          }
+        },
+        {
+          "id": "litz",
+          "price": 60.0,
+          "priceText": "$0.60",
+          "ratings": {
+            "DCR": 4.0,
+            "Isat": 0.1
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "xfmr4",
+      "id": "xfmr-12",
+      "inBin": true,
+      "kind": "XFMR",
+      "name": "Mains transformer, 12 V",
+      "pins": [
+        "P1",
+        "P2",
+        "S1",
+        "S2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "6VA",
+          "price": 250.0,
+          "priceText": "$2.50",
+          "ratings": {
+            "VA": 6.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "axial2",
+      "id": "1n4148",
+      "inBin": true,
+      "kind": "D",
+      "name": "1N4148 signal diode",
+      "pins": [
+        "A",
+        "K"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "DO35",
+          "price": 2.0,
+          "priceText": "$0.02",
+          "ratings": {
+            "IF": 0.3,
+            "IFAV": 0.15,
+            "IFRM": 0.5,
+            "IFSM": 2.0,
+            "Ptot": 0.5,
+            "VFmax10mA": 1.0,
+            "VR": 75.0,
+            "VRRM": 100.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "axial2",
+      "id": "1n4007",
+      "inBin": true,
+      "kind": "D",
+      "name": "1N4007 rectifier diode",
+      "pins": [
+        "A",
+        "K"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "DO41",
+          "price": 2.0,
+          "priceText": "$0.02",
+          "ratings": {
+            "I2t": 3.7,
+            "IFAV": 1.0,
+            "IFSM": 30.0,
+            "VFtyp": 1.1,
+            "VR": 1000.0,
+            "VRRM": 1000.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "axial2",
+      "id": "1n5819",
+      "inBin": true,
+      "kind": "SCHOTTKY",
+      "name": "1N5819 Schottky diode",
+      "pins": [
+        "A",
+        "K"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "DO41",
+          "price": 4.0,
+          "priceText": "$0.04",
+          "ratings": {
+            "IFAV": 1.0,
+            "IFSM": 25.0,
+            "VFmax1A": 0.6,
+            "VFmax3A1": 0.9,
+            "VR": 40.0,
+            "VRRM": 40.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "axial2",
+      "id": "1n4733a",
+      "inBin": true,
+      "kind": "Z",
+      "name": "1N4733A Zener 5.1 V",
+      "pins": [
+        "A",
+        "K"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "DO41",
+          "price": 4.0,
+          "priceText": "$0.04",
+          "ratings": {
+            "IZM": 0.178,
+            "Izt": 0.049,
+            "Pd": 1.3,
+            "Vz": 5.1,
+            "Zzt": 7.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "axial2",
+      "id": "1n4742a",
+      "inBin": true,
+      "kind": "Z",
+      "name": "1N4742A Zener 12 V",
+      "pins": [
+        "A",
+        "K"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "DO41",
+          "price": 4.0,
+          "priceText": "$0.04",
+          "ratings": {
+            "IZM": 0.076,
+            "Izt": 0.021,
+            "Pd": 1.3,
+            "Vz": 12.0,
+            "Zzt": 9.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "axial2",
+      "id": "1n4728a",
+      "inBin": true,
+      "kind": "Z",
+      "name": "1N4728A Zener 3.3 V",
+      "pins": [
+        "A",
+        "K"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "DO41",
+          "price": 4.0,
+          "priceText": "$0.04",
+          "ratings": {
+            "IZM": 0.276,
+            "Izt": 0.076,
+            "Pd": 1.3,
+            "Vz": 3.3,
+            "Zzt": 10.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "axial2",
+      "id": "bzx55c5v1",
+      "inBin": true,
+      "kind": "Z",
+      "name": "BZX55C5V1 Zener 5.1 V",
+      "pins": [
+        "A",
+        "K"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "DO35",
+          "price": 3.0,
+          "priceText": "$0.03",
+          "ratings": {
+            "Izt": 0.005,
+            "Pd": 0.5,
+            "Vz": 5.1,
+            "rzjMax": 35.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "radial2",
+      "id": "led-red-5mm",
+      "inBin": true,
+      "kind": "LED",
+      "name": "Red LED 5 mm",
+      "pins": [
+        "A",
+        "K"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "5mm",
+          "price": 3.0,
+          "priceText": "$0.03",
+          "ratings": {
+            "IF": 0.03,
+            "IFP": 0.16,
+            "IFwork": 0.02,
+            "PD": 0.075,
+            "VFmax10mA": 2.3,
+            "VFtyp10mA": 1.9,
+            "VR": 5.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "radial2",
+      "id": "led-yellow-5mm",
+      "inBin": true,
+      "kind": "LED",
+      "name": "Yellow LED 5 mm",
+      "pins": [
+        "A",
+        "K"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "5mm",
+          "price": 3.0,
+          "priceText": "$0.03",
+          "ratings": {
+            "IF": 0.03,
+            "IFwork": 0.02,
+            "VFapprox20mA": 2.1
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "radial2",
+      "id": "led-green-5mm",
+      "inBin": true,
+      "kind": "LED",
+      "name": "Green LED 5 mm",
+      "pins": [
+        "A",
+        "K"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "5mm",
+          "price": 3.0,
+          "priceText": "$0.03",
+          "ratings": {
+            "IF": 0.03,
+            "IFwork": 0.02,
+            "VFapprox20mA": 2.2
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "radial2",
+      "id": "led-blue-5mm",
+      "inBin": true,
+      "kind": "LED",
+      "name": "Blue LED 5 mm",
+      "pins": [
+        "A",
+        "K"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "5mm",
+          "price": 3.0,
+          "priceText": "$0.03",
+          "ratings": {
+            "IF": 0.03,
+            "IFwork": 0.02,
+            "VFapprox20mA": 3.1
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "radial2",
+      "id": "led-white-5mm",
+      "inBin": true,
+      "kind": "LED",
+      "name": "White LED 5 mm",
+      "pins": [
+        "A",
+        "K"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "5mm",
+          "price": 3.0,
+          "priceText": "$0.03",
+          "ratings": {
+            "IF": 0.03,
+            "IFwork": 0.02,
+            "VFapprox20mA": 3.1
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "axial2",
+      "id": "zener-6v-ideal",
+      "inBin": true,
+      "kind": "Z",
+      "name": "Ideal Zener, 6 V",
+      "pins": [
+        "A",
+        "K"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "ideal",
+          "price": 0.0,
+          "priceText": "$0.00",
+          "ratings": {}
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "to92",
+      "id": "2n3904",
+      "inBin": true,
+      "kind": "NPN",
+      "name": "2N3904 NPN",
+      "pins": [
+        "C",
+        "B",
+        "E"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "TO92",
+          "price": 3.0,
+          "priceText": "$0.03",
+          "ratings": {
+            "Ic": 0.2,
+            "Ptot": 0.625,
+            "Vcbo": 60.0,
+            "Vceo": 40.0,
+            "Vebo": 6.0,
+            "hFEmax": 300.0,
+            "hFEmin": 100.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "to92",
+      "id": "2n3906",
+      "inBin": true,
+      "kind": "PNP",
+      "name": "2N3906 transistor (PNP)",
+      "pins": [
+        "C",
+        "B",
+        "E"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "TO92",
+          "price": 3.0,
+          "priceText": "$0.03",
+          "ratings": {
+            "Ic": 0.2,
+            "Ptot": 0.625,
+            "Vceo": 40.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "to92",
+      "id": "2n2222a",
+      "inBin": true,
+      "kind": "NPN",
+      "name": "2N2222A NPN",
+      "pins": [
+        "E",
+        "B",
+        "C"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "TO92",
+          "price": 4.0,
+          "priceText": "$0.04",
+          "ratings": {
+            "Ic": 0.6,
+            "Ptot": 0.625,
+            "Vceo": 40.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "to92",
+      "id": "bc547b",
+      "inBin": true,
+      "kind": "NPN",
+      "name": "BC547B NPN",
+      "pins": [
+        "C",
+        "B",
+        "E"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "TO92",
+          "price": 3.0,
+          "priceText": "$0.03",
+          "ratings": {
+            "Ic": 0.1,
+            "Ptot": 0.5,
+            "Vceo": 45.0,
+            "hFEmax": 450.0,
+            "hFEmin": 200.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "to220",
+      "id": "tip120",
+      "inBin": true,
+      "kind": "DARLINGTON",
+      "name": "TIP120",
+      "pins": [
+        "B",
+        "C",
+        "E"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "TO220",
+          "price": 25.0,
+          "priceText": "$0.25",
+          "ratings": {
+            "Ic": 5.0,
+            "IcPeak": 8.0,
+            "Ptot": 65.0,
+            "PtotAir": 2.0,
+            "VceSatMax": 2.0,
+            "Vceo": 60.0,
+            "hFEmin": 1000.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "to92",
+      "id": "2n7000",
+      "inBin": true,
+      "kind": "NMOS",
+      "name": "2N7000 FET",
+      "pins": [
+        "S",
+        "G",
+        "D"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "TO92",
+          "price": 5.0,
+          "priceText": "$0.05",
+          "ratings": {
+            "Id": 0.2,
+            "Pd": 0.4,
+            "RdsOnMax10V": 5.0,
+            "Vds": 60.0,
+            "VgsMax": 20.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "to220",
+      "id": "irlz44n",
+      "inBin": true,
+      "kind": "NMOS",
+      "name": "IRLZ44N FET",
+      "pins": [
+        "G",
+        "D",
+        "S"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "TO220",
+          "price": 50.0,
+          "priceText": "$0.50",
+          "ratings": {
+            "Id": 47.0,
+            "Pd": 110.0,
+            "RdsOn10V": 0.022,
+            "RdsOn4V": 0.035,
+            "RdsOn5V": 0.025,
+            "Vds": 55.0,
+            "VgsMax": 16.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "to220",
+      "id": "irf540n",
+      "inBin": true,
+      "kind": "NMOS",
+      "name": "IRF540N FET",
+      "pins": [
+        "G",
+        "D",
+        "S"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "TO220",
+          "price": 45.0,
+          "priceText": "$0.45",
+          "ratings": {
+            "Id": 33.0,
+            "RdsOn10V": 0.044,
+            "Vds": 100.0,
+            "VgsMax": 20.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "to92",
+      "id": "npn-textbook",
+      "inBin": true,
+      "kind": "NPN",
+      "name": "Textbook NPN",
+      "pins": [
+        "C",
+        "B",
+        "E"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "ideal",
+          "price": 0.0,
+          "priceText": "$0.00",
+          "ratings": {
+            "Vceo": 1000.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "dip8",
+      "id": "lm741",
+      "inBin": true,
+      "kind": "OPAMP",
+      "name": "LM741 op-amp",
+      "pins": [
+        "OS1",
+        "IN-",
+        "IN+",
+        "V-",
+        "OS2",
+        "OUT",
+        "V+",
+        "NC"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "DIP8",
+          "price": 15.0,
+          "priceText": "$0.15",
+          "ratings": {
+            "VsMaxAbs": 36.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "dip8",
+      "id": "lm358",
+      "inBin": true,
+      "kind": "OPAMP",
+      "name": "LM358 dual op-amp",
+      "pins": [
+        "OUT1",
+        "IN1-",
+        "IN1+",
+        "V-",
+        "IN2+",
+        "IN2-",
+        "OUT2",
+        "V+"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "DIP8",
+          "price": 8.0,
+          "priceText": "$0.08",
+          "ratings": {
+            "VsMaxAbs": 32.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "dip8",
+      "id": "tl072",
+      "inBin": true,
+      "kind": "OPAMP",
+      "name": "TL072 dual op-amp",
+      "pins": [
+        "OUT1",
+        "IN1-",
+        "IN1+",
+        "V-",
+        "IN2+",
+        "IN2-",
+        "OUT2",
+        "V+"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "DIP8",
+          "price": 15.0,
+          "priceText": "$0.15",
+          "ratings": {
+            "VsMaxAbs": 36.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "dip8",
+      "id": "ne5532",
+      "inBin": true,
+      "kind": "OPAMP",
+      "name": "NE5532 dual op-amp",
+      "pins": [
+        "OUT1",
+        "IN1-",
+        "IN1+",
+        "V-",
+        "IN2+",
+        "IN2-",
+        "OUT2",
+        "V+"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "DIP8",
+          "price": 25.0,
+          "priceText": "$0.25",
+          "ratings": {
+            "VsMaxAbs": 40.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "dip8",
+      "id": "mcp6002",
+      "inBin": true,
+      "kind": "OPAMP",
+      "name": "MCP6002 dual op-amp",
+      "pins": [
+        "OUT1",
+        "IN1-",
+        "IN1+",
+        "V-",
+        "IN2+",
+        "IN2-",
+        "OUT2",
+        "V+"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "DIP8",
+          "price": 20.0,
+          "priceText": "$0.20",
+          "ratings": {
+            "VsMaxAbs": 7.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "dip8",
+      "id": "lm393",
+      "inBin": true,
+      "kind": "CMP",
+      "name": "LM393 dual comparator",
+      "pins": [
+        "OUT1",
+        "IN1-",
+        "IN1+",
+        "GND",
+        "IN2+",
+        "IN2-",
+        "OUT2",
+        "VCC"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "DIP8",
+          "price": 8.0,
+          "priceText": "$0.08",
+          "ratings": {
+            "VsMaxAbs": 36.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "dip8",
+      "id": "ne555",
+      "inBin": true,
+      "kind": "555",
+      "name": "NE555 timer",
+      "pins": [
+        "GND",
+        "TRIG",
+        "OUT",
+        "RESET",
+        "CTRL",
+        "THR",
+        "DIS",
+        "VCC"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "DIP8",
+          "price": 10.0,
+          "priceText": "$0.10",
+          "ratings": {
+            "VsMaxAbs": 18.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "to220",
+      "id": "lm7805",
+      "inBin": true,
+      "kind": "REG",
+      "name": "LM7805 regulator, 5 V",
+      "pins": [
+        "IN",
+        "GND",
+        "OUT"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "TO220",
+          "price": 15.0,
+          "priceText": "$0.15",
+          "ratings": {
+            "Iout": 1.0,
+            "VdoAt1A": 2.0,
+            "VinMax": 35.0
+          }
+        },
+        {
+          "id": "TO220-25",
+          "price": 23.0,
+          "priceText": "$0.23",
+          "ratings": {
+            "Iout": 1.0,
+            "VdoAt1A": 2.0,
+            "VinMax": 35.0,
+            "thetaSA": 25.0
+          }
+        },
+        {
+          "id": "TO220-15",
+          "price": 29.0,
+          "priceText": "$0.29",
+          "ratings": {
+            "Iout": 1.0,
+            "VdoAt1A": 2.0,
+            "VinMax": 35.0,
+            "thetaSA": 15.0
+          }
+        },
+        {
+          "id": "TO220-8",
+          "price": 75.0,
+          "priceText": "$0.75",
+          "ratings": {
+            "Iout": 1.0,
+            "VdoAt1A": 2.0,
+            "VinMax": 35.0,
+            "thetaSA": 8.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "to220",
+      "id": "lm317",
+      "inBin": true,
+      "kind": "REG",
+      "name": "LM317 adjustable regulator",
+      "pins": [
+        "ADJ",
+        "OUT",
+        "IN"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "TO220",
+          "price": 25.0,
+          "priceText": "$0.25",
+          "ratings": {
+            "Iout": 1.5,
+            "Vdo": 2.0,
+            "VinMax": 40.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "relay5",
+      "id": "relay-12v",
+      "inBin": true,
+      "kind": "RELAY",
+      "name": "12 V relay",
+      "pins": [
+        "C1",
+        "C2",
+        "COM",
+        "NO",
+        "NC"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "5A",
+          "price": 120.0,
+          "priceText": "$1.20",
+          "ratings": {
+            "Icontact": 5.0,
+            "Vcoil": 12.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "fuse",
+      "inBin": true,
+      "kind": "FUSE",
+      "name": "Fuse",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "0.4A",
+          "price": 8.0,
+          "priceText": "$0.08",
+          "ratings": {
+            "Irated": 0.4
+          }
+        },
+        {
+          "id": "1A",
+          "price": 8.0,
+          "priceText": "$0.08",
+          "ratings": {
+            "Irated": 1.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "ntc-10k",
+      "inBin": true,
+      "kind": "NTC",
+      "name": "NTC thermistor 10 k",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "B3950",
+          "price": 12.0,
+          "priceText": "$0.12",
+          "ratings": {
+            "Tmax": 125.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "heater",
+      "inBin": true,
+      "kind": "HEATER",
+      "name": "Heater element",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "12V",
+          "price": 100.0,
+          "priceText": "$1.00",
+          "ratings": {
+            "P": 3.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "speaker-8",
+      "inBin": true,
+      "kind": "SPEAKER",
+      "name": "Speaker 8 ohm",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "8ohm",
+          "price": 80.0,
+          "priceText": "$0.80",
+          "ratings": {
+            "P": 0.5
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "piezo",
+      "inBin": true,
+      "kind": "SPEAKER",
+      "name": "Piezo sounder",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "buzzer",
+          "price": 60.0,
+          "priceText": "$0.60",
+          "ratings": {
+            "Vmax": 12.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "fan-dc",
+      "inBin": true,
+      "kind": "MOTOR",
+      "name": "DC fan",
+      "pins": [
+        "+",
+        "-"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "12V",
+          "price": 200.0,
+          "priceText": "$2.00",
+          "ratings": {
+            "Vrated": 12.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "pot3",
+      "id": "slidewire",
+      "inBin": true,
+      "kind": "SLIDEWIRE",
+      "name": "Slide wire 100 cm",
+      "pins": [
+        "A",
+        "J",
+        "B"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "100cm",
+          "price": 300.0,
+          "priceText": "$3.00",
+          "ratings": {
+            "lengthM": 1.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "galvanometer",
+      "inBin": true,
+      "kind": "METER",
+      "name": "Galvanometer",
+      "pins": [
+        "+",
+        "-"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "100ohm",
+          "price": 500.0,
+          "priceText": "$5.00",
+          "ratings": {}
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "led-strip",
+      "inBin": true,
+      "kind": "LOAD",
+      "name": "LED strip, 12 V",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "12V",
+          "price": 100.0,
+          "priceText": "$1.00",
+          "ratings": {
+            "P": 5.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "amp-load",
+      "inBin": true,
+      "kind": "LOAD",
+      "name": "Amp input 47 k",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "47k",
+          "price": 20.0,
+          "priceText": "$0.20",
+          "ratings": {
+            "P": 0.25
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "adc-in",
+      "inBin": true,
+      "kind": "LOAD",
+      "name": "ADC input",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "10k",
+          "price": 100.0,
+          "priceText": "$1.00",
+          "ratings": {
+            "P": 0.25
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "cable-loop",
+      "inBin": true,
+      "kind": "LOAD",
+      "name": "Cable loop",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "loop",
+          "price": 100.0,
+          "priceText": "$1.00",
+          "ratings": {
+            "P": 2.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "cell-2v",
+      "inBin": true,
+      "kind": "MISC",
+      "name": "2 V cell with rheostat",
+      "pins": [
+        "+",
+        "-"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "2V",
+          "price": 150.0,
+          "priceText": "$1.50",
+          "ratings": {
+            "emf": 2.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "cell-test",
+      "inBin": true,
+      "kind": "MISC",
+      "name": "Test cell",
+      "pins": [
+        "+",
+        "-"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "1.5V",
+          "price": 100.0,
+          "priceText": "$1.00",
+          "ratings": {
+            "emf": 1.5
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "blackbox",
+      "inBin": true,
+      "kind": "MISC",
+      "name": "Sealed module",
+      "pins": [
+        "OUT",
+        "GND"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "sealed",
+          "price": 500.0,
+          "priceText": "$5.00",
+          "ratings": {}
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "slide3",
+      "id": "slidewire-m",
+      "inBin": true,
+      "kind": "SLIDEWIRE",
+      "name": "Slide wire, 100 cm",
+      "pins": [
+        "A",
+        "J",
+        "B"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "100cm",
+          "price": 300.0,
+          "priceText": "$3.00",
+          "ratings": {
+            "lengthM": 1.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "axial2",
+      "id": "res-box",
+      "inBin": true,
+      "kind": "R",
+      "name": "Resistance box plug",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "plug",
+          "price": 12.0,
+          "priceText": "$0.12",
+          "ratings": {
+            "P": 3.0,
+            "Vmax": 100.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "axial2",
+      "id": "trimmer",
+      "inBin": true,
+      "kind": "R",
+      "name": "Trimmer, 1 k",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "0.5W",
+          "price": 25.0,
+          "priceText": "$0.25",
+          "ratings": {
+            "P": 0.5,
+            "Vmax": 300.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "axial2",
+      "id": "rheostat",
+      "inBin": true,
+      "kind": "R",
+      "name": "Rheostat",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "ideal",
+          "price": 0.0,
+          "priceText": "$0.00",
+          "ratings": {}
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "block2",
+      "id": "pullup-10k",
+      "inBin": true,
+      "kind": "LOAD",
+      "name": "Pull-up resistor, 10 k",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "10k",
+          "price": 20.0,
+          "priceText": "$0.20",
+          "ratings": {
+            "P": 0.25
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "logic-in",
+      "inBin": true,
+      "kind": "LOAD",
+      "name": "Logic input, 1 M",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "1M",
+          "price": 50.0,
+          "priceText": "$0.50",
+          "ratings": {
+            "P": 0.25
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "load-cc",
+      "inBin": true,
+      "kind": "LOAD",
+      "name": "Load, constant current",
+      "pins": [
+        "+",
+        "-"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "cc",
+          "price": 50.0,
+          "priceText": "$0.50",
+          "ratings": {}
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "bat-pp3",
+      "inBin": true,
+      "kind": "MISC",
+      "name": "9 V battery (PP3)",
+      "pins": [
+        "+",
+        "-"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "fresh",
+          "price": 100.0,
+          "priceText": "$1.00",
+          "ratings": {
+            "emf": 9.0
+          }
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "block2",
+      "id": "bat-pp3-tired",
+      "inBin": true,
+      "kind": "MISC",
+      "name": "9 V battery, tired",
+      "pins": [
+        "+",
+        "-"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "tired",
+          "price": 100.0,
+          "priceText": "$1.00",
+          "ratings": {
+            "emf": 8.4
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "bat-aa",
+      "inBin": true,
+      "kind": "MISC",
+      "name": "AA battery",
+      "pins": [
+        "+",
+        "-"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "fresh",
+          "price": 40.0,
+          "priceText": "$0.40",
+          "ratings": {
+            "emf": 1.5
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "bat-cr2032",
+      "inBin": true,
+      "kind": "MISC",
+      "name": "CR2032 coin cell",
+      "pins": [
+        "+",
+        "-"
+      ],
+      "scope": "sandbox",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "fresh",
+          "price": 30.0,
+          "priceText": "$0.30",
+          "ratings": {
+            "emf": 3.0
+          }
+        }
+      ],
+      "verified": false
+    },
+    {
+      "footprint": "block2",
+      "id": "ideal-vsource",
+      "inBin": true,
+      "kind": "MISC",
+      "name": "Ideal voltage source",
+      "pins": [
+        "+",
+        "-"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "ideal",
+          "price": 0.0,
+          "priceText": "$0.00",
+          "ratings": {}
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "block2",
+      "id": "ideal-isource",
+      "inBin": true,
+      "kind": "MISC",
+      "name": "Ideal current source",
+      "pins": [
+        "+",
+        "-"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "ideal",
+          "price": 0.0,
+          "priceText": "$0.00",
+          "ratings": {}
+        }
+      ],
+      "verified": true
+    },
+    {
+      "footprint": "axial2",
+      "id": "res-exact",
+      "inBin": true,
+      "kind": "R",
+      "name": "Exact resistor",
+      "pins": [
+        "1",
+        "2"
+      ],
+      "scope": "campaign",
+      "unavailable": false,
+      "values": null,
+      "variants": [
+        {
+          "id": "ideal",
+          "price": 0.0,
+          "priceText": "$0.00",
+          "ratings": {}
+        }
+      ],
+      "verified": true
+    }
+  ]
+}

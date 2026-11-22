@@ -215,6 +215,9 @@ export interface LevelDef {
   fixed: PlacedPart[];
   /** Pre-wired, non-removable wires (paths of pads), uids fw1, fw2...: e.g. the exam's source minus ends tied to the GND pad. */
   fixedWires?: Pad[][];
+  /** A repair ticket: the customer's faulty board as it arrives. Removable parts (uids x1, x2...) and wires (xw1...); `smoked`
+   *  lists the indices of parts that came in burnt (they count as smoked until replaced, and cost the player nothing). */
+  fault?: { parts: Omit<PlacedPart, 'uid' | 'fixed'>[]; wires: Pad[][]; smoked: number[] };
   /** Bench-provided sources (bench supply, function generator). Batteries are fixed parts instead. */
   supplies: SupplyDef[];
   /** Initial instrument settings. A bench supply / generator / scope the ticket does not mention stays unusable. */

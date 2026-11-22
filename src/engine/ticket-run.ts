@@ -63,7 +63,26 @@ function richer(f: { key: string; vars: Record<string, string | number> }, cause
   return f;
 }
 
-export function benchTicket(s: NodeState, def: LevelDef): { result: BenchResult; causes: { key: string; vars: Record<string, string | number> }[] } {
+type BenchOut = { result: BenchResult; causes: { key: string; vars: Record<string, string | number> }[] };
+/** The bench is a pure function of these inputs. Level search probes runBench on every turn, mostly on a board that has
+ *  not changed since the last probe, so the same answer is reused instead of simulated again. Exact: the key holds every
+ *  input the bench reads, and each caller gets its own deep copy. */
+const benchMemo = new WeakMap<LevelDef, Map<string, BenchOut>>();
+const BENCH_MEMO_CAP = 64;
+export const benchKey = (s: NodeState, tk: TicketState): string =>
+  hashOf({ r: s.region, b: tk.board, su: tk.instruments.supply, g: tk.instruments.gen, sm: tk.live.smoked, pr: tk.predictions, h: tk.hidden, sel: tk.sel ?? null });
+export function benchTicket(s: NodeState, def: LevelDef): BenchOut {
+  const key = benchKey(s, s.ticket!);
+  let memo = benchMemo.get(def); if (!memo) benchMemo.set(def, (memo = new Map()));
+  const hit = memo.get(key);
+  if (hit) return structuredClone(hit);
+  const out = benchTicketRaw(s, def);
+  if (memo.size >= BENCH_MEMO_CAP) memo.delete(memo.keys().next().value!);
+  memo.set(key, structuredClone(out));
+  return out;
+}
+/** The bench without the memo (tests compare the two). */
+export function benchTicketRaw(s: NodeState, def: LevelDef): BenchOut {
   const tk = s.ticket!;
   const out = runTicketBench({
     board: tk.board, getDef, supplies: def.supplies, plan: def.bench, hidden: hiddenOverrides(def, tk),

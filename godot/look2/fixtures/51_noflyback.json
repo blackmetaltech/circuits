@@ -1,0 +1,1066 @@
+{
+  "bench": {
+    "benched": null,
+    "boardErrors": [],
+    "connectors": [
+      {
+        "id": "V12",
+        "pad": [
+          2.0,
+          2.0
+        ],
+        "role": "source"
+      },
+      {
+        "id": "PIN",
+        "pad": [
+          2.0,
+          7.0
+        ],
+        "role": "source"
+      },
+      {
+        "id": "COLL",
+        "pad": [
+          22.0,
+          4.0
+        ],
+        "role": "load"
+      },
+      {
+        "id": "GND",
+        "pad": [
+          22.0,
+          14.0
+        ],
+        "role": "ground"
+      }
+    ],
+    "crossings": [],
+    "dangling": [],
+    "h": 16.0,
+    "instruments": {
+      "dmm": {
+        "black": null,
+        "label": "off",
+        "mode": "off",
+        "red": null
+      },
+      "gen": null,
+      "paused": false,
+      "powered": true,
+      "scope": {
+        "probes": [
+          {
+            "ch": 1.0,
+            "pad": [
+              16.0,
+              8.0
+            ]
+          }
+        ],
+        "timePerDiv": 0.002,
+        "trigger": {
+          "edge": "rise",
+          "level": 0.0,
+          "mode": "auto",
+          "source": 1.0
+        },
+        "voltsPerDiv": [
+          5.0,
+          5.0
+        ]
+      },
+      "supply": {
+        "ilim": 1.0,
+        "on": true,
+        "v": 12.0
+      }
+    },
+    "issues": [],
+    "joins": [
+      {
+        "n": 2.0,
+        "pad": [
+          14.0,
+          2.0
+        ]
+      },
+      {
+        "n": 3.0,
+        "pad": [
+          22.0,
+          4.0
+        ]
+      },
+      {
+        "n": 2.0,
+        "pad": [
+          16.0,
+          6.0
+        ]
+      }
+    ],
+    "keepOut": [],
+    "marks": [],
+    "openPins": [],
+    "parts": [
+      {
+        "fixed": true,
+        "flip": false,
+        "kind": "MOTOR",
+        "name": "DC fan",
+        "partId": "fan-dc",
+        "pins": [
+          {
+            "label": "+",
+            "name": "+",
+            "pad": [
+              16.0,
+              2.0
+            ]
+          },
+          {
+            "label": "-",
+            "name": "-",
+            "pad": [
+              22.0,
+              2.0
+            ]
+          }
+        ],
+        "pos": null,
+        "ratings": {
+          "Vrated": 12.0
+        },
+        "rot": 0.0,
+        "smoked": false,
+        "uid": "f1",
+        "value": null,
+        "valueText": "",
+        "variant": "12V",
+        "x": 16.0,
+        "y": 2.0
+      },
+      {
+        "fixed": false,
+        "flip": false,
+        "kind": "R",
+        "name": "Carbon-film resistor 5 %",
+        "partId": "res-cf",
+        "pins": [
+          {
+            "label": "1",
+            "name": "1",
+            "pad": [
+              4.0,
+              7.0
+            ]
+          },
+          {
+            "label": "2",
+            "name": "2",
+            "pad": [
+              8.0,
+              7.0
+            ]
+          }
+        ],
+        "pos": null,
+        "ratings": {
+          "P": 0.25,
+          "Tamb": 70.0,
+          "Vmax": 250.0
+        },
+        "rot": 0.0,
+        "smoked": false,
+        "uid": "p1",
+        "value": 220.0,
+        "valueText": "220 Ω",
+        "variant": "0.25W",
+        "x": 4.0,
+        "y": 7.0
+      },
+      {
+        "fixed": false,
+        "flip": false,
+        "kind": "NPN",
+        "name": "2N2222A NPN",
+        "partId": "2n2222a",
+        "pins": [
+          {
+            "label": "E",
+            "name": "E",
+            "pad": [
+              14.0,
+              8.0
+            ]
+          },
+          {
+            "label": "B",
+            "name": "B",
+            "pad": [
+              15.0,
+              8.0
+            ]
+          },
+          {
+            "label": "C",
+            "name": "C",
+            "pad": [
+              16.0,
+              8.0
+            ]
+          }
+        ],
+        "pos": null,
+        "ratings": {
+          "Ic": 0.6,
+          "Ptot": 0.625,
+          "Vceo": 40.0
+        },
+        "rot": 0.0,
+        "smoked": false,
+        "uid": "p2",
+        "value": null,
+        "valueText": "",
+        "variant": "TO92",
+        "x": 14.0,
+        "y": 8.0
+      }
+    ],
+    "redoDepth": 0.0,
+    "selectors": [
+      {
+        "id": "pin",
+        "index": 2.0,
+        "label": "PIN",
+        "options": [
+          "high",
+          "low",
+          "100 Hz"
+        ]
+      }
+    ],
+    "slots": [],
+    "status": "ok",
+    "ticket": "5-1",
+    "undoDepth": 11.0,
+    "w": 24.0,
+    "wires": [
+      {
+        "fixed": true,
+        "path": [
+          [
+            2.0,
+            2.0
+          ],
+          [
+            14.0,
+            2.0
+          ]
+        ],
+        "wid": "fw1"
+      },
+      {
+        "fixed": true,
+        "path": [
+          [
+            14.0,
+            2.0
+          ],
+          [
+            16.0,
+            2.0
+          ]
+        ],
+        "wid": "fw2"
+      },
+      {
+        "fixed": true,
+        "path": [
+          [
+            22.0,
+            2.0
+          ],
+          [
+            22.0,
+            4.0
+          ]
+        ],
+        "wid": "fw3"
+      },
+      {
+        "fixed": false,
+        "path": [
+          [
+            2.0,
+            7.0
+          ],
+          [
+            4.0,
+            7.0
+          ]
+        ],
+        "wid": "w1"
+      },
+      {
+        "fixed": false,
+        "path": [
+          [
+            8.0,
+            7.0
+          ],
+          [
+            15.0,
+            7.0
+          ],
+          [
+            15.0,
+            8.0
+          ]
+        ],
+        "wid": "w2"
+      },
+      {
+        "fixed": false,
+        "path": [
+          [
+            14.0,
+            8.0
+          ],
+          [
+            14.0,
+            14.0
+          ],
+          [
+            22.0,
+            14.0
+          ]
+        ],
+        "wid": "w3"
+      },
+      {
+        "fixed": false,
+        "path": [
+          [
+            16.0,
+            8.0
+          ],
+          [
+            16.0,
+            6.0
+          ]
+        ],
+        "wid": "w4"
+      },
+      {
+        "fixed": false,
+        "path": [
+          [
+            16.0,
+            6.0
+          ],
+          [
+            22.0,
+            6.0
+          ],
+          [
+            22.0,
+            4.0
+          ]
+        ],
+        "wid": "w5"
+      }
+    ]
+  },
+  "coach": {
+    "back": false,
+    "cur": 0,
+    "step_no": 4,
+    "step_total": 7,
+    "steps": [
+      {
+        "done": false,
+        "id": "burned",
+        "optional": false,
+        "shown": true,
+        "target": "pad:14,8",
+        "text": "The 2N2222A NPN burned: undo it (Ctrl+Z) or swap it for a fresh part, then read the note above: it says what killed it (too much current, too much heat or a voltage spike)."
+      },
+      {
+        "done": true,
+        "id": "place",
+        "optional": false,
+        "shown": true,
+        "target": "box:2n2222a",
+        "text": "Kit's fan board. Drag a transistor from the shoebox onto the board: the 2N2222A is rated for 600 mA, the BC547B only for 100."
+      },
+      {
+        "done": true,
+        "id": "base",
+        "optional": false,
+        "shown": true,
+        "target": "pad:2,7",
+        "text": "A resistor goes from the PIN pad to the transistor's base: it sets how much base current the pin gives."
+      },
+      {
+        "done": true,
+        "id": "wire",
+        "optional": false,
+        "shown": true,
+        "target": "pad:22,4",
+        "text": "Wire the PIN pad through the resistor to the base, the emitter to GND and the collector to the COLL pad (the fan's low end)."
+      },
+      {
+        "done": false,
+        "id": "diode",
+        "optional": true,
+        "shown": true,
+        "target": "box:1n4007",
+        "text": "A diode across the fan, its banded end on the 12 V side, gives the fan's current somewhere to go when the transistor turns off."
+      },
+      {
+        "done": false,
+        "id": "diode-burn",
+        "optional": false,
+        "shown": true,
+        "target": "box:1n4007",
+        "text": "The transistor burned when the fan switched off: a fan is a coil, and a coil's current cannot stop at once. Put a diode across the fan, its banded end on the 12 V side, before you try again. Optional: A diode across the fan, its banded end on the 12 V side, gives the fan's current somewhere to go when the transistor turns off."
+      },
+      {
+        "done": true,
+        "id": "power",
+        "optional": false,
+        "shown": true,
+        "target": "rocker",
+        "text": "Switch the bench on. The PIN switch turns the pin high, low or 100 Hz."
+      },
+      {
+        "done": false,
+        "id": "run-bench",
+        "optional": false,
+        "shown": true,
+        "target": "bench",
+        "text": "Run the bench: it tries the pin high, low and switching at 100 Hz."
+      },
+      {
+        "done": true,
+        "id": "done",
+        "optional": false,
+        "shown": false,
+        "target": "chit",
+        "text": "Kit's fan spins from a pin, and stays whole when it is switched off."
+      }
+    ]
+  },
+  "events": [
+    {
+      "data": {
+        "amps": 23.921,
+        "fx": "crack",
+        "kind": "NPN",
+        "text": "The collector of the 2N2222A NPN spiked to 2000 V (the most it can take between collector and emitter is 40 V) when it turned off: the inductance of the fan keeps current flowing (v = L x di/dt, voltage rises as fast as the current is cut). A diode across the fan gives that current a path.",
+        "uid": "p2",
+        "watts": 286.1
+      },
+      "name": "smoked"
+    }
+  ],
+  "frame": {
+    "ambient": 25.0,
+    "contacts": [],
+    "events": [
+      {
+        "failureId": 1.0,
+        "key": "smoke.bjt.avalanche",
+        "kind": "crack",
+        "part": "p2",
+        "text": "The collector of the 2N2222A NPN spiked to 2000 V (the most it can take between collector and emitter is 40 V) when it turned off: the inductance of the fan keeps current flowing (v = L x di/dt, voltage rises as fast as the current is cut). A diode across the fan gives that current a path."
+      }
+    ],
+    "frame": 78.0,
+    "issues": [],
+    "nodes": [
+      {
+        "connectors": [
+          "GND"
+        ],
+        "id": 0.0,
+        "name": "0",
+        "norm": 0.0,
+        "pads": [
+          [
+            14.0,
+            8.0
+          ],
+          [
+            22.0,
+            14.0
+          ]
+        ],
+        "v": 0.0
+      },
+      {
+        "connectors": [
+          "V12"
+        ],
+        "id": 1.0,
+        "name": "v12",
+        "norm": 1.0,
+        "pads": [
+          [
+            2.0,
+            2.0
+          ],
+          [
+            14.0,
+            2.0
+          ],
+          [
+            16.0,
+            2.0
+          ]
+        ],
+        "v": 12.0
+      },
+      {
+        "connectors": [
+          "COLL"
+        ],
+        "id": 2.0,
+        "name": "coll",
+        "norm": 0.0083,
+        "pads": [
+          [
+            22.0,
+            2.0
+          ],
+          [
+            22.0,
+            4.0
+          ],
+          [
+            16.0,
+            6.0
+          ],
+          [
+            16.0,
+            8.0
+          ]
+        ],
+        "v": 0.099174
+      },
+      {
+        "connectors": [
+          "PIN"
+        ],
+        "id": 3.0,
+        "name": "pin",
+        "norm": 0.0,
+        "pads": [
+          [
+            2.0,
+            7.0
+          ],
+          [
+            4.0,
+            7.0
+          ]
+        ],
+        "v": 0.0
+      },
+      {
+        "connectors": [],
+        "id": 4.0,
+        "name": "n4",
+        "norm": 0.0,
+        "pads": [
+          [
+            8.0,
+            7.0
+          ],
+          [
+            15.0,
+            8.0
+          ]
+        ],
+        "v": 0.0
+      }
+    ],
+    "parts": [
+      {
+        "pins": [
+          {
+            "i": 0.19835,
+            "name": "+",
+            "pad": [
+              16.0,
+              2.0
+            ],
+            "speed": 5.3208
+          },
+          {
+            "i": -0.19835,
+            "name": "-",
+            "pad": [
+              22.0,
+              2.0
+            ],
+            "speed": -5.3208
+          }
+        ],
+        "power": 2.3605,
+        "rated": null,
+        "ratio": 0.0,
+        "smoked": false,
+        "state": "normal",
+        "temp": 36.3,
+        "uid": "f1",
+        "violations": []
+      },
+      {
+        "pins": [
+          {
+            "i": 0.0,
+            "name": "1",
+            "pad": [
+              4.0,
+              7.0
+            ],
+            "speed": 0.0
+          },
+          {
+            "i": 0.0,
+            "name": "2",
+            "pad": [
+              8.0,
+              7.0
+            ],
+            "speed": 0.0
+          }
+        ],
+        "power": 0.0,
+        "rated": 0.25,
+        "ratio": 0.0,
+        "smoked": false,
+        "state": "normal",
+        "temp": 29.38,
+        "uid": "p1",
+        "violations": []
+      },
+      {
+        "pins": [
+          {
+            "i": -0.19835,
+            "name": "E",
+            "pad": [
+              14.0,
+              8.0
+            ],
+            "speed": -5.3208
+          },
+          {
+            "i": 0.0,
+            "name": "B",
+            "pad": [
+              15.0,
+              8.0
+            ],
+            "speed": 0.0
+          },
+          {
+            "i": 0.19835,
+            "name": "C",
+            "pad": [
+              16.0,
+              8.0
+            ],
+            "speed": 5.3208
+          }
+        ],
+        "power": 0.019671,
+        "rated": 0.625,
+        "ratio": 0.0315,
+        "smoked": true,
+        "state": "smoke",
+        "temp": 25.0,
+        "uid": "p2",
+        "violations": []
+      }
+    ],
+    "paused": false,
+    "powered": true,
+    "status": "ok",
+    "t": 0.16,
+    "valid": true,
+    "vmax": 12.0,
+    "vmin": 0.0,
+    "wires": [
+      {
+        "i": 0.0,
+        "speed": 0.0,
+        "wid": "fw1"
+      },
+      {
+        "i": 0.19835,
+        "speed": 5.3208,
+        "wid": "fw2"
+      },
+      {
+        "i": 0.19835,
+        "speed": 5.3208,
+        "wid": "fw3"
+      },
+      {
+        "i": 0.0,
+        "speed": 0.0,
+        "wid": "w1"
+      },
+      {
+        "i": 0.0,
+        "speed": 0.0,
+        "wid": "w2"
+      },
+      {
+        "i": 0.0,
+        "speed": 0.0,
+        "wid": "w3"
+      },
+      {
+        "i": -0.19835,
+        "speed": -5.3208,
+        "wid": "w4"
+      },
+      {
+        "i": -0.19835,
+        "speed": -5.3208,
+        "wid": "w5"
+      }
+    ]
+  },
+  "scope_q": {
+    "attached": true,
+    "badSamples": {},
+    "ch": 1.0,
+    "dt": 0.000078125,
+    "gauge": {
+      "dead": false,
+      "deadText": "",
+      "inBand": false,
+      "signed": null,
+      "signedText": "",
+      "slide": null,
+      "slideText": "",
+      "text": "",
+      "unit": "mA",
+      "v": [],
+      "value": null
+    },
+    "lock": false,
+    "lockSpecs": {},
+    "t0": 0.140078125,
+    "target": {
+      "clip": null,
+      "clipped": false,
+      "hi": 20.0,
+      "lo": 0.0,
+      "mode": "gauge",
+      "name": "The pin gives at most 20 mA when it is high",
+      "quantity": "A",
+      "scale": 1000.0,
+      "spec": "ipin",
+      "unit": "mA"
+    },
+    "timePerDiv": 0.002,
+    "trigger": {
+      "edge": "rise",
+      "level": 0.0,
+      "mode": "auto",
+      "source": 1.0
+    },
+    "triggered": false,
+    "unit": "V",
+    "v": [
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917,
+      0.09917
+    ],
+    "voltsPerDiv": 5.0
+  },
+  "scope_view": {
+    "attached": true,
+    "clip_name": "",
+    "clip_pad": null,
+    "clipped": false,
+    "hi": 20.0,
+    "hidden": false,
+    "label": "CURRENT",
+    "lo": 0.0,
+    "mode": "gauge",
+    "name": "The pin gives at most 20 mA when it is high",
+    "nogauge": false,
+    "scale": 1000.0,
+    "slide": "",
+    "text": "",
+    "unit": "mA",
+    "value": 0.0,
+    "vdiv": 5.0
+  },
+  "smoked": {
+    "p2": true
+  }
+}

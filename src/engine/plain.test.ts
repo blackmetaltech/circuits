@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { Engine } from '@core/kit';
 import { GAME } from '../game';
+import { clearFaultActions } from './replay';
 import { LEVEL_DEFS } from '../data/levels';
 import { explainLevelMiss } from '../sim/explain';
 import { say } from './text';
@@ -14,6 +15,7 @@ function open(id: string): Engine<NodeState> {
   for (const d of LEVEL_DEFS.filter((x) => x.chapter === 1)) { if (d.id === id) break; st.progress.tickets[d.id] = { ...newTicketProgress(), passed: true, stars: 1 }; }
   e.setState(st);
   expect(e.act('openTicket', [id]).ok).toBe(true);
+  for (const a of clearFaultActions(LEVEL_DEFS.find((d) => d.id === id)!)) expect(e.act(a.name, a.args ?? []).ok).toBe(true);   // these build tests start from the cleared board (repair.test.ts covers the arrival)
   return e;
 }
 const ok = (e: Engine<NodeState>, name: string, ...args: unknown[]) => { const r = e.act(name, args); expect(r.ok, `${name} ${JSON.stringify(args)}: ${r.message}`).toBe(true); return r; };
@@ -76,9 +78,10 @@ describe('wires say what they touch, and flag the ones that touch nothing', () =
 
 describe('undo and delete', () => {
   it('undo takes back the last edit, undoDepth tracks it', () => {
-    const e = open('1-1'); place(e, 4, 5); ok(e, 'wire', [2, 2], [4, 5]);
-    expect(q(e, 'bench').undoDepth).toBe(2);
-    ok(e, 'undo'); expect(q(e, 'bench').wires).toHaveLength(0); expect(q(e, 'bench').undoDepth).toBe(1);
+    const e = open('1-1'); const d0 = q(e, 'bench').undoDepth;   // clearing the repair's faulty board is undoable too
+    place(e, 4, 5); ok(e, 'wire', [2, 2], [4, 5]);
+    expect(q(e, 'bench').undoDepth).toBe(d0 + 2);
+    ok(e, 'undo'); expect(q(e, 'bench').wires).toHaveLength(0); expect(q(e, 'bench').undoDepth).toBe(d0 + 1);
     ok(e, 'undo'); expect(q(e, 'bench').parts.filter((p: any) => !p.fixed)).toHaveLength(0);
   });
   it('deleting a part removes the wires its legs alone were holding; undo brings them back', () => {

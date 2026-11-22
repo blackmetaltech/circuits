@@ -14,6 +14,8 @@ export const L1_2: LevelDef = {
     connectors: [{ id: 'VP', pad: [2, 2], role: 'rail' }, { id: 'GND', pad: [8, 2], role: 'ground' }],
   },
   fixed: [{ uid: 'f1', partId: 'bat-pp3', value: null, variant: 'fresh', x: 2, y: 2, rot: 0, flip: false, fixed: true }],
+  // repair (decision 10b): the light arrives working but dim: three LEDs in series on a 1 k resistor (about 5 mA)
+  fault: { parts: [{ partId: 'res-cf', value: 1000, variant: '0.25W', x: 2, y: 5, rot: 0, flip: false }, { partId: 'led-red-5mm', value: null, variant: '5mm', x: 8, y: 5, rot: 0, flip: false }, { partId: 'led-red-5mm', value: null, variant: '5mm', x: 14, y: 5, rot: 0, flip: false }, { partId: 'led-red-5mm', value: null, variant: '5mm', x: 18, y: 5, rot: 0, flip: false }], wires: [[[2, 2], [2, 5]], [[6, 5], [8, 5]], [[10, 5], [14, 5]], [[16, 5], [18, 5]], [[20, 5], [20, 2], [8, 2]]], smoked: [] },
   supplies: [],
   instruments: { scope: { timePerDiv: 1e-3, voltsPerDiv: [1, 1] } },
   bin: [

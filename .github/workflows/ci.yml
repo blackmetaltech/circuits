@@ -76,3 +76,8 @@ jobs:
           CB_SMOKE=1 timeout 180 godot --headless --path godot 2>&1 | tee smoke.log
           grep -q "SMOKE OK" smoke.log
           ! grep -E "SCRIPT ERROR|Parse Error" smoke.log
+      - name: New look, chapter 1 end to end and save-continue (Godot flows on the real engine)
+        if: matrix.node == '22'
+        run: |
+          timeout 600 godot --headless --path godot -s res://tests/look2_ch1_flow.gd
+          XDG_DATA_HOME=$(mktemp -d /tmp/cbsave.XXXX) timeout 300 godot --headless --path godot -s res://tests/look2_save_flow.gd

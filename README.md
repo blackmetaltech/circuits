@@ -1,22 +1,29 @@
-# 🔌 CIRCUITS: a night-market electronics stall where real circuits are the rules
+# 🔌 CIRCUITS: a repair bench where real circuits are the rules
 
-**[Changelog](CHANGELOG.md)** · **[Design](docs/DESIGN.md)** · **[Status](docs/STATUS.md)**
+**[Changelog](CHANGELOG.md)** · **[Design](docs/DESIGN.md)** · **[Status](docs/STATUS.md)** · **[The new look](docs/LOOK2.md)**
 
-**Run Wren's repair stall on Lantern Lane.** Customers bring a dead torch, a slow toy car, a relay that pulls in late. You drag real parts
-from the shoebox onto a perfboard, wire them pad to pad, flip the power switch and watch the oscilloscope trace. Get it wrong and the LED
-cracks and smokes, the resistor glows, the capacitor vents, and the game tells you why in plain words, with the numbers from your own
-circuit. Get it right and the trace locks in the band, the customer grins and coins drop in the tin.
+**Customers bring broken devices to your bench.** A torch that died, a bike light too dim to be seen, a fish-tank heater running hot,
+a toy car that crawls, a desk fan that burned its driver. Open the case, probe the old work with the meter and the scope, fix it with
+real parts, and hand it back. Burn a part and it comes out of your pay; the game tells you why it burned, with the numbers from your own
+circuit. A free bench lets you place any part, power it, probe it and save the build.
 
 The front end is a **Godot 4.7** game. Every volt, amp and second comes from a **deterministic TypeScript circuit engine** (a modified
 nodal analysis solver with DC, transient and device models) that Godot drives through a Node sidecar. The interface computes no numbers
 of its own.
 
-> **v0.2.0, pre-alpha.** Chapters 1 to 5 (23 tickets) are playable end to end on desktop and at Steam Deck size (1280x800). Chapters 1 to 3
-> were each won by a fresh play-tester from in-game guidance alone; chapters 4 and 5 are verified through the UI with the reference designs and
-> the designed failures, and were hand-played only by the build agent. Chapters 6 to 8 are designed, not built. No phone build, no sound pass and
-> no gamepad pass yet. The [v0.2.0 release](https://github.com/blackmetaltech/circuits/releases/tag/v0.2.0) is a Linux x86_64 build.
+> **v0.3.0 "Workbench", pre-alpha.** A new 3D look: chapter 1 (five tickets, four of them repairs) and the 5-1 fan repair play on the
+> workbench; chapters 2 to 5 (23 tickets in all) play in the classic 2D stall, one switch away on both title screens. Desktop and Steam Deck
+> size (1280x800); the low tier runs at about 65 fps on an integrated Radeon. No sound and no gamepad in the new look yet; the new look was
+> hand-played by an agent persona, not yet by a human. The [v0.3.0 release](https://github.com/blackmetaltech/circuits/releases/tag/v0.3.0) is a Linux x86_64 build.
 
-![A fixed torch: the trace locks, the customer is happy](docs/readme/hero-lock.png)
+![The fan's driver without a flyback diode: the transistor burns and the scope catches the 2000 V kick](docs/readme/wb-failure.gif)
+
+| | |
+|---|---|
+| ![](docs/readme/wb-case-open.gif)<br>**A repair arrives.** The case opens on the customer's own faulty board. | ![](docs/readme/wb-scope.gif)<br>**The scope runs live.** The fan driver switching at 100 Hz. |
+| ![](docs/readme/wb-faulty-board-1-1.png)<br>**1-1 Torch.** The LED was wired straight across the 9 V battery. It is dead. | ![](docs/readme/wb-fixed-1-1.png)<br>**Fixed.** 470 ohm, 15.0 mA, stamped PASSED. |
+| ![](docs/readme/wb-heater-1-3.png)<br>**1-3 Heater.** 22 ohm, 1 W drops the 12 V supply to 8.33 V. | ![](docs/readme/wb-free-bench.png)<br>**Free bench.** Any part, three save slots. |
+| ![](docs/readme/wb-1280x800-1-2.png)<br>**Steam Deck size** (1280x800). | ![](docs/readme/wb-igpu-low-1-1.png)<br>**Low tier** on an integrated GPU. |
 
 ## What you actually do
 
@@ -58,7 +65,7 @@ something gets hot. Every cute element shows a physical quantity; none hides one
 - **Named simplifications** live in the level headers and the Codex (generic values for small electrolytics, for example).
 - **Mains is simulated only.** Chapter 4 opens with a safety card and never tells anyone to build on real mains.
 
-## Screenshots
+## Screenshots: the classic stall (chapters 1 to 5)
 
 | | |
 |---|---|

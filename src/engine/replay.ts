@@ -3,8 +3,18 @@ import type { Action } from '@core/kit';
 import type { LevelDef } from '../data/levels/types';
 import { getDef } from './board';
 
-export function refActions(def: LevelDef): Action[] {
+/** A repair ticket's faulty board taken apart (wires, then parts), as a player clears the old work. Empty for a build ticket. */
+export function clearFaultActions(def: LevelDef): Action[] {
   const out: Action[] = [];
+  if (def.fault) {
+    def.fault.wires.forEach((_, i) => out.push({ name: 'deleteWire', args: [`xw${i + 1}`] }));
+    def.fault.parts.forEach((_, i) => out.push({ name: 'deletePart', args: [`x${i + 1}`] }));
+  }
+  return out;
+}
+
+export function refActions(def: LevelDef): Action[] {
+  const out: Action[] = clearFaultActions(def);
   def.ref.parts.forEach((p, i) => {
     const uid = `p${i + 1}`;
     out.push({ name: 'placePart', args: [p.partId, p.value, p.variant, p.x, p.y, p.rot, p.flip] });

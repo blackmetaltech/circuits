@@ -150,7 +150,9 @@ func _title() -> void:
 	items.append(["new", "New game", Color("#a24a2a")])
 	items.append(["settings", "Settings", Color("#35597a")])
 	items.append(["cute", "Cute mode:  %s" % ("on" if cute else "off"), Color("#8a4a78")])
-	var sw := 420.0; var sh := 72.0; var gap := 34.0
+	if get_tree() and get_tree().root.get_child_count() > 0 and get_tree().root.get_child(get_tree().root.get_child_count() - 1).has_method("set_look"):
+		items.append(["workbench", "New look: 3D bench", Color("#6a5a2a")])   # the look switch back to the LOOK2 workbench (chapter 1)
+	var sw := 420.0; var sh := 72.0 if items.size() <= 4 else 60.0; var gap := 34.0 if items.size() <= 4 else 20.0
 	var y0 := h * 0.5
 	for i in items.size():
 		var it: Array = items[i]

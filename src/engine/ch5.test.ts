@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Engine } from '@core/kit';
 import { GAME } from '../game';
 import { LEVEL_DEFS } from '../data/levels';
-import { refActions } from './replay';
+import { clearFaultActions, refActions } from './replay';
 import { newTicketProgress, type NodeState } from './state';
 
 const def = (id: string) => LEVEL_DEFS.find((d) => d.id === id)!;
@@ -14,6 +14,8 @@ function open(id: string, passed: string[] = ['4-3', '5-1', '5-2', '5-3', '5-4']
   for (const d of passed.filter((x) => x !== id)) st.progress.tickets[d] = { ...newTicketProgress(), passed: true, stars: 1 };
   e.setState(st);
   expect(e.act('openTicket', [id]).ok, `open ${id}`).toBe(true);
+  // a repair ticket arrives with its faulty board; these build tests start from the cleared board (repair.test.ts covers the arrival)
+  for (const a of clearFaultActions(LEVEL_DEFS.find((d) => d.id === id)!)) expect(e.act(a.name, a.args ?? []).ok, `${a.name} ${String(a.args)}`).toBe(true);
   return e;
 }
 const ok = (e: Engine<NodeState>, name: string, ...args: unknown[]) => { const r = e.act(name, args); expect(r.ok, `${name} ${JSON.stringify(args)}: ${r.message}`).toBe(true); return r; };

@@ -18,6 +18,11 @@ export const DEFAULT_NEWTON_ITERS = 3;
 export const ASM_ELEM = 120;
 /** Fixed per-accepted-step cost (state update, breakpoints, bookkeeping), flop-equivalents. */
 export const STEP_OVERHEAD = 400;
+/** A linear circuit's elements stamp constants (no device evaluation): assembly per element and per-step bookkeeping are far cheaper.
+ *  Calibrated 11-23 with the steadier timing in scripts/bench-cost.ts: rc-step and rlc-step ran 5 to 6x faster per estimated flop
+ *  than every nonlinear board, which the old 5-sample timing hid in noise. */
+export const ASM_ELEM_LINEAR = 20;
+export const STEP_OVERHEAD_LINEAR = 60;
 /** Extra solves per step charged to a circuit with event devices (555, relay, fuse, regulator): crossing checks and re-solves. */
 export const EVENT_EXTRA_ITERS = 1;
 /** Newton iterations assumed for the DC operating point of a nonlinear circuit (source stepping included). */
@@ -62,7 +67,8 @@ function tranCost(ckt: Circuit, c: CostCondition): { steps: number; iters: numbe
   if (ckt.linear) {
     // two cached factorisations (BE restart steps and TRAP), every step: assemble + back-substitute
     const factors = 2;
-    return { steps, iters: 1, factors, flops: factors * (lu + asm) + steps * (asm + solve + STEP_OVERHEAD) };
+    const asmLin = n * n + ASM_ELEM_LINEAR * ne;
+    return { steps, iters: 1, factors, flops: factors * (lu + asmLin) + steps * (asmLin + solve + STEP_OVERHEAD_LINEAR) };
   }
   const iters = (c.newtonIters ?? DEFAULT_NEWTON_ITERS) + (hasEvents ? EVENT_EXTRA_ITERS : 0);
   const op = OP_ITERS * (lu + solve + asm);

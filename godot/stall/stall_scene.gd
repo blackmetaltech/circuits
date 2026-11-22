@@ -214,6 +214,9 @@ func _on_page(id: String, arg: String) -> void:
 	sfx.play("page" if id in ["close", "goto:map", "codex"] else "click", 0.7)
 	match id:
 		"continue", "goto:map": go_map()
+		"workbench":
+			var host := get_parent()
+			if host and host.has_method("set_look"): host.call("set_look", "workbench")
 		"new":
 			done.clear(); wallet = 0
 			if backend.ENGINE: backend.new_game(); if not _nosave(): backend.save_game()

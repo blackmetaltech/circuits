@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chapter 4 · Mains &amp; Rectifiers · CIRCUITS wiki</title>
+<meta name="description" content="CIRCUITS chapter 4: every ticket, what the bench checks and the parts you get.">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body class="wiki">
+<header class="nav"><a class="logo" href="../">CIRCUITS</a><nav><a href="./">Wiki</a><a href="controls.html">Controls</a><a href="../#download" class="btn mini">Download</a></nav></header>
+<main class="wrap">
+<p class="crumbs"><a href="./">Wiki</a> / Chapter 4</p>
+<h1>Chapter 4 · Mains &amp; Rectifiers</h1>
+<p class="lede">Wren's fourth page: five jobs at Stall 14, Lantern Lane, with rain on the awnings. Rebuild a wall-wart's rectifier on the safe side of a simulated, isolated mains, hold a radio's rail with a Zener, keep a regulator cool, set an LM317 to 3.3 V, then sit the Zener exam.</p>
+<section class="ticket" id="t4-1">
+<h2>4-1 · Wall Wart <span class="tag dim">classic look</span></h2>
+<p>Mrs. Dale's wall adapter hums and the radio on it crackles. It is a 12 V adapter: a transformer steps the mains down to 12 V rms, and you rebuild what comes after it: a diode bridge and a smoothing capacitor. OUT must average at least 12.0 V with at most 1.0 V of ripple (peak to peak) while it feeds 100 mA, and it has to do that when the mains sags 10 % (207 V) and when it runs 10 % high (253 V). With no load at all the capacitor must stay inside its voltage rating. Wren: rms is the heating value; the peak is 1.41 times that, and a capacitor charges to the peak.</p>
+<h3>The bench checks</h3>
+<ul><li>The ripple on OUT is at most 1.0 V peak to peak at 100 mA, for mains of 207, 230 and 253 V</li><li>OUT averages at least 12.0 V at 100 mA, for mains of 207, 230 and 253 V</li></ul>
+<p class="parts"><b>Parts tray:</b> 1N4007 rectifier diode, 1N4148 signal diode, Electrolytic capacitor, Carbon-film resistor 5 %</p>
+</section>
+<section class="ticket" id="t4-2">
+<h2>4-2 · Zener Shunt <span class="tag dim">classic look</span></h2>
+<p>Iris's radio needs a steady 5.1 V rail but only gets an unregulated 13 to 17 V. Put a resistor from IN to OUT and a Zener from OUT to GND (the cathode, the banded end, on OUT). OUT must stay within 5.1 V give or take 5 % for an input of 13 V and of 17 V, with the radio drawing anything from 0 to 30 mA. Wren: size the resistor for the worst case at each end: lowest input with highest load, and highest input with no load.</p>
+<h3>The bench checks</h3>
+<ul><li>OUT stays between 4.845 V and 5.355 V for 13 V and 17 V in, and 0 mA and 30 mA out, and no part is over its rating</li></ul>
+<p class="parts"><b>Parts tray:</b> Carbon-film resistor 5 %, 1N4733A Zener 5.1 V, BZX55C5V1 Zener 5.1 V</p>
+</section>
+<section class="ticket" id="t4-3">
+<h2>4-3 · Hot Regulator <span class="tag dim">classic look</span></h2>
+<p>Jun's 3D-printer controller needs 5.00 V (give or take 4 %) at 0.1 to 0.5 A from a 15 V rail, inside a printer that sits at 40 degrees. A linear regulator turns every volt it drops into heat, P = (Vin - Vout) x I, and its chip must stay at 125 degrees or less. You can clip a heatsink on the chip (25, 15 or 8 degrees per watt) and put a power resistor ahead of it to take part of the drop. Wren: the chip shuts itself off at 150 degrees and comes back at 135, which looks like OUT blinking. The thermal camera (press T) shows where the watts go.</p>
+<h3>The bench checks</h3>
+<ul><li>OUT never falls under 4.8 V (the regulator does not shut down or drop out), at 0.1 A and at 0.5 A</li><li>OUT never rises over 5.2 V</li></ul>
+<p class="parts"><b>Parts tray:</b> LM7805 regulator, 5 V, 5 W wirewound resistor</p>
+</section>
+<section class="ticket" id="t4-4">
+<h2>4-4 · Bench Supply <span class="tag dim">classic look</span></h2>
+<p>Your own bench wants a 3.3 V supply from the 9 V rail with an LM317. Two resistors set the voltage: R1 from OUT to the ADJ pin, R2 from ADJ to GND. The chip keeps 1.25 V across R1, so Vout = 1.25 x (1 + R2 / R1) + Iadj x R2, with Iadj about 50 microamps. OUT must be 3.30 V, give or take 1 %, at no load, at 10 mA and at 500 mA. Wren: the LM317 also wants a few milliamps of minimum load, which is why the datasheet says R1 = 240 ohm.</p>
+<h3>The bench checks</h3>
+<ul><li>OUT stays between 3.267 V and 3.333 V at 0 mA, 10 mA and 500 mA</li></ul>
+<p class="parts"><b>Parts tray:</b> LM317 adjustable regulator, Carbon-film resistor 5 %</p>
+</section>
+<section class="ticket" id="t4-5">
+<h2>4-5 · Exam: Zener Regulator <span class="tag">exam</span><span class="tag dim">classic look</span></h2>
+<p>A 12 V supply feeds a 6 V Zener through Rs = 300 ohm, with a load RL = 1 kilohm across the Zener. The Zener needs at least 2 mA to hold its voltage. Find the Zener current with RL connected, the smallest RL that still lets the Zener regulate, and the Zener power with no load. Predict first, then build the circuit and let the bench measure it.</p>
+<h3>The bench checks</h3>
+<ul><li>Zener current with RL = 1 kilohm (mA)</li><li>Smallest RL that still regulates (ohm)</li><li>Zener power with no load (mW)</li><li>The current through Rs is 20 mA, give or take 1 % (Rs = 300 ohm and the Zener is holding 6 V)</li></ul>
+<p class="parts"><b>Parts tray:</b> Exact resistor, Ideal Zener, 6 V</p>
+</section>
+</main>
+<footer class="foot wrap"><p>Generated from the game's own text by <code>src/wiki.ts</code>. People and places are made up; the circuits are not. <a href="https://github.com/blackmetaltech/circuits">Source</a></p></footer>
+</body>
+</html>

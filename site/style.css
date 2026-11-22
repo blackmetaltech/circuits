@@ -1,0 +1,29 @@
+:root{--bg:#14110e;--panel:#1f1a15;--paper:#e9e1cf;--fg:#efe7d8;--dim:#b4a893;--acc:#f2a33a;--line:#3a3128}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f4efe4;--panel:#fffaf0;--fg:#1d1914;--dim:#5d5446;--acc:#b5650e;--line:#d8cdb8}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.55 "IBM Plex Sans",system-ui,sans-serif}
+a{color:var(--acc)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+.nav{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;padding:14px 16px;max-width:1040px;margin:0 auto}
+.nav nav a{margin-left:12px;text-decoration:none;color:var(--fg)}
+.logo{font:700 20px/1 "IBM Plex Mono",monospace;letter-spacing:.12em;text-decoration:none;color:var(--acc)}
+.btn{display:inline-block;padding:12px 20px;border:1px solid var(--acc);border-radius:8px;color:var(--fg);text-decoration:none}
+.btn.go{background:var(--acc);color:#1b1206;font-weight:600}
+.btn.mini{padding:6px 12px}
+h1{font-size:clamp(40px,8vw,80px);line-height:1;margin:24px 0 8px;letter-spacing:.04em}
+h2{margin-top:48px}
+.tag-line{font-size:22px;color:var(--fg);margin:0 0 12px}
+.lede,p{color:var(--dim)}
+img{max-width:100%;height:auto;border-radius:8px;display:block}
+figure{margin:0}
+figcaption{color:var(--dim);font-size:15px;margin-top:6px}
+.hero{display:grid;gap:24px;padding:24px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.note{border-left:3px solid var(--acc);padding:4px 12px;background:var(--panel)}
+.foot{padding:48px 16px;color:var(--dim);font-size:14px}
+.crumbs{margin-top:24px;font-size:14px}
+.ticket{border-top:1px solid var(--line);padding-top:8px}
+.tag{font:500 12px "IBM Plex Mono",monospace;border:1px solid var(--acc);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle;color:var(--acc)}
+.tag.dim{border-color:var(--line);color:var(--dim)}
+.chapters{list-style:none;padding:0}.chapters li{padding:8px 0;border-bottom:1px solid var(--line)}.chapters span{display:block;color:var(--dim)}
+.keys th{text-align:left;padding:6px 16px 6px 0;font-family:"IBM Plex Mono",monospace;font-weight:500}.keys td{color:var(--dim)}

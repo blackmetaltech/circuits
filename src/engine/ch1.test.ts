@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Engine, createProtocol } from '@core/kit';
 import { GAME } from '../game';
 import { LEVEL_DEFS } from '../data/levels';
-import { refActions } from './replay';
+import { clearFaultActions, refActions } from './replay';
 import { newTicketProgress, type NodeState } from './state';
 
 const CH1 = LEVEL_DEFS.filter((d) => d.chapter === 1);
@@ -16,6 +16,8 @@ function open(id: string, mode = 'learner'): Engine<NodeState> {
   for (const d of CH1) { if (d.id === id) break; st.progress.tickets[d.id] = { ...newTicketProgress(), passed: true, stars: 1 }; }
   e.setState(st);
   expect(e.act('openTicket', [id]).ok).toBe(true);
+  // a repair ticket arrives with its faulty board; these build tests start from the cleared board (repair.test.ts covers the arrival)
+  for (const a of clearFaultActions(LEVEL_DEFS.find((d) => d.id === id)!)) expect(e.act(a.name, a.args ?? []).ok, `${a.name} ${String(a.args)}`).toBe(true);
   return e;
 }
 const st = (e: Engine<NodeState>): NodeState => e.state as NodeState;
@@ -24,7 +26,9 @@ const bad = (e: Engine<NodeState>, name: string, ...args: unknown[]) => { const 
 const q = (e: Engine<NodeState>, name: string, ...args: unknown[]) => e.q(name, args) as any;
 const bench = (e: Engine<NodeState>) => { ok(e, 'runBench'); return q(e, 'benchResult'); };
 const spec = (b: any, id: string) => b.specs.find((x: any) => x.id === id);
-const runRef = (e: Engine<NodeState>, id: string) => { for (const a of refActions(def(id)).filter((x) => x.name !== 'runBench' && x.name !== 'power' && x.name !== 'advance')) ok(e, a.name, ...(a.args ?? [])); };
+/** The whole ref replay from a freshly opened ticket (clears a repair ticket's faulty board first). */
+const runRefAll = (e: Engine<NodeState>, id: string) => { for (const a of refActions(def(id)).filter((x) => x.name !== 'runBench' && x.name !== 'power' && x.name !== 'advance')) ok(e, a.name, ...(a.args ?? [])); };
+const runRef = (e: Engine<NodeState>, id: string) => { for (const a of refActions(def(id)).slice(clearFaultActions(def(id)).length).filter((x) => x.name !== 'runBench' && x.name !== 'power' && x.name !== 'advance')) ok(e, a.name, ...(a.args ?? [])); };
 const powerUp = (e: Engine<NodeState>, frames = 3) => { ok(e, 'power', true); return ok(e, 'advance', frames); };
 /** Advance until something smokes (or give up). */
 const burn = (e: Engine<NodeState>, max = 60): string[] => { for (let i = 0; i < max; i++) { const r = ok(e, 'advance', 8); if ((r.smoked as string[]).length) return r.smoked as string[]; } return []; };
@@ -273,13 +277,13 @@ describe('UI queries and board actions', () => {
     expect(m.tickets.map((t: any) => [t.id, t.state, t.unlocked, t.eb])).toEqual([['1-1', 'open', true, false], ['1-2', 'locked', false, false], ['1-3', 'locked', false, false], ['1-4', 'locked', false, false], ['1-5', 'locked', false, true]]);
     expect(m.tickets[0]).toMatchObject({ title: 'Torch', customer: 'Lio', feeText: '$3.00', after: [], chit: { x: 0.2, y: 0.3 } });
     expect(bad(e, 'openTicket', '1-3')).toMatch(/locked.*1-2/);
-    ok(e, 'openTicket', '1-1'); runRef(e, '1-1'); bench(e); ok(e, 'closeTicket');
+    ok(e, 'openTicket', '1-1'); runRefAll(e, '1-1'); bench(e); ok(e, 'closeTicket');
     m = q(e, 'chapterMap'); expect(m.tickets[0]).toMatchObject({ state: 'done', passed: true, stars: 2 }); expect(m.tickets[1].state).toBe('open'); expect(m.starsEarned).toBe(2); expect(m.tickets[0].best.costText).toBe('$0.05');
     expect(q(e, 'wallet').text).toBe('$5.00');
   });
   it('chapter 1 plays end to end through the protocol (open, build the ref, bench) with the wallet growing', () => {
     const e = new Engine(GAME); e.autosave = false;
-    for (const d of CH1) { ok(e, 'openTicket', d.id); runRef(e, d.id); expect(bench(e).pass, d.id).toBe(true); ok(e, 'closeTicket'); }
+    for (const d of CH1) { ok(e, 'openTicket', d.id); runRefAll(e, d.id); expect(bench(e).pass, d.id).toBe(true); ok(e, 'closeTicket'); }
     expect(q(e, 'chapterMap').complete).toBe(true); expect(st(e).progress.wallet).toBeGreaterThan(2000);
     // the sidecar protocol exposes the whole contract of docs/API-CH1.md
     const h = createProtocol(new Engine(GAME)); const init = (h({ id: 1, fn: 'init' }).result as any);

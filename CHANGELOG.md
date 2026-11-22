@@ -2,6 +2,41 @@
 
 All notable changes to CIRCUITS (called NODE until v0.1.0). The release workflow publishes the section whose heading contains `[x.y.z]`.
 
+## [0.3.0] - 2026-11-23 · "Workbench"
+A new look: a 3D repair bench. Chapter 1 and the 5-1 fan repair play in it; chapters 2 to 5 stay in the classic 2D stall behind a labelled switch on both title screens. Saves from 0.2.0 load unchanged.
+
+### Added
+- The workbench: a lamp-lit desk with an oscilloscope, bench supply, multimeter and parts drawers, real 3D parts (resistors with colour bands, LEDs that light, a PP3 battery, an aquarium heater, transistors, diodes), wires with stripped ends, a scope trace that runs live, smoke and scorch when a part burns. Camera views on keys 1 to 5; right drag orbits, wheel zooms.
+- Repair tickets: 1-1 torch, 1-2 bike light, 1-3 heater, 1-4 toy car and 5-1 fan arrive as the customer's faulty device in a case. Open it, probe the old work, fix it, close it and hand it back. The customer's words and thanks are on the paper ticket.
+- Burnt parts cost money: a part you burn is billed at its price and comes out of the job's pay (the ticket shows the bill). Parts that arrived burnt are free.
+- Free bench: any part from the catalogue on an open board, the supply, scope and meter; save and load builds in three slots.
+- Instrument-style controls: a paper repair ticket, a bench control plate with LCD readouts, a parts tray of labelled 3D renders, and a tool rail of keycaps.
+- Quality tiers: high (RTX class: shadows, SSR, SSIL, fog, TAA and 4x MSAA), medium, low (integrated GPUs: Compatibility renderer, 75 % 3D scale, FXAA). Measured at 1920x1080 on an RTX 4090, high: chapter 1 powered 5.4 to 5.8 ms; 5-1 unpowered 7.5 ms, 5-1 powered and switching at 100 Hz 23 to 28 ms (the live simulation, not the GPU; measured with other work loading the machine). Ryzen 9900X iGPU, low, 1280x800, 1-1: 15.0 ms avg, 18.9 ms p95. A Graphics row on the title picks the tier and remembers it.
+- Saves: chapter 1 progress and the wallet are saved after each job in the new look and continue next time; the new look and the classic stall share one save.
+- A Quit key on the new-look title.
+- The site (circuits.blackmetal.tech) shows the workbench, and a player wiki is generated from the game's own text (`src/wiki.ts`; a test fails when it is stale): every ticket, its specs, its parts and what a repair arrives with, plus the controls.
+- Tests: `src/engine/repair.test.ts`, `src/engine/bench-memo.test.ts`, `src/look2-textures.test.ts`, `src/wiki.test.ts`, `godot/tests/look2_ch1_flow.gd` (chapter 1 end to end in the new look, 74 checks), `godot/tests/look2_save_flow.gd` (save and continue). CI runs both flows; the release smoke check now also opens 1-1 on the workbench.
+
+### Changed
+- Level search is about 17x faster on 5-1 and 2x on 4-4: the bench result is memoised exactly, and a board missing a part the specs measure fails without simulating. The whole test suite runs in about 7 minutes on 4 workers (was about 30).
+- A bench on an incomplete board names only the missing parts (no rating lines, no smoke). The two 0-0 idle trajectory goldens were regenerated for this, in their own commit.
+- Every 3D texture is mipmapped and VRAM-compressed; the screen-space roughness limiter is on.
+
+### Fixed
+- The meter read "-305 V" for -305 mV (the prefix was dropped) in both looks.
+- From the hand plays: a click on a part's body as drawn finds it (clicks used to land 10 to 14 px low); wires and meter leads snap to the leg you aim at; the 1-5 exam can be answered on the ticket (one box per prediction, Lock in) and the ticket states the problem; the hand-back key sits under the PASSED stamp (key H); a bench verdict clears when the board changes; the tray arrows change the part in hand; resistor tiles show their wattage; the meter says why it has no reading.
+- From the art and fun reviews: burnt parts are drawn as cold char on every surface (a burnt resistor kept its colour bands); the burn bill shows the moment a part burns; power and meter readouts no longer share one line on the free bench; the case tag and plates no longer glow under the lamp; the arrival tag leaves the desk once the case is open; the work camera shows more of the room.
+
+### Known gaps
+- Chapters 2 to 5 are not yet in the new look (classic only; 5-1 is the one showcase).
+- No sound in the new look. No gamepad in the new look.
+- The meter shows the instant value on a switching node (a real meter averages).
+- Four hand plays by an agent persona (1-1 to 1-4 won in one session, the 1-5 exam with 3 stars in the next); no human has played the new look.
+- Wires onto legs under tall bodies (the exam's sources) can take several tries; removing a part removes its wires without saying so; the exam's marked working is shown only in the classic stall.
+- The bench control plate, parts tray and tool rail still sit as a band of panels across the bottom of the screen (the art review's top finding); they should become objects on the bench.
+- The burn bill is small next to the pay (a $0.04 transistor against a $10 job): it informs but does not yet hurt.
+- 5-1 switching at 100 Hz costs 23 to 28 ms a frame on a fast desktop: the live simulation needs work before chapter 5 moves to the new look.
+
 ## [0.2.0] - 2026-11-22 · "Switches & Gain"
 Chapter 5 (five tickets) and the fixes from the 0.1 play-test and screenshot review. Saves from 0.1.0 load unchanged (chapter 5 is simply unlocked by chapter 4).
 
