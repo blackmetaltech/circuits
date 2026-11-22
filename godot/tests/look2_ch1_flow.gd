@@ -102,6 +102,17 @@ func _run() -> void:
 		wb.backend.set_dial("V"); wb.backend.set_probe("red", cs[0].pad); wb.backend.set_probe("black", cs[1].pad); await _step(0.2)
 		wb.run_test(); await _frames(5)
 		ok(wb.backend.passed, "the bench passes %s" % id)
+		if id == "1-5":
+			wb.changed.emit(); await _frames(3)
+			var marked := false; var working_key: Button = null
+			for lb in wb.find_children("*", "Label", true, false): if (lb as Label).text.contains("you said 6.667"): marked = true
+			for b in wb.find_children("*", "Button", true, false): if (b as Button).text.begins_with("Show the working"): working_key = b
+			ok(marked and working_key != null, "the exam is marked on the ticket: your numbers against the bench, and a key for the working")
+			if working_key: working_key.pressed.emit(); await _frames(3)
+			var answer := false
+			for lb in wb.find_children("*", "Label", true, false): if (lb as Label).text.contains("6.67"): answer = true
+			ok(answer and wb.ui.show_working, "the worked answer shows on request")
+			wb.ui.show_working = false
 		wb.changed.emit(); await _frames(3)
 		var hb: Button = null
 		for b in wb.find_children("*", "Button", true, false): if (b as Button).text.begins_with("Close up and hand back"): hb = b
@@ -140,6 +151,7 @@ func _run() -> void:
 	ok(wb.backend.parts.size() == before + 2, "build 1 loads back: %s" % wb.note)
 	# right-click on the middle of the resistor's body (not a leg) removes it
 	wb.set_view(5, true); await _frames(3)
+	wb.backend.add_wire([8, 11], [8, 14]); await _frames(2)   # a wire held only by the resistor's leg: it goes with the resistor
 	var n_before: int = wb.backend.parts.size()
 	var body_uid := ""
 	for p in wb.backend.parts: if str(p.partId) == "res-cf": body_uid = str(p.uid)
@@ -149,7 +161,8 @@ func _run() -> void:
 	var top: Vector3 = ab.get_center() + Vector3(0, ab.size.y * 0.5, 0)   # the top of the body, as the player sees it
 	ok(top.y - wb.board.global_position.y > 0.002, "the resistor body stands above the board (%.4f m)" % (top.y - wb.board.global_position.y))
 	wb._right_click(wb.cam.unproject_position(top))
-	ok(wb.backend.parts.size() == n_before - 1 and wb.note.begins_with("Removed"), "right-click on a part's body removes it: %s" % wb.note)
+	ok(wb.backend.parts.size() == n_before - 1 and wb.note.contains("removed"), "right-click on a part's body removes it: %s" % wb.note)
+	ok(wb.note.contains("wire") and wb.note.contains("Ctrl+Z"), "and says which wires went with it (%s)" % wb.note)
 	wb.back_to_title(); await _frames(5)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(wb._build_path(1)))
 	ok(trap.count == 0, "zero script errors in the whole session (%d: %s)" % [trap.count, str(trap.lines.slice(0, 3))])

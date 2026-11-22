@@ -285,6 +285,7 @@ func _job_card() -> void:
 		# the way out first, where it can never sit under the bench panels (Noor: hidden behind Bench Control at 1280x800)
 		var st2 := Stamp.new(); st2.font = f_engr; st2.custom_minimum_size = Vector2(0, 56 if short else 80); st2.mouse_filter = Control.MOUSE_FILTER_IGNORE; v.add_child(st2)
 		_key(v, "Close up and hand back", func(): bench.hand_back(), "H", true)
+		_marked(v)
 	var sep := ColorRect.new(); sep.color = Color(0.3, 0.27, 0.22, 0.5); sep.custom_minimum_size = Vector2(0, 2); v.add_child(sep)   # 2 px: 1 px broke into dashes at 1280x800
 	var pred_ids := {}
 	for pr in t.get("predictions", []) + t.get("answers", []): pred_ids[str(pr.id)] = true
@@ -309,6 +310,23 @@ func _job_card() -> void:
 		if not short: _ink(v, "Ctrl+Z puts in a fresh part with the power off.", 15, Color(0.30, 0.28, 0.25), f_sans)
 	elif bench.note != "":
 		_ink(v, bench.note, 17, Color(0.14, 0.20, 0.42), f_sans)
+
+## An exam, marked on the ticket (it lived only in the classic stall): your numbers against the bench, the stars, and the
+## worked answer behind one key, so the ticket stays short until asked.
+var show_working := false
+func _marked(v: Control) -> void:
+	var d = bench.backend.last_result.get("debrief", null)
+	if not (d is Dictionary) or not bool(bench.backend.ticket.get("eb", false)): return
+	_ink(v, "Marked", 18, RED_INK, f_semi)
+	for row in d.get("rows", []):
+		var okr: bool = bool(row.get("ok", false))
+		_ink(v, "%s: you said %s, measured %s %s (%s%.1f %% off)" % [str(row.name).trim_prefix("Your prediction: "), EngineBench._g(float(row.entered), 4), EngineBench._g(float(row.truth), 4), str(row.unit), "+" if float(row.gapPct) > 0.0 else "", float(row.gapPct)], 15, Color(0.11, 0.45, 0.22) if okr else RED_INK, f_sans)
+	if str(d.get("starsText", "")) != "": _ink(v, str(d.starsText), 15, INK, f_sans)
+	_key(v, "Hide the working" if show_working else "Show the working", func(): show_working = not show_working; _rebuild(), "", false, show_working)
+	if show_working:
+		if str(d.get("equation", "")) != "": _ink(v, str(d.equation), 15, INK, f_type)
+		for ln in d.get("working", []): _ink(v, str(ln), 15, INK, f_sans)
+		if str(d.get("answer", "")) != "": _ink(v, str(d.answer), 17, Color(0.11, 0.45, 0.22), f_type)
 
 ## Exam tickets: predict first. One field per prediction on the paper ticket; "Lock in" sends them to the engine, and the band
 ## and the test cell's volts stay hidden until every one is in (Noor could not find where to answer 1-5).

@@ -1034,7 +1034,12 @@ func _hover(mp: Vector2, qa := false) -> void:
 	hover_pad = pad
 	if board == null: return
 	var ok := pad.x >= 0
-	board.set_hover(pad.x, pad.y, ok and tool in ["wire", "probe", "red", "black", "place"], Color(0.91, 0.64, 0.24) if tool != "probe" else Color(0.95, 0.85, 0.2))
+	# a wire end or a meter lead on a pad with no leg connects nothing: the marker turns red before the click, not after (Noor)
+	var dead := tool in ["wire", "red", "black"] and ok and not _pad_used(pad)
+	board.set_hover(pad.x, pad.y, ok and tool in ["wire", "probe", "red", "black", "place"], Color(0.9, 0.18, 0.12) if dead else (Color(0.91, 0.64, 0.24) if tool != "probe" else Color(0.95, 0.85, 0.2)))
+	if tool in ["wire", "red", "black"] and ok:
+		var t4 := "No leg here: this end would connect nothing" if dead else ""
+		if t4 != hover_tip and (dead or hover_tip.begins_with("No leg")): hover_tip = t4; changed.emit()
 	if tool == "place" and ghost:
 		ghost.visible = ok
 		if ok:
@@ -1083,7 +1088,10 @@ func _right_click(mp: Vector2) -> void:
 	if it.is_empty(): return
 	if it.kind == "part":
 		var nm := str(it.label)
-		backend.delete_part(str(it.id)); note = "Removed the %s." % nm
+		backend.delete_part(str(it.id))
+		# the engine's own sentence: it names the wires that went with the part (they hung only on its legs); never silent (Noor)
+		note = str(backend.last_note) if str(backend.last_note) != "" else "Removed the %s." % nm
+		if note.contains("along with"): note += " Ctrl+Z puts them back."
 	else:
 		backend.delete_wire(str(it.id)); note = "Removed a wire."
 	_set_pick_hl({}); changed.emit()
