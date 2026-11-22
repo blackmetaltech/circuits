@@ -33,7 +33,7 @@ export const PRICES_GLOBAL_CENTS: Record<string, number> = {
   // Chapter 2 fixtures and bench items (game values): the customer's fixed parts are priced only so the Sandbox never shows a free part; res-box plugs and the trimmer are bin items.
   'adc-in:10k': 100, 'cable-loop:loop': 100, 'cell-2v:2V': 150, 'cell-test:1.5V': 100, 'blackbox:sealed': 500, 'slidewire-m:100cm': 300, 'res-box:plug': 12, 'trimmer:0.5W': 25,
   // Chapter 3 fixtures (game values): the pre-charged capacitor of 3-4 is the customer's part, priced only so the Sandbox never shows a free part.
-  'cap-charged:4uF-100V': 100, 'pullup-10k:10k': 20, 'logic-in:1M': 50,
+  'cap-charged:4uF-100V': 100, 'pullup-10k:10k': 20, 'led-strip:12V': 100, 'amp-load:47k': 20, 'logic-in:1M': 50,
   // Chapter 4 fixtures (game values): the customer's constant-current load, priced only so the Sandbox never shows a free part.
   'load-cc:cc': 50,
   // Batteries (game values)

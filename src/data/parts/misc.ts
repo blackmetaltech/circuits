@@ -57,9 +57,9 @@ export const piezo: PartDef = {
 
 export const fan: PartDef = {
   id: 'fan-dc', kind: 'MOTOR', nameKey: 'part.fan-dc.name', footprint: 'block2', pins: ['+', '-'],
-  variants: [variant('12V', { Vrated: 12 }, T(40, 85))],
-  model: { R: 60, L: 5e-3 },
-  source: { doc: 'generic 12 V DC fan / motor, R + L model (DESIGN §4.1 [R])', note: GEN('DC fan') + 'R 60 ohm and L 5 mH are estimates (DESIGN gives only "R+L"). Back-EMF is not modelled. ' + TAU_R },
+  variants: [variant('12V', { Vrated: 12 }, T(8, 85))],   // 8 C/W: the fan's 2.4 W warms its winding by 19 C (a fan is cooled by its own blades; it is the customer's, it must not smoke in the bench)
+  model: { R: 60, L: 10e-3 },
+  source: { doc: 'generic 12 V DC fan / motor, R + L model (DESIGN §4.1 [R], ticket 5-1: 60 ohm + 10 mH, 200 mA)', note: GEN('DC fan') + 'R 60 ohm and L 10 mH are the game values of ticket 5-1 (DESIGN gives only "R+L"; the catalogue first said 5 mH). Back-EMF is not modelled. ' + TAU_R },
   verified: false, scope: 'sandbox', simplifications: ['part.simplify.motor-model'],
 };
 
@@ -192,4 +192,22 @@ export const loadCc: PartDef = {
   verified: false, scope: 'sandbox', simplifications: ['part.simplify.load-cc-fixture'],
 };
 
-export const MISC: PartDef[] = [relay, fuse, ntc, heater, speaker, piezo, fan, slidewire, galvanometer, adcIn, cableLoop, cell2v, cellTest, blackbox, slidewireM, resBox, trimmer, rheostat, pullup, logicIn, loadCc];
+/** Ticket 5-2: the customer's 12 V LED strip, 40 ohm (0.3 A), soldered between the 12 V pad and the DRAIN pad. */
+export const ledStrip: PartDef = {
+  id: 'led-strip', kind: 'LOAD', nameKey: 'part.led-strip.name', footprint: 'block2', pins: ['1', '2'],
+  variants: [variant('12V', { P: 5 }, FIXED_T)],
+  model: { R: 40 },
+  source: { doc: FIX_DOC('the 12 V LED strip of the maker space (DESIGN §2.8 ticket 5-2: 40 ohm, 0.3 A)'), gameFixture: true, note: FIX('40 ohm at 12 V.') + TAU_R },
+  verified: false, scope: 'sandbox', simplifications: ['part.simplify.pullup-fixture'],
+};
+
+/** Ticket 5-4: the 47 kohm input of the amplifier the synth drives, to ground. */
+export const ampLoad: PartDef = {
+  id: 'amp-load', kind: 'LOAD', nameKey: 'part.amp-load.name', footprint: 'block2', pins: ['1', '2'],
+  variants: [variant('47k', { P: 0.25 }, FIXED_T)],
+  model: { R: 47e3 },
+  source: { doc: FIX_DOC('the 47 kohm input of the amplifier behind the synth preamp (DESIGN §2.8 ticket 5-4)'), gameFixture: true, note: FIX('47 kohm input resistance to ground.') + TAU_R },
+  verified: false, scope: 'sandbox', simplifications: ['part.simplify.pullup-fixture'],
+};
+
+export const MISC: PartDef[] = [relay, fuse, ntc, heater, speaker, piezo, fan, slidewire, galvanometer, ledStrip, ampLoad, adcIn, cableLoop, cell2v, cellTest, blackbox, slidewireM, resBox, trimmer, rheostat, pullup, logicIn, loadCc];

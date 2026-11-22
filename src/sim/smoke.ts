@@ -47,7 +47,7 @@ export function instantFailures(ckt: NetLike, parts: readonly RatedPart[], w: Wi
       case 'NPN': case 'PNP': case 'DARLINGTON': {
         const vceo = r.Vceo; if (vceo === undefined || !v || !i) break;
         let pk = 0;
-        for (let k = 0; k < v.y.length; k++) if (Math.abs(i.y[k] ?? 0) > BJT_CONDUCTING_A && Math.abs(v.y[k]) > BJT_AVALANCHE * vceo && Math.abs(v.y[k]) > pk) pk = Math.abs(v.y[k]);
+        for (let k = 0; k < v.y.length; k++) if ((Math.abs(i.y[k] ?? 0) > BJT_CONDUCTING_A || Math.abs(i.y[k - 1] ?? 0) > BJT_CONDUCTING_A) && Math.abs(v.y[k]) > BJT_AVALANCHE * vceo && Math.abs(v.y[k]) > pk) pk = Math.abs(v.y[k]);   // (or it was conducting one sample ago: an inductive kick is the instant after the current stopped)
         if (pk > 0) add('bjtAvalanche', 'smoke.bjt.avalanche', { vce: pk, vceo, limit: BJT_AVALANCHE * vceo });
         break;
       }

@@ -194,6 +194,8 @@ const load: Expander = (x) => {
   if (m.cc !== undefined) return [el(x, 'CCL', [x.nodes[0], x.nodes[1]], { i: x.part.value ?? m.i, cc: 1, ton: m.ton ?? 0 })];
   return resistor(x);
 };
+/** MOTOR (a DC fan, chapter 5): a winding, model.R in series with model.L (one branch, no internal node); without model.L it is a plain resistor. */
+const motor: Expander = (x) => (x.def.model.L !== undefined ? [el(x, 'L', [x.nodes[0], x.nodes[1]], { l: x.def.model.L, rs: x.def.model.R ?? 0 })] : resistor(x));
 const inductor: Expander = (x) => [el(x, 'L', [x.nodes[0], x.nodes[1]], { l: x.part.value ?? x.def.model.l ?? x.def.model.L })];
 
 /** Diode family (D, LED, Z, SCHOTTKY): pins [A, K]; def.model keys Is / N / Rs / BV / Ibv / Nbv (any case) → device params (lower case);
@@ -213,7 +215,7 @@ const pinNode = (x: ExpandCtx, name: string): number => x.nodes[x.def.pins.index
 /** NPN / PNP: pins C B E → Q [C, B, E]; model Is / Bf / Br / Vaf (lower-cased). PNP sets pol −1. */
 const bjt = (pol: number): Expander => (x) => {
   const m = modelOf(x), p: Params = { pol };
-  for (const k of ['is', 'bf', 'br', 'vaf']) if (m[k] !== undefined) p[k] = m[k];
+  for (const k of ['is', 'bf', 'br', 'vaf', 'ideal', 'vf', 'ron', 'vcesat', 'ronc']) if (m[k] !== undefined) p[k] = m[k];   // (ideal = 1: the textbook transistor, constant Vbe 0.7 V and a fixed beta)
   return [el(x, 'Q', [pinNode(x, 'C'), pinNode(x, 'B'), pinNode(x, 'E')], p)];
 };
 /** DARLINGTON: pins B C E → DAR [C, B, E]. Model: composite hFEmin, Rb, Re. Per-stage bf solves bf·(bf + 1) = hFE (two cascaded stages), per-stage Is 1e-12 A
@@ -284,7 +286,7 @@ export const EXPANDERS: Readonly<Partial<Record<PartKind, Expander>>> = Object.f
   NPN: bjt(1), PNP: bjt(-1), DARLINGTON: darlington, NMOS: mosfet,
   OPAMP: opamp, CMP: comparator, '555': timer555, REG: regulator, RELAY: relay, FUSE: fuse, NTC: ntc, SLIDEWIRE: slidewire,
   XFMR: transformer, D: diode, LED: diode, Z: diode, SCHOTTKY: diode,
-  C: capacitor, CE: capacitor, L: inductor, R: resistor, HEATER: resistor, LOAD: load, SPEAKER: resistor, MOTOR: resistor,
+  C: capacitor, CE: capacitor, L: inductor, R: resistor, HEATER: resistor, LOAD: load, SPEAKER: resistor, MOTOR: motor,
   POT: (x) => {
     // wiper α ∈ [alphaMin, alphaMax] when the part model gives them (0.5 % end resistance: a 0 Ω exploit stops here, DESIGN §3.7)
     const R = resistance(x), m = modelOf(x), a = Math.min(m.alphamax ?? 1, Math.max(m.alphamin ?? 0, x.part.pos ?? 0.5));

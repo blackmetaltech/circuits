@@ -230,6 +230,71 @@ function explainChapter3(f: BenchFailure, ctx: ExplainContext): Explained | null
   return null;
 }
 
+// ---------------------------------------------------------------- chapter 5
+/** Collector current of a divider-biased (or single-resistor) common-emitter stage at gain beta: Ic = beta x (Vth - 0.65) / (Rth + (beta + 1) x RE). r2 = 0 means no lower resistor (a single bias resistor). */
+export function ceCollectorCurrent(a: { r1: number; r2: number; re: number; vcc: number; beta: number }): number {
+  const vth = a.r2 > 0 ? (a.vcc * a.r2) / (a.r1 + a.r2) : a.vcc, rth = a.r2 > 0 ? (a.r1 * a.r2) / (a.r1 + a.r2) : a.r1;
+  return Math.max(0, (a.beta * (vth - 0.65)) / (rth + (a.beta + 1) * a.re));
+}
+/** Chapter 5 failures in plain words. Null when the failure is not one of theirs. */
+function explainChapter5(f: BenchFailure, ctx: ExplainContext): Explained | null {
+  const mode = ctx.miss?.mode, v = f.vars, num = (k: string): number => Number(v[k]), again = (ctx.prior ?? 0) >= 1, id = String(v.id ?? ''), cond = String(v.cond ?? '');
+  const condText = cond === '' || cond === 'nominal' ? '' : `, in the ${cond} test`, value = num('value');
+  if (mode === 'switch' && ctx.sw) {
+    const w = ctx.sw, ib = (w.vpin - 0.7) / (w.rb + w.rpin), ic = Math.min(w.beta * ib, w.vfan / w.rfan), need = w.vfan / w.rfan;
+    if (id === 'fanhi' && (f.key === 'bench.level.fail' || f.key === 'bench.metric.fail')) {
+      const vars: Vars = { value: sig(Math.max(0, value), 3), lo: sig(num('lo'), 3), rb: si(w.rb, 'Ω'), rpin: si(w.rpin, 'Ω'), vpin: w.vpin, ib: sig(ib * 1000, 3), beta: w.beta, icMax: sig(w.beta * ib * 1000, 3), need: sig(need * 1000, 3), vce: sig(w.vfan - Math.max(0, value), 3), ibNeed: sig((need / 10) * 1000, 3), rbMax: si(((w.vpin - 0.7) / (need / 10)) - w.rpin, 'Ω') };
+      return { key: again ? 'explain.sw.weak.again' : 'explain.sw.weak.first', vars };
+    }
+    if (id === 'ipin' && value > num('hi')) return { key: 'explain.sw.pin', vars: { value: sig(value * 1000, 3), hi: sig(num('hi') * 1000, 2), rb: si(w.rb, 'Ω'), rpin: si(w.rpin, 'Ω'), vpin: w.vpin, rbMin: si((w.vpin - 0.7) / 0.02 - w.rpin, 'Ω') } };
+    if (id === 'fanlo') return { key: 'explain.sw.leak', vars: { value: sig(Math.max(0, value), 3), hi: sig(num('hi'), 2) } };
+    if (f.key === 'rating.bjt.vceo' || f.key === 'smoke.bjt.avalanche') {
+      const peak = f.key === 'rating.bjt.vceo' ? num('value') : num('vce'), lim = f.key === 'rating.bjt.vceo' ? num('limit') : num('vceo');
+      return explainInductiveKick({ part: String(v.part), load: 'the fan', vPeak: peak, vceo: lim });
+    }
+    if (f.key === 'rating.bjt.ic') return { key: 'explain.sw.ic', vars: { ...pn(String(v.part)), value: sig(num('value') * 1000, 3), limit: sig(num('limit') * 1000, 3), need: sig(need * 1000, 3) } };
+    if (f.key === 'rating.thermal.tj' || f.key === 'smoke.thermal') {
+      const vce = w.vfan - w.rfan * ic;
+      return explainBjtActive({ part: String(v.part), vce, ic, ib, pRated: w.pRated, beta: 10 });
+    }
+  }
+  if (mode === 'fet' && ctx.fet) {
+    const g = ctx.fet, which = /minimum/.test(cond) ? 'minimum' : /maximum/.test(cond) ? 'maximum' : 'typical', vth = g.vth[which];
+    if (id === 'istrip' && (f.key === 'bench.level.fail' || f.key === 'bench.metric.fail')) {
+      const i = Math.max(0, value), vov = g.vgs - vth, vds = Math.max(0, g.vstrip - g.rstrip * i), vars: Vars = { value: sig(i * 1000, 3), lo: sig(num('lo') * 1000, 3), cond: condText, vth: sig(vth, 3), vgs: g.vgs, vov: sig(vov, 3), vds: sig(vds, 3), vstrip: g.vstrip, iNeed: sig((g.vstrip / g.rstrip) * 1000, 3) };
+      return { key: vov <= 0 ? (again ? 'explain.fet.off.again' : 'explain.fet.off.first') : (again ? 'explain.fet.weak.again' : 'explain.fet.weak.first'), vars };
+    }
+    if (id === 'ioff') return { key: 'explain.fet.float', vars: { value: sig(Math.max(0, value) * 1000, 3), hi: sig(num('hi') * 1000, 2), vleak: g.vleak, vth: sig(g.vth.minimum, 3), rpd: g.rpd > 0 ? si(g.rpd, 'Ω') : 'no resistor' } };
+    if (f.key === 'rating.thermal.tj' || f.key === 'smoke.thermal') {
+      const p = num(f.key === 'smoke.thermal' ? 'P' : 'P'), idr = (g.vstrip - Math.sqrt(Math.max(0, g.vstrip * g.vstrip - 4 * g.rstrip * p))) / (2 * g.rstrip), vds = g.vstrip - g.rstrip * idr;
+      return explainMosfetUnderdriven({ part: String(v.part), vgs: g.vgs, vth: g.vth.typical, id: idr, vds, theta: g.theta });
+    }
+  }
+  if (mode === 'gate' && ctx.gate && id === 'voh' && (f.key === 'bench.level.fail' || f.key === 'bench.metric.fail')) {
+    const g = ctx.gate, vdiv = (g.vcc * g.rl) / (g.rc + g.rl), vars: Vars = { value: sig(Math.max(0, value), 3), lo: sig(num('lo'), 3), cond: condText, rc: si(g.rc, 'Ω'), rl: si(g.rl, 'Ω'), vcc: g.vcc, vdiv: sig(vdiv, 3), vlow: g.vlow, nDiodes: g.nDiodes, pLow: sig(g.vlow + 0.65, 3), pNeed: sig(0.65 * 3, 3) };
+    if (vdiv < num('lo') + 0.05) return { key: 'explain.gate.pullup', vars };
+    if (g.nDiodes < 4) return { key: g.nDiodes <= 2 ? 'explain.gate.noshift' : 'explain.gate.fewshift', vars };
+    return { key: 'explain.gate.base', vars };
+  }
+  if (mode === 'gate' && ctx.gate && id === 'vol' && (f.key === 'bench.level.fail' || f.key === 'bench.metric.fail')) {
+    const g = ctx.gate;
+    return { key: 'explain.gate.low', vars: { value: sig(Math.max(0, value), 3), hi: sig(num('hi'), 2), cond: condText, rc: si(g.rc, 'Ω'), iSink: sig(((g.vcc - Math.max(0, value)) / g.rc + 1e-3) * 1000, 3) } };
+  }
+  if (mode === 'amp' && ctx.amp && (f.key === 'bench.metric.fail' || f.key === 'bench.metric.nan') && (id === 'gain' || id === 'thd')) {
+    const a = ctx.amp, ic = (b: number): number => ceCollectorCurrent({ r1: a.r1, r2: a.r2, re: a.re, vcc: a.vcc, beta: b }), icLo = ic(a.beta.low), icHi = ic(a.beta.high), icMid = ic(a.beta.mid);
+    const vc = a.vcc - icMid * a.rc, gain = id === 'gain' ? value / 0.2 : NaN;
+    const vars: Vars = { value: Number.isFinite(value) ? sig(value, 3) : 0, gain: Number.isFinite(gain) ? sig(gain, 3) : 0, cond: condText, icLo: sig(icLo * 1000, 3), icHi: sig(icHi * 1000, 3), icMid: sig(icMid * 1000, 3), betaLo: a.beta.low, betaHi: a.beta.high, rc: si(a.rc, 'Ω'), re: si(a.re, 'Ω'), vc: sig(vc, 3), vcc: a.vcc, rePrime: si(0.02585 / Math.max(icMid, 1e-9), 'Ω'), gainRe: sig((a.rc * a.rload / (a.rc + a.rload)) / (a.re + 0.02585 / Math.max(icMid, 1e-9)), 3), swing: sig(value, 3), ratio: sig(icHi / Math.max(icLo, 1e-12), 2) };
+    if (a.re < 1) return { key: 'explain.amp.noRe', vars };
+    if (a.r2 <= 0 || icHi / Math.max(icLo, 1e-12) > 1.5 || vc < 1.5 || vc > a.vcc - 0.5) return { key: again ? 'explain.amp.bias.again' : 'explain.amp.bias.first', vars };
+    return { key: 'explain.amp.clip', vars };
+  }
+  if (mode === 'amplifierexam' && ctx.ce && (id === 'ic' || id === 'vce') && (f.key === 'bench.metric.fail' || f.key === 'bench.metric.nan')) {
+    const c = ctx.ce, ib = (c.vcc - c.vbe) / c.rb, ic = c.beta * ib, vce = c.vcc - ic * c.rc;
+    return { key: 'explain.ceexam.miss', vars: { rb: si(c.rb, 'Ω'), rc: si(c.rc, 'Ω'), ib: sig(ib * 1e6, 3), ic: sig(ic * 1000, 3), vce: sig(Math.max(vce, 0.2), 3), vcc: c.vcc, vbe: c.vbe, beta: c.beta, value: sig(Number.isFinite(value) ? value : 0, 3), lo: sig(num('lo'), 3), hi: sig(num('hi'), 3), which: id === 'ic' ? 'collector current (mA)' : 'collector voltage (V)' } };
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------- chapter 4
 const condNum = (cond: string, re: RegExp): number | null => { const m = re.exec(cond); return m ? Number(m[1]) : null; };
 /** Chapter 4 failures in plain words: the rectifier (4-1), the Zener shunt (4-2), the regulator (4-3) and the LM317 (4-4). Null when the failure is not one of theirs. */
@@ -369,6 +434,12 @@ export interface ExplainContext {
   zener?: { r: number; vz: number; slope: number; izt: number };
   reg?: { rpre: number; vrail: number; vout: number; theta: number; ta: number; tjMax: number };
   lm317?: { r1: number; r2: number };
+  /** Chapter 5: the fan driver (5-1), the 3.3 V gate (5-2), the NAND gate (5-3), the common-emitter amplifier (5-4) and its exam (5-5) as the player built them. */
+  sw?: { rb: number; rpin: number; vpin: number; vfan: number; rfan: number; beta: number; icLimit: number; pRated: number; part: string };
+  fet?: { part: string; vgs: number; vstrip: number; rstrip: number; vth: { minimum: number; typical: number; maximum: number }; theta: number; vleak: number; rpd: number };
+  gate?: { nDiodes: number; rc: number; rl: number; vcc: number; vlow: number; hasPulldown: boolean };
+  amp?: { r1: number; r2: number; rc: number; re: number; vcc: number; rsrc: number; rload: number; beta: { low: number; mid: number; high: number } };
+  ce?: { rb: number; rc: number; beta: number; vcc: number; vbe: number };
   /** How many failures the player already had on this ticket (the first burn teaches the cause, a repeat gives the worked formula). */
   prior?: number;
 }
@@ -389,6 +460,7 @@ function explainRaw(f: BenchFailure, ctx: ExplainContext): Explained {
   const v = f.vars, part = String(v.part ?? '');
   const num = (k: string): number => Number(v[k]);
   const e4 = explainChapter4(f, ctx); if (e4) return e4;
+  const e5 = explainChapter5(f, ctx); if (e5) return e5;
   switch (f.key) {
     case 'rating.resistor.power': case 'smoke.resistor': {
       const r = ctx.resistance?.[part];

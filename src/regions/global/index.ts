@@ -18,7 +18,7 @@ export const GLOBAL = defineRegion<NodeRegionData>({
   strings: {
     stall: 'Stall 14', lane: 'Lantern Lane', mentor: 'Wren', cat: 'Rezzy',
     'customer.kid_torch': 'Lio', 'customer.cyclist': 'Ash', 'customer.aquarium': 'Mr. Brook', 'customer.toycar': 'Bo', 'customer.weather': 'Kaya',
-    'customer.exam': 'The exam desk', 'customer.irrigation': 'Sami', 'customer.wallwart': 'Mrs. Dale', 'customer.radio': 'Iris', 'customer.musician': 'Juno',
+    'customer.exam': 'The exam desk', 'customer.irrigation': 'Sami', 'customer.wallwart': 'Mrs. Dale', 'customer.radio': 'Iris', 'customer.maker': 'Kit', 'customer.strip': 'Tess', 'customer.robotics': 'Dev', 'customer.musician': 'Juno',
     'customer.cablecrew': 'Foreman Dunn', 'customer.sensorshop': 'Tomo', 'customer.camera': 'Ines', 'customer.arcade': 'Dex', 'customer.printmaker': 'Jun', 'customer.ownbench': 'Your own bench',
   },
 }, validateNodeData);

@@ -1,6 +1,7 @@
 // The exam debrief (N5): what the 1-5 slip shows after the bench. The engine owns every number: the nodal (KCL) equation worked out from the printed
 // figure, the answers, charging or discharging, and the player's predictions graded against the measured truth.
 import type { ExamFigure } from '../data/levels/types';
+import { dmath } from '@core/numerics';
 import { sig } from '../sim/explain';
 import { say } from './text';
 
@@ -81,10 +82,28 @@ function buildZenerDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars:
   return { node: 'zener', equation: say('debrief.zener.equation'), working, answer: say('debrief.zener.answer', { iz: num(iz), rl: num(rl), pz: num(pz) }), currents: [], rows: full, starsText, ...retryOf(built, stars) };
 }
 
+/** The 5-5 slip: the CE card worked from the printed problem with the textbook 0.7 V junction, the predictions graded, then the reality check with the engine's own Ebers-Moll law (Is = 1e-14 A, Vt = 25.85 mV) and the beta = 300 swap. */
+function buildAmpDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: number, built: boolean): Debrief {
+  const a = f.amp!, vt = 0.025852, ib = (a.vcc - a.vbe) / a.rb, ic = a.beta * ib, vce = a.vcc - ic * a.rc, gm = ic / vt, av = gm * a.rc;
+  let icR = ic;   // Ebers-Moll: the junction drop follows the current, so iterate Ic = beta x (VCC - Vt ln(Ic / Is)) / RB
+  for (let k = 0; k < 30; k++) icR = (a.beta * (a.vcc - vt * dmath.log(icR / 1e-14))) / a.rb;
+  const vbeR = vt * dmath.log(icR / 1e-14), vceR = a.vcc - icR * a.rc, avR = (icR / vt) * a.rc, ic3 = 3 * ic, icMax = (a.vcc - 0.2) / a.rc;
+  const working = [
+    say('debrief.amp.ib', { vcc: num(a.vcc), vbe: num(a.vbe), rb: `${num(a.rb / 1000)} kΩ`, ib: num(ib * 1e6) }), say('debrief.amp.ic', { beta: num(a.beta), ib: num(ib * 1e6), ic: num(ic * 1000) }),
+    say('debrief.amp.vce', { vcc: num(a.vcc), ic: num(ic * 1000), rc: `${num(a.rc / 1000)} kΩ`, vce: num(vce) }), say('debrief.amp.gain', { ic: num(ic * 1000), gm: num(gm * 1000), rc: `${num(a.rc / 1000)} kΩ`, av: num(av) }),
+    say('debrief.amp.real', { ic: num(ic * 1000), vbeReal: num(vbeR), ibReal: num((icR / a.beta) * 1e6), icReal: num(icR * 1000), vceReal: num(vceR), avReal: num(avR) }),
+    say('debrief.amp.beta', { ic3: num(ic3 * 1000), icMax: num(icMax * 1000), vcc: num(a.vcc), rc: `${num(a.rc / 1000)} kΩ` }),
+  ];
+  const full = rows.map((x) => ({ ...x, ok: x.grade !== 'miss' }));
+  const starsText = say(!built ? 'debrief.stars.fail' : stars >= 3 ? 'debrief.stars.3' : stars === 2 ? 'debrief.stars.2' : 'debrief.stars.1.amp');
+  return { node: 'amp', equation: say('debrief.amp.equation'), working, answer: say('debrief.amp.answer', { ib: num(ib * 1e6), ic: num(ic * 1000), vce: num(vce), av: num(av) }), currents: [], rows: full, starsText, ...retryOf(built, stars) };
+}
+
 export function buildDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: number, built: boolean, measured?: Record<string, number>): Debrief {
   if (f.kind === 'pot' && f.pot) return buildPotDebrief(f, rows, stars, built);
   if (f.kind === 'caps' && f.caps) return buildCapsDebrief(f, rows, stars, built, measured);
   if (f.kind === 'zener' && f.zener) return buildZenerDebrief(f, rows, stars, built);
+  if (f.kind === 'amp' && f.amp) return buildAmpDebrief(f, rows, stars, built);
   const { a, into } = solveFigure(f), n = f.node;
   const eq = f.sources.map((s) => `(${num(s.volts)} − ${n})/${num(s.r.ohm)}`).join(' + ') + ` = ${n}/${num(f.load.ohm)}`;
   const mult = f.sources.every((s) => Number.isInteger(s.r.ohm)) && Number.isInteger(f.load.ohm) ? leastCommon([...f.sources.map((s) => s.r.ohm), f.load.ohm]) : 0;

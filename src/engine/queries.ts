@@ -132,6 +132,37 @@ function explainCtx(tk: TicketState | null, def: LevelDef | undefined, prior = 0
       if (r1 > 0 && r2 > 0) ctx.lm317 = { r1, r2 };
     }
   }
+  // chapter 5: the fan driver, the strip gate, the NAND, the amplifier and the exam amplifier as built
+  const nodesOf = (uid: string): number[] => rig.conn.pinNodes[uid] ?? [];
+  const resBetween = (a: number, b: number): number => resistors.filter((p) => !p.fixed).filter((p) => { const n = nodesOf(p.uid); return (n[0] === a && n[1] === b) || (n[0] === b && n[1] === a); }).reduce((acc, p) => acc + (p.value ?? 0), 0);
+  const q5 = tk.board.parts.find((p) => !p.fixed && ['NPN', 'DARLINGTON'].includes(getDef(p.partId)?.kind ?? '')), qd = q5 ? getDef(q5.partId) : undefined;
+  const cn = rig.conn.connectorNodes;
+  if (def.explain === 'switch' && q5 && qd) {
+    const pinSupply = def.supplies.find((x) => x.kind === 'pin'), rb = resistors.filter((p) => !p.fixed).reduce((a, p) => a + (p.value ?? 0), 0), v = qd.variants.find((x) => x.id === q5.variant) ?? qd.variants[0]!;
+    ctx.sw = { rb, rpin: pinSupply?.kind === 'pin' ? pinSupply.rOut : 25, vpin: pinSupply?.kind === 'pin' ? pinSupply.v : 5, vfan: 12, rfan: 60, beta: qd.model.Bf ?? qd.model.bf ?? (qd.model.hFEmin ?? 100), icLimit: v.ratings.Ic ?? 0.2, pRated: v.ratings.Ptot ?? 0.625, part: q5.uid };
+    if (qd.kind === 'NPN' && qd.model.Bf !== undefined) ctx.sw.beta = qd.model.Bf;
+  }
+  if (def.explain === 'fet') {
+    const m = tk.board.parts.find((p) => !p.fixed && getDef(p.partId)?.kind === 'NMOS'), md = m ? getDef(m.partId) : undefined, strip = tk.board.parts.find((p) => p.fixed && getDef(p.partId)?.id === 'led-strip');
+    if (m && md) {
+      const rng = md.tolerance?.Vt, vt = Array.isArray(rng) ? rng : [md.model.Vt ?? 1.5, md.model.Vt ?? 1.5], th = md.variants.find((x) => x.id === m.variant)?.thermal.thetaJA ?? md.variants[0]!.thermal.thetaJA;
+      const gnd = cn.GND ?? -1, gate = nodesOf(m.uid)[md.pins.indexOf('G')] ?? -1;
+      ctx.fet = { part: m.uid, vgs: 3.3, vstrip: 12, rstrip: strip ? (getDef(strip.partId)!.model.R ?? 40) : 40, vth: { minimum: vt[0]!, typical: md.model.Vt ?? vt[0]!, maximum: vt[1]! }, theta: th, vleak: 1.8, rpd: resBetween(gate, gnd) };
+    }
+  }
+  if (def.explain === 'gate') {
+    const nOut = cn.OUT ?? -1, nGnd = cn.GND ?? -1, rcs = resistors.filter((p) => !p.fixed && nodesOf(p.uid).includes(nOut)), base = tk.board.parts.find((p) => !p.fixed && getDef(p.partId)?.kind === 'NPN'), baseNode = base ? nodesOf(base.uid)[getDef(base.partId)!.pins.indexOf('B')] ?? -1 : -1;
+    ctx.gate = { nDiodes: tk.board.parts.filter((p) => !p.fixed && getDef(p.partId)?.kind === 'D').length, rc: rcs.length > 0 ? (rcs[0]!.value ?? 0) : 1e9, rl: 10e3, vcc: 5, vlow: 0.4, hasPulldown: resBetween(baseNode, nGnd) > 0 };
+  }
+  if (def.explain === 'amp' && q5 && qd) {
+    const n = nodesOf(q5.uid), nC = n[qd.pins.indexOf('C')] ?? -1, nB = n[qd.pins.indexOf('B')] ?? -1, nE = n[qd.pins.indexOf('E')] ?? -1, nV = cn.VCC ?? -1, nG = cn.GND ?? -1;
+    const bf = qd.tolerance?.Bf, rng = Array.isArray(bf) ? bf : [qd.model.Bf ?? 200, qd.model.Bf ?? 200];
+    ctx.amp = { r1: resBetween(nV, nB), r2: resBetween(nB, nG), rc: resBetween(nV, nC), re: resBetween(nE, nG), vcc: 9, rsrc: 600, rload: 47e3, beta: { low: rng[0]!, mid: qd.model.Bf ?? rng[0]!, high: rng[1]! } };
+  }
+  if (def.explain === 'amplifierexam' && q5) {
+    const n = nodesOf(q5.uid), nB = n[1] ?? -1, nC = n[0] ?? -1, nV = rig.conn.nodeOfPad([2, 2]);
+    ctx.ce = { rb: resBetween(nV, nB) || 565e3, rc: resBetween(nV, nC) || 3e3, beta: 100, vcc: 12, vbe: 0.7 };
+  }
   for (const p of tk.board.parts) {
     const d = getDef(p.partId); if (!d) continue;
     kinds[p.uid] = d.kind;

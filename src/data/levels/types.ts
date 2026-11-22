@@ -27,7 +27,10 @@ export type SupplyDef =
   | { id: string; kind: 'gen'; plus: string; minus: string; rOut?: number }
   /** Chapter 4: the wall socket behind an ISOLATION TRANSFORMER (simulated mains: a sine of `vrms` volts rms and `f` Hz between the two connectors, floating: only a 100 Mohm insulation resistance ties it to ground). A condition or a selector
    *  sets `vrms` (key 'vrms') to the pack's low / nominal / high mains. */
-  | { id: string; kind: 'mains'; plus: string; minus: string; vrms: number; f: number };
+  | { id: string; kind: 'mains'; plus: string; minus: string; vrms: number; f: number }
+  /** Chapter 5: a driven logic pin of the customer's board (the microcontroller pin of 5-1, the gate inputs of 5-3, the line-out of 5-4): a source of `v` volts behind the output resistance `rOut`. A condition sets `v` (a logic low is NOT 0 V: 0.4 V), or `pwm: 1` to
+   *  switch it between `v` and 0 V at `f` Hz with the given duty (the 100 Hz on / off test of 5-1). `sine` > 0: instead a sine of that peak amplitude about `v` at `f` Hz (the synth line-out of 5-4). */
+  | { id: string; kind: 'pin'; plus: string; minus: string; v: number; rOut: number; f?: number; duty?: number; sine?: number };
 
 /** A live switch on the bench (chapter 4): a few positions, each a set of overrides exactly like a bench condition (the mains tolerance, the load). The bench plan still lists every condition it runs; the selector only chooses what the LIVE view shows. */
 export interface SelectorDef {
@@ -80,6 +83,8 @@ export interface BenchPlan {
   regTau?: number;
   /** Chapter 4 (4-3): the junction limit the ratings check applies to semiconductors (deg C), tighter than the part's own maximum ("Tj <= 125 C at Ta = 40 C"). */
   tjLimit?: number;
+  /** Chapter 5: a spec that applies only in the listed conditions (spec id -> condition ids): the NAND truth table asks for a high output in three of its four tests and a low one in the fourth. */
+  only?: Record<string, string[]>;
 }
 
 /** Tiny expression language for hint numbers computed from the live solver (DESIGN §7.2 rung 2). */
@@ -126,7 +131,7 @@ export interface GaugeDef {
 /** The printed exam figure of an exam-bridge ticket (DESIGN §2.5: the one place a schematic is allowed): sources, each through its own resistor, meet at a named node; a load resistor runs to ground. */
 export interface ExamFigure {
   /** 'node' (default): the 1-5 nodal figure. 'pot': the 2-4 slide-wire potentiometer figure. 'caps': the 3-4 capacitor cards. */
-  kind?: 'node' | 'pot' | 'caps' | 'zener';
+  kind?: 'node' | 'pot' | 'caps' | 'zener' | 'amp';
   /** Name of the common node (printed on the figure). */
   node: string;
   sources: { name: string; volts: number; r: { name: string; ohm: number } }[];
@@ -137,6 +142,8 @@ export interface ExamFigure {
   caps?: { a: { c1: number; c2: number; c3: number; volts: number }; b: { c1: number; v1: number; c2: number } };
   /** kind 'zener': the 4-5 card: a source behind a series resistor, a Zener of `vz` volts with a minimum current, a load. */
   zener?: { volts: number; rs: number; vz: number; izMin: number; rl: number };
+  /** kind 'amp': the 5-5 card: a supply, a base resistor, a collector resistor, a transistor with its gain and the 0.7 V drop. */
+  amp?: { vcc: number; rb: number; rc: number; beta: number; vbe: number };
 }
 
 /** A number the player works out and enters on the ticket's slip (ticket 2-2: the distance to the fault). Checked by the bench against a hidden parameter: truth = hidden[`hidden`] / `per`, within `tol`. */
@@ -251,7 +258,7 @@ export interface LevelDef {
   /** i18n key of the one-line spec printed on the ticket chit (chapter 2: the scope band is a null or a match, not a range). */
   specShort?: string;
   /** Plain-words explainer for a missed level spec: 'divider' (2-1, the load on the bottom resistor). */
-  explain?: 'divider' | 'bridge' | 'blackbox' | 'pot' | 'rc' | 'debounce' | 'coil' | 'caps' | 'rectifier' | 'zener' | 'regulator' | 'lm317' | 'zenerexam';
+  explain?: 'divider' | 'bridge' | 'blackbox' | 'pot' | 'rc' | 'debounce' | 'coil' | 'caps' | 'rectifier' | 'zener' | 'regulator' | 'lm317' | 'zenerexam' | 'switch' | 'fet' | 'gate' | 'amp' | 'amplifierexam';
   /** Chapter 3: the scope's time trace and its tube (see TraceDef). */
   trace?: TraceDef;
   /** Engraved slots on the board where a bin part belongs (2-2, 2-4): a clear outlined spot between two pads, shown until a part of `partId` is placed. */

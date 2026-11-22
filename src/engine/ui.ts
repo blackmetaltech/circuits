@@ -133,7 +133,7 @@ function liveSpecs(sol: Sol, def: LevelDef): { id: string; value: number | null;
   return out;
 }
 
-const CHAPTER: Record<number, { title: string; blurb: string }> = { 1: { title: 'chapter.1.title', blurb: 'chapter.1.blurb' }, 2: { title: 'chapter.2.title', blurb: 'chapter.2.blurb' }, 3: { title: 'chapter.3.title', blurb: 'chapter.3.blurb' }, 4: { title: 'chapter.4.title', blurb: 'chapter.4.blurb' } };
+const CHAPTER: Record<number, { title: string; blurb: string }> = { 1: { title: 'chapter.1.title', blurb: 'chapter.1.blurb' }, 2: { title: 'chapter.2.title', blurb: 'chapter.2.blurb' }, 3: { title: 'chapter.3.title', blurb: 'chapter.3.blurb' }, 4: { title: 'chapter.4.title', blurb: 'chapter.4.blurb' }, 5: { title: 'chapter.5.title', blurb: 'chapter.5.blurb' } };
 const GAUGE_UNIT: Record<string, { display: string; scale: number }> = { A: { display: 'mA', scale: 1000 }, uA: { display: 'µA', scale: 1e6 }, V: { display: 'V', scale: 1 }, W: { display: 'W', scale: 1 } };
 
 /** The scope's target band and lock for the open ticket (null when the ticket has no gauge). */

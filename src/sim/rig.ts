@@ -137,6 +137,11 @@ export function buildRig(inp: RigInput): Rig {
   if (inp.smoked && inp.smoked.length > 0) nl = applyFailures(nl, inp.smoked, kinds);
   elements = nl.elements.slice();
 
+  // a tolerance condition: `{ target: '*tol', key: 'Vt' | 'Bf', value: -1 | 0 | 1 }` puts every part that has that tolerance range at its datasheet minimum, nominal or maximum (5-2: the threshold voltage at min, typ and max)
+  for (const o of inp.overrides ?? []) if (o.target === '*tol') for (const p of board.parts) {
+    const d = getDef(p.partId), r = d?.tolerance?.[o.key]; if (!d || !Array.isArray(r)) continue;
+    for (const e of elements) if (e.owner === p.uid && e.p[o.key.toLowerCase()] !== undefined) e.p[o.key.toLowerCase()] = o.value < 0 ? r[0] : o.value > 0 ? r[1] : e.p[o.key.toLowerCase()]!;
+  }
   // bench-provided sources
   const sources: string[] = elements.filter((e) => e.kind === 'BAT' || e.kind === 'BENCH' || e.kind === 'V').map((e) => e.id);
   const add = (e: Element): void => { elements.push(e); };
@@ -150,6 +155,12 @@ export function buildRig(inp: RigInput): Rig {
       add({ id: `${s.id}.iso`, kind: 'R', owner: s.id, nodes: [b, 0], p: { r: MAINS_ISO } });
       sources.push(s.id);
     }
+    else if (s.kind === 'pin') {   // the customer's driven pin: a source behind rOut; a condition may set v, pwm (1 = 100 Hz style on / off) and sine
+      const mid = nodeNames.length; nodeNames.push(`${s.id}#o`);
+      add({ id: s.id, kind: 'V', owner: s.id, nodes: [mid, b], p: { v: s.v, pwm: 0, f: s.f ?? 100, duty: s.duty ?? 0.5, sine: s.sine ?? 0 } });
+      add({ id: `${s.id}.r`, kind: 'R', owner: s.id, nodes: [mid, a], p: { r: s.rOut } });
+      sources.push(s.id);
+    }
     else if (s.kind === 'contact') add({ id: s.id, kind: 'SWT', owner: s.id, nodes: [a, b], p: { ron: s.ron ?? 0.05, roff: 1e9, pattern: 0 }, wave: contactWave(s, 0) });
     else {
       const mid = nodeNames.length; nodeNames.push(`${s.id}#o`);
@@ -159,7 +170,12 @@ export function buildRig(inp: RigInput): Rig {
     }
   }
   // overrides targeting a bench source (conditions such as "12 V supply") apply to the injected element too
-  for (const o of inp.overrides ?? []) for (const e of elements) if (e.owner === o.target && (e.kind === 'BENCH' || e.kind === 'V' || e.kind === 'SWT')) e.p[o.key] = o.value;
+  for (const o of inp.overrides ?? []) for (const e of elements) if (e.owner === o.target && (e.kind === 'BENCH' || e.kind === 'V' || e.kind === 'SWT' || (e.kind === 'R' && e.id === `${o.target}.r`))) e.p[o.key] = o.value;   // (a pin's output resistance `r` too)
+  // a pin's wave follows its (possibly overridden) parameters: a sine about v, or a pwm square between v and 0 V, else a plain DC level
+  for (const e of elements) if (e.kind === 'V' && e.p.pwm !== undefined && e.p.duty !== undefined) {
+    if (e.p.sine > 0) e.wave = sine(e.p.sine, e.p.f, 0, e.p.v);
+    else if (e.p.pwm === 1) { const T = 1 / e.p.f; e.wave = pulse(0, e.p.v, e.p.duty * T - 2e-6, { rise: 1e-6, fall: 1e-6, period: T }); }
+  }
   // the mains' voltage and frequency are picked by the condition / selector (`vrms`, `f`)
   for (const e of elements) if (e.kind === 'V' && e.p.vrms !== undefined && e.wave?.k === 'sine') e.wave = sine(e.p.vrms * SQRT2, e.p.f ?? e.wave.f);
   // the constant-current loads switch on after `ton`; the regulator's thermal clock runs on game time (4-3) and knows the ambient it sits in

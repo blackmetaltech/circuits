@@ -71,6 +71,7 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
     // resolve spec probes against the board; a spec whose part is not on the board fails with a teaching key
     const specs: BenchSpec[] = [], loads: string[] = [];
     for (const s of plan.specs) {
+      if (plan.only?.[s.id] && !plan.only[s.id]!.includes(cond.id)) continue;   // a spec that belongs to other conditions only (the NAND's high and low outputs)
       if (s.kind === 'match') {
         const a = rig0.resolve(s.a), b = rig0.resolve(s.b);
         if (a === null || b === null) { failures.push({ key: 'bench.part.missing', vars: { id: s.id, probe: a === null ? s.a : s.b, cond: cond.id } }); failedIds.add(s.id); continue; }
