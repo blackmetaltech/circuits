@@ -50,13 +50,16 @@ function run(ckt: Circuit, b: Board): void {
   if (!r.ok) throw new Error(`${b.id}: tran failed`);
   if (b.ac) { const ac = makeAc(ckt); bode(ac, b.ac.out, b.ac.inp, logFreqs(b.ac.f0, b.ac.f1, b.ac.perDecade)); }
 }
-/** Median of the best-half of `reps` timings (ms), after a warm-up run. */
+/** Lower quartile of the timings (ms) after three warm-up runs, repeating until at least `reps` runs AND 250 ms of measured time.
+ *  A 2-3 ms board timed five times was all JIT and GC noise (rc-step read 0.26 on CI and 0.86 here on the same code);
+ *  more samples of the same run measure the same thing more precisely. The 2x tolerance is unchanged. */
 function timeMs(ckt: Circuit, b: Board, reps: number): number {
-  run(ckt, b);
+  for (let i = 0; i < 3; i++) run(ckt, b);
   const xs: number[] = [];
-  for (let i = 0; i < reps; i++) { const t0 = now(); run(ckt, b); xs.push(now() - t0); }
+  let total = 0;
+  while (xs.length < reps || (total < 250 && xs.length < 400)) { const t0 = now(); run(ckt, b); const dt = now() - t0; xs.push(dt); total += dt; }
   xs.sort((a, c) => a - c);
-  return xs[Math.floor(xs.length / 2)];
+  return xs[Math.floor(xs.length / 4)];
 }
 const median = (xs: number[]): number => { const s = xs.slice().sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
 

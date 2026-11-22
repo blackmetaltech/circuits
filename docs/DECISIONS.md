@@ -35,3 +35,15 @@
   arrived-burnt parts are free). Build tests that start from a bare board clear the faulty board in their `open` helper
   (the same assertions); `src/engine/repair.test.ts` covers the arrival, the ref from the arrival, the 1-2 one-value fix
   and the burn bill. No golden moved (the trajectory goldens play ticket 0-0, which is not a repair).
+
+- **D-cost-linear (2026-11-23, Ingrid Solheim, Game Lead).** The CI bench-cost gate (estimate within 2x of measured time on 10
+  boards) had been red on master since 2026-11-22 01:26, before phase B, on rc-step and regulator-7805; locally it failed on other
+  boards. Cause: each board was timed 5 times after one warm-up, so a 0.1 to 3 ms board was JIT and GC noise (rc-step read 0.26 on
+  CI and 0.86 here on the same code). Fix in two parts, tolerance and flop limit unchanged:
+  (1) `scripts/bench-cost.ts` times each board after three warm-ups until it has 5 runs and 250 ms, and takes the lower quartile;
+  (2) with steady timing the two linear boards ran 5 to 6x faster per estimated flop than every nonlinear board, a real estimator
+  error: linear elements stamp constants. `src/sim/bench/cost.ts` charges linear circuits `ASM_ELEM_LINEAR` = 20 per element and
+  `STEP_OVERHEAD_LINEAR` = 60 per step (nonlinear constants unchanged). Three runs: all 10 boards within 2x (ratios 0.94 to 1.03 for
+  the linear pair). Effect in play: a linear bench is estimated closer to its real time, so the 1.5e9 refusal still means about 2 s
+  on a desktop. Disagreement on record: this is a model change made by the lead, not the systems engineer; a systems review of the
+  constants belongs in the next layer.
