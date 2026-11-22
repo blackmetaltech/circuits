@@ -65,7 +65,10 @@ func _build() -> void:
 		"dip8": _dip8(pid)
 		"pot3": _module(str(part.get("label", pid)), 4)
 		_:
-			if footprint == "block2": _terminals()
+			if pid.begins_with("bat-pp3"): _pp3(pid)
+			elif pid == "heater": _heater()
+			elif pid == "ideal-vsource": _vsource()
+			elif footprint == "block2": _terminals()
 			else: _module(str(part.get("label", pid)), 2)
 
 func _body(mesh: Mesh, material: Material, pos := Vector3.ZERO, rot := Vector3.ZERO) -> MeshInstance3D:
@@ -252,6 +255,49 @@ func _terminals() -> void:
 		MeshKit.add(self, slot, MeshKit.mat(Color(0.1, 0.1, 0.1), 0.6), Vector3(x, 0.0108, 0.0005))
 		_lead([Vector3(x, -MeshKit.BOARD_T, 0), Vector3(x, 0.002, 0)])
 	_labels.append(MeshKit.label(self, str(part.get("label", "")).to_upper(), 0.00005, Vector3(3 * P, 0.0003, 0.0065), Color(0.9, 0.9, 0.88)))
+
+## A 9 V PP3 lying behind its two snap pads: the body, the snap cap, red and black leads into the pads.
+func _pp3(pid: String) -> void:
+	var tired := pid.ends_with("tired")
+	var body := MeshKit.mat(Color(0.06, 0.06, 0.065), 0.4, 0.0, {"clearcoat": 0.5})
+	var band := MeshKit.mat(Color(0.80, 0.55, 0.10) if not tired else Color(0.45, 0.42, 0.38), 0.35, 0.3, {"clearcoat": 0.4})
+	var c := Vector3(3 * P, 0.0082, -0.010)
+	_body(MeshKit.rounded_box(Vector3(0.036, 0.016, 0.022), 0.002), body, c)
+	MeshKit.add(self, MeshKit.rounded_box(Vector3(0.024, 0.0162, 0.0222), 0.0018), band, c + Vector3(0.002, 0, 0))
+	MeshKit.add(self, MeshKit.rounded_box(Vector3(0.004, 0.012, 0.016), 0.001), MeshKit.m("black_plastic"), c + Vector3(-0.020, 0, 0))   # the snap
+	_labels.append(MeshKit.label(self, "9V" if not tired else "9V  OLD", 0.00007, c + Vector3(0.002, 0.0083, 0), Color(0.08, 0.06, 0.04), true))
+	for i in 2:
+		var x := float(i) * 6.0 * P
+		var lead := MeshKit.mat(Color(0.75, 0.10, 0.08) if i == 0 else Color(0.06, 0.06, 0.06), 0.5)
+		MeshKit.add(self, MeshKit.tube(MeshKit.round_corners(PackedVector3Array([c + Vector3(-0.022, -0.002, -0.003 + i * 0.006), Vector3(x - 0.002, 0.004, -0.008), Vector3(x, 0.0015, 0)]), 0.004, 3), 0.0008, 6), lead)
+		_lead([Vector3(x, -MeshKit.BOARD_T, 0), Vector3(x, 0.0015, 0)])
+	_labels.append(MeshKit.label(self, "+", 0.00008, Vector3(0, 0.0004, 0.0045), Color(0.9, 0.2, 0.15)))
+
+## The aquarium heater: a glass tube with a nichrome coil on two posts; it glows with its own heat.
+func _heater() -> void:
+	var post := MeshKit.mat(Color(0.85, 0.84, 0.80), 0.8)
+	for i in 2:
+		var x := float(i) * 6.0 * P
+		_body(MeshKit.rounded_box(Vector3(0.005, 0.008, 0.005), 0.0008), post, Vector3(x, 0.004, 0))
+		_lead([Vector3(x, -MeshKit.BOARD_T, 0), Vector3(x, 0.002, 0)])
+	var core := CylinderMesh.new(); core.top_radius = 0.0035; core.bottom_radius = 0.0035; core.height = 6 * P - 0.002
+	_body(core, MeshKit.mat(Color(0.86, 0.83, 0.76), 0.85), Vector3(3 * P, 0.0095, 0), Vector3(0, 0, PI / 2))
+	var coil := PackedVector3Array()
+	for k in 140:
+		var t := float(k) / 139.0
+		coil.append(Vector3(0.0015 + t * (6 * P - 0.003), 0.0095 + sin(t * TAU * 18.0) * 0.0042, cos(t * TAU * 18.0) * 0.0042))
+	_body(MeshKit.tube(coil, 0.00045, 5, false), MeshKit.mat(Color(0.55, 0.52, 0.48), 0.4, 0.9), Vector3.ZERO)
+	var glass := CylinderMesh.new(); glass.top_radius = 0.0055; glass.bottom_radius = 0.0055; glass.height = 6 * P - 0.001
+	MeshKit.add(self, glass, MeshKit.m("glass"), Vector3(3 * P, 0.0095, 0), Vector3(0, 0, PI / 2))
+	_labels.append(MeshKit.label(self, "HEATER 50Ω", 0.00004, Vector3(3 * P, 0.0003, 0.0075), Color(0.9, 0.9, 0.88)))
+
+## An exam-rig source: a grey module with its EMF printed and + and - marks over the pads.
+func _vsource() -> void:
+	_body(MeshKit.rounded_box(Vector3(6 * P + 0.006, 0.009, 0.012), 0.001), MeshKit.m("grey_plastic"), Vector3(3 * P, 0.0055, 0))
+	_labels.append(MeshKit.label(self, str(part.get("label", "E")).to_upper(), 0.00006, Vector3(3 * P, 0.0102, 0), Color(0.95, 0.95, 0.92), true))
+	_labels.append(MeshKit.label(self, "+", 0.0001, Vector3(0.002, 0.0102, 0), Color(0.95, 0.3, 0.2)))
+	_labels.append(MeshKit.label(self, "−", 0.0001, Vector3(6 * P - 0.002, 0.0102, 0), Color(0.8, 0.8, 0.8)))
+	for i in 2: _lead([Vector3(float(i) * 6.0 * P, -MeshKit.BOARD_T, 0), Vector3(float(i) * 6.0 * P, 0.002, 0)])
 
 func _module(text: String, span: int) -> void:
 	_body(MeshKit.rounded_box(Vector3(span * P + 0.006, 0.008, 0.010), 0.0008), MeshKit.m("black_plastic"), Vector3(span * P * 0.5, 0.005, 0))

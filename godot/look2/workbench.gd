@@ -8,7 +8,9 @@ extends Node3D
 signal changed
 
 const P := MeshKit.PITCH
-const TICKET := "5-1"
+const TICKET := "5-1"   ## the chapter-5 showcase slice
+const CH1 := ["1-1", "1-2", "1-3", "1-4", "1-5"]
+var ticket_id := "1-1"
 
 var backend: EngineBench
 var mode := "title"                  ## title | job | free
@@ -82,6 +84,7 @@ func _ready() -> void:
 	else: mode = "title"; changed.emit()
 	if OS.get_environment("CB_FRAMETIME") != "":
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	_aa()
 	if quality == "low": _low_tier()
 	if OS.get_environment("CB_SCALE3D") != "":   # render the 3D scene at N x the window (frame-time proxy for 2560x1440 on a 1080p screen)
 		get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR; get_viewport().scaling_3d_scale = float(OS.get_environment("CB_SCALE3D"))
@@ -96,6 +99,14 @@ func _pick_quality() -> String:
 	var dev := RenderingServer.get_video_adapter_name().to_lower()
 	if dev.contains("nvidia") or dev.contains("rtx") or dev.contains("radeon rx"): return "high"
 	return "medium"
+
+## Anti-aliasing per tier: high = 4x MSAA for edges plus TAA for shading and thin leads; medium = 2x MSAA; low = FXAA only.
+func _aa() -> void:
+	var vp := get_viewport()
+	match quality:
+		"high": vp.msaa_3d = Viewport.MSAA_4X; vp.use_taa = true; vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
+		"medium": vp.msaa_3d = Viewport.MSAA_2X; vp.use_taa = false; vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
+		_: vp.msaa_3d = Viewport.MSAA_DISABLED; vp.use_taa = false; vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
 
 ## Low tier (integrated GPUs, Deck class, the Compatibility renderer): one soft lamp shadow at a small atlas, no moon shadow,
 ## no depth of field, 3D drawn at 75 % and scaled up. The emissive screens, LEDs, glow and the warm/cool colour plan stay.
@@ -193,6 +204,7 @@ func _esd_mat() -> void:
 				var d := Vector2(x, y).distance_to(Vector2(b[0], b[1]))
 				if d < float(b[2]): c = c.lerp(Color(0.05, 0.04, 0.035), 0.7 * (1.0 - d / float(b[2])))
 			img.set_pixel(x, y, c)
+	img.generate_mipmaps()   # minified without mips the mat print sparkles
 	var tex := ImageTexture.create_from_image(img)
 	var m := MeshKit.mat(Color.WHITE, 0.78, 0.0, {"normal": 0.25})
 	m.albedo_texture = tex; m.uv1_scale = Vector3(1, 1, 1)
@@ -381,7 +393,7 @@ func _used_bounds() -> AABB:
 func set_view(v: int, snap := false) -> void:
 	view = v
 	match v:
-		1: g_tgt = board_centre() + Vector3(0.01, 0.0, -0.07); g_yaw = deg_to_rad(6.0); g_pitch = deg_to_rad(-40.0); g_dist = 0.50
+		1: g_tgt = board_centre() + Vector3(-0.03, 0.0, -0.045); g_yaw = deg_to_rad(4.0); g_pitch = deg_to_rad(-38.0); g_dist = 0.56
 		5:
 			var bb := _used_bounds()
 			g_tgt = bb.get_center() + Vector3(-0.022, 0.0, 0.004); g_yaw = 0.0; g_pitch = deg_to_rad(-62.0); g_dist = clampf(bb.size.length() * 2.3, 0.2, 0.31)
@@ -402,20 +414,22 @@ func _update_camera(dt: float) -> void:
 
 ## ------------------------------------------------------------------------------------------------ modes
 
-func start_job() -> void:
-	mode = "job"
-	backend.new_game()
-	backend.unlock_through(TICKET)
-	backend.open_ticket(TICKET)
+func start_job(id := "") -> void:
+	if id == "": id = OS.get_environment("CB_L2_TICKET") if OS.get_environment("CB_L2_TICKET") != "" else first_open_ticket()
+	mode = "job"; ticket_id = id; _paid_text = ""
+	if not _campaign:
+		backend.new_game(); _campaign = true
+	if id == TICKET or OS.get_environment("CB_L2_TICKET") != "": backend.unlock_through(id)
+	backend.open_ticket(id)
 	_after_open()
 	if OS.get_environment("CB_L2_REF") == "1" or OS.get_environment("CB_L2_NODIODE") == "1":
-		backend.build_ref(TICKET)
+		backend.build_ref(id)
 		if OS.get_environment("CB_L2_NODIODE") == "1":
 			for p in backend.parts: if str(p.partId) == "1n4007": backend.delete_part(str(p.uid))
 	var cs := OS.get_environment("CB_L2_CASE")
 	if cs == "" and (OS.get_environment("CB_L2_REF") == "1" or OS.get_environment("CB_L2_NODIODE") == "1" or OS.get_environment("CB_L2_GHOST") != ""): cs = "open"
 	if cs in ["open", "handed"] and case_node: case_node.set_state("open", false)
-	if OS.get_environment("CB_PROBE") != "":
+	if OS.get_environment("CB_PROBE") != "" and id == TICKET:
 		backend.set_probe("ch1", [16, 8]); backend.set_dial("V"); backend.set_probe("red", [16, 2]); backend.set_probe("black", [22, 2])
 	if OS.get_environment("CB_PIN") != "": backend.set_selector("pin", int(OS.get_environment("CB_PIN")))
 	if OS.get_environment("CB_POWER") == "1": backend.set_power(true)
@@ -429,7 +443,7 @@ func case_closed() -> bool: return case_node != null and case_node.state != "ope
 
 func open_case() -> void:
 	if case_node == null or case_node.state == "open": return
-	case_node.set_state("open"); note = "Case open. The driver board is inside: the pin has to switch the fan through a transistor."
+	case_node.set_state("open"); note = str(OPEN_LINE.get(ticket_id, "Case open. The board is on the bench."))
 	set_view(1); changed.emit()
 
 ## After a pass: the lid goes back on and the fan goes home running.
@@ -441,8 +455,8 @@ func hand_back() -> void:
 	backend.set_probe("ch1", null)
 	case_node.set_state("handed"); handed = true
 	if not backend.powered: backend.set_power(true)
-	backend.set_selector("pin", 0)
-	note = "Handed back to %s. The fan runs from the pin and the transistor stays cool." % str(backend.ticket.get("customer", ""))
+	if ticket_id == TICKET: backend.set_selector("pin", 0)
+	note = "%s: \"%s\"" % [str(backend.ticket.get("customer", "")), str(backend.ticket.get("thanks", ""))]
 	set_view(2); changed.emit()
 
 ## QA hook (CB_L2_GHOST=1): a 2N2222A picked from the drawer, its placement preview over pads 14-16 of row I, as the player sees it mid-drag.
@@ -456,7 +470,7 @@ func _ghost_demo() -> void:
 	hover_pad = Vector2i(14, 8)
 
 func start_free() -> void:
-	mode = "free"
+	mode = "free"; _campaign = false
 	backend._act("newGame", [1, "sandbox"])
 	backend.open_ticket(TICKET)
 	_after_open()
@@ -491,7 +505,17 @@ func _after_open() -> void:
 		case_node.build(Vector2((board.w + 3) * P, (board.h + 3) * P), str(backend.ticket.get("id", "")), str(backend.ticket.get("title", "")), str(backend.ticket.get("customer", "")))
 		case_node.global_position = board.to_global(c)
 		case_node.set_state("closed", false)
+	_layout_for_ticket()
 	_cables()
+
+## The bench is set for the job: the fan and the microcontroller only come out for 5-1; the scope stands behind the board,
+## clear of the repair ticket on the left, so nothing on screen covers its trace.
+func _layout_for_ticket() -> void:
+	var fan_job := mode == "free" or ticket_id == TICKET
+	if fan: fan.visible = fan_job
+	if mcu: mcu.visible = fan_job
+	if scope: scope.position = Vector3(-0.10, 0, -0.30) if fan_job else Vector3(0.0, 0, -0.29); scope.rotation_degrees.y = 6.0 if fan_job else 0.0
+	if fan: fan.position = Vector3(0.17, 0.0, -0.12)
 
 ## Drawer rows: the ticket's shoebox (job) or the whole catalogue (free bench), grouped by kind.
 func drawer() -> Array:
@@ -553,11 +577,12 @@ func _fam_name(it: Dictionary) -> String:
 func sync_board() -> void:
 	if board == null: return
 	var sp := ""
-	for p in backend.parts: sp += "%s:%s:%d:%d:%d|" % [p.uid, p.partId, p.x, p.y, p.rot]
+	var shown: Array = backend._all_parts if not backend._all_parts.is_empty() else backend.parts   # the 3D bench shows the PP3 too (the classic stall drew it in its supply view)
+	for p in shown: sp += "%s:%s:%d:%d:%d|" % [p.uid, p.partId, p.x, p.y, p.rot]
 	if sp != _sig_parts:
 		_sig_parts = sp
 		var keep := {}
-		for p in backend.parts:
+		for p in shown:
 			var key := "%s:%d:%d:%d" % [p.uid, p.x, p.y, p.rot]
 			keep[str(p.uid)] = true
 			if parts3d.has(p.uid) and str(parts3d[p.uid].get_meta("key", "")) == key: continue
@@ -661,10 +686,18 @@ func _cables() -> void:
 		MeshKit.add(cables_root, MeshKit.tube(PackedVector3Array([b + Vector3(0, 0.003, 0), b + Vector3(0.0012, 0.001, 0)]), 0.0003, 6), MeshKit.m("steel"))
 	var pr: Vector3 = _call(psu, "post_world", [0]) if psu and psu.has_method("post_world") else Vector3(0.28, 0.04, -0.17)
 	var pb: Vector3 = _call(psu, "post_world", [1]) if psu and psu.has_method("post_world") else Vector3(0.31, 0.04, -0.17)
-	add.call(pr, post.call("V12"), red, 0.06)
-	add.call(pb, post.call("GND"), blk, 0.05)
-	var mp: Vector3 = _call(mcu, "pin_world") if mcu and mcu.has_method("pin_world") else Vector3(-0.17, 0.02, 0.1)
-	add.call(mp, post.call("PIN"), MeshKit.mat(Color(0.85, 0.66, 0.08), 0.45), 0.02)
+	# the bench supply's leads go to the ticket's own supply connectors (5-1: V12/GND, 1-3: IN/GND); a battery ticket uses no supply
+	var plus := ""; var minus := ""
+	for sd in backend.card.get("supplies", []):
+		if str(sd.get("kind", "")) == "bench": plus = str(sd.get("plus", "")); minus = str(sd.get("minus", "")); break
+	if plus == "" and ticket_id == TICKET: plus = "V12"; minus = "GND"
+	if mode == "free": plus = "V12"; minus = "GND"
+	if plus != "":
+		add.call(pr, post.call(plus), red, 0.06)
+		add.call(pb, post.call(minus), blk, 0.05)
+	if mcu and mcu.visible:
+		var mp: Vector3 = _call(mcu, "pin_world") if mcu.has_method("pin_world") else Vector3(-0.17, 0.02, 0.1)
+		add.call(mp, post.call("PIN"), MeshKit.mat(Color(0.85, 0.66, 0.08), 0.45), 0.02)
 	for p in backend.parts:
 		if str(p.partId).begins_with("fan"):
 			for i in 2:
@@ -768,6 +801,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 			changed.emit()
 		"paid":
 			var st := int(data.get("stars", 0))
+			_paid_text = str(data.get("pay_text", ""))
 			note = "Bench test passed. Paid %s: the %s fee%s." % [str(data.get("pay_text", "")), str(backend.ticket.get("price_text", "")), (" and %d new star%s" % [st, "" if st == 1 else "s"]) if st > 0 else ""]
 			last_failure = {}; changed.emit()
 		"power", "lock", "wired", "placed", "deleted":
@@ -780,34 +814,37 @@ func _fail_title(kind: String, vce: float) -> String:
 	return "A part burnt"
 
 func _smoke_at(p: Vector3) -> void:
-	var ps := GPUParticles3D.new(); ps.amount = 120; ps.lifetime = 4.5; ps.explosiveness = 0.0; ps.randomness = 0.6; ps.fixed_fps = 0
+	# a thin grey wisp, not a cloud: many small, faint sprites in one rising column that widens and drifts with the room air
+	var ps := GPUParticles3D.new(); ps.amount = 260; ps.lifetime = 5.0; ps.explosiveness = 0.0; ps.randomness = 0.4; ps.fixed_fps = 0
 	ps.visibility_aabb = AABB(Vector3(-0.2, -0.05, -0.2), Vector3(0.4, 0.5, 0.4))
+	ps.draw_order = GPUParticles3D.DRAW_ORDER_VIEW_DEPTH
 	var pm := ParticleProcessMaterial.new()
-	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE; pm.emission_sphere_radius = 0.002
-	pm.direction = Vector3(0, 1, 0); pm.spread = 14.0; pm.initial_velocity_min = 0.010; pm.initial_velocity_max = 0.024
-	pm.gravity = Vector3(0.003, 0.010, -0.002); pm.damping_min = 0.002; pm.damping_max = 0.004
-	pm.angle_min = -180.0; pm.angle_max = 180.0; pm.angular_velocity_min = -20.0; pm.angular_velocity_max = 20.0
-	pm.scale_min = 0.7; pm.scale_max = 1.3
-	var sc := Curve.new(); sc.add_point(Vector2(0, 0.15)); sc.add_point(Vector2(0.4, 0.9)); sc.add_point(Vector2(1, 2.6)); var sct := CurveTexture.new(); sct.curve = sc; pm.scale_curve = sct
-	var g := Gradient.new(); g.set_color(0, Color(0.16, 0.15, 0.14, 0.0)); g.add_point(0.08, Color(0.20, 0.19, 0.18, 0.05)); g.add_point(0.5, Color(0.26, 0.26, 0.26, 0.03)); g.set_color(1, Color(0.30, 0.30, 0.30, 0.0))
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE; pm.emission_sphere_radius = 0.0012
+	pm.direction = Vector3(0, 1, 0); pm.spread = 6.0; pm.initial_velocity_min = 0.016; pm.initial_velocity_max = 0.022
+	pm.gravity = Vector3(0.0045, 0.006, -0.0015); pm.damping_min = 0.001; pm.damping_max = 0.002
+	pm.angle_min = -180.0; pm.angle_max = 180.0; pm.angular_velocity_min = -12.0; pm.angular_velocity_max = 12.0
+	pm.scale_min = 0.8; pm.scale_max = 1.2
+	var sc := Curve.new(); sc.add_point(Vector2(0, 0.12)); sc.add_point(Vector2(0.35, 0.6)); sc.add_point(Vector2(1, 2.2)); var sct := CurveTexture.new(); sct.curve = sc; pm.scale_curve = sct
+	var g := Gradient.new()   # set both arrays at once: set_color(i) after add_point indexes the sorted list and left the end white
+	g.offsets = PackedFloat32Array([0.0, 0.06, 0.45, 1.0]); g.colors = PackedColorArray([Color(0.28, 0.28, 0.30, 0.0), Color(0.30, 0.30, 0.32, 0.32), Color(0.40, 0.41, 0.43, 0.14), Color(0.46, 0.47, 0.49, 0.0)])
 	var gt := GradientTexture1D.new(); gt.gradient = g; pm.color_ramp = gt
 	pm.turbulence_enabled = false   # turbulence clumps particles into beads at this scale
-	pm.tangential_accel_min = -0.004; pm.tangential_accel_max = 0.004
+	pm.tangential_accel_min = -0.002; pm.tangential_accel_max = 0.002
 	ps.process_material = pm
-	var q := QuadMesh.new(); q.size = Vector2(0.022, 0.022)
+	var q := QuadMesh.new(); q.size = Vector2(0.016, 0.016)
 	var m := StandardMaterial3D.new(); m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA; m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES; m.vertex_color_use_as_albedo = true
 	m.billboard_keep_scale = true; m.roughness = 1.0; m.proximity_fade_enabled = true; m.proximity_fade_distance = 0.01
-	var nz := FastNoiseLite.new(); nz.frequency = 0.04; nz.fractal_octaves = 4
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED   # smoke must not catch the warm lamp and turn into cream puffs
 	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
 	for y in 64:
 		for x in 64:
 			var d := Vector2(x - 31.5, y - 31.5).length() / 32.0
-			var a2 := clampf(1.0 - d, 0.0, 1.0); a2 = a2 * a2 * (0.6 + 0.4 * (nz.get_noise_2d(x, y) * 0.5 + 0.5))
+			var a2 := clampf(1.0 - d, 0.0, 1.0); a2 = a2 * a2 * a2
 			img.set_pixel(x, y, Color(1, 1, 1, a2))
 	m.albedo_texture = ImageTexture.create_from_image(img); q.material = m
 	ps.draw_pass_1 = q
-	add_child(ps); ps.global_position = p + Vector3(0, 0.012, 0)
-	ps.preprocess = 1.5
+	add_child(ps); ps.global_position = p + Vector3(0, 0.010, 0)
+	ps.preprocess = 2.0
 	var ember := OmniLight3D.new(); ember.light_color = Color(1.0, 0.35, 0.05); ember.light_energy = 1.4; ember.omni_range = 0.09; ps.add_child(ember)
 	smoke_fx.append(ps)
 	get_tree().create_timer(9.0).timeout.connect(func(): if is_instance_valid(ps): ps.emitting = false)
@@ -993,3 +1030,133 @@ func undo() -> void:
 	if board: board.set_marks([])
 	capture_until = 0.0; _call(scope, "clear_capture"); last_failure = {}
 	changed.emit()
+
+
+## ------------------------------------------------------------------------------------------------ phase B: jobs, ticket text, free-bench saves
+
+var _campaign := false
+
+## What the customer says when the case is opened, per ticket.
+const OPEN_LINE := {
+	"1-1": "Case open. The torch's LED board is inside, and the 9 V battery clip.",
+	"1-2": "Case open. Three red LEDs and the battery clip: they must all be bright on a fresh or a tired battery.",
+	"1-3": "Case open. The heater element is fixed to the board; it must see 8 V from the 12 V supply.",
+	"1-4": "Case open. The car's battery pack is tired. Measure it before you choose the load.",
+	"1-5": "Exam rig open. Predict first, then build and probe.",
+	"5-1": "Case open. The driver board is inside: the pin has to switch the fan through a transistor.",
+}
+const ARRIVE_LINE := {
+	"1-1": "Lio put the torch on the counter. It does not light.",
+	"1-2": "Ash left the bike light. It is too dim to be seen at night.",
+	"1-3": "Mr. Brook brought the heater in a bucket. The fish were too warm.",
+	"1-4": "Bo's car crawls. The battery pack came with it.",
+	"1-5": "The exam rig is on the bench. No customer: this one is graded.",
+	"5-1": "The fan came in with its driver board. Open the case to work on it.",
+}
+func arrival_line() -> String: return str(ARRIVE_LINE.get(ticket_id, "The device is on the bench. Open the case to work on it."))
+
+## The first chapter-1 ticket not yet passed (the campaign's next job), else 1-1.
+func first_open_ticket() -> String:
+	var pr: Dictionary = backend.progress(1) if backend.started else {}
+	for id in CH1:
+		var rec = pr.get(id, null)
+		if rec == null or not bool((rec as Dictionary).get("passed", false)): return id
+	return CH1[0]
+
+func next_job() -> void:
+	var i := CH1.find(ticket_id)
+	var nx: String = CH1[i + 1] if i >= 0 and i + 1 < CH1.size() else ""
+	backend.set_power(false); backend.close_ticket()
+	if nx == "": back_to_title(); return
+	start_job(nx)
+
+var _paid_text := ""
+func paid_text() -> String: return _paid_text if _paid_text != "" else "nothing"
+
+func burn_cost_text() -> String:
+	var c = backend.bench_q.get("burnCostText", null)
+	return str(c) if c != null else "$0.00"
+
+func set_selector(id: String, i: int) -> void:
+	backend.set_selector(id, i); changed.emit()
+
+## The meter's own LCD text, or what to do to get one.
+func meter_text() -> String:
+	var d: Dictionary = backend.dmm()
+	if str(d.get("mode", "OFF")) == "OFF": return "off  (M for leads)"
+	if backend.probes.get("red") == null or backend.probes.get("black") == null: return "%s  leads not placed" % str(d.get("mode", ""))
+	return "%s %s" % [str(d.get("text", "----")), str(d.get("unit", ""))]
+
+## One line of live numbers for the bench control plate.
+func readout_text() -> String:
+	if not backend.powered: return "POWER OFF"
+	if ticket_id == TICKET and mode == "job":
+		var fan_v: float = backend.volt_at([16, 2]) - backend.volt_at([22, 2])
+		return "FAN %s" % (BenchUI.si(fan_v, "V") if pin_mode() != "100 Hz" else "switching")
+	var sv: Dictionary = backend.scope_view
+	if str(sv.get("text", "")) != "": return "%s  %s" % [str(sv.get("label", "")).to_upper(), _sig3(sv)]
+	return "POWER ON"
+
+## Live values per spec id while powered: the gauge spec from the engine's gauge, and 5-1's three from the fan and pin.
+func live_specs() -> Dictionary:
+	var out := {}
+	if not backend.powered: return out
+	if ticket_id == TICKET and mode == "job":
+		var fan_v: float = backend.volt_at([16, 2]) - backend.volt_at([22, 2])
+		var has_i: bool = str(backend.scope_view.get("text", "")) != ""
+		if pin_mode() == "high": out["fanhi"] = BenchUI.si(fan_v, "V")
+		if pin_mode() == "low": out["fanlo"] = BenchUI.si(fan_v, "V")
+		if has_i: out["ipin"] = BenchUI.si(float(backend.scope_view.get("value", 0.0)) / 1000.0, "A")
+		return out
+	var g = backend.card.get("gauge", null)
+	if g is Dictionary and str(backend.scope_view.get("text", "")) != "": out[str(g.spec)] = _sig3(backend.scope_view)
+	return out
+
+## The scope's gauge value with three significant digits ("14.9551 mA" -> "15.0 mA").
+static func _sig3(sv: Dictionary) -> String:
+	var v := float(sv.get("value", 0.0)); var u := str(sv.get("unit", ""))
+	var a := absf(v); var d := 2 if a < 10.0 else (1 if a < 100.0 else 0)
+	return "%s %s" % [String.num(v, d), u]
+
+## A measured bench value in the spec's unit (from the spec name: current, power, voltage).
+func spec_text(id: String, v: float) -> String:
+	var nm := ""
+	for s in backend.ticket.get("specs", []): if str(s.id) == id: nm = str(s.get("name", "")).to_lower()
+	var unit := "V"
+	if "current" in nm or "ma" in nm.split(" ") or id.begins_with("i"): unit = "A"
+	elif "power" in nm or " w" in nm: unit = "W"
+	if id == "ipin": unit = "A"
+	return BenchUI.si(v, unit)
+
+## Free bench builds: three slots, saved by the engine (parts, values, wires) under the user data folder.
+func _build_path(slot: int) -> String: return "user://bench_build_%d.json" % slot
+func has_build(slot: int) -> bool: return FileAccess.file_exists(_build_path(slot))
+func save_build(slot: int) -> void:
+	var parts: Array = []
+	for p in backend.parts:
+		if bool(p.get("fixed", false)): continue
+		parts.append({"partId": str(p.partId), "value": p.get("value", null), "variant": str(p.get("variant", "")), "kind": str(p.get("kind", "")), "x": int(p.x), "y": int(p.y), "rot": int(p.get("rot", 0))})
+	var wires: Array = []
+	for w in backend.wires: wires.append({"path": w.path})
+	var f := FileAccess.open(_build_path(slot), FileAccess.WRITE)
+	if f == null: note = "Could not save build %d." % slot; changed.emit(); return
+	f.store_string(JSON.stringify({"v": 1, "parts": parts, "wires": wires})); f.close()
+	note = "Saved build %d: %d parts, %d wires." % [slot, parts.size(), wires.size()]; changed.emit()
+func load_build(slot: int) -> void:
+	if not has_build(slot): return
+	var d = JSON.parse_string(FileAccess.get_file_as_string(_build_path(slot)))
+	if not d is Dictionary: note = "Build %d is not readable." % slot; changed.emit(); return
+	backend.set_power(false)
+	for p in backend.parts.duplicate():
+		if not bool(p.get("fixed", false)): backend.delete_part(str(p.uid))
+	for w in backend.wires.duplicate(): backend.delete_wire(str(w.wid))
+	var placed := 0; var wired := 0
+	for p in d.get("parts", []):
+		var r := backend.place({"partId": str(p.partId), "value": p.get("value", null), "variant": str(p.get("variant", "")), "kind": str(p.get("kind", ""))}, int(p.x), int(p.y), int(p.get("rot", 0)))
+		if bool(r.get("ok", true)): placed += 1
+	for w in d.get("wires", []):
+		var path: Array = w.path
+		var r2 := backend.add_wire(path[0], path[path.size() - 1])
+		if bool(r2.get("ok", true)): wired += 1
+	note = "Loaded build %d: %d parts, %d wires." % [slot, placed, wired]
+	sync_board(); changed.emit()

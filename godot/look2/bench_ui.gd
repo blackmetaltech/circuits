@@ -1,3 +1,4 @@
+class_name BenchUI
 extends Control
 ## LOOK2 bench interface: a precise maker-tool language (dark anodised panels, Inter + JetBrains Mono, real units, one amber accent).
 ## Title, job card with live spec readings, parts drawer, tool strip, failure panel, status chips, and the schematic view (Tab).
@@ -80,77 +81,231 @@ func _btn(parent: Node, text: String, cb: Callable, key := "", primary := false,
 	parent.add_child(b)
 	return b
 
+## ------------------------------------------------------------------------------------------------ instrument parts
+## Round 3: the interface is made of bench objects. Faceplates are machined graphite with four screws and engraved labels,
+## readings sit in recessed LCD windows, buttons are keycaps with depth, and the job is a paper repair ticket.
+
+const PLATE := Color(0.135, 0.140, 0.150, 0.97)
+const ENGR := Color(0.66, 0.69, 0.72)
+const LCD_BG := Color(0.035, 0.050, 0.042)
+const LCD_ON := Color(1.0, 0.70, 0.28)
+const PAPER := Color(0.86, 0.83, 0.76)
+const INK := Color(0.11, 0.10, 0.09)
+const RED_INK := Color(0.66, 0.15, 0.10)
+var f_hand: Font
+var f_type: Font
+var f_engr: FontVariation
+
+func _fonts2() -> void:
+	if f_engr: return
+	f_hand = load("res://fonts/Kalam-Regular.ttf") if ResourceLoader.exists("res://fonts/Kalam-Regular.ttf") else f_sans
+	f_type = load("res://fonts/ShareTechMono-Regular.ttf") if ResourceLoader.exists("res://fonts/ShareTechMono-Regular.ttf") else f_mono
+	f_engr = FontVariation.new(); f_engr.base_font = f_semi; f_engr.spacing_glyph = 2
+
+class Screws extends Control:
+	func _draw() -> void:
+		for c in [Vector2(-9, -7), Vector2(size.x + 9, -7), Vector2(-9, size.y + 7), Vector2(size.x + 9, size.y + 7)]:
+			draw_circle(c, 4.5, Color(0.07, 0.07, 0.08)); draw_circle(c, 3.6, Color(0.42, 0.43, 0.45))
+			draw_line(c + Vector2(-2.6, -1.2), c + Vector2(2.6, 1.2), Color(0.12, 0.12, 0.13), 1.4)
+
+func _plate(pos: Vector2, title := "") -> VBoxContainer:
+	_fonts2()
+	var p := PanelContainer.new(); p.position = pos
+	var sb := StyleBoxFlat.new(); sb.bg_color = PLATE
+	for k in ["corner_radius_top_left", "corner_radius_top_right", "corner_radius_bottom_left", "corner_radius_bottom_right"]: sb.set(k, 4)
+	sb.border_width_top = 1; sb.border_width_bottom = 3; sb.border_width_left = 1; sb.border_width_right = 1
+	sb.border_color = Color(0.05, 0.05, 0.055); sb.shadow_color = Color(0, 0, 0, 0.5); sb.shadow_size = 12; sb.shadow_offset = Vector2(0, 5)
+	sb.content_margin_left = 22; sb.content_margin_right = 22; sb.content_margin_top = 16; sb.content_margin_bottom = 16
+	p.add_theme_stylebox_override("panel", sb)
+	_root.add_child(p)
+	var sc := Screws.new(); sc.mouse_filter = Control.MOUSE_FILTER_IGNORE; p.add_child(sc)
+	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 8); p.add_child(v)
+	if title != "": _eng(v, title)
+	return v
+
+func _eng(parent: Node, text: String, size := 15) -> Label:
+	var l := _lab(parent, text.to_upper(), size, ENGR, f_engr)
+	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8)); l.add_theme_constant_override("shadow_offset_y", 1); l.add_theme_constant_override("shadow_offset_x", 0)
+	return l
+
+func _lcd(parent: Node, text: String, size := 22, col := LCD_ON) -> Label:
+	var w := PanelContainer.new(); parent.add_child(w)
+	var sb := StyleBoxFlat.new(); sb.bg_color = LCD_BG
+	for k in ["corner_radius_top_left", "corner_radius_top_right", "corner_radius_bottom_left", "corner_radius_bottom_right"]: sb.set(k, 3)
+	sb.border_width_top = 2; sb.border_width_left = 1; sb.border_width_right = 1; sb.border_width_bottom = 1; sb.border_color = Color(0.0, 0.0, 0.0)
+	sb.content_margin_left = 12; sb.content_margin_right = 12; sb.content_margin_top = 6; sb.content_margin_bottom = 6
+	w.add_theme_stylebox_override("panel", sb)
+	var l := _lab(w, text, size, col, f_mono)
+	l.add_theme_color_override("font_shadow_color", Color(col.r, col.g, col.b, 0.35)); l.add_theme_constant_override("shadow_outline_size", 4)
+	return l
+
+## A keycap: a raised top, a dark skirt below (depth), a lit amber edge when the tool is in hand, the key legend engraved after the name.
+func _key(parent: Node, text: String, cb: Callable, key := "", primary := false, active := false) -> Button:
+	_fonts2()
+	var b := Button.new(); b.focus_mode = Control.FOCUS_ALL
+	b.text = text if key == "" else "%s  %s" % [text, key]
+	b.add_theme_font_override("font", f_semi); b.add_theme_font_size_override("font_size", fs(18))
+	var top := Color(0.86, 0.58, 0.18) if primary else (Color(0.25, 0.26, 0.28) if active else Color(0.20, 0.21, 0.23))
+	for st in ["normal", "hover", "pressed", "focus", "disabled"]:
+		var sb := StyleBoxFlat.new(); sb.bg_color = top
+		if st == "hover": sb.bg_color = top.lightened(0.07)
+		for k in ["corner_radius_top_left", "corner_radius_top_right", "corner_radius_bottom_left", "corner_radius_bottom_right"]: sb.set(k, 5)
+		sb.border_width_top = 1; sb.border_width_left = 1; sb.border_width_right = 1
+		sb.border_width_bottom = 1 if st == "pressed" else 5
+		sb.border_color = top.darkened(0.55)
+		if active and st != "pressed": sb.border_color = Color(0.91, 0.64, 0.24); sb.border_width_bottom = 4
+		sb.content_margin_left = 14; sb.content_margin_right = 14
+		sb.content_margin_top = 10 if st == "pressed" else 7; sb.content_margin_bottom = 6
+		if st == "focus": sb.draw_center = false; sb.border_color = Color(1, 0.8, 0.4); sb.border_width_top = 2; sb.border_width_left = 2; sb.border_width_right = 2; sb.border_width_bottom = 2
+		b.add_theme_stylebox_override(st, sb)
+	var ink := Color(0.10, 0.08, 0.05) if primary else Color(0.88, 0.89, 0.90)
+	b.add_theme_color_override("font_color", ink); b.add_theme_color_override("font_hover_color", ink); b.add_theme_color_override("font_pressed_color", ink); b.add_theme_color_override("font_focus_color", ink)
+	b.pressed.connect(cb)
+	parent.add_child(b)
+	return b
+
+## The repair ticket: a paper card, typed, with the customer's words in handwriting and a red stamp when the job passes.
+func _paper(pos: Vector2, w: float) -> VBoxContainer:
+	_fonts2()
+	var p := PanelContainer.new(); p.position = pos; p.custom_minimum_size = Vector2(w, 0); p.rotation = deg_to_rad(-0.6)
+	var sb := StyleBoxFlat.new(); sb.bg_color = PAPER
+	for k in ["corner_radius_top_left", "corner_radius_top_right", "corner_radius_bottom_left", "corner_radius_bottom_right"]: sb.set(k, 2)
+	sb.shadow_color = Color(0, 0, 0, 0.45); sb.shadow_size = 10; sb.shadow_offset = Vector2(3, 6)
+	sb.border_width_top = 10; sb.border_color = RED_INK
+	sb.content_margin_left = 22; sb.content_margin_right = 22; sb.content_margin_top = 14; sb.content_margin_bottom = 18
+	p.add_theme_stylebox_override("panel", sb)
+	_root.add_child(p)
+	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 6); p.add_child(v)
+	return v
+
+func _ink(parent: Node, text: String, size := 19, col := INK, font: Font = null, wrap := true) -> Label:
+	return _lab(parent, text, size, col, font if font else f_type, wrap)
+
+class Stamp extends Control:
+	var text := "PASSED"
+	var font: Font
+	func _draw() -> void:
+		var c := Color(0.70, 0.13, 0.10, 0.78)
+		draw_set_transform(size * 0.5, deg_to_rad(-12.0))
+		var w := 210.0; var h := 62.0
+		draw_rect(Rect2(-w * 0.5, -h * 0.5, w, h), c, false, 4.0)
+		draw_rect(Rect2(-w * 0.5 + 6, -h * 0.5 + 6, w - 12, h - 12), c, false, 1.5)
+		draw_string(font, Vector2(-w * 0.5, 13), text, HORIZONTAL_ALIGNMENT_CENTER, w, 36, c)
+
 ## ------------------------------------------------------------------------------------------------ layout
 
 var _spec_vals := {}
 var _status: Label
 var _readout: Label
+var _meter: Label
 
 func _rebuild() -> void:
 	if _root: _root.queue_free()
 	_root = Control.new(); add_child(_root); _root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); _root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_spec_vals.clear(); _drawer_sig = ""
+	_spec_vals.clear(); _drawer_sig = ""; _status = null; _readout = null; _meter = null
 	if bench.mode == "title": _title(); return
 	if schem:
 		var sv := SchematicView.new(); sv.bench = bench; sv.ui = self; _root.add_child(sv); sv.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); sv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_job_card()
 	_drawer()
 	_tools()
-	_status_chip()
-	_failure()
 
 func _title() -> void:
-	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 12); v.position = Vector2(110, 560); v.custom_minimum_size = Vector2(560, 0); _root.add_child(v)
-	var wm := _lab(v, "CIRCUITS", 40, TXT, f_semi); wm.add_theme_constant_override("outline_size", 0)
-	_lab(v, "An electronics workbench. Repair real devices, build circuits, and see why they work.", 22, DIM, f_sans, true)
-	var gap := Control.new(); gap.custom_minimum_size = Vector2(0, 10); v.add_child(gap)
-	var b1 := _btn(v, "Jobs: 5-1  Fan Driver", func(): bench.start_job(), "", true)
-	_lab(v, "A 5 V microcontroller pin has to switch a 12 V desk fan.", 18, DIM)
-	_btn(v, "Free bench", func(): bench.start_free())
-	_lab(v, "Every part in the catalogue on an open board. Pause time and step it.", 18, DIM)
+	_fonts2()
+	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 12); v.position = Vector2(110, 500); v.custom_minimum_size = Vector2(600, 0); _root.add_child(v)
+	_lab(v, "CIRCUITS", 44, TXT, f_engr)
+	_lab(v, "A repair bench. Customers bring broken devices; you probe, fix, and hand them back.", 22, Color(0.80, 0.82, 0.84), f_sans, true)
+	var gap := Control.new(); gap.custom_minimum_size = Vector2(0, 8); v.add_child(gap)
+	var b1 := _key(v, "Jobs: chapter 1, Current and Voltage", func(): bench.start_job(bench.first_open_ticket()), "", true)
+	_lab(v, "A torch, a bike light, a fish-tank heater, a toy car, and the exam.", 18, Color(0.72, 0.75, 0.78))
+	_key(v, "Free bench", func(): bench.start_free())
+	_lab(v, "Any part, the supply, scope and meter. Save a build and load it later.", 18, Color(0.72, 0.75, 0.78))
+	_key(v, "Showcase: 5-1 Fan Driver", func(): bench.start_job("5-1"))
+	_lab(v, "Chapter 5 slice in the new look. Chapters 2-5 play in the classic look (Menu > Classic).", 18, Color(0.72, 0.75, 0.78), f_sans, true)
 	b1.call_deferred("grab_focus")
-	_lab(v, "Right drag orbits   Middle drag pans   Wheel zooms   1-4 views   Tab schematic", 16, DIM, f_mono)
+	_lab(v, "Right drag orbits   Middle drag pans   Wheel zooms   Keys 1-5 views   Tab schematic", 17, Color(0.72, 0.75, 0.78), f_mono)
 
 func _job_card() -> void:
 	var t: Dictionary = bench.backend.ticket
-	var p := _panel(Vector2(28, 28), Vector2(470, 0))
-	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 8); p.add_child(v)
 	if bench.mode == "free":
-		_lab(v, "FREE BENCH", 16, AMBER, f_semi)
-		_lab(v, "Open testbed", 30, TXT, f_semi)
-		_lab(v, "Any part from the drawer, the supply, scope and meter. Space powers the bench. Pause time with the scope's RUN key, step it with the full stop key.", 18, DIM, f_sans, true)
-		_lab(v, "Saving builds and opening known devices come in the next build.", 17, DIM, f_sans, true)
+		var fv := _plate(Vector2(28, 28), "Free bench")
+		_lab(fv, "Open testbed", 28, TXT, f_semi)
+		_lab(fv, "Pick any part from the tray. Space powers the bench.\nScope RUN key pauses time; full stop steps it.", 18, Color(0.76, 0.78, 0.80), f_sans, true)
+		var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 8); fv.add_child(row)
+		for i in 3:
+			var slot := i + 1
+			_key(row, "Save %d" % slot, func(): bench.save_build(slot), "", false, false)
+		var row2 := HBoxContainer.new(); row2.add_theme_constant_override("separation", 8); fv.add_child(row2)
+		for i in 3:
+			var slot := i + 1
+			var k := _key(row2, "Load %d" % slot, func(): bench.load_build(slot), "", false, false)
+			k.disabled = not bench.has_build(slot)
+		_status = _lcd(fv, "", 20)
+		if bench.note != "": _lab(fv, bench.note, 18, TXT, f_sans, true)
 		return
-	_lab(v, "WORK ORDER  %s" % str(t.get("id", "")), 16, AMBER, f_semi)
-	_lab(v, str(t.get("title", "")), 30, TXT, f_semi)
-	_lab(v, "Desk fan, from %s.  %s" % [str(t.get("customer", "")), str(t.get("ask", ""))], 18, DIM, f_sans, true)
+	var v := _paper(Vector2(30, 26), 430)
+	var head := HBoxContainer.new(); v.add_child(head)
+	var h1 := _ink(head, "REPAIR TICKET  %s" % str(t.get("id", "")), 17, RED_INK, f_type, false); h1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_ink(head, str(t.get("price_text", "")), 17, INK, f_type, false)
+	_ink(v, str(t.get("title", "")), 28, INK, f_semi, false)
+	_ink(v, "%s: \"%s\"" % [str(t.get("customer", "")), str(t.get("ask", ""))], 21, Color(0.14, 0.20, 0.42), f_hand)
 	if bench.case_closed() and not bench.handed:
-		_lab(v, "The fan came in with its driver board. Open the case to work on it.", 18, TXT, f_sans, true)
-		_btn(v, "Open the case", func(): bench.open_case(), "O", true)
+		_ink(v, bench.arrival_line(), 18, INK, f_sans)
+		_key(v, "Open the case", func(): bench.open_case(), "O", true)
 		return
 	if bench.handed:
-		_lab(v, "Handed back. Job closed.", 20, OKC, f_semi)
+		_ink(v, "Collected by %s. Paid %s." % [str(t.get("customer", "")), bench.paid_text()], 19, INK, f_sans)
+		var st := Stamp.new(); st.font = f_engr; st.custom_minimum_size = Vector2(0, 90); st.mouse_filter = Control.MOUSE_FILTER_IGNORE; v.add_child(st)
+		_key(v, "Next job", func(): bench.next_job(), "", true)
 		return
-	if bench.backend.passed:
-		_btn(v, "Close up and hand back", func(): bench.hand_back(), "", true)
-	var sep := HSeparator.new(); v.add_child(sep)
+	var sep := ColorRect.new(); sep.color = Color(0.3, 0.27, 0.22, 0.5); sep.custom_minimum_size = Vector2(0, 1); v.add_child(sep)
 	for s in t.get("specs", []):
 		var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 10); v.add_child(row)
-		var mark := _lab(row, "○", 20, DIM, f_mono)
-		var nm := _lab(row, _short(str(s.get("id", "")), str(s.get("name", ""))), 18, TXT); nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var val := _lab(row, "—", 20, TXT, f_mono)
+		var mark := _ink(row, "[ ]", 18, INK, f_type, false)
+		var nm := _ink(row, _short(str(s.get("id", "")), str(s.get("name", ""))), 18, INK, f_sans, true); nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var val := _ink(row, "—", 19, INK, f_type, false)
 		_spec_vals[str(s.id)] = [mark, val]
-	_lab(v, "Pays %s.  Parts used: %s." % [str(t.get("pay_text", t.get("price_text", ""))).trim_prefix("fee "), str(bench.backend.last_result.get("costText", "$0.00"))], 17, DIM, f_sans, true)
-	v.add_child(HSeparator.new())
-	_status = _lab(v, "", 18, TXT, f_mono)
-	_readout = _lab(v, "", 18, DIM, f_mono)
-	var seg := HBoxContainer.new(); seg.add_theme_constant_override("separation", 4); v.add_child(seg)
-	_lab(seg, "PIN", 16, DIM, f_semi).custom_minimum_size = Vector2(52, 0)
-	var opts: Array = []
-	for sl in bench.backend.selectors: if str(sl.id) == "pin": opts = sl.options
-	for i in opts.size():
-		var idx := i
-		_btn(seg, str(opts[i]), func(): bench.set_pin(idx), "", false, bench.pin_mode() == str(opts[i]))
+	_ink(v, "Pays %s." % str(t.get("pay_text", "")).trim_prefix("fee "), 17, Color(0.30, 0.28, 0.25), f_sans)
+	_ink(v, "Parts %s   Burnt parts %s" % [str(bench.backend.last_result.get("costText", "$0.00")), bench.burn_cost_text()], 17, Color(0.30, 0.28, 0.25), f_sans)
+	if bench.backend.passed:
+		var st2 := Stamp.new(); st2.font = f_engr; st2.custom_minimum_size = Vector2(0, 80); st2.mouse_filter = Control.MOUSE_FILTER_IGNORE; v.add_child(st2)
+		_key(v, "Close up and hand back", func(): bench.hand_back(), "", true)
+	var f: Dictionary = bench.last_failure
+	if not f.is_empty():
+		var sep2 := ColorRect.new(); sep2.color = RED_INK; sep2.custom_minimum_size = Vector2(0, 2); v.add_child(sep2)
+		_ink(v, str(f.get("title", "")), 20, RED_INK, f_semi)
+		_ink(v, str(f.get("text", "")), 17, INK, f_sans)
+		_ink(v, "Ctrl+Z puts in a fresh part with the power off.", 16, Color(0.30, 0.28, 0.25), f_sans)
+	elif bench.note != "":
+		_ink(v, bench.note, 17, Color(0.14, 0.20, 0.42), f_sans)
+	# the bench control plate: power key with its lamp, the ticket's switches, and the readings in LCD windows
+	_control_plate(Vector2(30, 0), v.get_parent())
+
+func _control_plate(pos: Vector2, above: Control) -> void:
+	var cv := _plate(pos, "Bench control")
+	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 10); cv.add_child(row)
+	var lamp := Lamp.new(); lamp.on = bench.backend.powered; lamp.custom_minimum_size = Vector2(22, 22); lamp.size_flags_vertical = Control.SIZE_SHRINK_CENTER; row.add_child(lamp)
+	_key(row, "Power", func(): bench.toggle_power(), "Space", false, bench.backend.powered)
+	if bench.mode == "job": _key(row, "Bench test", func(): bench.run_test(), "Enter", true)
+	for sl in bench.backend.selectors:
+		var seg := HBoxContainer.new(); seg.add_theme_constant_override("separation", 4); cv.add_child(seg)
+		_eng(seg, str(sl.get("label", sl.id)), 14).custom_minimum_size = Vector2(70, 0)
+		var opts: Array = sl.options
+		for i in opts.size():
+			var idx := i; var sid := str(sl.id)
+			_key(seg, str(opts[i]), func(): bench.set_selector(sid, idx), "", false, int(sl.get("index", 0)) == i)
+	_readout = _lcd(cv, "", 20)
+	_meter = _lcd(cv, "", 20, Color(0.62, 0.95, 0.66))
+	var pc: Control = cv.get_parent()
+	pc.position.y = _canvas_h() - 16.0 - pc.get_combined_minimum_size().y   # bottom left, beside the tool rail; never under the ticket's wrapped text
+
+class Lamp extends Control:
+	var on := false
+	func _draw() -> void:
+		var c := size * 0.5
+		draw_circle(c, 10.0, Color(0.05, 0.05, 0.05))
+		draw_circle(c, 7.5, Color(1.0, 0.25, 0.12) if on else Color(0.25, 0.08, 0.06))
+		if on: draw_circle(c, 11.0, Color(1.0, 0.3, 0.1, 0.25))
 
 func _short(id: String, name: String) -> String:
 	match id:
@@ -162,52 +317,68 @@ func _short(id: String, name: String) -> String:
 var _fam_idx := {}          ## family key -> selected value index
 var _tray_name: Label
 
-## The part tray: a slim row of small 3D renders above the tool strip. Name and value show on hover or focus; arrows step values.
+## The part tray: a row of small 3D renders on a faceplate, each tile labelled with its name and value; arrows step values.
 func _drawer() -> void:
 	if bench.mode == "job" and (bench.case_closed() or bench.handed): return
 	var fams: Array = bench.tray_families()
-	var p := _panel(Vector2(560, 0), Vector2(0, 0))
-	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 4); p.add_child(v)
-	_tray_name = _lab(v, "Parts: pick one, then click a pad.  R turns it.", 17, DIM, f_sans)
-	var sc := ScrollContainer.new(); sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; sc.custom_minimum_size = Vector2(minf(1300.0, fams.size() * 128.0 + 8.0), 76.0 + fs(15) * 1.6); v.add_child(sc)
-	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 6); sc.add_child(row)
+	var v := _plate(Vector2(560, 0), "")
+	var pc: Control = v.get_parent()
+	_tray_name = _eng(v, "Parts tray: pick one, click a pad.  R turns it.", 14)
+	var sc := ScrollContainer.new(); sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; sc.custom_minimum_size = Vector2(minf(1240.0, fams.size() * 138.0 + 8.0), 70.0 + fs(15) * 2.9); v.add_child(sc)
+	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 8); sc.add_child(row)
 	for f in fams:
 		var items: Array = f.items
 		var key := str(items[0].partId) + "|" + str(items[0].variant)
 		var idx: int = clampi(int(_fam_idx.get(key, _default_idx(items))), 0, items.size() - 1)
 		var it: Dictionary = items[idx]
 		var col := VBoxContainer.new(); col.add_theme_constant_override("separation", 0); row.add_child(col)
-		var b := Button.new(); b.custom_minimum_size = Vector2(122, 76); b.focus_mode = Control.FOCUS_ALL
+		var b := Button.new(); b.custom_minimum_size = Vector2(130, 70); b.focus_mode = Control.FOCUS_ALL
 		b.icon = bench.part_icon(it); b.expand_icon = true; b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		var active: bool = bench.tool == "place" and str(bench.place_item.get("partId", "")) == str(it.partId) and str(bench.place_item.get("value", "")) == str(it.value)
 		for st in ["normal", "hover", "pressed", "focus"]:
-			var sb := StyleBoxFlat.new(); sb.bg_color = Color(0.20, 0.17, 0.11) if active else (BG2 if st != "hover" else BG2.lightened(0.07))
+			var sb := StyleBoxFlat.new(); sb.bg_color = Color(0.30, 0.24, 0.13) if active else (Color(0.07, 0.075, 0.08) if st != "hover" else Color(0.12, 0.125, 0.13))
 			if st == "focus": sb.draw_center = false; sb.border_color = AMBER; sb.border_width_bottom = 2; sb.border_width_top = 2; sb.border_width_left = 2; sb.border_width_right = 2
-			sb.corner_radius_top_left = 6; sb.corner_radius_top_right = 6; sb.corner_radius_bottom_left = 6; sb.corner_radius_bottom_right = 6
+			else: sb.border_width_top = 2; sb.border_color = Color(0, 0, 0)   # a recessed bin
+			for k in ["corner_radius_top_left", "corner_radius_top_right", "corner_radius_bottom_left", "corner_radius_bottom_right"]: sb.set(k, 4)
 			sb.content_margin_left = 4; sb.content_margin_right = 4; sb.content_margin_top = 2; sb.content_margin_bottom = 2
 			b.add_theme_stylebox_override(st, sb)
 		var desc := "%s   %s   %s" % [str(f.name), str(it.label).get_slice("  ", 0) if it.value != null else "", str(it.get("price_text", ""))]
-		b.mouse_entered.connect(func(): if is_instance_valid(_tray_name): _tray_name.text = desc)
-		b.focus_entered.connect(func(): if is_instance_valid(_tray_name): _tray_name.text = desc)
+		b.tooltip_text = desc
+		b.mouse_entered.connect(func(): if is_instance_valid(_tray_name): _tray_name.text = desc.to_upper())
+		b.focus_entered.connect(func(): if is_instance_valid(_tray_name): _tray_name.text = desc.to_upper())
 		var pick: Dictionary = it
 		b.pressed.connect(func(): bench.pick_part(pick))
 		col.add_child(b)
+		var nm := _lab(col, _tile_name(str(f.name), str(it.partId)), 15, TXT, f_semi); nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; nm.custom_minimum_size = Vector2(130, 0); nm.clip_text = true
 		var under := HBoxContainer.new(); under.alignment = BoxContainer.ALIGNMENT_CENTER; col.add_child(under)
+		var val_txt := str(it.label).get_slice("  ", 0).replace(" ", "") if it.value != null else str(it.get("price_text", ""))
 		if items.size() > 1:
 			var k2 := key; var n := items.size()
 			var prev := Button.new(); prev.text = "‹"; prev.flat = true; prev.focus_mode = Control.FOCUS_NONE; prev.add_theme_font_size_override("font_size", fs(18))
 			prev.pressed.connect(func(): _fam_idx[k2] = posmod(idx - 1, n); _rebuild())
 			var nx := Button.new(); nx.text = "›"; nx.flat = true; nx.focus_mode = Control.FOCUS_NONE; nx.add_theme_font_size_override("font_size", fs(18))
 			nx.pressed.connect(func(): _fam_idx[k2] = posmod(idx + 1, n); _rebuild())
-			under.add_child(prev); _lab(under, str(it.label).get_slice("  ", 0).replace(" ", ""), 15, TXT, f_mono); under.add_child(nx)
-	p.position.x = (1920 - p.get_combined_minimum_size().x) * 0.5
-	p.position.y = _canvas_h() - 112.0 - p.get_combined_minimum_size().y
+			under.add_child(prev); _lab(under, val_txt, 15, AMBER, f_mono); under.add_child(nx)
+		else:
+			_lab(under, val_txt, 15, Color(0.70, 0.72, 0.75), f_mono)
+	pc.position.x = (1920 - pc.get_combined_minimum_size().x) * 0.5
+	pc.position.y = _canvas_h() - 118.0 - pc.get_combined_minimum_size().y
+
+## A short tile name that fits under a 130 px tile: the part number for semiconductors, the family word otherwise.
+func _tile_name(fam: String, pid: String) -> String:
+	var up := pid.to_upper()
+	for pre in ["2N", "1N", "BC", "TIP", "IRL", "IRF", "LM", "NE", "BZX"]:
+		if up.begins_with(pre): return up.get_slice("-", 0)
+	if pid.begins_with("led-"): return "LED " + pid.get_slice("-", 1)
+	if pid.begins_with("res-ww"): return "Wirewound R"
+	if pid.begins_with("res-"): return "Resistor"
+	if pid.begins_with("cap-el"): return "Electrolytic"
+	if pid.begins_with("cap-"): return "Capacitor"
+	return fam.get_slice(" ", 0).substr(0, 12)
 
 func _default_idx(items: Array) -> int:
 	for i in items.size(): if str(items[i].label).begins_with("220 "): return i
 	return items.size() / 2
-
-func _short_name(n: String) -> String: return n.get_slice(" ", 0).substr(0, 9)
 
 ## SI value text with 3 significant digits: 0.000072 V -> "72.0 µV", 0.0171478 A -> "17.1 mA".
 static func si(v: float, unit: String) -> String:
@@ -219,74 +390,45 @@ static func si(v: float, unit: String) -> String:
 			return "%s %s%s" % [String.num(x, d), e[1], unit]
 	return "%s %s" % [String.num(v, 3), unit]
 
-func _kind_name(k: String) -> String:
-	return {"R": "RESISTORS", "D": "DIODES", "NPN": "TRANSISTORS", "PNP": "TRANSISTORS", "DARLINGTON": "TRANSISTORS", "NMOS": "MOSFETS", "C": "CAPACITORS", "CE": "ELECTROLYTICS", "LED": "LEDS", "Z": "ZENERS", "REG": "REGULATORS", "OPAMP": "OP-AMPS", "L": "INDUCTORS"}.get(k, k)
-
 func _canvas_h() -> float: return get_viewport().get_visible_rect().size.y
 
+## The tool rail: keycaps along the bottom edge, the view keys engraved at its end.
 func _tools() -> void:
 	if bench.handed: return
-	var p := _panel(Vector2(560, _canvas_h() - 100.0), Vector2(0, 0))
-	var h := HBoxContainer.new(); h.add_theme_constant_override("separation", 8); p.add_child(h)
-	_btn(h, "Select", func(): bench.set_tool("select"), "Esc", false, bench.tool == "select")
-	_btn(h, "Wire", func(): bench.set_tool("wire"), "W", false, bench.tool == "wire")
-	_btn(h, "Scope probe", func(): bench.set_tool("probe"), "P", false, bench.tool == "probe")
-	_btn(h, "Meter leads", func(): bench.set_tool("red"), "M", false, bench.tool in ["red", "black"])
-	_btn(h, ("Power off" if bench.backend.powered else "Power on"), func(): bench.toggle_power(), "Space", false, bench.backend.powered)
-	if bench.mode == "job": _btn(h, "Run bench test", func(): bench.run_test(), "Enter", true)
-	_btn(h, "Undo", func(): bench.undo(), "Ctrl+Z")
-	_btn(h, "Schematic", func(): toggle_schematic(), "Tab", false, schem)
-	_btn(h, "Menu", func(): bench.back_to_title())
-	p.position.x = (1920 - p.get_combined_minimum_size().x) * 0.5
-
-func _status_chip() -> void:
-	var p := _panel(Vector2(1500, 28), Vector2(0, 0))
-	var v := VBoxContainer.new(); p.add_child(v)
-	if bench.mode == "free":
-		_status = _lab(v, "", 18, TXT, f_mono)
-	_lab(v, "1 work   2 bench   3 scope   4 device   5 wiring", 16, DIM, f_mono)
-	p.position.x = 1892 - p.get_combined_minimum_size().x
-
-func _failure() -> void:
-	var f: Dictionary = bench.last_failure
-	var txt: String = bench.note
-	if f.is_empty() and txt == "": return
-	var p := _panel(Vector2(1392, 120), Vector2(500, 0), BAD if not f.is_empty() else AMBER)
-	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 8); p.add_child(v)
-	if not f.is_empty():
-		_lab(v, str(f.get("title", "")), 24, BAD.lightened(0.15), f_semi)
-		_lab(v, str(f.get("text", "")), 19, TXT, f_sans, true)
-		_lab(v, "Ctrl+Z swaps in a fresh part with the power off. Then change the circuit and try again.", 17, DIM, f_sans, true)
-	else:
-		_lab(v, txt, 19, TXT, f_sans, true)
-
+	var v := _plate(Vector2(560, 0), "")
+	var pc: Control = v.get_parent()
+	var h := HBoxContainer.new(); h.add_theme_constant_override("separation", 8); v.add_child(h)
+	_key(h, "Select", func(): bench.set_tool("select"), "Esc", false, bench.tool == "select")
+	_key(h, "Wire", func(): bench.set_tool("wire"), "W", false, bench.tool == "wire")
+	_key(h, "Scope probe", func(): bench.set_tool("probe"), "P", false, bench.tool == "probe")
+	_key(h, "Meter leads", func(): bench.set_tool("red"), "M", false, bench.tool in ["red", "black"])
+	_key(h, "Undo", func(): bench.undo(), "Ctrl+Z")
+	_key(h, "Schematic", func(): toggle_schematic(), "Tab", false, schem)
+	_key(h, "Menu", func(): bench.back_to_title())
+	var vk := _eng(h, "Views 1-5", 14); vk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	pc.position.x = (1920 - pc.get_combined_minimum_size().x) * 0.5
+	pc.position.y = _canvas_h() - 16.0 - pc.get_combined_minimum_size().y
 
 func _refresh_live() -> void:
 	var b = bench.backend
-	if _status and is_instance_valid(_status): _status.text = "POWER %s" % ("ON" if b.powered else "OFF")
-	var fan_v: float = b.volt_at([16, 2]) - b.volt_at([22, 2])
-	var ipin: float = float(b.scope_view.get("value", 0.0)) / 1000.0
-	var has_i: bool = b.powered and str(b.scope_view.get("text", "")) != ""
-	var pm: String = bench.pin_mode()
-	if _readout and is_instance_valid(_readout): _readout.text = "Fan %s    Pin %s" % [(si(fan_v, "V") if pm != "100 Hz" else "switching") if b.powered else "--", si(ipin, "A") if has_i else "--"]
+	if _status and is_instance_valid(_status): _status.text = "POWER %s   %s" % ["ON" if b.powered else "OFF", bench.meter_text()]
+	if _readout and is_instance_valid(_readout): _readout.text = bench.readout_text()
+	if _meter and is_instance_valid(_meter): _meter.text = "METER  " + bench.meter_text()
 	var res: Dictionary = b.last_result
 	var specs := {}
 	for s in res.get("specs", []): specs[str(s.id)] = s
 	var meas: Dictionary = res.get("measured", {})
+	var live: Dictionary = bench.live_specs()
 	for id in _spec_vals:
 		var mark: Label = _spec_vals[id][0]; var val: Label = _spec_vals[id][1]
-		var live := ""
-		if b.powered:
-			if id == "fanhi" and bench.pin_mode() == "high": live = si(fan_v, "V")
-			if id == "fanlo" and bench.pin_mode() == "low": live = si(fan_v, "V")
-			if id == "ipin" and has_i: live = si(ipin, "A")
-		if live == "" and meas.has(id): live = si(float(meas[id]), "A" if id == "ipin" else "V")
-		val.text = live if live != "" else "—"
+		var txt := str(live.get(id, ""))
+		if txt == "" and meas.has(id): txt = bench.spec_text(id, float(meas[id]))
+		val.text = txt if txt != "" else "—"
 		if specs.has(id):
 			var ok: bool = bool(specs[id].get("pass", false))
-			mark.text = "●" ; mark.add_theme_color_override("font_color", OKC if ok else BAD)
+			mark.text = "[✓]" if ok else "[✗]"; mark.add_theme_color_override("font_color", Color(0.12, 0.45, 0.20) if ok else RED_INK)
 		else:
-			mark.text = "○"; mark.add_theme_color_override("font_color", DIM)
+			mark.text = "[ ]"; mark.add_theme_color_override("font_color", INK)
 
 ## ------------------------------------------------------------------------------------------------ schematic
 
