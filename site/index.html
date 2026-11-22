@@ -22,24 +22,24 @@
   <div>
     <h1>CIRCUITS</h1>
     <p class="tag-line">A repair bench where real circuits are the rules.</p>
-    <p class="lede">Customers bring broken devices: a torch, a bike light, a fish-tank heater, a toy car, a desk fan. Open the case, probe the old work with the meter and the scope, fix it with real parts and hand it back. Burn a part and it comes out of your pay, and the game tells you why it burned, with the numbers from your own circuit.</p>
+    <p class="lede">Customers bring broken devices to your bench. Open them, probe them, fix them with real parts.</p>
     <p><a class="btn go" id="download" href="https://github.com/blackmetaltech/circuits/releases/latest">Download v0.3.0</a> <a class="btn" href="wiki/">Player wiki</a></p>
-    <p class="note">Pre-alpha, free, Linux x86_64. Chapter 1 and the fan repair play on the new 3D workbench; chapters 2 to 5 play in the classic 2D stall. No sound and no gamepad on the workbench yet.</p>
+    <p class="note">Pre-alpha. Free. Linux. Chapter 1 is on the 3D bench.</p>
   </div>
-  <figure><img src="assets/failure.gif" alt="The fan driver without a flyback diode: the transistor burns and the scope catches the 2000 V spike" width="800" height="450"><figcaption>No diode across the fan: the transistor burns, and the scope shows the 2000 V kick that did it.</figcaption></figure>
+  <figure><img src="assets/failure.gif" alt="The fan driver without a flyback diode: the transistor burns and the scope catches the 2000 V spike" width="800" height="450"><figcaption>No diode across the fan. The transistor burns.</figcaption></figure>
 </section>
 
 <h2>How it plays</h2>
 <div class="grid">
-  <figure><img src="assets/faulty-board-1-1.jpg" alt="The torch's board: an LED straight across the 9 V battery" loading="lazy" width="1600" height="900"><figcaption><b>Open the case.</b> The torch's LED was wired straight across the battery. It is dead.</figcaption></figure>
-  <figure><img src="assets/fixed-1-1.jpg" alt="The torch fixed with a 470 ohm resistor, ticket stamped PASSED" loading="lazy" width="1600" height="900"><figcaption><b>Fix it.</b> A 470 ohm resistor gives 15.0 mA. The bench stamps the ticket.</figcaption></figure>
-  <figure><img src="assets/scope-5-1.jpg" alt="The oscilloscope showing the fan driver switching" loading="lazy" width="1600" height="900"><figcaption><b>Measure it.</b> The scope and the meter read the simulated circuit live.</figcaption></figure>
+  <figure><img src="assets/faulty-board-1-1.jpg" alt="The torch's board: an LED straight across the 9 V battery" loading="lazy" width="1600" height="900"><figcaption><b>Open the case.</b> The LED was wired straight on the battery.</figcaption></figure>
+  <figure><img src="assets/fixed-1-1.jpg" alt="The torch fixed with a 470 ohm resistor, ticket stamped PASSED" loading="lazy" width="1600" height="900"><figcaption><b>Fix it.</b> 470 ohm gives 15.0 mA. Passed.</figcaption></figure>
+  <figure><img src="assets/scope-5-1.jpg" alt="The oscilloscope showing the fan driver switching" loading="lazy" width="1600" height="900"><figcaption><b>Measure it.</b> The scope reads the circuit live.</figcaption></figure>
   <figure><img src="assets/free-bench.jpg" alt="The free bench with parts placed and powered" loading="lazy" width="1600" height="900"><figcaption><b>Free bench.</b> Any part, any supply, three save slots.</figcaption></figure>
 </div>
 
 <h2>Honest by design</h2>
-<p>Every volt and amp comes from a circuit simulator. The interface computes no numbers of its own. The bench test fails with the power off, and a burnt part stays burnt.</p>
-<p>Five chapters are built (23 tickets): Ohm's law and LEDs, dividers and bridges, capacitors and time constants, rectifiers and regulators, transistors as switches and amplifiers. The <a href="wiki/">wiki</a> lists every ticket.</p>
+<p>A circuit simulator owns every number. A burnt part stays burnt.</p>
+<p>Five chapters, 23 tickets. The <a href="wiki/">wiki</a> lists them all.</p>
 </main>
 <footer class="foot wrap"><p>From <a href="https://blackmetal.tech">blackmetal.tech</a>, a small house that replaces textbooks with games. <a href="https://github.com/blackmetaltech/circuits">Source on GitHub</a>.</p></footer>
 </body>
