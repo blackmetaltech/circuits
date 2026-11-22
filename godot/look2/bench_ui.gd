@@ -88,7 +88,7 @@ func _rebuild() -> void:
 	if schem:
 		var sv := SchematicView.new(); sv.bench = bench; sv.ui = self; sv.set_anchors_preset(Control.PRESET_FULL_RECT); _root.add_child(sv)
 	_job_card()
-	_drawer()
+	if bench.view == 1 or bench.tool == "place" or bench.mode == "free": _drawer()
 	_tools()
 	_status_chip()
 	_failure()
@@ -221,7 +221,8 @@ func _refresh_live() -> void:
 	var fan_v: float = b.volt_at([16, 2]) - b.volt_at([22, 2])
 	var ipin: float = float(b.scope_view.get("value", 0.0)) / 1000.0
 	var has_i: bool = b.powered and str(b.scope_view.get("text", "")) != ""
-	if _readout: _readout.text = "Fan %s    Pin %s" % [si(fan_v, "V") if b.powered else "--", si(ipin, "A") if has_i else "--"]
+	var pm: String = bench.pin_mode()
+	if _readout: _readout.text = "Fan %s    Pin %s" % [(si(fan_v, "V") if pm != "100 Hz" else "switching") if b.powered else "--", si(ipin, "A") if has_i else "--"]
 	var res: Dictionary = b.last_result
 	var specs := {}
 	for s in res.get("specs", []): specs[str(s.id)] = s

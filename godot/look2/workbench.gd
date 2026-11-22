@@ -167,7 +167,7 @@ func _esd_mat() -> void:
 	var n := FastNoiseLite.new(); n.frequency = 0.08
 	for y in 512:
 		for x in 512:
-			var c := base * (0.94 + 0.06 * n.get_noise_2d(x, y))
+			var c := base * (0.975 + 0.025 * n.get_noise_2d(x, y))
 			if x % 64 == 0 or y % 64 == 0: c = c.lightened(0.09)
 			img.set_pixel(x, y, c)
 	var tex := ImageTexture.create_from_image(img)
@@ -232,7 +232,7 @@ func _drawers() -> void:
 
 func _props() -> void:
 	# soldering station: base with a red temperature display, iron in its holder, brass sponge
-	var st := Node3D.new(); st.position = Vector3(0.52, 0, 0.08); st.rotation_degrees.y = -25; add_child(st)
+	var st := Node3D.new(); st.position = Vector3(0.56, 0, -0.03); st.rotation_degrees.y = -30; add_child(st)
 	MeshKit.add(st, MeshKit.rounded_box(Vector3(0.13, 0.085, 0.15), 0.008), MeshKit.m("anodised"), Vector3(0, 0.0425, 0))
 	MeshKit.add(st, MeshKit.rounded_box(Vector3(0.06, 0.022, 0.002), 0.002), MeshKit.m("screen_glass"), Vector3(0, 0.058, 0.0755))
 	MeshKit.label(st, "330°", 0.00028, Vector3(0, 0.058, 0.0772), Color(1.0, 0.25, 0.12), true, Vector3.ZERO).modulate = Color(3.0, 0.6, 0.3)
@@ -302,7 +302,7 @@ func _new_class(cname: String) -> Node3D:
 
 func _instruments() -> void:
 	scope = _new_class("Scope3D"); psu = _new_class("Psu3D"); dmm = _new_class("Dmm3D"); mcu = _new_class("Mcu3D"); fan = _new_class("Fan3D")
-	var spots := [[scope, Vector3(-0.31, 0, -0.25), 14.0], [psu, Vector3(0.33, 0, -0.27), -16.0], [dmm, Vector3(0.30, 0, 0.17), -24.0], [mcu, Vector3(-0.19, 0.003, 0.13), 90.0], [fan, Vector3(0.03, 0.0, -0.24), 0.0]]
+	var spots := [[scope, Vector3(-0.31, 0, -0.25), 14.0], [psu, Vector3(0.33, 0, -0.27), -16.0], [dmm, Vector3(0.27, 0, 0.0), -28.0], [mcu, Vector3(-0.19, 0.003, 0.13), 90.0], [fan, Vector3(0.11, 0.0, -0.11), -18.0]]
 	for s in spots:
 		if s[0] == null: continue
 		var n: Node3D = s[0]; add_child(n); n.position = s[1]; n.rotation_degrees.y = s[2]
@@ -327,11 +327,11 @@ func set_view(v: int, snap := false) -> void:
 	view = v
 	match v:
 		1: g_tgt = board_centre(); g_yaw = 0.0; g_pitch = deg_to_rad(-64.0); g_dist = 0.36
-		2: g_tgt = Vector3(0.0, 0.05, -0.04); g_yaw = deg_to_rad(18.0); g_pitch = deg_to_rad(-27.0); g_dist = 1.05
+		2: g_tgt = Vector3(0.02, 0.04, -0.03); g_yaw = deg_to_rad(16.0); g_pitch = deg_to_rad(-26.0); g_dist = 0.92
 		3: g_tgt = (scope.global_position + Vector3(0, 0.08, 0)) if scope else Vector3(-0.3, 0.08, -0.25); g_yaw = deg_to_rad(14.0); g_pitch = deg_to_rad(-10.0); g_dist = 0.48
 		4: g_tgt = (fan.global_position + Vector3(0, 0.07, 0)) if fan else Vector3(0.03, 0.07, -0.24); g_yaw = deg_to_rad(-20.0); g_pitch = deg_to_rad(-14.0); g_dist = 0.42
 	if snap: tgt = g_tgt; yaw = g_yaw; pitch = g_pitch; dist = g_dist
-	if ui: ui.queue_redraw()
+	if ui: ui.call_deferred("_rebuild")
 
 func _update_camera(dt: float) -> void:
 	var k := 1.0 - exp(-dt * 6.0)
