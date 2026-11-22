@@ -166,10 +166,10 @@ var _tray_name: Label
 func _drawer() -> void:
 	if bench.mode == "job" and (bench.case_closed() or bench.handed): return
 	var fams: Array = bench.tray_families()
-	var p := _panel(Vector2(560, 842), Vector2(0, 0))
+	var p := _panel(Vector2(560, 0), Vector2(0, 0))
 	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 4); p.add_child(v)
 	_tray_name = _lab(v, "Parts: pick one, then click a pad.  R turns it.", 17, DIM, f_sans)
-	var sc := ScrollContainer.new(); sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; sc.custom_minimum_size = Vector2(minf(1300.0, fams.size() * 98.0 + 8.0), 104); v.add_child(sc)
+	var sc := ScrollContainer.new(); sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; sc.custom_minimum_size = Vector2(minf(1300.0, fams.size() * 128.0 + 8.0), 76.0 + fs(15) * 1.6); v.add_child(sc)
 	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 6); sc.add_child(row)
 	for f in fams:
 		var items: Array = f.items
@@ -177,7 +177,7 @@ func _drawer() -> void:
 		var idx: int = clampi(int(_fam_idx.get(key, _default_idx(items))), 0, items.size() - 1)
 		var it: Dictionary = items[idx]
 		var col := VBoxContainer.new(); col.add_theme_constant_override("separation", 0); row.add_child(col)
-		var b := Button.new(); b.custom_minimum_size = Vector2(92, 76); b.focus_mode = Control.FOCUS_ALL
+		var b := Button.new(); b.custom_minimum_size = Vector2(122, 76); b.focus_mode = Control.FOCUS_ALL
 		b.icon = bench.part_icon(it); b.expand_icon = true; b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		var active: bool = bench.tool == "place" and str(bench.place_item.get("partId", "")) == str(it.partId) and str(bench.place_item.get("value", "")) == str(it.value)
 		for st in ["normal", "hover", "pressed", "focus"]:
@@ -186,7 +186,7 @@ func _drawer() -> void:
 			sb.corner_radius_top_left = 6; sb.corner_radius_top_right = 6; sb.corner_radius_bottom_left = 6; sb.corner_radius_bottom_right = 6
 			sb.content_margin_left = 4; sb.content_margin_right = 4; sb.content_margin_top = 2; sb.content_margin_bottom = 2
 			b.add_theme_stylebox_override(st, sb)
-		var desc := "%s   %s   %s" % [str(f.name), str(it.label) if it.value != null else "", str(it.get("price_text", ""))]
+		var desc := "%s   %s   %s" % [str(f.name), str(it.label).get_slice("  ", 0) if it.value != null else "", str(it.get("price_text", ""))]
 		b.mouse_entered.connect(func(): if is_instance_valid(_tray_name): _tray_name.text = desc)
 		b.focus_entered.connect(func(): if is_instance_valid(_tray_name): _tray_name.text = desc)
 		var pick: Dictionary = it
@@ -199,10 +199,9 @@ func _drawer() -> void:
 			prev.pressed.connect(func(): _fam_idx[k2] = posmod(idx - 1, n); _rebuild())
 			var nx := Button.new(); nx.text = "›"; nx.flat = true; nx.focus_mode = Control.FOCUS_NONE; nx.add_theme_font_size_override("font_size", fs(18))
 			nx.pressed.connect(func(): _fam_idx[k2] = posmod(idx + 1, n); _rebuild())
-			under.add_child(prev); _lab(under, str(it.label).get_slice("  ", 0), 15, TXT, f_mono); under.add_child(nx)
-		else:
-			_lab(under, _short_name(str(f.name)), 15, DIM, f_mono)
+			under.add_child(prev); _lab(under, str(it.label).get_slice("  ", 0).replace(" ", ""), 15, TXT, f_mono); under.add_child(nx)
 	p.position.x = (1920 - p.get_combined_minimum_size().x) * 0.5
+	p.position.y = _canvas_h() - 112.0 - p.get_combined_minimum_size().y
 
 func _default_idx(items: Array) -> int:
 	for i in items.size(): if str(items[i].label).begins_with("220 "): return i
@@ -223,8 +222,11 @@ static func si(v: float, unit: String) -> String:
 func _kind_name(k: String) -> String:
 	return {"R": "RESISTORS", "D": "DIODES", "NPN": "TRANSISTORS", "PNP": "TRANSISTORS", "DARLINGTON": "TRANSISTORS", "NMOS": "MOSFETS", "C": "CAPACITORS", "CE": "ELECTROLYTICS", "LED": "LEDS", "Z": "ZENERS", "REG": "REGULATORS", "OPAMP": "OP-AMPS", "L": "INDUCTORS"}.get(k, k)
 
+func _canvas_h() -> float: return get_viewport().get_visible_rect().size.y
+
 func _tools() -> void:
-	var p := _panel(Vector2(560, 980), Vector2(0, 0))
+	if bench.handed: return
+	var p := _panel(Vector2(560, _canvas_h() - 100.0), Vector2(0, 0))
 	var h := HBoxContainer.new(); h.add_theme_constant_override("separation", 8); p.add_child(h)
 	_btn(h, "Select", func(): bench.set_tool("select"), "Esc", false, bench.tool == "select")
 	_btn(h, "Wire", func(): bench.set_tool("wire"), "W", false, bench.tool == "wire")
