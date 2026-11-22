@@ -82,6 +82,7 @@ func _ready() -> void:
 	else: mode = "title"; changed.emit()
 	if OS.get_environment("CB_FRAMETIME") != "":
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	if quality == "low": _low_tier()
 	if OS.get_environment("CB_SCALE3D") != "":   # render the 3D scene at N x the window (frame-time proxy for 2560x1440 on a 1080p screen)
 		get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR; get_viewport().scaling_3d_scale = float(OS.get_environment("CB_SCALE3D"))
 
@@ -95,6 +96,16 @@ func _pick_quality() -> String:
 	var dev := RenderingServer.get_video_adapter_name().to_lower()
 	if dev.contains("nvidia") or dev.contains("rtx") or dev.contains("radeon rx"): return "high"
 	return "medium"
+
+## Low tier (integrated GPUs, Deck class, the Compatibility renderer): one soft lamp shadow at a small atlas, no moon shadow,
+## no depth of field, 3D drawn at 75 % and scaled up. The emissive screens, LEDs, glow and the warm/cool colour plan stay.
+func _low_tier() -> void:
+	var vp := get_viewport()
+	vp.positional_shadow_atlas_size = 1024; vp.msaa_3d = Viewport.MSAA_DISABLED
+	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR; vp.scaling_3d_scale = 0.75
+	for n in find_children("*", "DirectionalLight3D", true, false): (n as DirectionalLight3D).shadow_enabled = false
+	if lamp: lamp.light_size = 0.0; lamp.shadow_blur = 1.0
+	env.glow_intensity = 0.4; env.adjustment_enabled = false
 
 ## ------------------------------------------------------------------------------------------------ environment and light
 
@@ -125,8 +136,8 @@ func _room() -> void:
 	wood.orm_texture = null
 	wood.roughness_texture = load("res://look2/assets/tex/wood_table_001_arm_2k.jpg"); wood.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
 	wood.ao_enabled = true; wood.ao_texture = load("res://look2/assets/tex/wood_table_001_arm_2k.jpg"); wood.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
-	wood.uv1_scale = Vector3(1.2, 1.2, 1.2); wood.uv1_triplanar = true; wood.uv1_world_triplanar = true
-	wood.albedo_color = Color(0.72, 0.62, 0.52)
+	wood.uv1_scale = Vector3(0.7, 0.7, 0.7); wood.uv1_triplanar = true; wood.uv1_world_triplanar = true
+	wood.albedo_color = Color(0.95, 0.9, 0.85); wood.normal_scale = 1.4
 	# desk
 	MeshKit.add(self, MeshKit.rounded_box(Vector3(1.9, 0.045, 0.85), 0.006, 2), wood, Vector3(0, -0.0225, -0.05))
 	for sx in [-0.9, 0.9]:
@@ -175,7 +186,12 @@ func _esd_mat() -> void:
 			var c := base * (0.975 + 0.025 * n.get_noise_2d(x, y))
 			if x % 64 == 0 or y % 64 == 0: c = c.lightened(0.035)
 			var sc := n.get_noise_2d(x * 0.25 + 900.0, y * 3.0)
-			if sc > 0.55: c = c.lightened((sc - 0.55) * 0.25)   # scuffs and wipe marks
+			if sc > 0.5: c = c.lightened((sc - 0.5) * 0.35)   # scuffs and wipe marks
+			var edge := minf(minf(x, 511 - x), minf(y, 511 - y)) / 40.0
+			if edge < 1.0: c = c.darkened((1.0 - edge) * 0.25)   # worn, darker edges
+			for b in [[140, 300, 5.0], [380, 120, 4.0], [260, 420, 3.0]]:   # old solder burn spots
+				var d := Vector2(x, y).distance_to(Vector2(b[0], b[1]))
+				if d < float(b[2]): c = c.lerp(Color(0.05, 0.04, 0.035), 0.7 * (1.0 - d / float(b[2])))
 			img.set_pixel(x, y, c)
 	var tex := ImageTexture.create_from_image(img)
 	var m := MeshKit.mat(Color.WHITE, 0.78, 0.0, {"normal": 0.25})
@@ -216,11 +232,14 @@ func _lamp() -> void:
 	MeshKit.add(shade_node, shade, sm, Vector3(0, 0, -0.04), Vector3(-PI / 2, 0, 0))
 	var bulb := SphereMesh.new(); bulb.radius = 0.022; bulb.height = 0.044
 	MeshKit.add(shade_node, bulb, MeshKit.mat(Color(1, 0.9, 0.75), 0.3, 0.0, {"emission": Color(1.0, 0.82, 0.6), "emission_energy": 8.0}), Vector3(0, 0, -0.06))
-	lamp = SpotLight3D.new(); lamp.light_color = Color(1.0, 0.80, 0.58); lamp.light_energy = 2.5; lamp.spot_range = 1.6; lamp.spot_angle = 52.0; lamp.spot_angle_attenuation = 1.2
+	lamp = SpotLight3D.new(); lamp.light_color = Color(1.0, 0.76, 0.50); lamp.light_energy = 4.2; lamp.spot_range = 1.6; lamp.spot_angle = 52.0; lamp.spot_angle_attenuation = 1.2
 	lamp.shadow_enabled = true; lamp.light_size = 0.04 if quality == "high" else 0.0; lamp.shadow_blur = 1.5; lamp.light_volumetric_fog_energy = 0.6
 	shade_node.add_child(lamp); lamp.position = Vector3(0, 0, -0.07)
 	# a soft overall fill from the lamp bouncing off the wall
-	var fill := OmniLight3D.new(); fill.light_color = Color(1.0, 0.85, 0.7); fill.light_energy = 0.25; fill.omni_range = 2.0; fill.position = Vector3(-0.3, 0.9, -0.3); add_child(fill)
+	var fill := OmniLight3D.new(); fill.light_color = Color(1.0, 0.85, 0.7); fill.light_energy = 0.3; fill.omni_range = 2.0; fill.position = Vector3(-0.3, 0.9, -0.3); add_child(fill)
+	# bounce: the lamp pool on the oak and mat throws warm light back up under the instruments
+	var bounce := OmniLight3D.new(); bounce.light_color = Color(1.0, 0.70, 0.45); bounce.light_energy = 0.55; bounce.omni_range = 0.55; bounce.omni_attenuation = 1.6
+	bounce.position = Vector3(-0.08, 0.035, 0.0); bounce.shadow_enabled = false; bounce.light_specular = 0.0; add_child(bounce)
 
 func _drawers() -> void:
 	var cab := Node3D.new(); cab.position = Vector3(0.66, 0, -0.33); cab.rotation_degrees.y = -12; add_child(cab)
@@ -362,7 +381,7 @@ func _used_bounds() -> AABB:
 func set_view(v: int, snap := false) -> void:
 	view = v
 	match v:
-		1: g_tgt = board_centre() + Vector3(0.0, 0.0, -0.09); g_yaw = deg_to_rad(8.0); g_pitch = deg_to_rad(-38.0); g_dist = 0.62
+		1: g_tgt = board_centre() + Vector3(0.01, 0.0, -0.07); g_yaw = deg_to_rad(6.0); g_pitch = deg_to_rad(-40.0); g_dist = 0.50
 		5:
 			var bb := _used_bounds()
 			g_tgt = bb.get_center() + Vector3(-0.022, 0.0, 0.004); g_yaw = 0.0; g_pitch = deg_to_rad(-62.0); g_dist = clampf(bb.size.length() * 2.3, 0.2, 0.31)
@@ -761,27 +780,38 @@ func _fail_title(kind: String, vce: float) -> String:
 	return "A part burnt"
 
 func _smoke_at(p: Vector3) -> void:
-	var ps := GPUParticles3D.new(); ps.amount = 60; ps.lifetime = 3.0; ps.one_shot = false; ps.explosiveness = 0.25
+	var ps := GPUParticles3D.new(); ps.amount = 120; ps.lifetime = 4.5; ps.explosiveness = 0.0; ps.randomness = 0.6; ps.fixed_fps = 0
+	ps.visibility_aabb = AABB(Vector3(-0.2, -0.05, -0.2), Vector3(0.4, 0.5, 0.4))
 	var pm := ParticleProcessMaterial.new()
-	pm.direction = Vector3(0, 1, 0); pm.spread = 18.0; pm.initial_velocity_min = 0.02; pm.initial_velocity_max = 0.05; pm.gravity = Vector3(0.002, 0.012, -0.002)
-	pm.scale_min = 0.6; pm.scale_max = 1.4
-	var sc := Curve.new(); sc.add_point(Vector2(0, 0.25)); sc.add_point(Vector2(1, 2.4)); var sct := CurveTexture.new(); sct.curve = sc; pm.scale_curve = sct
-	var g := Gradient.new(); g.set_color(0, Color(0.32, 0.30, 0.28, 0.0)); g.add_point(0.15, Color(0.36, 0.34, 0.32, 0.16)); g.add_point(0.6, Color(0.40, 0.40, 0.40, 0.08)); g.set_color(1, Color(0.42, 0.42, 0.42, 0.0))
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE; pm.emission_sphere_radius = 0.002
+	pm.direction = Vector3(0, 1, 0); pm.spread = 14.0; pm.initial_velocity_min = 0.010; pm.initial_velocity_max = 0.024
+	pm.gravity = Vector3(0.003, 0.010, -0.002); pm.damping_min = 0.002; pm.damping_max = 0.004
+	pm.angle_min = -180.0; pm.angle_max = 180.0; pm.angular_velocity_min = -20.0; pm.angular_velocity_max = 20.0
+	pm.scale_min = 0.7; pm.scale_max = 1.3
+	var sc := Curve.new(); sc.add_point(Vector2(0, 0.15)); sc.add_point(Vector2(0.4, 0.9)); sc.add_point(Vector2(1, 2.6)); var sct := CurveTexture.new(); sct.curve = sc; pm.scale_curve = sct
+	var g := Gradient.new(); g.set_color(0, Color(0.16, 0.15, 0.14, 0.0)); g.add_point(0.08, Color(0.20, 0.19, 0.18, 0.05)); g.add_point(0.5, Color(0.26, 0.26, 0.26, 0.03)); g.set_color(1, Color(0.30, 0.30, 0.30, 0.0))
 	var gt := GradientTexture1D.new(); gt.gradient = g; pm.color_ramp = gt
-	pm.turbulence_enabled = true; pm.turbulence_noise_strength = 0.4; pm.turbulence_noise_scale = 2.0
+	pm.turbulence_enabled = false   # turbulence clumps particles into beads at this scale
+	pm.tangential_accel_min = -0.004; pm.tangential_accel_max = 0.004
 	ps.process_material = pm
-	var q := QuadMesh.new(); q.size = Vector2(0.018, 0.018)
+	var q := QuadMesh.new(); q.size = Vector2(0.022, 0.022)
 	var m := StandardMaterial3D.new(); m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA; m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES; m.vertex_color_use_as_albedo = true
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL; m.roughness = 1.0
-	var rg := Gradient.new(); rg.set_color(0, Color(1, 1, 1, 1)); rg.set_color(1, Color(1, 1, 1, 0))
-	var rt := GradientTexture2D.new(); rt.gradient = rg; rt.fill = GradientTexture2D.FILL_RADIAL; rt.fill_from = Vector2(0.5, 0.5); rt.fill_to = Vector2(0.5, 0.0)
-	m.albedo_texture = rt; q.material = m
+	m.billboard_keep_scale = true; m.roughness = 1.0; m.proximity_fade_enabled = true; m.proximity_fade_distance = 0.01
+	var nz := FastNoiseLite.new(); nz.frequency = 0.04; nz.fractal_octaves = 4
+	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+	for y in 64:
+		for x in 64:
+			var d := Vector2(x - 31.5, y - 31.5).length() / 32.0
+			var a2 := clampf(1.0 - d, 0.0, 1.0); a2 = a2 * a2 * (0.6 + 0.4 * (nz.get_noise_2d(x, y) * 0.5 + 0.5))
+			img.set_pixel(x, y, Color(1, 1, 1, a2))
+	m.albedo_texture = ImageTexture.create_from_image(img); q.material = m
 	ps.draw_pass_1 = q
 	add_child(ps); ps.global_position = p + Vector3(0, 0.012, 0)
+	ps.preprocess = 1.5
 	var ember := OmniLight3D.new(); ember.light_color = Color(1.0, 0.35, 0.05); ember.light_energy = 1.4; ember.omni_range = 0.09; ps.add_child(ember)
 	smoke_fx.append(ps)
-	get_tree().create_timer(7.0).timeout.connect(func(): if is_instance_valid(ps): ps.emitting = false)
-	get_tree().create_timer(11.0).timeout.connect(func(): if is_instance_valid(ps): ps.queue_free())
+	get_tree().create_timer(9.0).timeout.connect(func(): if is_instance_valid(ps): ps.emitting = false)
+	get_tree().create_timer(14.0).timeout.connect(func(): if is_instance_valid(ps): ps.queue_free())
 
 ## ------------------------------------------------------------------------------------------------ input
 

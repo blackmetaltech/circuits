@@ -249,7 +249,7 @@ func _failure() -> void:
 	var f: Dictionary = bench.last_failure
 	var txt: String = bench.note
 	if f.is_empty() and txt == "": return
-	var p := _panel(Vector2(560, 760), Vector2(800, 0), BAD if not f.is_empty() else AMBER)
+	var p := _panel(Vector2(1392, 120), Vector2(500, 0), BAD if not f.is_empty() else AMBER)
 	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 8); p.add_child(v)
 	if not f.is_empty():
 		_lab(v, str(f.get("title", "")), 24, BAD.lightened(0.15), f_semi)
@@ -257,7 +257,7 @@ func _failure() -> void:
 		_lab(v, "Ctrl+Z swaps in a fresh part with the power off. Then change the circuit and try again.", 17, DIM, f_sans, true)
 	else:
 		_lab(v, txt, 19, TXT, f_sans, true)
-	p.position.x = (1920 - 800) * 0.5 + 60
+
 
 func _refresh_live() -> void:
 	var b = bench.backend

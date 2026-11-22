@@ -41,18 +41,18 @@ func build(inner: Vector2, ticket_id: String, title: String, customer: String) -
 	MeshKit.label(lid, "DESK FAN  12 V  0.2 A", 0.00006, Vector3(size.x * 0.22, 0.0032, 0.016), Color(0.12, 0.12, 0.13), true)
 	MeshKit.label(lid, "DRIVER BOARD INSIDE", 0.000045, Vector3(size.x * 0.22, 0.0032, 0.025), Color(0.12, 0.12, 0.13), true)
 	_lid_closed = Transform3D(Basis(), Vector3(0, size.y - 0.0165 + 0.0025, 0))
-	_lid_open = Transform3D(Basis(Vector3.UP, deg_to_rad(-18.0)).rotated(Vector3.FORWARD, deg_to_rad(0.0)), Vector3(-size.x - 0.03, -0.014, size.z * 0.55))
+	_lid_open = Transform3D(Basis(Vector3.UP, deg_to_rad(14.0)).rotated(Vector3.FORWARD, deg_to_rad(0.0)), Vector3(size.x + 0.055, -0.014, size.z * 0.75))
 	lid.transform = _lid_closed
 	# paper work-order tag tied to the shell with string
 	tag = Node3D.new(); add_child(tag)
-	tag.position = Vector3(size.x * 0.5 + 0.035, -0.0155, 0.02); tag.rotation.y = deg_to_rad(12.0)
+	tag.position = Vector3(size.x * 0.5 + 0.035, -0.0155, -0.03); tag.rotation.y = deg_to_rad(12.0)
 	MeshKit.add(tag, MeshKit.rounded_box(Vector3(0.06, 0.0006, 0.034), 0.001), MeshKit.mat(Color(0.93, 0.90, 0.82), 0.85, 0.0, {"normal": 0.4}))
 	var hole := TorusMesh.new(); hole.inner_radius = 0.0018; hole.outer_radius = 0.0028
 	MeshKit.add(tag, hole, MeshKit.mat(Color(0.75, 0.6, 0.3), 0.4, 1.0), Vector3(-0.024, 0.0005, 0))
 	MeshKit.label(tag, "WORK ORDER %s" % ticket_id, 0.00006, Vector3(0.004, 0.0004, -0.010), Color(0.55, 0.12, 0.08), true)
 	MeshKit.label(tag, title, 0.00008, Vector3(0.004, 0.0004, 0.0), Color(0.1, 0.1, 0.1))
 	MeshKit.label(tag, "from %s" % customer, 0.00005, Vector3(0.004, 0.0004, 0.009), Color(0.25, 0.25, 0.25))
-	var str_pts := PackedVector3Array([tag.position + Vector3(-0.024, 0.001, 0.003), Vector3(size.x * 0.5 + 0.004, 0.0, 0.03), Vector3(size.x * 0.5 - 0.002, 0.006, 0.035)])
+	var str_pts := PackedVector3Array([tag.position + Vector3(-0.024, 0.001, 0.003), Vector3(size.x * 0.5 + 0.004, 0.0, -0.02), Vector3(size.x * 0.5 - 0.002, 0.006, -0.015)])
 	MeshKit.add(self, MeshKit.tube(MeshKit.round_corners(str_pts, 0.01), 0.0004, 5), MeshKit.mat(Color(0.8, 0.75, 0.62), 0.9))
 
 func set_state(s: String, animate := true) -> void:
