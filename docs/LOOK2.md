@@ -29,7 +29,7 @@ You own a good electronics bench, and people bring you things that stopped worki
 
 ## Camera
 - Free orbit (right drag), pan (middle drag or WASD) and zoom (wheel). Movement is smooth, with limits so the view never leaves the room.
-- Snap views: **1** top-down wiring view, **2** three-quarter view of the whole bench, **3** scope close-up, **4** the device (the fan). Depth of field follows the snap view.
+- Snap views: **1** wiring (steep three-quarter view over the board), **2** the whole bench, **3** scope close-up, **4** the device (the fan). Depth of field follows the view. The parts drawer shows only in the wiring view or while placing a part, so the bench views stay clear.
 - **Tab** toggles a schematic view that mirrors the physical build: the same parts and nets drawn as symbols in place, with node voltages when the bench is powered.
 
 ## UI language
@@ -58,6 +58,31 @@ You own a good electronics bench, and people bring you things that stopped worki
 - The engine board (24 x 16 pads) is the perfboard on the bench. Fixed parts and pre-routed wires stay as the device's own board. The instruments a ticket allows sit on the bench, and the ones it does not allow are shelved.
 - Exams ("predict first") become a calibration sheet on a clipboard, drawn in the same panel style.
 - Each device needs one model: about 20 devices for the 23 tickets (the exam boards share one).
+
+## Measured (phase A slice, ticket 5-1, whole-bench view, powered at 100 Hz)
+| GPU | Tier | 1920x1080 | 2560x1440 (3D render scale 1.333) |
+|---|---|---|---|
+| RTX 4090 (Forward+, PRIME offload) | high | 6.4 ms avg, 7.6 ms p95 | 5.8 ms avg, 6.7 ms p95 |
+| Ryzen 9900X iGPU (Radeon, 2 CU, Forward+) | medium | 71 ms | not run |
+| Ryzen 9900X iGPU | low | 43 ms | not run |
+
+- The 4090 is not GPU-bound here: 1440p is no slower than 1080p. The per-frame engine step through the sidecar probably sets the floor. That is not yet profiled.
+- The iGPU is a 2-CU part, well below a Steam Deck (8 CU). Even so, the low tier has to get under 16.7 ms: shadows off, no glow, fewer pad instances, or the Compatibility renderer. That work is not done.
+
+## Cost to bring the whole game to this look
+| Work | Estimate (agent hours) |
+|---|---|
+| About 18 more part models: battery holders, pots and trimmers, slide wire and jockey, galvanometer, resistance box, relay, transformer, bridge, heatsinks, inductors, LED strip, speaker, NTC, fuse, heater, isolation transformer | 14 |
+| About 19 opened-up device models, one per ticket family | 28 |
+| Ticket systems in the new UI: exam calibration sheet, chapter 4 selectors and safety card, jockey control, thermal camera, coach steps, Codex, a job board for the chapter map, wallet, settings | 16 |
+| Five chapters integrated and hand-played on the bench | 20 |
+| New 3D flows per chapter, a 1280x800 layout audit, gamepad focus | 15 |
+| Quality tiers: low tier at 60 fps, Compatibility checked under Xvfb, a Deck run | 6 |
+| Free bench: save and load builds, a library of known devices | 8 |
+| Three critique and fix rounds | 12 |
+| **Total** | **about 120 hours**: six to seven sessions of a lead with two helpers |
+
+Asset gaps: CC0 props (hand tools, a mug model, cable ties), a smoke flipbook, and all bench sound (CC0 from Freesound or our own recordings).
 
 ## Risks
 - **Scope:** 20 device models are the cost driver. We reuse a common chassis family and open each one only as far as its fault needs.
