@@ -18,9 +18,13 @@ func _ready() -> void:
 ## CB_SMOKE=1 (the release build's headless check): the engine sidecar starts, the title shows, ticket 1-1 opens on the bench and the engine answers.
 ## Prints "SMOKE OK" and exits 0, or "SMOKE FAIL: why" and exits 1 (the release script and CI grep for these).
 func _smoke() -> void:
+	var stop_engine := func() -> void:   # the sidecar must not outlive the check (an orphan keeps a pipe open and a caller that waits on the output waits for ever)
+		if scene.backend != null and scene.backend.bridge != null and scene.backend.bridge.has_method("stop"): scene.backend.bridge.stop()
 	var fail := func(why: String) -> void:
-		print("SMOKE FAIL: ", why); get_tree().quit(1)
-	for i in 600:   # up to ten seconds of frames for the sidecar to come up
+		print("SMOKE FAIL: ", why); stop_engine.call(); get_tree().quit(1)
+	get_tree().create_timer(90.0).timeout.connect(func() -> void: print("SMOKE FAIL: no result after 90 s"); stop_engine.call(); get_tree().quit(1))   # a hard stop: the check can never hang
+	var t0 := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < 30000:   # up to thirty SECONDS for the sidecar to come up (frames run unthrottled when headless: counting frames gave a busy machine no time at all)
 		await get_tree().process_frame
 		if scene.backend != null and scene.backend.ENGINE: break
 	if scene.backend == null or not scene.backend.ENGINE: fail.call("the engine sidecar did not start"); return
@@ -33,4 +37,5 @@ func _smoke() -> void:
 	if scene.bench.model.is_empty() or int(scene.bench.model.get("w", 0)) <= 0: fail.call("the bench has no board"); return
 	print("smoke: ticket 1-1 open on a %dx%d board" % [int(scene.bench.model.w), int(scene.bench.model.h)])
 	print("SMOKE OK")
+	stop_engine.call()
 	get_tree().quit(0)
