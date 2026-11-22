@@ -430,11 +430,16 @@ func _update_camera(dt: float) -> void:
 
 ## ------------------------------------------------------------------------------------------------ modes
 
+func _nosave() -> bool: return OS.has_environment("CB_NOSAVE") or OS.get_environment("CB_L2_TICKET") != ""
+
 func start_job(id := "") -> void:
+	if not _campaign:
+		# one save with the classic stall: chapter 1 progress and the wallet carry between the two looks
+		if not _nosave() and backend.has_save(): backend.load_game()
+		else: backend.new_game()
+		_campaign = true
 	if id == "": id = OS.get_environment("CB_L2_TICKET") if OS.get_environment("CB_L2_TICKET") != "" else first_open_ticket()
 	mode = "job"; ticket_id = id; _paid_text = ""
-	if not _campaign:
-		backend.new_game(); _campaign = true
 	if id == TICKET or OS.get_environment("CB_L2_TICKET") != "": backend.unlock_through(id)
 	backend.open_ticket(id)
 	_after_open()
@@ -473,6 +478,8 @@ func open_case() -> void:
 ## After a pass: the lid goes back on and the fan goes home running.
 func hand_back() -> void:
 	if case_node == null: return
+	# save after a campaign job (not after the 5-1 showcase, which unlocks tickets the player has not reached)
+	if not _nosave() and CH1.has(ticket_id) and backend.passed: backend.save_game()
 	set_tool("select")
 	if probe_node: probe_node.visible = false
 	if probe_cable: probe_cable.visible = false

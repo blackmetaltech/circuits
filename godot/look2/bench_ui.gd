@@ -221,7 +221,7 @@ func _title() -> void:
 	_lab(v, "CIRCUITS", 44, TXT, f_engr)
 	_lab(v, "A repair bench. Customers bring broken devices; you probe, fix, and hand them back.", 22, Color(0.80, 0.82, 0.84), f_sans, true)
 	var gap := Control.new(); gap.custom_minimum_size = Vector2(0, 8); v.add_child(gap)
-	var b1 := _key(v, "Jobs: chapter 1, Current and Voltage", func(): bench.start_job(bench.first_open_ticket()), "", true)
+	var b1 := _key(v, "Jobs: chapter 1, Current and Voltage", func(): bench.start_job(), "", true)
 	_lab(v, "A torch, a bike light, a fish-tank heater, a toy car, and the exam.", 18, Color(0.72, 0.75, 0.78))
 	_key(v, "Free bench", func(): bench.start_free())
 	_lab(v, "Any part, the supply, scope and meter. Save a build and load it later.", 18, Color(0.72, 0.75, 0.78))
