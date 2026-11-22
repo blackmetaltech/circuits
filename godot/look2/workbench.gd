@@ -36,6 +36,8 @@ var cables_root: Node3D
 var smoke_fx: Array = []
 var capture_until := 0.0
 var last_failure := {}              ## {title, text, hint} shown in the UI
+var case_node: DeviceCase                ## the customer's device around the board (jobs only)
+var handed := false
 var tool := "select"                 ## select | place | wire | probe | red | black
 var place_item: Dictionary = {}
 var place_rot := 0
@@ -391,6 +393,9 @@ func start_job() -> void:
 		backend.build_ref(TICKET)
 		if OS.get_environment("CB_L2_NODIODE") == "1":
 			for p in backend.parts: if str(p.partId) == "1n4007": backend.delete_part(str(p.uid))
+	var cs := OS.get_environment("CB_L2_CASE")
+	if cs == "" and (OS.get_environment("CB_L2_REF") == "1" or OS.get_environment("CB_L2_NODIODE") == "1" or OS.get_environment("CB_L2_GHOST") != ""): cs = "open"
+	if cs in ["open", "handed"] and case_node: case_node.set_state("open", false)
 	if OS.get_environment("CB_PROBE") != "":
 		backend.set_probe("ch1", [16, 8]); backend.set_dial("V"); backend.set_probe("red", [16, 2]); backend.set_probe("black", [22, 2])
 	if OS.get_environment("CB_PIN") != "": backend.set_selector("pin", int(OS.get_environment("CB_PIN")))
@@ -399,6 +404,27 @@ func start_job() -> void:
 	else: set_view(1)
 	sync_board(); changed.emit()
 	if OS.get_environment("CB_L2_GHOST") != "": _ghost_demo.call_deferred()
+	if cs == "handed": get_tree().create_timer(2.5).timeout.connect(func(): hand_back())
+
+func case_closed() -> bool: return case_node != null and case_node.state != "open"
+
+func open_case() -> void:
+	if case_node == null or case_node.state == "open": return
+	case_node.set_state("open"); note = "Case open. The driver board is inside: the pin has to switch the fan through a transistor."
+	set_view(1); changed.emit()
+
+## After a pass: the lid goes back on and the fan goes home running.
+func hand_back() -> void:
+	if case_node == null: return
+	set_tool("select")
+	if probe_node: probe_node.visible = false
+	if probe_cable: probe_cable.visible = false
+	backend.set_probe("ch1", null)
+	case_node.set_state("handed"); handed = true
+	if not backend.powered: backend.set_power(true)
+	backend.set_selector("pin", 0)
+	note = "Handed back to %s. The fan runs from the pin and the transistor stays cool." % str(backend.ticket.get("customer", ""))
+	set_view(2); changed.emit()
 
 ## QA hook (CB_L2_GHOST=1): a 2N2222A picked from the drawer, its placement preview over pads 14-16 of row I, as the player sees it mid-drag.
 func _ghost_demo() -> void:
@@ -439,6 +465,13 @@ func _after_open() -> void:
 	board.build(int(backend.ticket.board.w), int(backend.ticket.board.h), backend.ticket.board.connectors)
 	var c := Vector3((board.w - 1) * P * 0.5, 0, (board.h - 1) * P * 0.5)
 	board.position = Vector3(-0.02, 0.003 + 0.012 + MeshKit.BOARD_T, 0.07) - c
+	if case_node: case_node.queue_free(); case_node = null
+	handed = false
+	if mode == "job":
+		case_node = DeviceCase.new(); board_root.add_child(case_node)
+		case_node.build(Vector2((board.w + 3) * P, (board.h + 3) * P), str(backend.ticket.get("id", "")), str(backend.ticket.get("title", "")), str(backend.ticket.get("customer", "")))
+		case_node.global_position = board.to_global(c)
+		case_node.set_state("closed", false)
 	_cables()
 
 ## Drawer rows: the ticket's shoebox (job) or the whole catalogue (free bench), grouped by kind.
@@ -458,6 +491,43 @@ func drawer() -> Array:
 			out.append({"i": i, "partId": str(d.id), "value": v, "variant": str(va.id), "label": ("%s  %s" % [NodeApi.format_value(float(v), str(d.kind)), str(d.name) if str(d.name).length() <= 22 else str(d.name).substr(0, 22)]) if v != null else str(d.name), "kind": str(d.kind), "footprint": fp, "price_text": str(va.get("priceText", "")), "tag": str(d.name) if v != null else "", "left": -1})
 			i += 1
 	return out
+
+## A small 3D render of a part for the tray (rendered once in its own world, cached by part and value).
+var _icons := {}
+func part_icon(item: Dictionary) -> Texture2D:
+	var key := "%s|%s" % [str(item.partId), str(item.get("value", ""))]
+	if _icons.has(key): return _icons[key]
+	var vp := SubViewport.new(); vp.size = Vector2i(144, 144); vp.own_world_3d = true; vp.transparent_bg = true
+	vp.render_target_update_mode = SubViewport.UPDATE_ONCE; vp.msaa_3d = Viewport.MSAA_4X
+	add_child(vp)
+	var part := Part3D.make({"partId": item.partId, "kind": item.kind, "value": item.value, "variant": item.variant, "label": item.label, "footprint": item.footprint, "uid": "icon"})
+	vp.add_child(part)
+	var c := part._centre() + Vector3(0, 0.006, 0)
+	var fp: Array = NodeApi.FOOTPRINTS.get(str(item.footprint), [[0, 0], [2, 0]])
+	var span := 0.0
+	for o in fp: span = maxf(span, Vector2(float(o[0]), float(o[1])).length() * P)
+	var cam3 := Camera3D.new(); cam3.projection = Camera3D.PROJECTION_ORTHOGONAL; cam3.size = maxf(0.024, span + 0.012)
+	vp.add_child(cam3); cam3.position = c + Vector3(0.05, 0.06, 0.07); cam3.look_at(c)
+	var l := DirectionalLight3D.new(); l.light_color = Color(1.0, 0.9, 0.8); l.light_energy = 1.6; l.rotation_degrees = Vector3(-50, 30, 0); vp.add_child(l)
+	var we := WorldEnvironment.new(); var e := Environment.new(); e.background_mode = Environment.BG_CLEAR_COLOR; e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	e.ambient_light_color = Color(0.55, 0.6, 0.7); e.ambient_light_energy = 0.8; e.tonemap_mode = Environment.TONE_MAPPER_AGX; we.environment = e; vp.add_child(we)
+	_icons[key] = vp.get_texture()
+	return _icons[key]
+
+## Tray families: one tile per part, with its values (resistors) stepped on the tile.
+func tray_families() -> Array:
+	var fams: Array = []
+	var by := {}
+	for it in drawer():
+		var k := str(it.partId) + "|" + str(it.variant)
+		if not by.has(k): by[k] = {"name": _fam_name(it), "items": []}; fams.append(by[k])
+		by[k].items.append(it)
+	return fams
+
+func _fam_name(it: Dictionary) -> String:
+	if str(it.kind) == "R": return "Resistor" + ("  %s" % str(it.get("tag", ""))).strip_edges().replace("Resistor", "")
+	var l := str(it.label)
+	return l if it.get("value", null) == null else str(it.get("tag", l))
 
 ## ------------------------------------------------------------------------------------------------ board sync
 
@@ -789,6 +859,7 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_ESCAPE: set_tool("select")
 			KEY_R:
 				if tool == "place": place_rot = (place_rot + 1) % 4; _hover(get_viewport().get_mouse_position())
+			KEY_O: open_case()
 			KEY_SPACE: toggle_power()
 			KEY_ENTER, KEY_KP_ENTER: run_test()
 			KEY_Z:
@@ -817,6 +888,9 @@ func _hover(mp: Vector2, qa := false) -> void:
 			wire_preview = MeshKit.add(self, MeshKit.tube(MeshKit.round_corners(PackedVector3Array([a, mid, b]), 0.01, 6), 0.0011, 8), MeshKit.mat(Color(0.91, 0.64, 0.24), 0.4, 0.0, {"alpha": 0.7, "emission": Color(0.91, 0.64, 0.24), "emission_energy": 0.6}))
 
 func _left(pressed: bool, mp: Vector2) -> void:
+	if case_closed() and not handed:
+		if pressed: open_case()
+		return
 	var pad := ray_pad(mp)
 	if pressed:
 		var hit := ray_hit(mp)

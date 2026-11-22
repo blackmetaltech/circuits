@@ -94,7 +94,7 @@ func _rebuild() -> void:
 	if schem:
 		var sv := SchematicView.new(); sv.bench = bench; sv.ui = self; _root.add_child(sv); sv.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); sv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_job_card()
-	if bench.view in [1, 5] or bench.tool == "place" or bench.mode == "free": _drawer()
+	_drawer()
 	_tools()
 	_status_chip()
 	_failure()
@@ -124,6 +124,15 @@ func _job_card() -> void:
 	_lab(v, "WORK ORDER  %s" % str(t.get("id", "")), 16, AMBER, f_semi)
 	_lab(v, str(t.get("title", "")), 30, TXT, f_semi)
 	_lab(v, "Desk fan, from %s.  %s" % [str(t.get("customer", "")), str(t.get("ask", ""))], 18, DIM, f_sans, true)
+	if bench.case_closed() and not bench.handed:
+		_lab(v, "The fan came in with its driver board. Open the case to work on it.", 18, TXT, f_sans, true)
+		_btn(v, "Open the case", func(): bench.open_case(), "O", true)
+		return
+	if bench.handed:
+		_lab(v, "Handed back. Job closed.", 20, OKC, f_semi)
+		return
+	if bench.backend.passed:
+		_btn(v, "Close up and hand back", func(): bench.hand_back(), "", true)
 	var sep := HSeparator.new(); v.add_child(sep)
 	for s in t.get("specs", []):
 		var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 10); v.add_child(row)
@@ -150,38 +159,61 @@ func _short(id: String, name: String) -> String:
 		"ipin": return "Pin current  ≤ 20 mA"
 	return name
 
+var _fam_idx := {}          ## family key -> selected value index
+var _tray_name: Label
+
+## The part tray: a slim row of small 3D renders above the tool strip. Name and value show on hover or focus; arrows step values.
 func _drawer() -> void:
-	var p := _panel(Vector2(28, 500 if bench.mode == "job" else 330), Vector2(470, 450 if bench.mode == "job" else 560))
-	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 6); p.add_child(v)
-	_lab(v, "PARTS DRAWER" if bench.mode == "job" else "CATALOGUE  (all parts)", 16, AMBER, f_semi)
-	var sc := ScrollContainer.new(); sc.size_flags_vertical = Control.SIZE_EXPAND_FILL; sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; v.add_child(sc)
-	_drawer_box = VBoxContainer.new(); _drawer_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL; _drawer_box.add_theme_constant_override("separation", 4); sc.add_child(_drawer_box)
-	var last_kind := ""
-	for it in bench.drawer():
-		var kind := _kind_name(str(it.kind))
-		if kind != last_kind:
-			last_kind = kind
-			_lab(_drawer_box, kind, 15, DIM, f_semi)
-		var row := Button.new(); row.alignment = HORIZONTAL_ALIGNMENT_LEFT; row.focus_mode = Control.FOCUS_ALL
-		row.text = "%s    %s" % [str(it.label), str(it.get("price_text", ""))]
-		row.tooltip_text = str(it.get("tag", ""))
-		row.add_theme_font_override("font", f_mono); row.add_theme_font_size_override("font_size", fs(18))
-		var active: bool = bench.tool == "place" and bench.place_item.get("i", -1) == it.i and str(bench.place_item.get("partId", "")) == str(it.partId)
+	if bench.mode == "job" and (bench.case_closed() or bench.handed): return
+	var fams: Array = bench.tray_families()
+	var p := _panel(Vector2(560, 842), Vector2(0, 0))
+	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 4); p.add_child(v)
+	_tray_name = _lab(v, "Parts: pick one, then click a pad.  R turns it.", 17, DIM, f_sans)
+	var sc := ScrollContainer.new(); sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; sc.custom_minimum_size = Vector2(minf(1300.0, fams.size() * 98.0 + 8.0), 104); v.add_child(sc)
+	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 6); sc.add_child(row)
+	for f in fams:
+		var items: Array = f.items
+		var key := str(items[0].partId) + "|" + str(items[0].variant)
+		var idx: int = clampi(int(_fam_idx.get(key, _default_idx(items))), 0, items.size() - 1)
+		var it: Dictionary = items[idx]
+		var col := VBoxContainer.new(); col.add_theme_constant_override("separation", 0); row.add_child(col)
+		var b := Button.new(); b.custom_minimum_size = Vector2(92, 76); b.focus_mode = Control.FOCUS_ALL
+		b.icon = bench.part_icon(it); b.expand_icon = true; b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var active: bool = bench.tool == "place" and str(bench.place_item.get("partId", "")) == str(it.partId) and str(bench.place_item.get("value", "")) == str(it.value)
 		for st in ["normal", "hover", "pressed", "focus"]:
-			var sb := StyleBoxFlat.new(); sb.bg_color = Color(0.20, 0.17, 0.11) if active else (BG2 if st != "hover" else BG2.lightened(0.06))
-			if st == "focus": sb.draw_center = false; sb.border_color = AMBER; sb.border_width_left = 2
-			sb.content_margin_left = 12; sb.content_margin_top = 6; sb.content_margin_bottom = 6; sb.corner_radius_top_left = 4; sb.corner_radius_bottom_left = 4; sb.corner_radius_top_right = 4; sb.corner_radius_bottom_right = 4
-			row.add_theme_stylebox_override(st, sb)
-		row.add_theme_color_override("font_color", AMBER if active else TXT)
-		var item: Dictionary = it
-		row.pressed.connect(func(): bench.pick_part(item))
-		_drawer_box.add_child(row)
+			var sb := StyleBoxFlat.new(); sb.bg_color = Color(0.20, 0.17, 0.11) if active else (BG2 if st != "hover" else BG2.lightened(0.07))
+			if st == "focus": sb.draw_center = false; sb.border_color = AMBER; sb.border_width_bottom = 2; sb.border_width_top = 2; sb.border_width_left = 2; sb.border_width_right = 2
+			sb.corner_radius_top_left = 6; sb.corner_radius_top_right = 6; sb.corner_radius_bottom_left = 6; sb.corner_radius_bottom_right = 6
+			sb.content_margin_left = 4; sb.content_margin_right = 4; sb.content_margin_top = 2; sb.content_margin_bottom = 2
+			b.add_theme_stylebox_override(st, sb)
+		var desc := "%s   %s   %s" % [str(f.name), str(it.label) if it.value != null else "", str(it.get("price_text", ""))]
+		b.mouse_entered.connect(func(): if is_instance_valid(_tray_name): _tray_name.text = desc)
+		b.focus_entered.connect(func(): if is_instance_valid(_tray_name): _tray_name.text = desc)
+		var pick: Dictionary = it
+		b.pressed.connect(func(): bench.pick_part(pick))
+		col.add_child(b)
+		var under := HBoxContainer.new(); under.alignment = BoxContainer.ALIGNMENT_CENTER; col.add_child(under)
+		if items.size() > 1:
+			var k2 := key; var n := items.size()
+			var prev := Button.new(); prev.text = "‹"; prev.flat = true; prev.focus_mode = Control.FOCUS_NONE; prev.add_theme_font_size_override("font_size", fs(18))
+			prev.pressed.connect(func(): _fam_idx[k2] = posmod(idx - 1, n); _rebuild())
+			var nx := Button.new(); nx.text = "›"; nx.flat = true; nx.focus_mode = Control.FOCUS_NONE; nx.add_theme_font_size_override("font_size", fs(18))
+			nx.pressed.connect(func(): _fam_idx[k2] = posmod(idx + 1, n); _rebuild())
+			under.add_child(prev); _lab(under, str(it.label).get_slice("  ", 0), 15, TXT, f_mono); under.add_child(nx)
+		else:
+			_lab(under, _short_name(str(f.name)), 15, DIM, f_mono)
+	p.position.x = (1920 - p.get_combined_minimum_size().x) * 0.5
+
+func _default_idx(items: Array) -> int:
+	for i in items.size(): if str(items[i].label).begins_with("220 "): return i
+	return items.size() / 2
+
+func _short_name(n: String) -> String: return n.get_slice(" ", 0).substr(0, 9)
 
 ## SI value text with 3 significant digits: 0.000072 V -> "72.0 µV", 0.0171478 A -> "17.1 mA".
 static func si(v: float, unit: String) -> String:
 	var a := absf(v)
-	var pre := [[1e3, "k"], [1.0, ""], [1e-3, "m"], [1e-6, "µ"]]
-	for e in pre:
+	for e in [[1e3, "k"], [1.0, ""], [1e-3, "m"], [1e-6, "µ"]]:
 		if a >= float(e[0]) * 0.9995 or e[1] == "µ":
 			var x := v / float(e[0])
 			var d := 2 if absf(x) < 10.0 else (1 if absf(x) < 100.0 else 0)
