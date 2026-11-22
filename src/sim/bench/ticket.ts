@@ -63,6 +63,17 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
     return { pass: false, failures, rows: specIds.map((id) => ({ id, pass: false, margin: -1 })), supplyPowerW: 0, smoked: burnt.map((b) => String(b.vars.part)), causes, predictions, badSamples, values };
   }
 
+  // cheap precondition: does every spec probe resolve on this board, in every condition? (netlist only, no simulation)
+  let missingAny = false;
+  for (const cond of plan.conditions) {
+    if (missingAny) break;
+    const rig0 = buildRig({ board: inp.board, getDef: inp.getDef, supplies: inp.supplies, supply: inp.supply, gen: inp.gen, overrides: [...inp.hidden, ...(cond.set ?? [])], ambientC: cond.ambientC ?? plan.ambientC, probeLoads: [], testLoads: plan.testLoads, regTau: plan.regTau });
+    for (const sp of plan.specs) {
+      if (plan.only?.[sp.id] && !plan.only[sp.id]!.includes(cond.id)) continue;
+      const probes = sp.kind === 'match' ? [sp.a, sp.b] : sp.kind === 'predict' ? (sp.truth !== undefined ? [] : [sp.of.probe]) : sp.kind === 'level' || sp.kind === 'band' || sp.kind === 'metric' ? [sp.probe] : [];
+      if (probes.some((pr) => rig0.resolve(pr) === null)) { missingAny = true; break; }
+    }
+  }
   for (const cond of plan.conditions) {
     const overrides: RigOverride[] = [...inp.hidden, ...(cond.set ?? [])];
     const ta = cond.ambientC ?? plan.ambientC;
@@ -95,6 +106,9 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
         } else specs.push({ ...s, probe } as BenchSpec);
       } else specs.push(s);
     }
+    // a board without a part the specs measure cannot pass: say which part is missing and do not simulate (a half-built
+    // board can chatter the stepper to its give-up limit for a minute; the answer is fail either way). Decision: docs/DECISIONS.md D-bench-missing.
+    if (missingAny) { for (const id of specIds) failedIds.add(id); continue; }
     const rig = mk(loads);
     if (rig.errors.length > 0) { for (const e of rig.errors) failures.push({ key: e.key, vars: { ...e.vars, cond: cond.id } }); for (const id of specIds) failedIds.add(id); continue; }
     const ckt = rig.circuit!;

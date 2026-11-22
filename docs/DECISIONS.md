@@ -13,3 +13,16 @@
 - 2026-11-10 (director, Gate A): CONDITIONAL GO (docs/perf/pixel-factor.json). Solver budgets pass by >10x on the Pixel; the in-loop
   live-frame engine time (p95 6.4 ms vs 4 ms) fails although the isolated frame is 1.1 ms, so the fix is in the live path
   (serialisation/dispatch, quantum size), not the MNA cap. M1 continues; M2 live mode must re-measure before M2-7.
+- 2026-11-23 (Ingrid, LOOK2 phase B, "D-bench-missing" and the bench memo): level search spent 91 % of its time in `runBench`
+  probes. Two changes, measured on `checkLevel(seed 1)` with reports byte-identical before and after (hash of the JSON report):
+  1. `benchTicket` is memoised on every input the bench reads (region, board, supply, generator, smoked parts, predictions,
+     hidden values, selectors), per level def, 64 entries; each caller gets a deep copy. Exact by construction; a test
+     compares it with `benchTicketRaw` on edited, burnt and passed boards. 4-4: 132 s -> 61 s.
+  2. Before any simulation the bench checks, netlist only, that every spec probe resolves in every condition. If one does not
+     (a part the specs measure is not on the board), the bench fails with "part missing" and simulates nothing. Before, it
+     still ran the other conditions, and a half-built 5-1 board could chatter the stepper to its give-up limit for 60 s,
+     to report a fail that was certain. 5-1: 111 s -> 6.5 s. Player-visible change: an incomplete board's failure list now
+     names only the missing parts (no rating or convergence lines, no smoke from a bench on an incomplete board). No golden
+     moved; the solvability, idle and random-play checks are unchanged (an incomplete board could never pass).
+  Rejected: not offering runBench as a candidate (changes the search), cutting rollout counts (weakens the check), a core
+  probe hook (core change; not needed after 1 and 2).
