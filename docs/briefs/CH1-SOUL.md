@@ -1,6 +1,6 @@
 # CIRCUITS chapter 1 "First Light": soul brief (main session, 2026-11-20)
 
-The current build shows the generic COBANANA dashboard: a top bar with TICK/WALLET/TICKET, a right sidebar card, bottom tabs, a flat grid of
+The current build shows the generic shared dashboard: a top bar with TICK/WALLET/TICKET, a right sidebar card, bottom tabs, a flat grid of
 pads and a tutorial popup. That is exactly what the owner rejected on 2026-11-10 ("looked horrible, copied GIGAWATT elements"). Delete
 that chrome from the main view. CIRCUITS's own soul is already written in docs/DESIGN.md §1.2, §5 and §6. This brief makes chapter 1 meet it.
 

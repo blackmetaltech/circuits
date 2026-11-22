@@ -1,5 +1,5 @@
 extends Node
-## CIRCUITS front end. The old COBANANA dashboard shell (top bar, sidebar cards, bottom tabs) is gone from the main view: the whole interface is
+## CIRCUITS front end. The old shared dashboard shell (top bar, sidebar cards, bottom tabs) is gone from the main view: the whole interface is
 ## Wren's repair stall (godot/stall/). Env hooks: CB_SCREEN=title|map|bench|notebook|settings, CB_TICKET=1-3, CB_UNLOCK=1, CB_SHOTS=1 (screenshot run).
 var scene: StallScene
 
