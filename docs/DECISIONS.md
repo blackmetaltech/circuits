@@ -47,3 +47,13 @@
   the linear pair). Effect in play: a linear bench is estimated closer to its real time, so the 1.5e9 refusal still means about 2 s
   on a desktop. Disagreement on record: this is a model change made by the lead, not the systems engineer; a systems review of the
   constants belongs in the next layer.
+
+- **D-ch2-bench (2026-11-23, Ingrid Solheim, Game Lead; product call by Priya Nair).** Chapter 2 is the next chapter on the bench,
+  not chapter 4. Why: a player who finishes chapter 1 drops straight into the old look otherwise; 2-1 and 2-3 need only the meter
+  and resistors we already have; chapter 4 (transformer, safety card, ripple, heatsinks, thermal camera) is a layer of its own.
+  Strongest argument against (game designer, Dagny behind): chapter 4 is the fantasy, and 2-2 and 2-4 are lab apparatus. Answer:
+  every chapter 2 ticket arrives as a customer's broken thing that must be measured before any change: 2-1 Kaya's weather station
+  reads low (divider sized unloaded, 2.76 V at the 10 k ADC); 2-2 a reel of buried cable with a fault somewhere (loop resistance
+  first; Tomasz checks the meter-resolution claim); 2-3 a dead sealed module (open-circuit volts and short-circuit amps first);
+  2-4 the exam rig's slide wire with the wrong rheostat (volts across the wire first). Cut line, written now: if the layer slips,
+  2-1 and 2-3 ship on the bench and 2-2 and 2-4 stay classic, labelled.
