@@ -129,7 +129,7 @@ func _build(id: String) -> bool:   # the level's reference design, dragged in by
 
 func _start(id: String) -> void:
 	sc.size = Vector2(1920, 1080)   # the desk the checks are written for (something in the headless window resets it)
-	sc.start_ticket(id)
+	sc.start_ticket(id); bk.clear_fault()
 	await _frames(4)
 	evlog.clear()
 
@@ -234,7 +234,7 @@ func _run() -> void:
 	# take the burnt LED off (right-click), then build the reference torch
 	sc._right(sc.pad_screen(Vector2(9, 5)))
 	ok(bk.part_by("p1").is_empty(), "right-click removes the burnt LED")
-	sc.start_ticket("1-1"); await _frames(3); evlog.clear()
+	sc.start_ticket("1-1"); bk.clear_fault(); await _frames(3); evlog.clear()
 	ok(_build("1-1"), "the reference torch (470 ohm + LED) is built by pointer")
 	_rocker()
 	_clock(0.6)
@@ -571,7 +571,8 @@ func _run() -> void:
 		var ev := InputEventMouseButton.new(); ev.pressed = true; ev.button_index = MOUSE_BUTTON_LEFT; ev.position = (btn.rect as Rect2).get_center()
 		sc.pages._gui_input(ev)
 	await _frames(4)
-	ok(sc.phase == "bench" and bk.ticket.id == "1-1" and bk.parts.filter(func(p): return not p.fixed).is_empty(), "clicking a FIXED chit reopens the ticket on a fresh board")
+	ok(sc.phase == "bench" and bk.ticket.id == "1-1" and bk.parts.filter(func(p): return not p.fixed and not str(p.uid).begins_with("x")).is_empty(), "clicking a FIXED chit reopens the ticket on a fresh board (the torch as it arrived, none of the player's build)")
+	bk.clear_fault()
 	ok(_build("1-1"), "replay: the torch is built again")
 	_rocker(); _clock(6.0, func(): return bk.passed)
 	ok(bk.passed and bk.wallet_minor == w_before, "replay: it passes again and pays nothing twice (wallet %s)" % bk.wallet_text)

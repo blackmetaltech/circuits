@@ -118,7 +118,7 @@ func _build(id: String) -> bool:
 
 func _start(id: String, read_card := true) -> void:
 	sc.size = Vector2(1920, 1080)
-	sc.start_ticket(id)
+	sc.start_ticket(id); bk.clear_fault()
 	await _frames(4)
 	if read_card and sc.pages.mode == "safety": sc._on_page("safety_ok", ""); await _frames(2)
 	evlog.clear()
@@ -247,7 +247,7 @@ func _run() -> void:
 	sc.map_chapter = 5; sc._refresh_pages(); sc.go_map(); await _frames(3)
 	ok(sc.pages.tickets.filter(func(t): return bool(t.done)).size() == 5, "all five chits are FIXED on the page")
 	ok(CoachData.CODEX.size() >= 40 and str(CoachData.CODEX[32].title) == "A transistor as a switch", "the codex has the chapter 5 pages (%d pages)" % CoachData.CODEX.size())
-	sc.start_ticket("5-1"); await _frames(2); sc.pages.show_page("notebook"); await _frames(3)
+	sc.start_ticket("5-1"); bk.clear_fault(); await _frames(2); sc.pages.show_page("notebook"); await _frames(3)
 	ok(sc.pages.codex_i == 32, "the notebook opens on the page that belongs to the ticket (the switch)")
 	sc.pages.show_page(""); await _frames(2)
 

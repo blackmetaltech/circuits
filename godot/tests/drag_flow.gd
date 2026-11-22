@@ -41,7 +41,7 @@ func _run() -> void:
 	if not sc.backend.ENGINE:
 		print("FAIL the engine sidecar did not start (npx vite build -c vite.bridge.config.ts)"); quit(2); return
 	bk = sc.backend
-	bk.new_game(); bk.unlock_through("1-1"); sc.start_ticket("1-1"); sc.pages.show_page("")
+	bk.new_game(); bk.unlock_through("1-1"); sc.start_ticket("1-1"); bk.clear_fault(); sc.pages.show_page("")
 	await _frames(4)
 	print("== one-frame drags from the shoebox")
 	var n: int = sc.props.items.size()

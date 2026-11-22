@@ -473,6 +473,7 @@ func start_free() -> void:
 	mode = "free"; _campaign = false
 	backend._act("newGame", [1, "sandbox"])
 	backend.open_ticket(TICKET)
+	backend.clear_fault()   # the free bench is an open board, not the fan repair
 	_after_open()
 	if OS.get_environment("CB_L2_FREEPARTS") == "1":   # QA hook: a few arbitrary catalogue parts on the open board (sandbox: no bin, no limits)
 		for q in [["led-green-5mm", null, 4, 11, 0], ["ne555", null, 9, 9, 0], ["cap-el", 100e-6, 6, 13, 0], ["lm7805", null, 15, 11, 0], ["res-cf", 4700, 3, 9, 0], ["led-blue-5mm", null, 19, 7, 0]]:
