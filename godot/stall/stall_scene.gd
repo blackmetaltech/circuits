@@ -194,7 +194,8 @@ func _refresh_pages() -> void:
 		var pg: Dictionary = backend.progress(map_chapter)
 		pages.tickets = pg.tickets; pages.wallet = int(pg.wallet); pages.wallet_text = str(pg.wallet_text)
 		pages.map_chapter = map_chapter; pages.map_title = str(pg.title); pages.map_blurb = str(pg.blurb)
-		pages.chapter_open = [true, _chapter_unlocked(2), _chapter_unlocked(3), _chapter_unlocked(4)]
+		pages.chapter_open = [true, _chapter_unlocked(2), _chapter_unlocked(3), _chapter_unlocked(4), _chapter_unlocked(5)]
+		pages.map_stars = int(pg.get("stars", 0)); pages.map_stars_total = int(pg.get("stars_total", 0))
 		for tk in pg.tickets: done[str(tk.id)] = bool(tk.done)
 		pages.coach_ticket = backend.ticket; return
 	var prev_done := true
@@ -467,7 +468,7 @@ func _layout() -> void:
 	dmm.scale = Vector2(0.8, 0.8); dmm.position = Vector2(dmm_x, low)
 	# the tin's coin total hangs 132 px below the tin's top edge: keep all of it inside the window (and the tin right of the exam / crew slip, 1094..1290)
 	L.tin = Rect2(maxf(sup_x + 20.0, 1306.0), minf(880 + dy * 0.8 + ms, H - 16.0 - 132.0), 124, 124)
-	L.customer = Rect2(780, 858 + dy, 300, 270)   # behind the counter: head and shoulders show, and the band above her head is free for her speech bubble
+	L.customer = Rect2(815, 864 + dy, 230, 207)   # behind the counter at 0.82 scale: the whole face AND the paper / gadget in their hands stay inside the window (head top at -92, gadget bottom at +124 design units; layout_flow checks it)
 	L.next = Rect2(1306, 1000 + dy, 220, 50)
 	L.exam = Rect2(1094, 816 + dy, 196, 224)   # the exam problem card (exam tickets) or the crew's slip (2-2): it stays on the bench after "later"
 	L.chit = Rect2(sc_x + 594.0 - chit_w, 190.0 + dy * 0.05 + (266.0 if not handheld else 270.0) + chit_dy, chit_w, chit_h)   # handheld: a bigger chit for 16 px text
@@ -481,7 +482,7 @@ func _layout() -> void:
 	if vp.size != vsz: vp.size = vsz
 	tex.position = board_rect.position; tex.size = board_rect.size
 	# the speech bubble sits centred above her head, in the band between the board and her head: it covers no control, instrument or pad
-	L.bubble = Rect2(772, L.customer.position.y + 34.0 - 100.0, 312, 100)
+	L.bubble = Rect2(772, L.customer.position.y + 27.0 - 100.0, 312, 100)
 	props.L = L; top.L = L
 	window.gear_hover = hover == "gear"
 
@@ -806,11 +807,23 @@ func _sync_views(dt: float) -> void:
 	window.neon_on = true
 	mouse_default_cursor_shape = Control.CURSOR_DRAG if drag.has("kind") else (Control.CURSOR_POINTING_HAND if hover != "" else Control.CURSOR_ARROW)
 
-func _fit_slip() -> void:
-	var w := 440.0
-	var h := 58.0 + S.wrapped_h(S.hand(), top.slip_text, 21, w - 40.0) + 26.0
+## Wren's slip: it grows UP from the bench edge, but never over the perfboard's usable area. A long step first uses a slightly wider paper, then a smaller hand (never under the text floor).
+func slip_layout(text: String) -> Dictionary:
 	var dy := maxf(0.0, size.y - 1080.0)
-	L["slip"] = Rect2(312, 1038.0 + dy - h, w, h)
+	var bottom := 1038.0 + dy if dy <= 0.0 else size.y - 14.0   # a handheld window is taller: the paper may sit lower
+	var top_lim := board_rect.end.y + 8.0
+	var floor_fs := maxi(16, S.min_font)
+	var best := {}
+	for w in [440.0, 446.0]:
+		for fs in range(maxi(21, floor_fs), floor_fs - 1, -1):
+			var h := 58.0 + S.wrapped_h(S.hand(), text, fs, w - 40.0) + 26.0
+			best = {"rect": Rect2(312, bottom - h, w, h), "fs": fs}
+			if bottom - h >= top_lim: return best
+	return best
+
+func _fit_slip() -> void:
+	var lay := slip_layout(top.slip_text)
+	L["slip"] = lay.rect; top.slip_fs = int(lay.fs)
 
 func _hottest_screen() -> Vector2:
 	var best := 0.0; var out := Vector2.ZERO
@@ -969,13 +982,17 @@ func _where(sp: Vector2) -> String:
 	if board_rect.grow(6).has_point(sp): return "board"
 	return ""
 
+## The shoebox row under a screen point (-1: none). A press computes this itself: a press that arrives before any motion event (a fast click-drag, a touch, a harness) must still know what it grabbed.
+func _slot_at(sp: Vector2) -> int:
+	if not props.box_inner().has_point(sp): return -1
+	var sl := StallProps.slots(props.box_inner(), props.items.size(), props.bin_scroll)
+	for i in sl.size(): if (sl[i] as Rect2).size != Vector2.ZERO and (sl[i] as Rect2).has_point(sp): return i
+	return -1
+
 func _motion(sp: Vector2) -> void:
 	_mouse = sp
 	hover = _where(sp)
-	_slot_hover = -1
-	if hover == "box" and props.box_inner().has_point(sp):
-		var sl := StallProps.slots(props.box_inner(), props.items.size(), props.bin_scroll)
-		for i in sl.size(): if (sl[i] as Rect2).size != Vector2.ZERO and (sl[i] as Rect2).has_point(sp): _slot_hover = i
+	_slot_hover = _slot_at(sp) if hover == "box" else -1
 	if drag.get("kind", "") == "probe": drag.pos = sp
 	elif drag.get("kind", "") == "jockey": _jockey_to(sp)
 	elif drag.get("kind", "") == "tray": _tray_motion(sp)
@@ -1032,7 +1049,7 @@ func _press(sp: Vector2) -> void:
 		var chip = props.chip_at(sp)
 		if chip != null: props.rating_filter = str(chip); props.bin_scroll = 0.0; sfx.play("click", 0.5); return
 		if props.box_inner().grow(4).has_point(sp):
-			_fling = 0.0; rot = 0
+			_slot_hover = _slot_at(sp); _fling = 0.0; rot = 0
 			drag = {"kind": "tray", "item": _slot_hover, "start": sp, "scroll0": props.bin_scroll, "mode": "", "last": sp, "lt": t}
 		return
 	if hover == "board":
@@ -1084,8 +1101,9 @@ func _near_pin(pd: Dictionary, pa: Vector2) -> bool:
 func _tray_motion(sp: Vector2) -> void:
 	var dv: Vector2 = sp - (drag.start as Vector2)
 	if drag.mode == "":
-		if absf(dv.y) > 10.0 and absf(dv.y) > absf(dv.x) * 1.2: drag.mode = "scroll"
-		elif int(drag.item) >= 0 and dv.length() > 14.0 and (absf(dv.x) >= absf(dv.y) * 0.8 or not props.box_inner().has_point(sp)): _tray_lift(); return
+		if int(drag.item) >= 0 and dv.length() > 14.0 and not props.box_inner().has_point(sp): _tray_lift(); return   # leaving the box ALWAYS lifts the part, whatever the direction (one coarse motion sample can jump straight up to the board)
+		elif absf(dv.y) > 10.0 and absf(dv.y) > absf(dv.x) * 1.2: drag.mode = "scroll"
+		elif int(drag.item) >= 0 and dv.length() > 14.0 and absf(dv.x) >= absf(dv.y) * 0.8: _tray_lift(); return
 	if drag.mode == "scroll":
 		var dt := maxf(t - float(drag.lt), 0.001)
 		_fling = clampf((float(drag.last.y) - sp.y) / StallProps.row_h() / dt, -14.0, 14.0)
@@ -1098,7 +1116,8 @@ func _tray_lift() -> void:
 
 func _release(sp: Vector2) -> void:
 	if drag.get("kind", "") == "tray":
-		if int(drag.item) >= 0 and drag.mode == "" and (sp - (drag.start as Vector2)).length() > 14.0: _tray_lift()
+		var far: bool = (sp - (drag.start as Vector2)).length() > 14.0
+		if int(drag.item) >= 0 and far and (drag.mode == "" or not props.box_inner().has_point(sp)): _tray_lift()   # press, move and release inside one frame still places the part where the pointer is
 		elif drag.mode != "scroll": _fling = 0.0
 	if drag.get("kind", "") in ["part", "move"]: _mouse = sp; _board_overlay()   # drop where the pointer is NOW, not where the last drawn frame saw it
 	var d := drag; drag = {}

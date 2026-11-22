@@ -17,6 +17,7 @@ var tag: Dictionary = {}          ## hover readout {text, pos}
 var chit_pay := true             ## the fee line fits on the paper (the scene hides it when the paper would have to grow past what the instruments under it allow; the notebook has it)
 var slip_text := ""
 var slip_step := ""
+var slip_fs := 21               ## the slip's hand size (a long step writes smaller so the paper stays off the board)
 var arrow_to := Vector2.ZERO
 var show_arrow := false
 var bubble := ""
@@ -84,6 +85,7 @@ func _draw() -> void:
 	for c in cables: _cable(c)
 	_cam_chip()
 	if not scope_lead.is_empty(): _scope_lead()
+	for ld in leads: _lead_cable(ld)   # the lead cables lie UNDER the chit paper (they never run across its text); the probe bodies and clips stay on top
 	if not peek.is_empty(): _peek()
 	else: _chit()
 	for ld in leads: _lead(ld)
@@ -122,10 +124,13 @@ func _scope_lead() -> void:
 	draw_line(c + Vector2(0, 6), c + Vector2(0, 12), Color("#d8dce0"), 3.0)
 	S.text(self, S.hand(), "CH1", c + Vector2(12, -12), 14, Color("#9dffa0"))
 
-func _lead(ld: Dictionary) -> void:
+func _lead_cable(ld: Dictionary) -> void:
 	var a: Vector2 = ld.from; var tip: Vector2 = ld.tip; var col: Color = ld.col
+	S.cable(self, a, tip + Vector2(52, -96), 70.0, col.darkened(0.55) if col.r > col.g else Color("#1b1c20"), 5.0)
+
+func _lead(ld: Dictionary) -> void:
+	var tip: Vector2 = ld.tip; var col: Color = ld.col
 	var grip := tip + Vector2(52, -96)     # the probe body is held up and to the right of its tip
-	S.cable(self, a, grip, 70.0, col.darkened(0.55) if col.r > col.g else Color("#1b1c20"), 5.0)
 	var dir := (tip - grip).normalized(); var side := dir.orthogonal()
 	var body := PackedVector2Array([grip + side * 11, grip - side * 11, grip + dir * 70 - side * 6, grip + dir * 70 + side * 6])
 	draw_colored_polygon(body.duplicate(), Color(0, 0, 0, 0.3))
@@ -220,7 +225,7 @@ func _chit() -> void:
 func _slip() -> void:
 	if slip_text == "": return
 	var r := slip_rect()
-	var w := r.size.x - 40.0; var fs := 21
+	var w := r.size.x - 40.0; var fs := slip_fs
 	S.paper(self, r, 1.5, Color("#f7f0d6"))
 	var c := r.get_center(); draw_set_transform(c, deg_to_rad(1.5), Vector2.ONE)
 	var q := Rect2(-r.size * 0.5, r.size)

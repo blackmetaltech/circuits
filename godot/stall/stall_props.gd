@@ -475,6 +475,11 @@ func _scroll_cues(ci: Control, inner: Rect2, n: int) -> void:
 
 ## ------------------------------------------------------------------------------------------------------------------ customer
 
+## The part of the customer that must stay readable: from the top of the head or hat to the bottom of the gadget in the hands, and the width of the shoulders.
+static func customer_visible(r: Rect2) -> Rect2:
+	var k := r.size.x / 280.0; var c := r.get_center()
+	return Rect2(c.x - 120.0 * k, c.y - 92.0 * k, 240.0 * k, 216.0 * k)
+
 func _customer() -> void:
 	var r := _r("customer"); var c := r.get_center()
 	var bob := sin(t * 1.6) * 3.0 + (sin(t * 9.0) * 4.0 if mood == "joy" else 0.0)
@@ -539,7 +544,7 @@ func _customer() -> void:
 			draw_arc(hc + Vector2(0, 26), 24, 0.3, PI - 0.3, 12, Color("#7a3b2a"), 4.0)
 			draw_colored_polygon(PackedVector2Array([hc + Vector2(-18, 34), hc + Vector2(18, 34), hc + Vector2(0, 50)]), Color(0.45, 0.1, 0.1, 0.0))
 	# arms up on the counter holding the gadget
-	var g := Vector2(58, 120)
+	var g := Vector2(58, 100)   # the gadget is held high enough that the whole of it stays on screen
 	for sgn in [-1.0, 1.0]:
 		draw_line(Vector2(sgn * 92, 100), g + Vector2(sgn * 26, 6), cloth.darkened(0.15), 24.0, true); draw_circle(g + Vector2(sgn * 26, 6), 13, skin)
 	_gadget(g)

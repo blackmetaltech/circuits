@@ -30,7 +30,12 @@ var tickets: Array = []                   ## [{id,title,customer,spec,price,open
 var map_chapter := 1                      ## which chapter's page the map shows
 var map_title := ""                       ## the engine's chapter title and blurb
 var map_blurb := ""
-var chapter_open: Array = [true, false, false, false]
+var chapter_open: Array = [true, false, false, false, false]
+var map_stars := 0                        ## stars earned on this chapter's page and the most it holds (engine chapterMap)
+var map_stars_total := 0
+var card_rects: Array = []                ## the map's ticket-card text as drawn: [{id, rect (page space, rotation ignored), size}] (layout_flow checks 16 px and no overlap)
+var record_cards := false
+var map_left_free := Rect2()               ## the part of the map's left page that holds the large sketch (between Wren's note and the star key)
 var safety: Dictionary = {}                ## the mains safety card (engine ticketCard().mains): title, Wren's lines, button, firstView
 var safety_t := 0.0                        ## seconds the card has been open (the first view cannot be dismissed before it has been on the desk long enough to read)   ## per chapter: has a ticket that is not locked
 var pred_head := ""                        ## the slip's title line ("2-4 Exam: ... · predict first" or "Cable Fault · the crew's slip")
@@ -201,17 +206,28 @@ func _map(a: float) -> void:
 	if map_chapter == 2: note = map_blurb + "\n\nA voltage divider is only as good as what hangs on it. A bridge asks nothing of the cable but a balance. Measure first, then build."
 	elif map_chapter == 3: note = map_blurb + "\n\nNothing here settles at once. A capacitor fills at a pace set by R times C, and a coil rises at L over R: watch the curve form, and keep it inside the amber tube."
 	elif map_chapter == 4: note = map_blurb + "\n\nThe rain is loud on the awnings tonight. Volts you can feel are volts you respect: on the mains tickets the bench is simulated and the dangerous side is fenced off in red."
+	elif map_chapter == 5: note = map_blurb + "\n\nA transistor is a valve with a tiny handle: a trickle at the base decides a flood at the collector. Shove it hard enough and it is a switch; ease it and it is an amplifier. Mind the heat either way."
 	S.text(self, f, note, lp + Vector2(0, 124), 24, Color(S.INK, 0.85), HORIZONTAL_ALIGNMENT_LEFT, half - 130)
-	var dc := r.position + Vector2(half * 0.5 + 170.0, r.size.y - 190)
-	if map_chapter == 2: _doodle_divider(dc)
-	elif map_chapter == 3: _doodle_rc(dc)
-	elif map_chapter == 4: _doodle_rectifier(dc)
-	else: _doodle_led(dc)
+	# the chapter's idea, sketched large in the free part of the left page, between the note and the star key
+	var note_end := lp.y + 124.0 + S.wrapped_h(f, note, 24, half - 130.0)
+	var sk_top := note_end + 16.0; var sk_bot := r.end.y - 232.0
+	map_left_free = Rect2(r.position.x + 56.0, sk_top, half - 130.0, sk_bot - sk_top)
+	var kk := clampf((sk_bot - sk_top) / 190.0, 0.8, 1.9)
+	var dc := Vector2(r.position.x + half * 0.5 + 10.0, (sk_top + sk_bot) * 0.5)
+	draw_set_transform(dc, 0.0, Vector2(kk, kk))
+	if map_chapter == 2: _doodle_divider(Vector2.ZERO)
+	elif map_chapter == 3: _doodle_rc(Vector2.ZERO)
+	elif map_chapter == 4: _doodle_rectifier(Vector2.ZERO)
+	elif map_chapter == 5: _doodle_switch(Vector2.ZERO)
+	else: _doodle_led(Vector2(0, -20))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	S.text(self, f, "stars earned:  %d of %d" % [map_stars, map_stars_total], r.position + Vector2(56, r.size.y - 112), 26, S.INK_RED)
 	S.text(self, f, ("in the tin:  %s" % wallet_text) if wallet_text != "" else ("coins in the tin:  %d" % wallet), r.position + Vector2(56, r.size.y - 60), 28, S.INK)
 	# the chits, pinned on the right page
 	var rp := Rect2(r.position.x + half + 30, r.position.y + 40, half - 60, r.size.y - 80)
 	S.text(self, f, "tickets on the spike", rp.position + Vector2(10, 30), 26, Color(S.INK, 0.7))
-	var cw := rp.size.x * 0.46; var ch := 226.0
+	var cw := rp.size.x * 0.46; var ch := 232.0
+	card_rects.clear()
 	for i in tickets.size():
 		var tk: Dictionary = tickets[i]
 		var col := i % 2; var row := i / 2
@@ -225,47 +241,58 @@ func _map(a: float) -> void:
 		S.paper(self, Rect2(cr.position + Vector2(0, lift), cr.size), rot, tint)
 		draw_set_transform(cr.get_center() + Vector2(0, lift), deg_to_rad(rot), Vector2.ONE)
 		var q := Rect2(-cr.size * 0.5, cr.size)
+		if record_cards: card_rects.append({"id": str(tk.id), "card": q})
 		S.pin(self, q.position + Vector2(q.size.x * 0.5, 12), Color("#d23a2e") if open else Color("#7a7f86"))
-		S.text(self, f, "%s%s" % [str(tk.id), "  EB" if bool(tk.get("eb", false)) else ""], q.position + Vector2(14, 48), 18, S.INK_RED)
+		var cid := str(tk.id)
+		_ct(cid, f, "%s%s" % [str(tk.id), "  EB" if bool(tk.get("eb", false)) else ""], q.position + Vector2(14, 44.0 if S.handheld else 48.0), 18, S.INK_RED)
 		var tsz := 32   # a long title shrinks to fit the chit instead of running into the corner tags
 		var tw_max: float = q.size.x - 28.0 - (140.0 if tk.done else 0.0)   # a FIXED stamp sits at the right: the title stops before it
 		while tsz > 18 and S.tw(f, str(tk.title), tsz) > tw_max: tsz -= 2
-		S.text(self, f, str(tk.title), q.position + Vector2(14, 84), tsz, S.INK if open else Color(S.INK, 0.5))
-		S.text(self, f, "for %s" % str(tk.customer), q.position + Vector2(14, 112), 20, Color(S.INK, 0.8 if open else 0.4))
-		if not S.handheld: S.text(self, f, str(tk.spec), q.position + Vector2(14, 130), 16, Color(S.INK, 0.9 if open else 0.4), HORIZONTAL_ALIGNMENT_LEFT, q.size.x - 26)   # (handheld: the spec is on the ticket chit; here the text is big instead)
+		_ct(cid, f, str(tk.title), q.position + Vector2(14, 86.0 if S.handheld else 84.0), tsz, S.INK if open else Color(S.INK, 0.5))
+		_ct(cid, f, "for %s" % str(tk.customer), q.position + Vector2(14, 122.0 if S.handheld else 112.0), 20, Color(S.INK, 0.8 if open else 0.4))
+		if not S.handheld: _ct(cid, f, str(tk.spec), q.position + Vector2(14, 134), 16, Color(S.INK, 0.9 if open else 0.4), q.size.x - 26)   # (handheld: the spec is on the ticket chit; here the text is big instead)
 		var pay := str(tk.get("pay_text", ""))
-		var hb := 46.0 if S.handheld else 38.0   # the 'best cost' / replay line sits this far above the bottom edge
-		if open and pay != "": S.text(self, f, pay, q.position + Vector2(14, q.size.y - 14), 14, Color(S.INK, 0.6))
+		var hb := 34.0   # the 'best cost' / replay line sits this far above the fee line
+		if open and pay != "": _ct(cid, f, pay.replace(" per new star", " a star") if S.handheld else pay, q.position + Vector2(14, q.size.y - 10), 16, Color(S.INK, 0.6))
 		var fee: String = str(tk.get("price_text", "")) if str(tk.get("price_text", "")) != "" else "%d coins" % int(tk.price)
-		if not tk.done: S.text(self, f, fee, q.position + Vector2(q.size.x - 20 - S.tw(f, fee, 17), 48), 17, Color(S.INK, 0.7))   # (a fixed chit's fee is on its 'fee + per new star' line; the stamp sits here)
+		if not tk.done: _ct(cid, f, fee, q.position + Vector2(q.size.x - 20 - S.tw(f, fee, 17), 48), 17, Color(S.INK, 0.7))   # (a fixed chit's fee is on its 'fee + per new star' line; the stamp sits here)
 		if int(tk.get("stars", 0)) > 0 or tk.done:
 			var smax := int(tk.get("stars_max", 2)); var got := int(tk.get("stars", 0))
-			S.text(self, f, "*".repeat(got) + ".".repeat(maxi(0, smax - got)), q.position + Vector2(118, 52), 30, S.INK_RED)
-		if tk.done and hv: S.text(self, f, "tap to replay" if S.handheld else "tap to replay: better stars, lower cost", q.position + Vector2(14, q.size.y - hb), 15, S.INK_RED)
-		elif tk.done and str(tk.get("best_text", "")) != "": S.text(self, f, str(tk.best_text), q.position + Vector2(14, q.size.y - hb), 15, Color(S.INK, 0.7))
+			_ct(cid, f, "*".repeat(got) + ".".repeat(maxi(0, smax - got)), q.position + Vector2(118, 52), 30, S.INK_RED)
+		if tk.done and hv: _ct(cid, f, "tap to replay" if S.handheld else "tap to replay: better stars, lower cost", q.position + Vector2(14, q.size.y - 10 - hb), 16, S.INK_RED)
+		elif tk.done and str(tk.get("best_text", "")) != "": _ct(cid, f, str(tk.best_text), q.position + Vector2(14, q.size.y - 10 - hb), 16, Color(S.INK, 0.7))
 		if tk.done:
 			draw_set_transform(cr.get_center() + (Vector2(cr.size.x * 0.28, -cr.size.y * 0.17) if not S.handheld else Vector2(cr.size.x * 0.24, cr.size.y * 0.0)), deg_to_rad(-12), Vector2.ONE)
 			S.rr_line(self, Rect2(-52, -20, 104, 40), 6, Color(0.1, 0.55, 0.2, 0.9), 3.5); S.text(self, f, "FIXED", Vector2(-36, 10), 26, Color(0.1, 0.55, 0.2, 0.9))
 		elif not open:
-			S.text(self, f, "locked", q.position + Vector2(q.size.x - 20 - S.tw(f, "locked", 18), 112), 18, Color(S.INK, 0.45))
+			_ct(cid, f, "locked", q.position + Vector2(q.size.x - 20 - S.tw(f, "locked", 18), q.size.y - 10), 18, Color(S.INK, 0.5))   # bottom right: nothing else lives there on a locked chit
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		if hv: S.rr_line(self, Rect2(cr.position + Vector2(-3, lift - 3), cr.size + Vector2(6, 6)), 4, Color("#ffd98a", 0.85), 3.0)
 	# what the stars on a chit mean
-	var lx0 := r.position.x + 70.0; var ly0 := r.end.y - 300.0   # the star key sits on the left page, above the tin
-	S.text(self, f, "stars on a chit", Vector2(lx0, ly0), 18, S.INK_RED)
-	S.text(self, f, "*  met the spec", Vector2(lx0, ly0 + 26), 18, Color(S.INK, 0.8))
-	S.text(self, f, "**  and under the cost par", Vector2(lx0, ly0 + 50), 18, Color(S.INK, 0.8))
-	S.text(self, f, "***  an exam: every prediction within 1 %", Vector2(lx0, ly0 + 74), 18, Color(S.INK, 0.8))
-	for ci in 4:   # the chapters: tabs on the page's right edge (a page nobody has opened yet is dim)
+	var lx0 := r.position.x + 70.0; var ly0 := r.end.y - 222.0   # the star key sits on the left page, above the star total and the tin
+	S.text(self, f, "stars on a chit", Vector2(lx0, ly0), 20, S.INK_RED)
+	S.text(self, f, "*  met the spec", Vector2(lx0, ly0 + 28), 20, Color(S.INK, 0.8))
+	S.text(self, f, "**  and under the cost par", Vector2(lx0, ly0 + 54), 20, Color(S.INK, 0.8))
+	S.text(self, f, "***  an exam: every prediction within 1 %", Vector2(lx0, ly0 + 80), 20, Color(S.INK, 0.8))
+	for ci in 5:   # the chapters: tabs on the page's right edge (a page nobody has opened yet is dim)
 		var tr := Rect2(r.end.x - 22, r.position.y + 60 + ci * 66, 44, 56)
 		var chv := _btn(tr, "chapter", str(ci + 1))
 		var curc := ci + 1 == map_chapter; var openc: bool = ci < chapter_open.size() and bool(chapter_open[ci])
-		S.rr(self, tr, 8, [Color("#d9663f"), Color("#4a7fb5"), Color("#6aa05a"), Color("#8c6ab5")][ci].lightened(0.15 if chv or curc else -0.12).darkened(0.0 if openc else 0.35))
+		S.rr(self, tr, 8, [Color("#d9663f"), Color("#4a7fb5"), Color("#6aa05a"), Color("#8c6ab5"), Color("#c9a02f")][ci].lightened(0.15 if chv or curc else -0.12).darkened(0.0 if openc else 0.35))
 		S.text(self, f, str(ci + 1), tr.position + Vector2(24, 36), 26, Color("#fff8e0", 1.0 if openc else 0.55))
 	# back to the title
 	var br := Rect2(r.end.x - 230, r.end.y - 62, 190, 44)
 	var bh := _btn(br, "goto:title")
 	S.text(self, f, "<  back to the sign", br.position + Vector2(0, 30), 22, S.INK if bh else Color(S.INK, 0.6))
+
+## One line (or a wrapped block, when `w` > 0) of a map ticket card: drawn like S.text, and recorded in card coordinates for the layout audit.
+func _ct(id: String, f: Font, txt: String, pos: Vector2, size: int, col: Color, w := -1.0) -> void:
+	S.text(self, f, txt, pos, size, col, HORIZONTAL_ALIGNMENT_LEFT, w)
+	if record_cards:
+		var sz := maxi(size, S.min_font)
+		var width := w if w > 0.0 else S.tw(f, txt, size)
+		var hh := (S.wrapped_h(f, txt, size, w) - 0.25 * float(sz)) if w > 0.0 else 0.98 * float(sz)   # the ink box: 0.78 em above the baseline, 0.2 below
+		card_rects.append({"id": id, "rect": Rect2(pos.x, pos.y - 0.78 * float(sz), minf(width, w) if w > 0.0 else width, hh), "size": sz, "text": txt})
 
 ## Chapter 1's doodle: an LED with rays. Chapter 2's: a divider with its load, and a bridge.
 func _doodle_led(dc: Vector2) -> void:
@@ -296,6 +323,18 @@ func _doodle_rectifier(dc: Vector2) -> void:
 	for i in 41: var x := float(i) / 40.0; var ph := fposmod(x * 3.0, 1.0); q.append(base + Vector2(x * 96.0, -44.0 + 14.0 * ph - (0.0 if ph < 0.35 else 0.0)))
 	draw_polyline(q, S.AMBER.darkened(0.1), 4.0, true)
 	S.text(self, S.hand(), "~", o + Vector2(36, 34), 26, S.INK_RED); S.text(self, S.hand(), "ripple", base + Vector2(10, 38), 20, S.INK_RED)
+
+## Chapter 5's doodle: a transistor with a small base current steering a big collector current through a load.
+func _doodle_switch(dc: Vector2) -> void:
+	var ink := Color(S.INK, 0.8)
+	var b := dc + Vector2(-20, 0)
+	draw_line(b + Vector2(-70, 0), b, ink, 3.0); draw_line(b, b + Vector2(0, 0), ink, 3.0); draw_line(b + Vector2(0, -34), b + Vector2(0, 34), ink, 5.0)
+	draw_line(b + Vector2(0, -16), b + Vector2(40, -50), ink, 3.0); draw_line(b + Vector2(0, 16), b + Vector2(40, 50), ink, 3.0)
+	draw_colored_polygon(PackedVector2Array([b + Vector2(40, 50), b + Vector2(24, 46), b + Vector2(34, 34)]), ink)
+	draw_line(b + Vector2(40, -50), b + Vector2(40, -86), ink, 3.0); ExamFigure._zig(self, b + Vector2(40, -86), b + Vector2(40, -140), 10.0, Color(S.INK_RED, 0.9), 3.0)
+	draw_line(b + Vector2(40, 50), b + Vector2(40, 84), ink, 3.0); draw_line(b + Vector2(20, 84), b + Vector2(60, 84), ink, 3.0)
+	S.text(self, S.hand(), "5 V pin", b + Vector2(-130, -10), 22, ink); S.text(self, S.hand(), "small", b + Vector2(-122, 18), 20, S.INK_RED)
+	S.text(self, S.hand(), "big", b + Vector2(62, -108), 20, S.INK_RED); S.text(self, S.hand(), "fan", b + Vector2(62, -84), 22, ink)
 
 func _doodle_divider(dc: Vector2) -> void:
 	var ink := Color(S.INK, 0.8)

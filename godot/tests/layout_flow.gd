@@ -9,6 +9,7 @@ var bk: EngineBench
 var fails := 0
 var checks := 0
 var verbose := OS.get_environment("CB_VERBOSE") != ""
+const CHAPTERS := 4
 const IDS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4", "4-1", "4-2", "4-3", "4-4", "4-5"]
 
 func _initialize() -> void:
@@ -49,6 +50,9 @@ func _run() -> void:
 			sc.pages.show_page(""); sc._lay_key = ""
 			await _frames(3)
 			await _audit(id, res)
+	for res in [Vector2i(1920, 1080), Vector2i(1280, 800)]:
+		await _set_layout_and_frames(res)
+		await _map_audit(res)
 	print("layout_flow: %d checks, %d failed" % [checks, fails])
 	quit(1 if fails > 0 else 0)
 
@@ -83,6 +87,13 @@ func _audit(id: String, res: Vector2i) -> void:
 		ok(not bt.intersects(Rect2(sc.L.box)) and not bt.intersects(Rect2(sc.L.notebook)), "%s the bubble does not cover the shoebox or the notebook" % tag)
 		var ex: Rect2 = sc.L.exam
 		ok(not bt.intersects(ex), "%s the bubble does not touch the exam / crew card" % tag)
+	# the customer is fully readable: the face and the paper in the hands inside the window, clear of every control
+	var cv: Rect2 = StallProps.customer_visible(sc.L.customer)
+	ok(cv.position.y >= 0.0 and cv.end.y <= H - 4.0 and cv.position.x >= 0.0 and cv.end.x <= W, "%s the customer (face and paper) is inside the window (%s in %dx%d)" % [tag, str(cv), int(W), int(H)])
+	for k in ["go", "scope", "supply", "dmm", "tin", "chit"]:
+		ok(not cv.intersects(R[k]), "%s the customer does not overlap %s (%s vs %s)" % [tag, k, str(cv), str(R[k])])
+	ok(not cv.intersects(sc.board_rect), "%s the customer does not overlap the perfboard (%s vs %s)" % [tag, str(cv), str(sc.board_rect)])
+	ok(not cv.intersects(Rect2(sc.L.box)) and not cv.intersects(Rect2(sc.L.notebook)) and not cv.intersects(sc.L.exam), "%s the customer is clear of the shoebox, the notebook and the exam card" % tag)
 	for k in ["go", "scope", "supply", "dmm", "tin"]:
 		var r: Rect2 = R[k]
 		ok(r.position.x >= 0.0 and r.position.y >= 0.0 and r.end.x <= W + 0.5 and r.end.y <= H + 0.5, "%s %s inside the window (%s in %dx%d)" % [tag, k, str(r), int(W), int(H)])
@@ -94,6 +105,16 @@ func _audit(id: String, res: Vector2i) -> void:
 	var dmm_body := Rect2(R.dmm.position + Vector2(0, 36), R.dmm.size - Vector2(0, 36))   # the meter's top rim is blank bezel: the paper may hang over it
 	ok(not R.chit.intersects(R.supply) and not R.chit.intersects(dmm_body) and not R.chit.intersects(R.tin), "%s the chit is clear of the supply, the meter and the tin (%s)" % [tag, str(R.chit)])
 	ok(sc.top.chit_need(bk.ticket, R.chit.size.x, sc.top.chit_pay) <= R.chit.size.y + 0.5, "%s the chit paper holds every line of its text (%.0f of %.0f)" % [tag, sc.top.chit_need(bk.ticket, R.chit.size.x, sc.top.chit_pay), R.chit.size.y])
+	# Wren's slip: every step's text, however long, keeps the paper off the perfboard, inside the window and clear of the customer and her bubble
+	var cvw: Dictionary = bk.coach_view()
+	var step_texts: Array = ["Fixed! Click here (or open the notebook) for the next ticket."]
+	for st in cvw.steps: step_texts.append(str(st.text))
+	for txt in step_texts:
+		var lay: Dictionary = sc.slip_layout(txt); var sr: Rect2 = lay.rect
+		ok(not sr.intersects(sc.board_rect), "%s the coach slip stays off the perfboard (%d chars, %s vs %s)" % [tag, txt.length(), str(sr), str(sc.board_rect)])
+		ok(sr.position.x >= 0.0 and sr.end.y <= H and sr.position.y >= 0.0, "%s the coach slip is inside the window (%s)" % [tag, str(sr)])
+		ok(not sr.intersects(cv) and not sr.intersects(Rect2(sc.L.bubble.position.x - 6.0, sc.L.bubble.position.y - 60.0, 330.0, 190.0)), "%s the coach slip is clear of the customer and her bubble" % tag)
+		ok(int(lay.fs) >= 16 and S.wrapped_h(S.hand(), txt, int(lay.fs), sr.size.x - 40.0) + 84.0 <= sr.size.y + 0.5, "%s the coach slip holds all its text at %d px" % [tag, int(lay.fs)])
 	# the coin total sits inside the window
 	var tt: Rect2 = sc.props.tin_text_rect()
 	ok(tt.end.y <= H - 6.0, "%s the coin total is not clipped (bottom %.0f of %.0f)" % [tag, tt.end.y, H])
@@ -117,3 +138,33 @@ func _audit(id: String, res: Vector2i) -> void:
 	for it in sc.props.items:
 		var fit: Dictionary = sc.props.label_fit(it, inner.size.x - 4.0 - StallProps.LABEL_X - 10.0)
 		ok(bool(fit.fits), "%s shoebox name fits: '%s' (%s)" % [tag, str(it.label), str(fit)])
+
+
+## The chapter pages of the notebook (the map): every ticket card's text is 16 px or more on screen, sits inside its card, and no two text blocks of one card overlap (the "locked" tag
+## used to run over the spec); both with the later chapters locked (a fresh game) and with everything unlocked.
+func _map_audit(res: Vector2i) -> void:
+	for pass_i in 2:
+		if pass_i == 0: bk.new_game()
+		else: bk.unlock_through(IDS[IDS.size() - 1])
+		for ch in range(1, CHAPTERS + 1):
+			sc.start_ticket(IDS[0]); sc.map_chapter = ch; sc._refresh_pages()
+			sc.pages.record_cards = true; sc.pages.card_rects.clear(); sc.pages.show_page("map"); sc.pages.open_t = 1.0
+			await _frames(3)
+			sc.pages.card_rects.clear(); sc.pages.queue_redraw(); await _frames(2)
+			var tag := "map ch%d @%dx%d %s" % [ch, res.x, res.y, "fresh" if pass_i == 0 else "all unlocked"]
+			var cards := {}; var texts: Array = []
+			for e in sc.pages.card_rects:
+				if e.has("card"): cards[e.id] = e.card
+				else: texts.append(e)
+			ok(texts.size() > 0 and cards.size() == sc.pages.tickets.size(), "%s: %d cards recorded (%d text lines)" % [tag, cards.size(), texts.size()])
+			for e in texts:
+				ok(int(e.size) >= 16, "%s: %s '%s' is %d px (16 minimum)" % [tag, e.id, str(e.text).left(24), int(e.size)])
+				if cards.has(e.id): ok((cards[e.id] as Rect2).grow(2.0).encloses(e.rect), "%s: %s '%s' stays on its card (%s vs %s)" % [tag, e.id, str(e.text).left(24), str(e.rect), str(cards[e.id])])
+			for i in texts.size():
+				for j in range(i + 1, texts.size()):
+					if texts[i].id != texts[j].id: continue
+					var ra: Rect2 = (texts[i].rect as Rect2).grow(-2.0); var rb: Rect2 = (texts[j].rect as Rect2).grow(-2.0)
+					ok(not ra.intersects(rb), "%s: %s '%s' does not overlap '%s' (%s vs %s)" % [tag, texts[i].id, str(texts[i].text).left(18), str(texts[j].text).left(18), str(ra), str(rb)])
+			var lp: Rect2 = sc.pages.map_left_free
+			ok(lp.size.y >= 120.0, "%s: the left page has room for its sketch (%s)" % [tag, str(lp)])
+	sc.pages.record_cards = false; sc.pages.show_page("")

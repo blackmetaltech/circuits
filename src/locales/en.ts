@@ -53,7 +53,7 @@ export const en: Record<string, string> = {
   'coach.1-2.s2': 'Wire them in a row: each LED leg K goes to the next LED leg A. One current flows through all of them.',
   'coach.1-2.s3': 'Switch on, then clip the meter on each LED leg. Is the current the same in all three?',
   'coach.1-2.s4': 'Run the bench. It tests a fresh battery and a tired one.',
-  'coach.1-2.s5': "A tired battery pushes less voltage, so the same resistor passes less current. Estimate the current twice, once with the fresh battery's voltage and once with the tired one's, using I = (V - 3 LED drops) / R, and compare each with the 14 to 20 mA window. Which resistor lands both inside?",
+  'coach.1-2.s5': "A tired battery pushes less voltage, so the same resistor passes less current. Work out I = (V - 3 LED drops) / R twice, with the fresh voltage and the tired one, and check both against 14 to 20 mA. Which resistor lands both inside?",
   'coach.1-2.s6': '{customer} will ride tonight. Nice.',
   'ticket.1-3.title': 'Hot Resistor',
   'ticket.1-3.brief': "{customer}'s aquarium heater is a fixed 50 ohm element (soldered on the board, between the OUT and GND pads) and the supply gives 12 V. The heater needs a voltage between 7.85 V and 8.4 V, measured across it (OUT to GND). Put a resistor in series, from IN to OUT, to drop the rest, and mind how hot that resistor gets. {mentor}: watts are heat.",
