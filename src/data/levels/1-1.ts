@@ -11,6 +11,8 @@ export const L1_1: LevelDef = {
     connectors: [{ id: 'VP', pad: [2, 2], role: 'rail' }, { id: 'GND', pad: [8, 2], role: 'ground' }],
   },
   fixed: [{ uid: 'f1', partId: 'bat-pp3', value: null, variant: 'fresh', x: 2, y: 2, rot: 0, flip: false, fixed: true }],
+  // repair (decision 10b): the torch arrives with its LED straight across the PP3, no resistor; the LED is dead
+  fault: { parts: [{ partId: 'led-red-5mm', value: null, variant: '5mm', x: 8, y: 5, rot: 0, flip: false }], wires: [[[2, 2], [2, 5]], [[2, 5], [8, 5]], [[10, 5], [10, 2], [8, 2]]], smoked: [0] },
   supplies: [],
   instruments: { scope: { timePerDiv: 1e-3, voltsPerDiv: [1, 1] } },
   bin: [

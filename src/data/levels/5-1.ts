@@ -23,6 +23,8 @@ export const L5_1: LevelDef = {
   // the fan is soldered on: its + end to the 12 V pad, its - end to the COLL pad (the collector side of the fan)
   fixed: [{ uid: 'f1', partId: 'fan-dc', value: null, variant: '12V', x: 16, y: 2, rot: 0, flip: false, fixed: true }],
   fixedWires: [[[2, 2], [14, 2]], [[14, 2], [16, 2]], [[22, 2], [22, 4]]],
+  // repair (decision 10b): the fan's driver arrives with Q1 burnt and no flyback diode across the fan
+  fault: { parts: [{ partId: 'res-cf', value: 220, variant: '0.25W', x: 4, y: 7, rot: 0, flip: false }, { partId: '2n2222a', value: null, variant: 'TO92', x: 14, y: 8, rot: 0, flip: false }], wires: [[[2, 7], [4, 7]], [[8, 7], [15, 7], [15, 8]], [[14, 8], [14, 14], [22, 14]], [[16, 8], [16, 6]], [[16, 6], [22, 6], [22, 4]]], smoked: [1] },
   supplies: [
     { id: 'psu12', kind: 'bench', plus: 'V12', minus: 'GND', fixed: 12 },
     { id: 'pin', kind: 'pin', plus: 'PIN', minus: 'GND', v: 5, rOut: 25, f: 100, duty: 0.5 },

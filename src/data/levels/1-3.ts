@@ -19,6 +19,8 @@ export const L1_3: LevelDef = {
     ],
   },
   fixed: [{ uid: 'f1', partId: 'heater', value: null, variant: '12V', x: 14, y: 2, rot: 1, flip: false, fixed: true }],
+  // repair (decision 10b): the heater arrives wired straight to the 12 V supply by a link wire: it runs at 12 V, too hot
+  fault: { parts: [], wires: [[[2, 2], [14, 2]]], smoked: [] },
   supplies: [{ id: 'psu', kind: 'bench', plus: 'IN', minus: 'GND' }],
   instruments: { supply: { v: 12, ilim: 0.5 }, scope: { timePerDiv: 1e-3, voltsPerDiv: [2, 1] } },
   bin: [{ partId: 'res-cf', values: [22, 27, 47, 51, 100], variants: ['0.25W', '0.5W', '1W'] }],

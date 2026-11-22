@@ -12,6 +12,7 @@ import { advanceLive } from '../sim/live';
 import { sig } from '../sim/explain';
 import { t } from '../i18n';
 import { REGIONS } from '../regions';
+import { partPrice } from './metrics';
 import { formatMinor } from '../regions/data';
 import {
   allowedValues, allowedVariants, checkPartSpot, checkWire, getDef, isProblem, nextId, normalisePath, occupancy, problem, snapValue, sortParts, sortWires,
@@ -40,6 +41,13 @@ function open(s: NodeState, defs: Defs): { tk: TicketState; def: LevelDef } {
   return { tk: s.ticket!, def: def! };
 }
 const sandbox = (s: NodeState): boolean => s.mode === 'sandbox';
+/** A part the player burned costs its replacement: added to the ticket's burn bill, which comes out of the pay (decision 10b). Fixed parts (the customer's own) and sandbox are free. */
+function chargeBurn(s: NodeState, tk: TicketState, uid: string): void {
+  if (sandbox(s)) return;
+  const p = tk.board.parts.find((x) => x.uid === uid);
+  if (!p || p.fixed) return;
+  tk.burnCost = (tk.burnCost ?? 0) + partPrice(REGIONS.get(s.region), p.partId, p.variant, p.value);
+}
 
 const binList = (def: LevelDef): string => def.bin.map((b) => getDef(b.partId)?.id ?? b.partId).join(', ');
 function binEntry(s: NodeState, def: LevelDef, partId: string) {
@@ -535,7 +543,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
         const uid = typeof ev.vars.part === 'string' ? ev.vars.part : '';
         if (uid) (live.notes ??= {})[uid] = explainedText({ key: ev.key, vars: ev.vars }, tk, def, s.progress.failureLog.filter((x) => x.ticket === tk.id).length + rec.attempts);
         pushFailure(s.progress, { id, ticket: tk.id, tick: s.tick, kind: ev.key, vars: ev.vars });
-        rec.smokes += 1; tk.burned = true;
+        rec.smokes += 1; tk.burned = true; if (uid) chargeBurn(s, tk, uid);
         s.log.push({ tick: s.tick, level: 'bad', text: say(ev.key, nameVars(tk.board, ev.vars)) });
       }
       if (out.events.length > 0) return ok(say('live.smoked', { part: out.events.map((e) => partName(tk.board, e.part)).join(', '), text: say(out.events[0]!.key, nameVars(tk.board, out.events[0]!.vars)) }), { frames: out.frames, smoked: out.events.map((e) => e.part), status: live.status });
@@ -553,7 +561,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       tk.lastBench = result;
       const rec = (s.progress.tickets[tk.id] ??= newTicketProgress());
       rec.attempts += 1;
-      for (const uid of result.smoked) if (!tk.live.smoked.includes(uid)) { tk.live.smoked.push(uid); delete tk.live.temps[uid]; rec.smokes += 1; tk.burned = true; }
+      for (const uid of result.smoked) if (!tk.live.smoked.includes(uid)) { tk.live.smoked.push(uid); delete tk.live.temps[uid]; rec.smokes += 1; tk.burned = true; chargeBurn(s, tk, uid); }
       for (const c of causes) if (c.key.startsWith('smoke.') && typeof c.vars.part === 'string' && !tk.live.notes?.[c.vars.part]) (tk.live.notes ??= {})[c.vars.part] = explainedText({ key: c.key, vars: c.vars as Record<string, string | number> }, tk, def, s.progress.failureLog.filter((x) => x.ticket === tk.id).length + rec.attempts - 1);
       for (const c of causes) if (c.key.startsWith('smoke.')) {
         const id = (s.progress.failureLog[s.progress.failureLog.length - 1]?.id ?? 0) + 1;
@@ -562,14 +570,17 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       }
       if (result.pass) {
         // payment: the fee on the first pass plus a bonus for every star earned for the first time (never paid twice)
-        const first = !rec.passed, newStars = Math.max(0, result.stars - rec.stars), pay = def.pay ? (first ? def.pay.fee : 0) + def.pay.perStar * newStars : 0;
+        const first = !rec.passed, newStars = Math.max(0, result.stars - rec.stars), gross = def.pay ? (first ? def.pay.fee : 0) + def.pay.perStar * newStars : 0;
+        // burnt parts come out of the pay (never below zero; what is left over comes out of a later star bonus)
+        const burnt = Math.min(gross, Math.max(0, (tk.burnCost ?? 0) - (tk.burnDeducted ?? 0))), pay = gross - burnt;
+        if (burnt > 0) { tk.burnDeducted = (tk.burnDeducted ?? 0) + burnt; result.burnt = burnt; }
         if (pay > 0) { s.progress.wallet += pay; result.pay = pay; s.log.push({ tick: s.tick, level: 'good', text: say('wallet.paid', { amount: formatMinor(pay, REGIONS.get(s.region)) }) }); }
         rec.passed = true; rec.stars = Math.max(rec.stars, result.stars) as 0 | 1 | 2 | 3;
         const head = def.stars.head;
         if (rec.best === null || (result.metrics[head] ?? 0) < (rec.best[head] ?? 0)) rec.best = { ...result.metrics };
         const pack = REGIONS.get(s.region);
         s.log.push({ tick: s.tick, level: 'good', text: say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }) });
-        return ok((autoPower ? say('bench.autoPower') + ' ' : '') + say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }), { pass: true, stars: result.stars, metrics: result.metrics, pay: result.pay ?? 0, autoPowered: autoPower });
+        return ok((autoPower ? say('bench.autoPower') + ' ' : '') + say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }), { pass: true, stars: result.stars, metrics: result.metrics, pay: result.pay ?? 0, burnt: result.burnt ?? 0, autoPowered: autoPower });
       }
       return ok((autoPower ? say('bench.autoPower') + ' ' : '') + say('bench.fail', { id: tk.id, n: result.failures.length }), { pass: false, stars: 0, metrics: result.metrics, autoPowered: autoPower });
     },

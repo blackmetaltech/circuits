@@ -14,10 +14,17 @@ export const isUnlocked = (def: LevelDef, passed: (id: string) => boolean): bool
 
 export const levelDefOf = (defs: readonly LevelDef[], id: unknown): LevelDef | undefined => defs.find((d) => d.id === id);
 
-/** The board a ticket starts with: its connectors and fixed parts, nothing else. */
-export function startBoard(def: LevelDef): Board {
-  return { w: def.board.w, h: def.board.h, connectors: structuredClone(def.board.connectors), ...(def.board.keepOut ? { keepOut: structuredClone(def.board.keepOut) } : {}), parts: structuredClone(def.fixed) as PlacedPart[], wires: (def.fixedWires ?? []).map((path, i) => ({ wid: `fw${i + 1}`, path: path.map((q) => [q[0], q[1]] as [number, number]), fixed: true })) };
+/** The board a ticket starts with: its connectors and fixed parts, plus a repair ticket's faulty board unless `bare`. */
+export function startBoard(def: LevelDef, bare = false): Board {
+  const b: Board = { w: def.board.w, h: def.board.h, connectors: structuredClone(def.board.connectors), ...(def.board.keepOut ? { keepOut: structuredClone(def.board.keepOut) } : {}), parts: structuredClone(def.fixed) as PlacedPart[], wires: (def.fixedWires ?? []).map((path, i) => ({ wid: `fw${i + 1}`, path: path.map((q) => [q[0], q[1]] as [number, number]), fixed: true })) };
+  if (def.fault && !bare) {
+    def.fault.parts.forEach((p, i) => b.parts.push({ ...structuredClone(p), uid: `x${i + 1}` } as PlacedPart));
+    def.fault.wires.forEach((path, i) => b.wires.push({ wid: `xw${i + 1}`, path: path.map((q) => [q[0], q[1]] as [number, number]) }));
+  }
+  return b;
 }
+/** The uids of a repair ticket's parts that arrive burnt. */
+export const faultSmoked = (def: LevelDef): string[] => (def.fault?.smoked ?? []).map((i) => `x${i + 1}`);
 
 /** Hidden parameters: Learner uses the fixed value, every other mode draws from the save's rng (3 significant figures, so codes stay short). */
 export function drawHidden(s: NodeState, hidden: readonly HiddenDef[] | undefined): Record<string, number> {
@@ -28,7 +35,7 @@ export function drawHidden(s: NodeState, hidden: readonly HiddenDef[] | undefine
 
 /** The ref solution as a board (uids p1, p2... in placement order, wires w1...), used by hints and the expert persona. */
 export function refBoard(def: LevelDef): Board {
-  const b = startBoard(def);
+  const b = startBoard(def, true);
   def.ref.parts.forEach((p, i) => b.parts.push({ ...p, uid: `p${i + 1}` } as PlacedPart));
   def.ref.wires.forEach((path, i) => b.wires.push({ wid: `w${i + 1}`, path: path.map((q) => [q[0], q[1]] as [number, number]) }));
   for (const [uid, mm] of Object.entries(def.ref.jockeys ?? {})) { const p = b.parts.find((x) => x.uid === uid); if (p) p.pos = mm / 1000; }
@@ -39,5 +46,6 @@ export function openTicketIn(s: NodeState, def: LevelDef): void {
   const ps = def.instruments;
   const presets = { supply: ps.supply, gen: ps.gen, scope: ps.scope };
   const ticket: TicketState = newTicketState(def.id, startBoard(def), presets, drawHidden(s, def.hidden));
+  for (const uid of faultSmoked(def)) ticket.live.smoked.push(uid);
   s.ticket = ticket;
 }

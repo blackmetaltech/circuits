@@ -63,6 +63,8 @@ export interface BenchResult {
   measured?: Record<string, number>;
   /** Minor units paid into the wallet by THIS pass (absent when nothing was paid). */
   pay?: number;
+  /** Minor units of burnt-part replacements taken out of this pass's pay. */
+  burnt?: number;
 }
 
 export interface TicketProgress {
@@ -167,6 +169,9 @@ export interface TicketState {
   probed?: boolean;
   /** A part has smoked at least once on this ticket (live or bench): the coach keeps pointing at what limits the current after an undo, instead of back at the power switch. */
   burned?: boolean;
+  /** Minor units: replacement price of every part the player burned on this ticket (a repair's arrived-burnt parts are free), and how much of it has come out of the pay so far. */
+  burnCost?: number;
+  burnDeducted?: number;
   tolerance: { done: number; total: number; failures: number } | null;
   /** Chapter 4: the position of each live switch (mains tolerance, load) by selector id; absent = the ticket's initial positions. */
   sel?: Record<string, number>;

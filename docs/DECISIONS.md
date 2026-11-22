@@ -26,3 +26,12 @@
      moved; the solvability, idle and random-play checks are unchanged (an incomplete board could never pass).
   Rejected: not offering runBench as a candidate (changes the search), cutting rollout counts (weakens the check), a core
   probe hook (core change; not needed after 1 and 2).
+- 2026-11-23 (Ingrid, decision 10b, owner's go-ahead 11-22): repair tickets. `LevelDef.fault` is the customer's faulty board
+  as it arrives (removable parts x1.., wires xw.., and which parts came in burnt). Five tickets: 1-1 torch (LED straight on
+  the PP3, dead), 1-2 tail light (1 k resistor, dim), 1-3 heater (link wire, full 12 V), 1-4 toy car (burnt 1 W load),
+  5-1 fan (Q1 burnt, no flyback diode). The ref replay clears the faulty board first (`clearFaultActions`), so checkLevel
+  and the expert persona play the repair. Burnt parts cost money: a part the player burns adds its regional price to the
+  ticket's burn bill, which comes out of the pay on a pass (never below zero; fixed parts and the sandbox are free;
+  arrived-burnt parts are free). Build tests that start from a bare board clear the faulty board in their `open` helper
+  (the same assertions); `src/engine/repair.test.ts` covers the arrival, the ref from the arrival, the 1-2 one-value fix
+  and the burn bill. No golden moved (the trajectory goldens play ticket 0-0, which is not a repair).

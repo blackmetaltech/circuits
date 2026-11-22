@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { Engine } from '@core/kit';
 import { GAME } from '../game';
+import { clearFaultActions } from './replay';
 import { LEVEL_DEFS } from '../data/levels';
 import { newTicketProgress, type NodeState } from './state';
 
@@ -11,6 +12,7 @@ function open(id: string): Engine<NodeState> {
   for (const d of LEVEL_DEFS.filter((x) => x.chapter === 1)) { if (d.id === id) break; st.progress.tickets[d.id] = { ...newTicketProgress(), passed: true, stars: 1 }; }
   e.setState(st);
   expect(e.act('openTicket', [id]).ok).toBe(true);
+  for (const a of clearFaultActions(LEVEL_DEFS.find((d) => d.id === id)!)) expect(e.act(a.name, a.args ?? []).ok).toBe(true);   // these build tests start from the cleared board (repair.test.ts covers the arrival)
   return e;
 }
 const ok = (e: Engine<NodeState>, name: string, ...args: unknown[]) => { const r = e.act(name, args); expect(r.ok, `${name} ${JSON.stringify(args)}: ${r.message}`).toBe(true); return r; };

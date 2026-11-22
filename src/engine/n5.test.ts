@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { Engine } from '@core/kit';
 import { GAME } from '../game';
+import { clearFaultActions } from './replay';
 import { LEVEL_DEFS } from '../data/levels';
 import { newTicketProgress, type NodeState } from './state';
 import { explainFailure } from '../sim/explain';
@@ -15,6 +16,7 @@ export function open(id: string): Engine<NodeState> {
   for (const d of LEVEL_DEFS.filter((x) => x.chapter === 1)) { if (d.id === id) break; st.progress.tickets[d.id] = { ...newTicketProgress(), passed: true, stars: 1 }; }
   e.setState(st);
   expect(e.act('openTicket', [id]).ok).toBe(true);
+  for (const a of clearFaultActions(LEVEL_DEFS.find((d) => d.id === id)!)) expect(e.act(a.name, a.args ?? []).ok).toBe(true);   // these build tests start from the cleared board (repair.test.ts covers the arrival)
   return e;
 }
 export const ok = (e: Engine<NodeState>, name: string, ...args: unknown[]) => { const r = e.act(name, args); expect(r.ok, `${name} ${JSON.stringify(args)}: ${r.message}`).toBe(true); return r as any; };
@@ -30,7 +32,7 @@ describe('N5: 1-1 at 220 ohm, every arrangement', () => {
   };
   for (const [name, build] of Object.entries(builds)) for (const mode of ['learner', 'engineer']) {
     it(`${name} (${mode}): bench says "too much current: 30.9 mA", no solver words`, () => {
-      const e = new Engine(GAME, { mode }); e.autosave = false; expect(e.act('openTicket', ['1-1']).ok).toBe(true);
+      const e = new Engine(GAME, { mode }); e.autosave = false; expect(e.act('openTicket', ['1-1']).ok).toBe(true); for (const a of clearFaultActions(LEVEL_DEFS.find((d) => d.id === '1-1')!)) expect(e.act(a.name, a.args ?? []).ok).toBe(true);
       build(e);
       for (const power of [false, true]) {   // every bench condition: power switch off (auto-powered) and on
         if (power) { ok(e, 'power', true); ok(e, 'advance', 3); }

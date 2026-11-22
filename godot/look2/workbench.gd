@@ -725,7 +725,10 @@ func _live(dt: float) -> void:
 		n.set_heat(backend._heat(p))
 		n.set_smoked(bool(p.get("smoked", false)) or backend.smoked.has(str(p.uid)))
 		if p.has("led"): n.set_led(float(p.led.get("mA", 0.0)), float(p.led.get("bloom", 0.0)))
-	for u in parts3d: if not backend.smoked.has(u) and not backend.powered: (parts3d[u] as Part3D).set_smoked(false)
+	# the engine's board list says which parts are burnt (a repair's arrived-burnt part stays charred with the power off)
+	var burnt := {}
+	for bp in backend.bench_q.get("parts", []): if bool(bp.get("smoked", false)): burnt[str(bp.uid)] = true
+	for u in parts3d: if not backend.powered: (parts3d[u] as Part3D).set_smoked(burnt.has(u) or backend.smoked.has(u))
 	# the fan: speed from its own current (200 mA = full speed)
 	var fi := 0.0
 	for p in f.get("parts", []):
@@ -802,6 +805,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 		"paid":
 			var st := int(data.get("stars", 0))
 			_paid_text = str(data.get("pay_text", ""))
+			if int(data.get("burnt", 0)) > 0: _paid_text += " after %s for burnt parts" % burn_cost_text()
 			note = "Bench test passed. Paid %s: the %s fee%s." % [str(data.get("pay_text", "")), str(backend.ticket.get("price_text", "")), (" and %d new star%s" % [st, "" if st == 1 else "s"]) if st > 0 else ""]
 			last_failure = {}; changed.emit()
 		"power", "lock", "wired", "placed", "deleted":
@@ -1038,12 +1042,12 @@ var _campaign := false
 
 ## What the customer says when the case is opened, per ticket.
 const OPEN_LINE := {
-	"1-1": "Case open. The torch's LED board is inside, and the 9 V battery clip.",
-	"1-2": "Case open. Three red LEDs and the battery clip: they must all be bright on a fresh or a tired battery.",
-	"1-3": "Case open. The heater element is fixed to the board; it must see 8 V from the 12 V supply.",
-	"1-4": "Case open. The car's battery pack is tired. Measure it before you choose the load.",
+	"1-1": "Case open. The LED sits straight across the 9 V clip, no resistor. It is dark now. Probe it.",
+	"1-2": "Case open. Three LEDs in series on one resistor. Measure the current before you change anything.",
+	"1-3": "Case open. A link wire puts the full 12 V on the heater element. It needs 8 V.",
+	"1-4": "Case open. The load resistor is burnt. Measure the pack before you choose a new one.",
 	"1-5": "Exam rig open. Predict first, then build and probe.",
-	"5-1": "Case open. The driver board is inside: the pin has to switch the fan through a transistor.",
+	"5-1": "Case open. Q1 is burnt, and nothing across the fan catches its turn-off kick.",
 }
 const ARRIVE_LINE := {
 	"1-1": "Lio put the torch on the counter. It does not light.",
@@ -1057,10 +1061,10 @@ func arrival_line() -> String: return str(ARRIVE_LINE.get(ticket_id, "The device
 
 ## The first chapter-1 ticket not yet passed (the campaign's next job), else 1-1.
 func first_open_ticket() -> String:
-	var pr: Dictionary = backend.progress(1) if backend.started else {}
-	for id in CH1:
-		var rec = pr.get(id, null)
-		if rec == null or not bool((rec as Dictionary).get("passed", false)): return id
+	if not _campaign: return CH1[0]
+	var done := {}
+	for row in backend.progress(1).get("tickets", []): if bool(row.get("done", false)): done[str(row.id)] = true
+	for id in CH1: if not done.has(id): return id
 	return CH1[0]
 
 func next_job() -> void:

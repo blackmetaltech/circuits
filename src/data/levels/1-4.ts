@@ -15,6 +15,8 @@ export const L1_4: LevelDef = {
     connectors: [{ id: 'VP', pad: [2, 2], role: 'rail' }, { id: 'GND', pad: [8, 2], role: 'ground' }],
   },
   fixed: [{ uid: 'f1', partId: 'bat-pp3-tired', value: null, variant: 'tired', x: 2, y: 2, rot: 0, flip: false, fixed: true }],
+  // repair (decision 10b): the car arrives with a burnt 1 W 4.7 ohm load (it took 4.3 W)
+  fault: { parts: [{ partId: 'res-cf', value: 4.7, variant: '1W', x: 2, y: 5, rot: 0, flip: false }], wires: [[[2, 2], [2, 5]], [[6, 5], [6, 2], [8, 2]]], smoked: [0] },
   supplies: [],
   instruments: { scope: { timePerDiv: 1e-3, voltsPerDiv: [2, 1] } },
   bin: [
