@@ -12,3 +12,6 @@ dist/
 __pycache__/
 *.translation
 .claude/
+
+# LOOK2 3D textures: keep their import settings (mipmaps, VRAM compression) in git
+!godot/look2/assets/**/*.import
