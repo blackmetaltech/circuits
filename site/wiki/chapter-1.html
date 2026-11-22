@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chapter 1 · First Light · CIRCUITS wiki</title>
+<meta name="description" content="CIRCUITS chapter 1: every ticket, what the bench checks and the parts you get.">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body class="wiki">
+<header class="nav"><a class="logo" href="../">CIRCUITS</a><nav><a href="./">Wiki</a><a href="controls.html">Controls</a><a href="../#download" class="btn mini">Download</a></nav></header>
+<main class="wrap">
+<p class="crumbs"><a href="./">Wiki</a> / Chapter 1</p>
+<h1>Chapter 1 · First Light</h1>
+<p class="lede">Wren's first page: five tickets at Stall 14, Lantern Lane. Light an LED, share a current, keep a resistor cool, squeeze a tired battery, then sit the exam.</p>
+<section class="ticket" id="t1-1">
+<h2>1-1 · Torch <span class="tag">new look</span></h2>
+<p>Lio's torch is dead and Lio is ten. Put a red LED on the 9 V battery so it glows and never burns out. Wren says: an LED has no resistance of its own, so you must add some.</p>
+<p class="arrives"><b>Arrives:</b> The LED sits straight across the 9 V clip, no resistor. It is dark now.</p><h3>The bench checks</h3>
+<ul><li>LED current between 10 mA and 20 mA</li></ul>
+<p class="parts"><b>Parts tray:</b> Red LED 5 mm, Carbon-film resistor 5 %</p>
+</section>
+<section class="ticket" id="t1-2">
+<h2>1-2 · Tail-light <span class="tag">new look</span></h2>
+<p>Ash rides home after dark and wants a tail-light with three red LEDs on one 9 V battery, bright and even, and it must still work when the battery is tired. Wren: LEDs in a row share one current.</p>
+<p class="arrives"><b>Arrives:</b> Three LEDs in series on one resistor, too dim to be seen.</p><h3>The bench checks</h3>
+<ul><li>LED 1 current between 14 mA and 20 mA, fresh and tired battery</li><li>LED 2 current between 14 mA and 20 mA, fresh and tired battery</li><li>LED 3 current between 14 mA and 20 mA, fresh and tired battery</li><li>Battery current at most 25 mA</li></ul>
+<p class="parts"><b>Parts tray:</b> Red LED 5 mm, Carbon-film resistor 5 %</p>
+</section>
+<section class="ticket" id="t1-3">
+<h2>1-3 · Hot Resistor <span class="tag">new look</span></h2>
+<p>Mr. Brook's aquarium heater is a fixed 50 ohm element (soldered on the board, between the OUT and GND pads) and the supply gives 12 V. The heater needs a voltage between 7.85 V and 8.4 V, measured across it (OUT to GND). Put a resistor in series, from IN to OUT, to drop the rest, and mind how hot that resistor gets. Wren: watts are heat.</p>
+<p class="arrives"><b>Arrives:</b> A link wire puts the full 12 V on the heater element. It needs 8 V.</p><h3>The bench checks</h3>
+<ul><li>Heater voltage between 7.85 V and 8.40 V, no part over its rating</li></ul>
+<p class="parts"><b>Parts tray:</b> Carbon-film resistor 5 %</p>
+</section>
+<section class="ticket" id="t1-4">
+<h2>1-4 · Tired Battery <span class="tag">new look</span></h2>
+<p>Bo's toy car has a tired battery pack: its voltage sags when it works hard. Choose the load resistor that gets the most power out of it. Wren: measure first, guess later.</p>
+<p class="arrives"><b>Arrives:</b> The load resistor is burnt.</p><h3>The bench checks</h3>
+<ul><li>Power into the load at least 4.20 W</li></ul>
+<p class="parts"><b>Parts tray:</b> Carbon-film resistor 5 %, 5 W wirewound resistor</p>
+</section>
+<section class="ticket" id="t1-5">
+<h2>1-5 · Exam: Two Batteries <span class="tag">exam</span><span class="tag">new look</span></h2>
+<p>E1 = 10 V with R1 = 2 ohm and E2 = 5 V with R2 = 3 ohm feed a common node A, with R3 = 6 ohm from A to ground. Find the voltage at A and the current through E2. Is E2 charging or discharging? Predict first, then build and probe.</p>
+<h3>The bench checks</h3>
+<ul><li>Your prediction: V(A), in volts</li><li>Your prediction: current into E2, in amps (positive = charging)</li><li>Voltage at A within 0.1 % of the textbook answer</li><li>Current into E2 within 0.1 % of the textbook answer</li></ul>
+<p class="parts"><b>Parts tray:</b> Exact resistor</p>
+</section>
+</main>
+<footer class="foot wrap"><p>Generated from the game's own text by <code>src/wiki.ts</code>. People and places are made up; the circuits are not. <a href="https://github.com/blackmetaltech/circuits">Source</a></p></footer>
+</body>
+</html>

@@ -2,23 +2,45 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CIRCUITS</title>
-<meta name="description" content="CIRCUITS: a learning game where real equations are the rules.">
-<style>
-  :root { --bg: #070b12; --fg: #e6f0ff; --dim: #93a7bd; --acc: #4fd1ff; }
-  body { margin: 0; background: var(--bg); color: var(--fg); font: 18px/1.5 system-ui, sans-serif; }
-  main { max-width: 860px; margin: 0 auto; padding: 64px 16px; }
-  h1 { font-size: clamp(48px, 10vw, 96px); margin: 0; letter-spacing: 0.04em; color: var(--acc); }
-  p { color: var(--dim); }
-  a.btn { display: inline-block; margin: 8px 8px 0 0; padding: 12px 20px; border: 1px solid var(--acc); border-radius: 10px; color: var(--fg); text-decoration: none; }
-</style>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CIRCUITS · a repair bench where real circuits are the rules</title>
+<meta name="description" content="CIRCUITS is a free game about repairing electronics. Customers bring broken devices; you probe, fix and hand them back. A real circuit simulator decides what works.">
+<link rel="canonical" href="https://circuits.blackmetal.tech/">
+<meta property="og:title" content="CIRCUITS: a repair bench where real circuits are the rules">
+<meta property="og:description" content="Open the case, probe it, fix it with real parts. Burn one and it comes out of your pay. Free, Linux.">
+<meta property="og:image" content="https://circuits.blackmetal.tech/assets/og.jpg">
+<meta property="og:url" content="https://circuits.blackmetal.tech/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main>
-  <h1>CIRCUITS</h1>
-  <p>A learning game where real equations are the rules. From <a href="https://blackmetal.tech">blackmetal.tech</a>.</p>
-  <p><a class="btn" id="dl" href="https://github.com/blackmetaltech/circuits/releases/latest">Download</a></p>
+<header class="nav"><a class="logo" href="./">CIRCUITS</a><nav><a href="wiki/">Wiki</a><a href="#download" class="btn mini">Download</a></nav></header>
+<main class="wrap">
+<section class="hero">
+  <div>
+    <h1>CIRCUITS</h1>
+    <p class="tag-line">A repair bench where real circuits are the rules.</p>
+    <p class="lede">Customers bring broken devices: a torch, a bike light, a fish-tank heater, a toy car, a desk fan. Open the case, probe the old work with the meter and the scope, fix it with real parts and hand it back. Burn a part and it comes out of your pay, and the game tells you why it burned, with the numbers from your own circuit.</p>
+    <p><a class="btn go" id="download" href="https://github.com/blackmetaltech/circuits/releases/latest">Download v0.3.0</a> <a class="btn" href="wiki/">Player wiki</a></p>
+    <p class="note">Pre-alpha, free, Linux x86_64. Chapter 1 and the fan repair play on the new 3D workbench; chapters 2 to 5 play in the classic 2D stall. No sound and no gamepad on the workbench yet.</p>
+  </div>
+  <figure><img src="assets/failure.gif" alt="The fan driver without a flyback diode: the transistor burns and the scope catches the 2000 V spike" width="800" height="450"><figcaption>No diode across the fan: the transistor burns, and the scope shows the 2000 V kick that did it.</figcaption></figure>
+</section>
+
+<h2>How it plays</h2>
+<div class="grid">
+  <figure><img src="assets/faulty-board-1-1.jpg" alt="The torch's board: an LED straight across the 9 V battery" loading="lazy" width="1600" height="900"><figcaption><b>Open the case.</b> The torch's LED was wired straight across the battery. It is dead.</figcaption></figure>
+  <figure><img src="assets/fixed-1-1.jpg" alt="The torch fixed with a 470 ohm resistor, ticket stamped PASSED" loading="lazy" width="1600" height="900"><figcaption><b>Fix it.</b> A 470 ohm resistor gives 15.0 mA. The bench stamps the ticket.</figcaption></figure>
+  <figure><img src="assets/scope-5-1.jpg" alt="The oscilloscope showing the fan driver switching" loading="lazy" width="1600" height="900"><figcaption><b>Measure it.</b> The scope and the meter read the simulated circuit live.</figcaption></figure>
+  <figure><img src="assets/free-bench.jpg" alt="The free bench with parts placed and powered" loading="lazy" width="1600" height="900"><figcaption><b>Free bench.</b> Any part, any supply, three save slots.</figcaption></figure>
+</div>
+
+<h2>Honest by design</h2>
+<p>Every volt and amp comes from a circuit simulator. The interface computes no numbers of its own. The bench test fails with the power off, and a burnt part stays burnt.</p>
+<p>Five chapters are built (23 tickets): Ohm's law and LEDs, dividers and bridges, capacitors and time constants, rectifiers and regulators, transistors as switches and amplifiers. The <a href="wiki/">wiki</a> lists every ticket.</p>
 </main>
+<footer class="foot wrap"><p>From <a href="https://blackmetal.tech">blackmetal.tech</a>, a small house that replaces textbooks with games. <a href="https://github.com/blackmetaltech/circuits">Source on GitHub</a>.</p></footer>
 </body>
 </html>
