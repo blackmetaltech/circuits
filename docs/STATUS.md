@@ -73,3 +73,8 @@ Honest limits: on a 1280x800 handheld the long first-miss explanation of 4-1's 6
 
 ## 2026-11-22 v0.1.0
 Renamed to CIRCUITS; layout fix round (layout_flow); release v0.1.0 (Linux x86_64) via scripts/release-local.sh. See CHANGELOG.md and docs/CRITIQUE-0.1.md for what was not checked.
+
+## 2026-11-22 v0.2.0 chapter 5 "Switches & Gain"
+Tickets 5-1 Fan Driver, 5-2 3.3 V Gate, 5-3 Gate Builder, 5-4 Synth Preamp, 5-5 EB: CE Amplifier: data in `src/data/levels/5-*.ts` (each header lists its numbers and deviations), contract in docs/API-CH5.md, tests `src/engine/ch5.test.ts` and `godot/tests/ch5_engine_flow.gd`. Screens in docs/screens/ch5/.
+Engine: the `pin` supply, `*tol` conditions, `BenchPlan.only`, selector `cond`, the inductor's `rs`, the textbook NPN. Also the seven 0.1 findings (coach after a burn, map cards, customer, scope lead, coach slip, one-frame drag, headless smoke). See CHANGELOG.md and docs/CRITIQUE-0.2.md for what was not checked.
+Open: 2N2222A / BC547B rows unverified; THD is not in the 5-4 LOCK; the Codex index is a 26-tab window; gamepad, phone, audio listen, Windows and macOS not checked.

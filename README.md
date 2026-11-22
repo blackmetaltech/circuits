@@ -11,10 +11,10 @@ The front end is a **Godot 4.7** game. Every volt, amp and second comes from a *
 nodal analysis solver with DC, transient and device models) that Godot drives through a Node sidecar. The interface computes no numbers
 of its own.
 
-> **v0.1.0, pre-alpha.** Chapters 1 to 4 (18 tickets) are playable end to end on desktop and at Steam Deck size (1280x800). Chapters 1 to 3
-> were each won by a fresh play-tester from in-game guidance alone; chapter 4 is verified through the UI with the reference designs and
-> the designed failures, and has not yet had a fresh tester. Chapters 5 to 8 are designed, not built. No phone build, no sound pass and
-> no gamepad pass yet. The [v0.1.0 release](https://github.com/ixaxaar/circuits/releases/tag/v0.1.0) is a Linux x86_64 build.
+> **v0.2.0, pre-alpha.** Chapters 1 to 5 (23 tickets) are playable end to end on desktop and at Steam Deck size (1280x800). Chapters 1 to 3
+> were each won by a fresh play-tester from in-game guidance alone; chapters 4 and 5 are verified through the UI with the reference designs and
+> the designed failures, and were hand-played only by the build agent. Chapters 6 to 8 are designed, not built. No phone build, no sound pass and
+> no gamepad pass yet. The [v0.2.0 release](https://github.com/ixaxaar/circuits/releases/tag/v0.2.0) is a Linux x86_64 build.
 
 ![A fixed torch: the trace locks, the customer is happy](docs/readme/hero-lock.png)
 
@@ -33,7 +33,7 @@ of its own.
 
 ## The campaign
 
-Eight chapters take a player from a first LED to oscillators. Four are built (18 tickets):
+Eight chapters take a player from a first LED to oscillators. Five are built (23 tickets):
 
 | Chapter | Teaches | Tickets |
 |---|---|---|
@@ -41,7 +41,8 @@ Eight chapters take a player from a first LED to oscillators. Four are built (18
 | **2 Divide & Measure** | Dividers, the Wheatstone bridge, the metre bridge, the potentiometer | Dimmer · Cable Fault · Bridge · Exam: Potentiometer |
 | **3 Charge** | RC charging, time constants, debouncing, RL rise, capacitor energy | Flash Timer · Debounce · Relay Pull-in · Exam: Capacitor Bank |
 | **4 Mains & Rectifiers** | Diodes, the bridge rectifier, ripple and C, Zener shunts, linear regulators and their heat, mains safety (simulated mains only) | Wall Wart · Zener Shunt · Hot Regulator · Bench Supply · Exam: Zener Regulator |
-| 5 Switches & Gain · 6 Op-Amp Alley · 7 Tone & Resonance · 8 Oscillate *(designed)* | Transistors, op-amps, filters, resonance, oscillators | |
+| **5 Switches & Gain** | The transistor as a switch (forced gain, flyback diodes), MOSFET thresholds and heat, diode-transistor logic, the common-emitter amplifier and its bias | Fan Driver · 3.3 V Gate · Gate Builder · Synth Preamp · Exam: CE Amplifier |
+| 6 Op-Amp Alley · 7 Tone & Resonance · 8 Oscillate *(designed)* | Op-amps, filters, resonance, oscillators | |
 
 Stars on a chit: one for meeting the spec, two for also beating the cost par, three on exams for every prediction within 1 %.
 
@@ -66,6 +67,7 @@ something gets hot. Every cute element shows a physical quantity; none hides one
 | ![](docs/readme/hot.png)<br>**Power is heat.** An under-rated resistor glows. | ![](docs/readme/bridge.png)<br>**Cable Fault.** A metre bridge finds the break by a null on the galvanometer. |
 | ![](docs/readme/vent.png)<br>**Electrolytics vent.** A 6.3 V part on 7.7 V. | ![](docs/readme/relay.png)<br>**Relay Pull-in.** The coil current rises along L over R on the scope. |
 | ![](docs/readme/wallwart.png)<br>**Wall Wart (chapter 4).** A bridge and a capacitor behind an isolation transformer; the scope shows the ripple. | ![](docs/readme/regulator.png)<br>**Hot Regulator (chapter 4).** The thermal camera shows a bare 7805 cycling on its thermal shutdown. |
+| ![](docs/readme/fan.png)<br>**Fan Driver (chapter 5).** Without a flyback diode the fan's turn-off kick burns the transistor, and the note quotes the volts. | ![](docs/readme/preamp.png)<br>**Synth Preamp (chapter 5).** A common-emitter stage; the scope shows the sine against the amber tube.
 | ![](docs/readme/exam.png)<br>**Exams are marked.** Your predictions against the bench, then the worked solution. | ![](docs/readme/map.png)<br>**The chapter page.** Tickets pinned in Wren's notebook. |
 | ![](docs/readme/notebook.png)<br>**The notebook.** Coach steps on the left, the law on the right. | ![](docs/readme/deck.png)<br>**Steam Deck size** (1280x800). |
 
@@ -94,11 +96,11 @@ core/               cobanana-core submodule: bridge, saves, settings, layout, QA
 | typecheck | `pnpm typecheck` |
 | engine tests (oracles, goldens, levels) | `pnpm test` |
 | regenerate goldens (deliberate rule change only) | `GOLDEN_UPDATE=1 pnpm test` |
-| a UI flow | `godot --headless --path godot -s res://tests/ch3_engine_flow.gd` |
+| a UI flow | `godot --headless --path godot -s res://tests/ch5_engine_flow.gd` |
 | screenshots and testers | `core/qa/README.md` |
 
 ## Status and known gaps
-- Chapters 5 to 8, sound, gamepad focus, the phone layout and the Android build are not done. Nobody has listened to the audio yet.
+- Chapters 6 to 8, sound, gamepad focus, the phone layout and the Android build are not done. Nobody has listened to the audio yet.
 - Only a Linux x86_64 build is published. Windows and macOS come from the CI workflow and have not been run by hand.
 - The three-star tolerance run on build tickets is designed but not built.
-- Details and the gate for the next layer: [docs/CRITIQUE-0.1.md](docs/CRITIQUE-0.1.md).
+- Details and the gate for the next layer: [docs/CRITIQUE-0.2.md](docs/CRITIQUE-0.2.md).
