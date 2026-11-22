@@ -9,7 +9,7 @@ const DEPTH := 0.025
 const BORE := 0.0375
 const R_HUB := 0.0158
 const R_TIP := 0.0366
-const MAX_REV := 40.0        ## rev/s at speed 1
+const MAX_REV := 14.0        ## visual rev/s at speed 1 (a real fan turns ~40; faster than this strobes at 60-144 fps, the blur disc carries the rest)
 const TAU_S := 0.6           ## spin-up time constant, seconds
 
 var _target := 0.0
@@ -171,8 +171,8 @@ func _process(delta: float) -> void:
 		_alpha_on = want_alpha
 		_blade_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if want_alpha else BaseMaterial3D.TRANSPARENCY_DISABLED
 		_disc.visible = want_alpha
-	_blade_mat.albedo_color.a = lerpf(1.0, 0.30, k)
-	_disc_mat.albedo_color.a = k
+	_blade_mat.albedo_color.a = lerpf(1.0, 0.6, k)
+	_disc_mat.albedo_color.a = k * 0.55
 
 ## Normalised speed 0..1; the blades follow with inertia (time constant 0.6 s), up to 40 rev/s, blur disc fades in at speed.
 func set_speed(norm: float) -> void:

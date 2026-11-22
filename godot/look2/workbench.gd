@@ -80,6 +80,8 @@ func _ready() -> void:
 	else: mode = "title"; changed.emit()
 	if OS.get_environment("CB_FRAMETIME") != "":
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	if OS.get_environment("CB_SCALE3D") != "":   # render the 3D scene at N x the window (frame-time proxy for 2560x1440 on a 1080p screen)
+		get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR; get_viewport().scaling_3d_scale = float(OS.get_environment("CB_SCALE3D"))
 
 ## ------------------------------------------------------------------------------------------------ quality tiers
 
@@ -360,13 +362,30 @@ func start_job() -> void:
 	if OS.get_environment("CB_VIEW") != "": set_view(int(OS.get_environment("CB_VIEW")), true)
 	else: set_view(1)
 	sync_board(); changed.emit()
+	if OS.get_environment("CB_L2_GHOST") != "": _ghost_demo.call_deferred()
+
+## QA hook (CB_L2_GHOST=1): a 2N2222A picked from the drawer, its placement preview over pads 14-16 of row I, as the player sees it mid-drag.
+func _ghost_demo() -> void:
+	for it in drawer():
+		if str(it.partId) == "2n2222a": pick_part(it); break
+	await get_tree().process_frame
+	_hover(cam.unproject_position(board.pad_world(14, 8)))
+	hover_pad = Vector2i(14, 8)
 
 func start_free() -> void:
 	mode = "free"
 	backend._act("newGame", [1, "sandbox"])
 	backend.open_ticket(TICKET)
 	_after_open()
-	set_view(1); sync_board(); changed.emit()
+	if OS.get_environment("CB_L2_FREEPARTS") == "1":   # QA hook: a few arbitrary catalogue parts on the open board (sandbox: no bin, no limits)
+		for q in [["led-green-5mm", null, 4, 11, 0], ["ne555", null, 9, 9, 0], ["cap-el", 100e-6, 6, 13, 0], ["lm7805", null, 15, 11, 0], ["res-cf", 4700, 3, 9, 0], ["led-blue-5mm", null, 19, 7, 0]]:
+			var it := {"partId": q[0], "value": q[1], "variant": "", "kind": ""}
+			for d in drawer():
+				if str(d.partId) == q[0]: it.variant = d.variant; it.kind = d.kind; break
+			backend.place(it, q[2], q[3], q[4])
+		backend.add_wire([7, 9], [9, 9]); backend.add_wire([4, 11], [3, 11])
+	if OS.get_environment("CB_POWER") == "1": backend.set_power(true)
+	set_view(int(OS.get_environment("CB_VIEW")) if OS.get_environment("CB_VIEW") != "" else 1, OS.get_environment("CB_VIEW") != ""); sync_board(); changed.emit()
 
 func back_to_title() -> void:
 	backend.set_power(false); backend.close_ticket()
@@ -560,7 +579,7 @@ func _frametime(dt: float) -> void:
 		_ft.sort()
 		var s := 0.0
 		for x in _ft: s += x
-		print("FRAMETIME avg %.2f ms  p95 %.2f ms  frames %d  size %s  tier %s  method %s  gpu %s" % [1000.0 * s / _ft.size(), 1000.0 * _ft[int(_ft.size() * 0.95)], _ft.size(), str(get_viewport().get_visible_rect().size), quality, RenderingServer.get_current_rendering_method(), RenderingServer.get_video_adapter_name()])
+		print("FRAMETIME avg %.2f ms  p95 %.2f ms  frames %d  size %s x%s  tier %s  method %s  gpu %s" % [1000.0 * s / _ft.size(), 1000.0 * _ft[int(_ft.size() * 0.95)], _ft.size(), str(get_viewport().get_visible_rect().size), str(get_viewport().scaling_3d_scale), quality, RenderingServer.get_current_rendering_method(), RenderingServer.get_video_adapter_name()])
 		get_tree().quit()
 
 ## ------------------------------------------------------------------------------------------------ engine events
