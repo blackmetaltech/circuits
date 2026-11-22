@@ -9,6 +9,10 @@ func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color("#120c08"))
 	if OS.get_environment("CB_LOOK2_DEV") != "":   # LOOK2 dev scenes: CB_LOOK2_DEV=<name> runs res://look2/dev/<name>_test.gd
 		add_child(load("res://look2/dev/%s_test.gd" % OS.get_environment("CB_LOOK2_DEV")).new()); _shot_hook(); return
+	# LOOK2 (branch look2): the 3D workbench is the default front end. The old stall stays for the smoke check, the shot runs,
+	# CB_SCREEN deep links and CB_LOOK=stall; every test flow builds StallScene itself and is unaffected.
+	if OS.get_environment("CB_LOOK") != "stall" and OS.get_environment("CB_SMOKE") == "" and OS.get_environment("CB_SHOTS") == "" and OS.get_environment("CB_SCREEN") == "":
+		add_child(Workbench.new()); _shot_hook(); return
 	scene = StallScene.new(); add_child(scene)
 	if OS.get_environment("CB_SHOTS") != "":
 		var sh = load("res://tests/ch5_shots.gd" if OS.get_environment("CB_SHOTS") == "ch5" else "res://tests/ch4_shots.gd" if OS.get_environment("CB_SHOTS") == "ch4" else "res://tests/ch3_shots.gd" if OS.get_environment("CB_SHOTS") == "ch3" else ("res://tests/ch2_shots.gd" if OS.get_environment("CB_SHOTS") == "ch2" else "res://tests/stall_shots.gd")).new(); add_child(sh); sh.run(scene)

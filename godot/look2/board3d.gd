@@ -1,0 +1,102 @@
+class_name Board3D
+extends Node3D
+## LOOK2 perfboard: the engine's w x h pad grid as a green FR4 board with tinned pads (one MultiMesh), brass standoffs, silkscreen
+## grid labels and labelled header posts for the ticket's connectors. MeshKit conventions (pad (gx, gy) -> (gx*P, 0, gy*P)).
+
+const P := MeshKit.PITCH
+const ROLE_COL := {"source": Color(0.78, 0.16, 0.12), "supply": Color(0.78, 0.16, 0.12), "ground": Color(0.12, 0.2, 0.42), "load": Color(0.85, 0.55, 0.12)}
+
+var w := 24
+var h := 16
+var connectors: Array = []
+var _hover: MeshInstance3D
+var _marks: Array = []
+var _ring_mesh: TorusMesh
+
+func build(gw: int, gh: int, conns: Array) -> void:
+	w = gw; h = gh; connectors = conns
+	for c in get_children(): c.queue_free()
+	var m := 2.0 * P
+	var size := Vector3((w - 1) * P + 2 * m, MeshKit.BOARD_T, (h - 1) * P + 2 * m)
+	var centre := Vector3((w - 1) * P * 0.5, -MeshKit.BOARD_T * 0.5, (h - 1) * P * 0.5)
+	var fr4 := MeshKit.mat(Color(0.09, 0.25, 0.14), 0.32, 0.0, {"clearcoat": 0.7, "clearcoat_rough": 0.25, "normal": 0.25, "uv_scale": 30.0})
+	var board := MeshKit.add(self, MeshKit.rounded_box(size, 0.0015, 2), fr4, centre)
+	board.name = "fr4"
+	# standoffs
+	for sx in [-1, 1]:
+		for sz in [-1, 1]:
+			var p := centre + Vector3(sx * (size.x * 0.5 - m * 0.5), 0, sz * (size.z * 0.5 - m * 0.5))
+			var hole := CylinderMesh.new(); hole.top_radius = 0.0016; hole.bottom_radius = 0.0016; hole.height = MeshKit.BOARD_T * 1.05
+			MeshKit.add(self, hole, MeshKit.m("gold"), p)
+			var nut := CylinderMesh.new(); nut.top_radius = 0.0028; nut.bottom_radius = 0.0028; nut.height = 0.0012; nut.radial_segments = 6
+			MeshKit.add(self, nut, MeshKit.m("gold"), p + Vector3(0, MeshKit.BOARD_T * 0.5 + 0.0006, 0))
+			var st := CylinderMesh.new(); st.top_radius = 0.0025; st.bottom_radius = 0.0025; st.height = 0.012; st.radial_segments = 6
+			MeshKit.add(self, st, MeshKit.m("gold"), p + Vector3(0, -0.006 - MeshKit.BOARD_T * 0.5, 0))
+	# pads: tinned annular rings + dark holes (two MultiMeshes)
+	var ring := CylinderMesh.new(); ring.top_radius = 0.00165; ring.bottom_radius = 0.00175; ring.height = 0.0003; ring.radial_segments = 14; ring.rings = 1
+	var hole_m := CylinderMesh.new(); hole_m.top_radius = 0.0006; hole_m.bottom_radius = 0.0006; hole_m.height = 0.00034; hole_m.radial_segments = 10
+	var pad_mat := MeshKit.mat(Color(0.82, 0.80, 0.74), 0.22, 1.0, {"normal": 0.35})
+	for pass_i in 2:
+		var mm := MultiMesh.new(); mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = ring if pass_i == 0 else hole_m
+		mm.instance_count = w * h
+		var i := 0
+		for gy in h:
+			for gx in w:
+				mm.set_instance_transform(i, Transform3D(Basis(), Vector3(gx * P, 0.00012 + pass_i * 0.00004, gy * P))); i += 1
+		var mmi := MultiMeshInstance3D.new(); mmi.multimesh = mm
+		mmi.material_override = pad_mat if pass_i == 0 else MeshKit.mat(Color(0.01, 0.012, 0.01), 0.9, 0.0, {"normal": 0.0})
+		add_child(mmi)
+	# silkscreen: column numbers every 5, row letters
+	var silk := Color(0.86, 0.88, 0.84, 0.85)
+	for gx in range(0, w, 5): MeshKit.label(self, str(gx), 0.000045, Vector3(gx * P, 0.0001, -1.2 * P), silk, true)
+	for gy in range(0, h, 2): MeshKit.label(self, char(65 + gy), 0.000045, Vector3(-1.2 * P, 0.0001, gy * P), silk, true)
+	# connectors: gold header post + labelled silk tab
+	for c in conns:
+		var pad: Array = c.pad
+		var p := pad_local(int(pad[0]), int(pad[1]))
+		var post := MeshKit.rounded_box(Vector3(0.0013, 0.012, 0.0013), 0.0002)
+		MeshKit.add(self, post, MeshKit.m("gold"), p + Vector3(0, 0.0065, 0))
+		var base := MeshKit.rounded_box(Vector3(0.005, 0.005, 0.005), 0.0004)
+		MeshKit.add(self, base, MeshKit.m("black_plastic"), p + Vector3(0, 0.0025, 0))
+		var col: Color = ROLE_COL.get(str(c.get("role", "")), Color(0.5, 0.5, 0.5))
+		var tab := MeshKit.rounded_box(Vector3(0.011, 0.0002, 0.0042), 0.0003)
+		var side := -1.0 if int(pad[0]) < w / 2 else 1.0
+		var tp := p + Vector3(side * 0.0028 + side * 0.0055 - side * 0.0028, 0.0001, -0.0046)
+		MeshKit.add(self, tab, MeshKit.mat(col, 0.6, 0.0, {"normal": 0.0}), tp)
+		MeshKit.label(self, str(c.id), 0.00005, tp + Vector3(0, 0.00015, 0), Color(0.96, 0.96, 0.94))
+	_ring_mesh = TorusMesh.new(); _ring_mesh.inner_radius = 0.0018; _ring_mesh.outer_radius = 0.0026; _ring_mesh.rings = 24; _ring_mesh.ring_segments = 8
+	_hover = MeshKit.add(self, _ring_mesh, _glow(Color(0.91, 0.64, 0.24)), Vector3.ZERO)
+	_hover.visible = false; _hover.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+func _glow(c: Color) -> StandardMaterial3D:
+	var g := MeshKit.mat(c, 0.4, 0.0, {"emission": c, "emission_energy": 2.5, "normal": 0.0, "rough_tex": false})
+	g.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	return g
+
+func pad_local(gx: int, gy: int) -> Vector3: return Vector3(gx * P, 0, gy * P)
+func pad_world(gx: int, gy: int) -> Vector3: return to_global(pad_local(gx, gy))
+
+func pad_at_world(p: Vector3) -> Vector2i:
+	var l := to_local(p)
+	var gx := int(round(l.x / P)); var gy := int(round(l.z / P))
+	if gx < 0 or gy < 0 or gx >= w or gy >= h: return Vector2i(-1, -1)
+	return Vector2i(gx, gy)
+
+func set_hover(gx: int, gy: int, on: bool, col := Color(0.91, 0.64, 0.24)) -> void:
+	if _hover == null: return
+	_hover.visible = on
+	if on:
+		_hover.position = pad_local(gx, gy) + Vector3(0, 0.0004, 0)
+		(_hover.material_override as StandardMaterial3D).albedo_color = col; (_hover.material_override as StandardMaterial3D).emission = col
+
+func set_marks(pads: Array, col := Color(0.4, 0.8, 1.0)) -> void:
+	for m in _marks: m.queue_free()
+	_marks.clear()
+	for p in pads:
+		var mi := MeshKit.add(self, _ring_mesh, _glow(col), pad_local(int(p[0]), int(p[1])) + Vector3(0, 0.0004, 0))
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_marks.append(mi)
+
+## Board top surface plane in world space (for mouse picking).
+func plane_world() -> Plane: return Plane(global_transform.basis.y.normalized(), global_position)
