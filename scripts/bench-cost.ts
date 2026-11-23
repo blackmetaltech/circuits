@@ -34,6 +34,9 @@ const BOARDS: Board[] = [
   { id: 'sallen-key-opamp', waves: { Vin: sine(1, 1e3) }, cards: `Vin in 0 dc 0 ac 1\nR1 in n1 10k\nR2 n1 np 10k\nC2 np 0 10n\nC1 n1 out 20n\nU1 np out out vp vn oa741\n${OA741}`, tran: { h: 2e-6, tStop: 3e-3 }, ac: { out: 'out', inp: 'in', f0: 10, f1: 1e5, perDecade: 40 } },
   { id: '555-astable', cards: 'V1 vcc 0 5\nR1 vcc d 4.7k\nR2 d t 47k\nC1 t 0 100n\nU1 0 t out vcc cv t d vcc ne555\n.model ne555 555 ()', tran: { h: 1e-5, tStop: 0.03 } },
   { id: 'regulator-7805', cards: `V1 in 0 12\nCi in 0 100u\nU1 in 0 out r5\nCo out 0 10u\nRl out 0 50\n${REG5}`, tran: { h: 1e-5, tStop: 5e-3 } },
+  // a linear RC ladder of 11 sections (matrix dim 12): the linear constants were fitted on two tiny boards; Tomasz measured this
+  // one at a 1.81 ratio (an over-estimate, the safe side) and asked for it in the gate so a bigger linear board is covered
+  { id: 'rc-ladder-11', cards: ['V1 n0 0 5', ...Array.from({ length: 11 }, (_, i) => `R${i + 1} n${i} n${i + 1} 1k\nC${i + 1} n${i + 1} 0 100n`)].join('\n'), tran: { h: 1e-5, tStop: 5e-3 } },
   { id: 'regulator-short-thermal', cards: `Vin in 0 15\nU1 in 0 out r5\nRs out 0 10m\n${REG5}`, tran: { h: 2e-6, tStop: 3e-3 } },
 ];
 
@@ -83,4 +86,4 @@ console.log(`calibrated rate: ${(rate / 1e3).toFixed(1)} Mflop-eq/s; gate ${BENC
 const over = rows.filter((r) => !r.gate);
 for (const r of over) console.log(`GATE: ${r.id} exceeds ${BENCH_FLOP_LIMIT.toExponential(1)} flops`);
 if (bad > 0 || over.length > 0) { console.log(`bench-cost FAILED (${bad} outside 2x, ${over.length} over the gate)`); process.exit(1); }
-console.log('bench-cost OK: all 10 boards within 2x, all under the gate');
+console.log(`bench-cost OK: all ${BOARDS.length} boards within 2x, all under the gate`);
