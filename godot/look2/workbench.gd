@@ -1103,11 +1103,19 @@ func ray_pad(mp: Vector2) -> Vector2i:
 	# wires and leads go onto legs: a player aims at the leg as drawn, which stands above its pad. If the board-level pad is empty
 	# and the ray at leg height lands on a pad with a leg or a wire end, take that one (Noor: clicks landed "one row short").
 	if tool in ["wire", "red", "black", "probe"] and not _pad_used(pad):
-		for h in [0.003, 0.006, 0.010, 0.014]:
+		for h in [0.003, 0.006, 0.010, 0.014, 0.020, 0.028]:   # 0.6: up to a tall body's top (1-3's heater)
 			var hit2 = _plane_at(h).intersects_ray(o, d)
 			if hit2 == null: continue
 			var pad2: Vector2i = board.pad_at_world(hit2 - board.global_transform.basis.y.normalized() * h)
 			if _pad_used(pad2): return pad2
+		# 0.6 (Rui, Asha: neither found 1-3's heater leg): one hole off a leg or a connector, the end snaps to it
+		var best := Vector2i(-1, -1); var bd := 1e9
+		for t in connect_targets():
+			var tp := Vector2i(int(t[0]), int(t[1]))
+			if absi(tp.x - pad.x) <= 1 and absi(tp.y - pad.y) <= 1:
+				var dd: float = board.pad_world(tp.x, tp.y).distance_to(hit)
+				if dd < bd: bd = dd; best = tp
+		if best.x >= 0: return best
 	return pad
 
 ## The board plane raised by h metres (a part body or a leg top sits above the pads).

@@ -420,7 +420,7 @@ func _job_card() -> void:
 		var cut := full.find(". ")
 		_ink(v, full.substr(0, cut + 1) if cut > 0 and cut < full.length() - 2 else full, 17, INK, f_sans)   # the cause in one sentence; the scope shows the rest
 		if cut > 0 and cut < full.length() - 2: _ink(v, "Why: " + full.substr(cut + 2).strip_edges(), 15, Color(0.30, 0.28, 0.25), f_sans)
-		if not short: _ink(v, "Ctrl+Z puts in a fresh part with the power off.", 15, Color(0.30, 0.28, 0.25), f_sans)
+		if not short: _ink(v, "Right-click a burnt part to fit a fresh one. Its wires stay.", 15, Color(0.30, 0.28, 0.25), f_sans)
 	elif bench.note != "":
 		_ink(v, _two_sentences(bench.note), 17, Color(0.14, 0.20, 0.42), f_sans)
 

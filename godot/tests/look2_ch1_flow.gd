@@ -64,6 +64,16 @@ func _run() -> void:
 			var dk: Button = null
 			for b in wb.find_children("*", "Button", true, false): if (b as Button).text.begins_with("Buy the condition dial"): dk = b
 			ok(dk != null and dk.text.contains("$15.00") and dk.disabled == (wb.backend.wallet_minor < 1500), "1-2: the ticket offers the condition dial for $15.00 (wallet %s)" % wb.backend.wallet_text)
+		if id == "1-3":
+			# 0.6 (Rui, Asha: neither found the heater's leg under its tall body): a wire click one hole off the leg lands on the leg
+			var hp: Array = []
+			for q in wb.backend.bench_q.get("parts", []): if str(q.get("partId", "")) == "heater": hp = q.pins[0].pad
+			wb.set_view(5, true); wb.set_tool("wire"); await _frames(3)
+			var off := Vector2i(int(hp[0]) + 1, int(hp[1]))
+			if wb._pad_used(off): off = Vector2i(int(hp[0]) - 1, int(hp[1]))
+			var got: Vector2i = wb.ray_pad(wb.cam.unproject_position(wb.board.pad_world(off.x, off.y)))
+			ok(got == Vector2i(int(hp[0]), int(hp[1])), "1-3: a wire click one hole off the heater's leg %s snaps to it (got %s)" % [str(hp), str(got)])
+			wb.set_tool("select")
 		await _frames(3)
 		for i in (LevelBurnt.get(id, []) as Array):
 			var n = wb.parts3d.get(i, null)

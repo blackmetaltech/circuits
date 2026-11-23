@@ -96,6 +96,7 @@ func set_targets(pads: Array) -> void:
 	_targets.clear()
 	if _ring_mesh == null: return
 	var mat := _glow(Color(0.55, 0.75, 0.95)); mat.albedo_color.a = 0.55
+	mat.no_depth_test = true; mat.render_priority = 2   # 0.6: a ring shows through the part that stands over its pad (1-3's heater hid both)
 	for pd in pads:
 		var m := MeshKit.add(self, _ring_mesh, mat, pad_local(int(pd[0]), int(pd[1])) + Vector3(0, 0.0003, 0))
 		m.scale = Vector3(0.8, 1.0, 0.8); m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; _targets.append(m)
