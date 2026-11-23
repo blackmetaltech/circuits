@@ -73,17 +73,9 @@ jobs:
         run: |
           godot --headless --path godot --import >/dev/null 2>&1 || true
           godot --headless --path godot --import >/dev/null 2>&1 || true   # second pass: generated translations now exist
-          CB_SMOKE=1 timeout 180 godot --headless --path godot 2>&1 | tee smoke.log
-          grep -q "SMOKE OK" smoke.log
-          ! grep -E "SCRIPT ERROR|Parse Error" smoke.log
+          # the shared runner (core/qa/run-flow.sh) fails the smoke on SMOKE OK missing, a timeout, or a script error in the log (SCRIPT ERROR, Parse Error, Error calling ...)
+          CB_FLOW_TAIL=80 CB_SMOKE=1 core/qa/run-flow.sh -k smoke -T 180 -o "$RUNNER_TEMP/flows" --
       - name: New look, chapter 1 end to end and save-continue (Godot flows on the real engine)
         if: matrix.node == '22'
-        run: |
-          timeout 600 godot --headless --path godot -s res://tests/look2_ch1_flow.gd
-          timeout 900 godot --headless --path godot -s res://tests/look2_ch23_flow.gd
-          timeout 400 godot --headless --path godot -s res://tests/look2_swap_flow.gd
-          timeout 600 godot --headless --path godot -s res://tests/look2_testbed_flow.gd
-          timeout 300 godot --headless --path godot -s res://tests/look2_pad_flow.gd
-          timeout 300 godot --headless --path godot -s res://tests/look2_frame_flow.gd
-          timeout 120 godot --headless --path godot -s res://tests/sfx_flow.gd
-          XDG_DATA_HOME=$(mktemp -d /tmp/cbsave.XXXX) timeout 300 godot --headless --path godot -s res://tests/look2_save_flow.gd
+        # scripts/flows.sh runs each flow through core/qa/run-flow.sh: script errors in the log, a missing OK line or a check count under flow-min.txt fail it
+        run: CB_FLOW_TAIL=60 scripts/flows.sh "$RUNNER_TEMP/flows"
