@@ -28,7 +28,7 @@ func _init() -> void:
 	_shell_root = Node3D.new(); add_child(_shell_root)
 	_content = Node3D.new(); add_child(_content)
 
-## The box itself: as many rows as the families need (2 to ROWS), so a two-part ticket gets a small box, not six empty bins.
+## The box itself: as many rows as the families need (1 to ROWS), so a two-part ticket gets a small box, not six empty bins.
 func _shell(n_rows: int) -> void:
 	for c in _shell_root.get_children(): c.queue_free()
 	var shell := MeshKit.mat(Color(0.16, 0.30, 0.36), 0.35, 0.0, {"normal": 0.1})   # blue-grey polypropylene
@@ -47,7 +47,7 @@ func fill(fams: Array, idx_of: Callable, held: Dictionary) -> void:
 	pages = maxi(1, int(ceil(float(fams.size()) / float(per))))
 	page = clampi(page, 0, pages - 1)
 	var shown := mini(per, fams.size() - page * per)
-	rows = clampi(int(ceil(float(shown) / float(COLS))), 2, ROWS)
+	rows = clampi(int(ceil(float(shown) / float(COLS))), 1, ROWS)   # 0.4.1 (Sigrid): no empty bins; a two-part ticket gets one row
 	_shell(rows)
 	var w := COLS * CW + WALL; var d := rows * CD + WALL
 	for s in per:
@@ -68,17 +68,16 @@ func fill(fams: Array, idx_of: Callable, held: Dictionary) -> void:
 		var active: bool = str(held.get("partId", "")) == str(it.partId) and str(held.get("value", "")) == str(it.value) and str(held.get("variant", "")) == str(it.variant)
 		var floor_m := MeshKit.mat(Color(0.95, 0.62, 0.18) if active else Color(0.12, 0.22, 0.27), 0.6, 0.0, {"normal": 0.0, "emission": Color(0.95, 0.55, 0.12), "emission_energy": 0.6 if active else 0.0})
 		_rims.append(MeshKit.add(cell, MeshKit.rounded_box(Vector3(CW - WALL * 1.5, 0.0008, CD - WALL * 1.5), 0.0006, 1), floor_m, Vector3(0, 0.0004, 0)))
-		# a paper label on the front wall: name on the first line, value and price on the second; fixed size, so it reads on a Deck
-		var lab := Label3D.new()
-		lab.text = "%s\n%s" % [_short_name(fam, it), _value_line(it, items.size())]
-		lab.fixed_size = true; lab.pixel_size = 0.0008; lab.font_size = 22; lab.outline_size = 7
-		lab.modulate = Color(0.96, 0.94, 0.88); lab.outline_modulate = Color(0.05, 0.05, 0.06)   # light on a dark rim reads on the mat and on the box
-		lab.font = load(Instruments3D.FONT_UI); lab.billboard = BaseMaterial3D.BILLBOARD_ENABLED; lab.no_depth_test = true
-		# labels sit outside the box, beside their compartment, so two columns never overlap: left column to the left, right to the right
-		var left_col := (s % COLS) == 0
-		lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if left_col else HORIZONTAL_ALIGNMENT_LEFT
-		lab.position = Vector3(-CW * 0.5 - 0.004 if left_col else CW * 0.5 + 0.004, H + 0.002, 0)
-		cell.add_child(lab); _labels.append(lab)
+		# 0.4.1 (Sigrid): a printed paper tab on the compartment's front wall, tilted up to the bench camera, instead of a label floating
+		# beside the box. The value is large (7 mm: about 16 px cap at 1280x800 in view 1), the price small; the name is on the hover tip.
+		var tab := Node3D.new(); tab.position = Vector3(0, H + 0.001, CD * 0.5 - WALL * 0.2); tab.rotation_degrees.x = -45.0; cell.add_child(tab)
+		MeshKit.add(tab, MeshKit.rounded_box(Vector3(CW - WALL * 1.6, 0.0135, 0.0006), 0.0008, 1), MeshKit.mat(Color(0.93, 0.90, 0.80), 0.85, 0.0, {"normal": 0.0}), Vector3(0, 0.0, 0))
+		var big := Label3D.new(); big.text = _tab_value(fam, it); big.font = load(Instruments3D.FONT_UI)
+		big.font_size = 64; big.pixel_size = 0.00011; big.modulate = Color(0.08, 0.08, 0.09); big.outline_size = 0
+		big.position = Vector3(0, 0.0022, 0.0005); big.double_sided = false; tab.add_child(big); _labels.append(big)
+		var small := Label3D.new(); small.text = ("‹ %s ›" % str(it.get("price_text", ""))) if items.size() > 1 else str(it.get("price_text", "")); small.font = load(Instruments3D.FONT_UI)
+		small.font_size = 64; small.pixel_size = 0.00005; small.modulate = Color(0.30, 0.28, 0.24); small.outline_size = 0
+		small.position = Vector3(0, -0.0042, 0.0005); small.double_sided = false; tab.add_child(small); _labels.append(small)
 		Instruments3D.hit(cell, "tray:%d" % s, Vector3(CW - WALL, H, CD - WALL), Vector3(0, H * 0.5, 0))
 	if pages > 1:
 		var tab := Node3D.new(); tab.position = Vector3(0, 0, d * 0.5 + 0.016); _content.add_child(tab)
@@ -100,6 +99,11 @@ func _short_name(fam: Dictionary, it: Dictionary) -> String:
 		return ("Wirewound" if pid.begins_with("res-ww") else "Resistor") + watt
 	var n := str(fam.get("name", pid))
 	return n if n.length() <= 16 else n.substr(0, 15) + "."
+
+## The tab's big line: the value for valued parts ("220 Ω"), else the short name ("LED red", "2N2222").
+func _tab_value(fam: Dictionary, it: Dictionary) -> String:
+	if it.get("value", null) != null: return str(it.label).get_slice("  ", 0)
+	return _short_name(fam, it)
 
 func _value_line(it: Dictionary, n: int) -> String:
 	var v := str(it.label).get_slice("  ", 0) if it.get("value", null) != null else ""
