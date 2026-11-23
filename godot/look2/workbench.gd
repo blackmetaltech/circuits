@@ -504,6 +504,7 @@ func start_job(id := "") -> void:
 		if m.size() == 4: backend.set_dial("V"); backend.set_probe("red", [int(m[0]), int(m[1])]); backend.set_probe("black", [int(m[2]), int(m[3])])
 	if OS.get_environment("CB_PIN") != "": backend.set_selector("pin", int(OS.get_environment("CB_PIN")))
 	if OS.get_environment("CB_POWER") == "1": backend.set_power(true)
+	if OS.get_environment("CB_THERMAL") == "1": toggle_thermal()   # shot hook: chapter 4's thermal camera on
 	if OS.get_environment("CB_POWER_AT") != "":   # QA/clip hook: switch the bench on after N seconds (the clip shows the moment)
 		get_tree().create_timer(float(OS.get_environment("CB_POWER_AT"))).timeout.connect(func(): toggle_power())
 	if OS.get_environment("CB_OPEN") == "1": open_case(); set_view(int(OS.get_environment("CB_VIEW")) if OS.get_environment("CB_VIEW") != "" else 1, true)   # shot hook
@@ -621,12 +622,12 @@ func _layout_for_ticket() -> void:
 	var fan_job := (mode == "free" and testbed_device in ["", "fan"]) or (mode != "free" and ticket_id == TICKET)
 	if fan: fan.visible = fan_job
 	if mcu: mcu.visible = fan_job
-	if scope: scope.position = Vector3(-0.10, 0, -0.30) if fan_job else Vector3(0.0, 0, -0.29); scope.rotation_degrees.y = 6.0 if fan_job else 0.0
+	if scope: scope.position = Vector3(-0.05, 0, -0.30) if fan_job else Vector3(0.0, 0, -0.29); scope.rotation_degrees.y = 6.0 if fan_job else 0.0
 	if fan: fan.position = Vector3(0.085, 0.0, -0.15)   # D-bench-ch45: at 0.17 it stood in front of the bench supply's display
 	if iso_box == null and not backend.mains.is_empty(): iso_box = IsoBox.new(); add_child(iso_box)
 	if iso_box:
 		iso_box.visible = not backend.mains.is_empty() and mode != "free"
-		iso_box.position = Vector3(0.36, 0.0, -0.06); iso_box.rotation_degrees.y = -38.0   # right of the supply, clear of its display
+		iso_box.position = Vector3(0.30, 0.0, -0.085); iso_box.rotation_degrees.y = -30.0   # in front of the supply's lower right, under its display, behind the meter
 	if mcu: mcu.position = Vector3(-0.07, 0.003, 0.215); mcu.rotation_degrees.y = 0.0   # in front of the case; the sorting box stands at its left
 
 ## Drawer rows: the ticket's shoebox (job) or the whole catalogue (free bench), grouped by kind.

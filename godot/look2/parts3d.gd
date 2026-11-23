@@ -247,6 +247,18 @@ func _to220(pid: String) -> void:
 	var hole := CylinderMesh.new(); hole.top_radius = 0.0037; hole.bottom_radius = 0.0037; hole.height = 0.0028; hole.radial_segments = 20
 	MeshKit.add(self, hole, MeshKit.mat(Color(0.01, 0.01, 0.01), 0.9), Vector3(2 * P, y0 + 0.018 + 0.0062, 0.0032), Vector3(PI / 2, 0, 0))
 	_labels.append(MeshKit.label(self, pid.to_upper(), 0.00004, Vector3(2 * P, y0 + 0.010, -0.00455), Color(0.62, 0.62, 0.64), true, Vector3(0, PI, 0)))
+	# 4-3 (D-bench-ch45): a clip-on heatsink on the tab when the variant has one (TO220-25 / -15 / -8: its C/W). The lower the
+	# number, the bigger the sink, so the tray and the board show which one was chosen.
+	var vr := str(part.get("variant", ""))
+	if vr.begins_with("TO220-") and vr.get_slice("-", 1).is_valid_int():
+		var sa := int(vr.get_slice("-", 1))
+		var fins := 4 if sa >= 25 else (6 if sa >= 15 else 9)
+		var hs := 0.022 if sa >= 25 else (0.028 if sa >= 15 else 0.036)
+		var zb := 0.0032 + 0.0013 + 0.0010
+		_body(MeshKit.rounded_box(Vector3(0.022, hs, 0.0020), 0.0003), MeshKit.m("anodised"), Vector3(2 * P, y0 + hs * 0.5, zb))
+		for k in fins:
+			var fx := 2 * P - 0.010 + float(k) * 0.020 / float(fins - 1)
+			_body(MeshKit.rounded_box(Vector3(0.0009, hs, 0.0100), 0.0002), MeshKit.m("anodised"), Vector3(fx, y0 + hs * 0.5, zb + 0.0055))
 	for i in 3:
 		var x := float(i) * 2.0 * P
 		_lead([Vector3(x, -MeshKit.BOARD_T, 0), Vector3(x, 0.002, 0), Vector3(2 * P + (x - 2 * P) * 0.25, y0 + 0.0005, 0)], 0.0005)

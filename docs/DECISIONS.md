@@ -171,3 +171,33 @@
   now lands paused, so Step shows the frame in which a part burns. Strongest argument against (a 5-2 player): the dimmer's strip
   already belongs to a ticket. Answer: the testbed is for how devices work; reusing a ticket's fixed parts keeps one model per part.
   Cut, written down: a dimmer for mains lamps (a triac; no triac model), a 555 timer device, free choice of fault on any part.
+
+- **D-bench-ch45 (2026-11-23, Kofi Mensah, Programmer; the lead's call, the choices below are mine).** Chapters 4 and 5 play on
+  the bench: the campaign is 1-1 to 5-5 in the engine's order, Next job runs through to the 5-5 exam, and the title offers the
+  classic stall as an option ("Classic 2D look"). The engine owns every number; the bench only shows it. Choices: (1) 4-1's safety
+  card is printed on the paper ticket with the engine's words and key (ticketCard().mains, readSafety). Until it is read the ticket
+  shows nothing else, and Power, Space and TEST answer "Read the safety card on the ticket first" instead of doing nothing silently,
+  which is what they did before. The card names "the grey box on the bench" and "the red hatched square", so both exist: an
+  isolation transformer prop wired to L and N (brown and blue leads), and the engine's keep-out drawn as a hatched square with its
+  HIGH VOLTAGE words. (2) The thermal camera (T, or a rail key on tickets whose card offers it) colours each part's body from the
+  engine's temperature on a fixed iron scale (dark blue at 20 C, white at 150 C) and names the hottest part on the tip plate. It is
+  a false-colour overlay, not a separate camera view, so the board stays where the player is working. (3) The five fixed parts
+  that fell back to a plain box got models of their own: the EI-core mains transformer, the constant-current load module, the
+  fan's soldered leads, the 12 V LED strip (it lights with the engine's strip current over its 0.3 A rating) and the amplifier
+  input jack. The 7805's heatsink variants (TO220-25, -15, -8 C/W) now carry a clip-on sink sized by their rating, so the tray and
+  the board show which sink was chosen; before, 4-3 drew every variant as a bare TO-220. The ch23 rule holds: look2_ch45_flow
+  fails on any part drawn as a plain box. (4) The ch45 flow also fails when a
+  device (the fan, the microcontroller, the isolation transformer, the case) stands between the work-view camera and an instrument
+  display. It failed on 5-1, where the fan hid the bench supply's numbers; the fan moved left, to x 0.085, behind the board's right
+  edge. The 1280x800 stills found two more overlaps the check cannot see: 5-1's scope screen sat partly under the paper ticket (the
+  scope moves 5 cm right), and 4-1's isolation transformer stood mostly off the right edge (it moves in front of the supply, below
+  its display). (5) 5-1 started from the title is still the showcase: it unlocks the tickets before it, so it never saves, its Next job
+  returns to the title, and the next Jobs reloads the save. From the campaign it is an ordinary job. (6) Selector keys on the rail
+  carry their selector's label, because 4-1 has two rows (MAINS 207/230/253 V, LOAD 100 mA/none) and "none" alone says nothing.
+  Strongest argument against (2), from a domain engineer: a thermal camera sees surfaces, and the engine's number is the junction
+  temperature, so the 7805's tab reads hotter on the bench than it would through a lens. Answer: the ticket's limit (125 C) is on
+  the junction, and that is the number the player has to keep down, so showing it is the honest choice for this lesson. The palette
+  is fixed, never auto-ranged, so a cooler build looks cooler. Cut, written down: no case-to-junction offset on the camera; the
+  ch4/ch5 boards still arrive blank where the engine has no fault for them (4-1 to 4-4, 5-2 to 5-4; the brief and the empty board
+  are the job); the strip's glow scales on its rated 0.3 A and does not model colour shift; the condition dial (D-money-06) is not
+  exercised by the ch45 flow.
