@@ -50,7 +50,7 @@ class Screen extends Control:
 	static func _fmt_t(t: float) -> String:
 		if t >= 1.0: return "%s s/div" % _trim(t)
 		if t >= 1e-3: return "%s ms/div" % _trim(t * 1e3)
-		return "%s us/div" % _trim(t * 1e6)
+		return "%s µs/div" % _trim(t * 1e6)   # 0.6: the screen printed "us" (Kofi)
 
 	## 2.00 -> "2", 0.50 -> "0.5": the bar has room for short numbers only.
 	static func _trim(x: float) -> String:
