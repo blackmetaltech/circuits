@@ -1639,7 +1639,8 @@ func thermal_text() -> String:
 func run_test() -> void:
 	if _safety_first(): return
 	if backend.passed and mode == "job":
-		note = "Already passed and paid. Close up and hand it back."; changed.emit(); return
+		# 0.7 (Mina): the bench had passed by itself as she pressed TEST, and the first word she read was "Already"; say what was paid
+		note = ("Passed. Paid %s. " % _paid_text if _paid_text != "" else "Passed and paid. ") + "Close up and hand it back (H)."; changed.emit(); return
 	if bool(backend.ticket.get("eb", false)) and not backend.predictions_done():
 		note = "Predict first: write your numbers on the ticket and press Lock in."; changed.emit(); return
 	backend.run_bench(); changed.emit()
@@ -1657,7 +1658,7 @@ var _campaign := false
 
 ## What the customer says when the case is opened, per ticket.
 const OPEN_LINE := {
-	"1-1": "Case open. The LED sits straight across the 9 V clip with no resistor: fit one in series with it.",
+	"1-1": "Case open. A wire runs from the battery's + straight to the LED. Right-click that wire to take it out, then put a resistor in its place.",   # 0.7 (Mina): she added a resistor and the old wire kept feeding the LED
 	"1-2": "Case open. Three LEDs in series on one resistor. Measure the current before you change anything.",
 	"1-3": "Case open. A link wire puts the full 12 V on the heater element. It needs 8 V.",
 	"1-4": "Case open. The load resistor is burnt. Measure the pack before you choose a new one.",

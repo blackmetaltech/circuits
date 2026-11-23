@@ -560,10 +560,10 @@ func run_bench() -> Dictionary:
 	else:
 		var why := str(r.get("message", ""))
 		var fl: Array = last_result.get("failures", [])
-		var pre := "The power switch was off, so I switched it on for the test.  " if bool(r.get("autoPowered", false)) else ""
+		var post := "  (The power was off; the test switched it on.)" if bool(r.get("autoPowered", false)) else ""   # 0.7 (Mina): the reason first, this note after
 		if not fl.is_empty(): why = str((fl[0] as Dictionary).get("text", why))
 		for p in last_result.get("predictions", []): if str(p.get("grade", "")) == "miss": why = "%s  (%s)" % [why, str(p.get("gradeText", ""))]
-		event.emit("bench_failed", {"text": pre + why, "result": last_result})
+		event.emit("bench_failed", {"text": why + post, "result": last_result})
 	return r
 
 func _board_key() -> String: return "%s|%d" % [str(bench_q.get("ticket", "")), int(bench_q.get("undoDepth", 0))]
