@@ -224,7 +224,7 @@
   down: no new conditions on 1-3 or 2-1; the TIP120 gain fix (solve the stage gain so the composite meets 1000 at 0.5 A with the
   shunts in) moves every TIP120 golden and waits for the lead's call.
 
-- **D-first-timer-07 (2026-11-25, Ingrid Solheim, Game Lead).** The five 1-1 blockers from Leo's 0.6 run, each fixed where it
+- **D-first-timer-07 (2026-11-24, Ingrid Solheim, Game Lead).** The five 1-1 blockers from Leo's 0.6 run, each fixed where it
   happened. (1) Esc also drops the lit part; the wheel cannot change it until the pointer leaves and comes back. (2) Right-click
   removes only what is lit, and a wire is named by its ends ("Removed the wire from IN to the heater leg. Ctrl+Z puts it back.").
   (3) Picking a part says what to do next, and a drag from the tray released over the board places it. (4) A wire end snaps one
@@ -237,7 +237,7 @@
   for that lesson. Cut, written down: a confirmation before removing a part (undo is enough), a drag-to-place for parts already
   on the board (move stays click-then-click).
 
-- **D-tools-07 (2026-11-25, Ingrid Solheim, Game Lead).** Dagny (0.6): "after the $15 dial the wallet buys nothing". A ladder of
+- **D-tools-07 (2026-11-24, Ingrid Solheim, Game Lead).** Dagny (0.6): "after the $15 dial the wallet buys nothing". A ladder of
   three bench tools, each changing a diagnosis: the condition dial ($15, 0.6), the thermal camera ($30: every job, not only
   chapter 4's; see a part heat before it burns) and the scope's second channel ($45: input and output on one screen, which
   chapter 6's gain, clipping and slew jobs are built to show). They are offered on the ticket after a job is paid (the moment
@@ -248,6 +248,6 @@
   direction; the shelf objects need models and a place on the bench, and chapter 6 comes first. Cut, written down: Dagny's
   current clamp, part tester and organiser; tool boxes on a shelf; a price check by Mateo of $30 and $45 against the fees.
 
-- **Note on D-conditions-06 (2026-11-25, Ingrid).** "About 700 at 0.5 A" is history: Ravi's 54486ba makes the TIP120's composite
+- **Note on D-conditions-06 (2026-11-24, Ingrid).** "About 700 at 0.5 A" is history: Ravi's 54486ba makes the TIP120's composite
   gain 1000 at 0.5 A and 1530 at 3 A (onsemi TIP120/D, hFE min 1000 at 0.5 A and 3 A); 1f0fb7c moved the testbed numbers
   (relay timer pull-in 1.86 s, 3.98 s with 470 uF; dimmer 0.101 A). No ticket changed pass or fail.
