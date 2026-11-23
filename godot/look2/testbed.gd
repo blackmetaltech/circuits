@@ -61,6 +61,7 @@ static func load_device(wb, id: String) -> bool:
 	var d := device(id)
 	if d.is_empty(): return false
 	wb.start_free()
+	wb.backend.auto_bench = false   # Dagny: the charger "passed and paid $15" on its own (the scope's LOCK auto-test)
 	wb.testbed_device = id   # before any sync: the cables read it (Sigrid's dimmer shot had 5-1's PIN lead hanging to the mat)
 	var b = wb.backend
 	b.set_power(false)

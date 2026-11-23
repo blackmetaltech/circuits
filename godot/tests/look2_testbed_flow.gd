@@ -82,6 +82,7 @@ func _run() -> void:
 	ok(not bool(wb.scope.get("_screen").get("cap")), "and the scope's capture")
 	# 0.6 (D-testbed-06): the phone charger stage, the lamp dimmer and the relay timer
 	ok(Testbed.load_device(wb, "charger"), "the phone charger stage loads (4-1's board, safety card read)")
+	ok(not wb.backend.auto_bench, "the testbed never runs the host ticket's bench test by itself (Dagny: the charger 'passed and paid')")
 	ok(wb.backend.parts.filter(func(p): return str(p.partId) == "1n4007").size() == 4 and wb.backend.parts.any(func(p): return str(p.partId) == "cap-el"), "four diodes and the smoothing capacitor are on the board")
 	await _power_and_run(60)
 	ok(wb.backend.powered and _smoked_ids().is_empty(), "it runs on the mains with nothing burnt")
@@ -92,6 +93,18 @@ func _run() -> void:
 	var f1n = wb.parts3d.get("f1", null)
 	ok(f1n != null and f1n.anim.has("strip") and wb.board.connectors.any(func(c): return str(c.id) == "DRAIN"), "the dimmer's 3D bench is 5-2's board with its LED strip, not the free bench's 5-1 fan (Sigrid)")
 	ok(wb.view == 2, "the testbed opens in the work view (view %d)" % wb.view)
+	# Asha (0.6): the wheel over the knob zoomed. Rest on the knob as drawn (its top), then wheel: the wiper moves
+	wb.set_view(5, true); await _frames(3)   # in the headless window the work view puts the knob under the rail
+	var kn = wb.parts3d.get(str(wb.backend.parts.filter(func(p): return str(p.partId) == "pot-panel")[0].uid), null)
+	var kmp: Vector2 = wb.cam.unproject_position((kn.anim["knob"] as Node3D).global_position + Vector3(0, 0.003, 0))
+	var a0: float = float(wb.pot_alpha.values()[0]) if not wb.pot_alpha.is_empty() else -1.0
+	var kmv := InputEventMouseMotion.new(); kmv.position = wb.get_viewport().get_final_transform() * kmp; Input.parse_input_event(kmv); await process_frame
+	await create_timer(0.45).timeout
+	for down in [true, false]:
+		var ke := InputEventMouseButton.new(); ke.button_index = MOUSE_BUTTON_WHEEL_UP; ke.pressed = down
+		ke.position = wb.get_viewport().get_final_transform() * kmp; Input.parse_input_event(ke); await process_frame
+	var a1: float = float(wb.pot_alpha.values()[0]) if not wb.pot_alpha.is_empty() else -1.0
+	ok(a1 >= 0.0 and absf(a1 - a0) > 0.01 and wb.note.begins_with("Knob at"), "rest on the knob, then wheel: the knob turns (%.2f -> %.2f; %s)" % [a0, a1, wb.note])
 	var pot := ""
 	for p in wb.backend.parts: if str(p.partId) == "pot-panel": pot = str(p.uid)
 	ok(pot != "" and wb.backend.parts.any(func(p): return str(p.partId) == "tip120"), "the knob and the transistor are on the board")

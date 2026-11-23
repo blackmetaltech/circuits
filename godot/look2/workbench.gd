@@ -491,6 +491,7 @@ func _update_camera(dt: float) -> void:
 func _nosave() -> bool: return OS.has_environment("CB_NOSAVE") or OS.get_environment("CB_L2_TICKET") != ""
 
 func start_job(id := "") -> void:
+	backend.auto_bench = true
 	if not _campaign:
 		# one save with the classic stall: chapter 1 progress and the wallet carry between the two looks
 		if not _nosave() and backend.has_save(): backend.load_game()
@@ -567,7 +568,7 @@ func _ghost_demo() -> void:
 	hover_pad = Vector2i(14, 8)
 
 func start_free() -> void:
-	mode = "free"; _campaign = false; testbed_device = ""; testbed_paused = false
+	mode = "free"; _campaign = false; testbed_device = ""; testbed_paused = false; backend.auto_bench = true
 	backend._act("newGame", [1, "sandbox"])
 	backend.open_ticket(TICKET)
 	backend.clear_fault()   # the free bench is an open board, not the fan repair
@@ -1386,7 +1387,7 @@ func _pick_item(mp: Vector2) -> Dictionary:
 	# (at board level alone the hit fell behind the part and the player had to click 10 to 14 px low)
 	var best := {}; var bd := 0.7
 	var qs: Array = []
-	for h in [0.0, 0.002, 0.004, 0.006, 0.008, 0.010, 0.013]:
+	for h in [0.0, 0.002, 0.004, 0.006, 0.008, 0.010, 0.013, 0.018, 0.024]:   # 0.6: up to a panel knob's top
 		var hit = _plane_at(h).intersects_ray(o, dir)
 		if hit == null: continue
 		var l: Vector3 = board.to_local(hit - board.global_transform.basis.y.normalized() * h)
@@ -1567,7 +1568,7 @@ var _campaign := false
 
 ## What the customer says when the case is opened, per ticket.
 const OPEN_LINE := {
-	"1-1": "Case open. The LED sits straight across the 9 V clip, no resistor. It is dark now. Probe it.",
+	"1-1": "Case open. The LED sits straight across the 9 V clip with no resistor: fit one in series with it.",
 	"1-2": "Case open. Three LEDs in series on one resistor. Measure the current before you change anything.",
 	"1-3": "Case open. A link wire puts the full 12 V on the heater element. It needs 8 V.",
 	"1-4": "Case open. The load resistor is burnt. Measure the pack before you choose a new one.",

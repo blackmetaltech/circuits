@@ -648,6 +648,9 @@ func _refresh_live() -> void:
 	dmm_q = d if d is Dictionary else {}
 	_apply_live()
 
+## 0.6 (Dagny): the testbed is not a job: a gauge that holds in band must not run the host ticket's bench test and "pay".
+var auto_bench := true
+
 func _apply_live() -> void:
 	_scope_update()
 	temps.clear(); smoked.clear()
@@ -804,7 +807,7 @@ func step(dt: float) -> void:
 	if locked and not passed:
 		hold += dt
 		# the formal check runs by itself once LOCK has held and every part is still cool: a part that is warming is left to play out (glow, then smoke) in real time
-		if hold >= LOCK_HOLD and not bool(ticket.get("eb", false)) and answers_done() and _bench_key != _board_key() and not _any_heating(): run_bench()
+		if auto_bench and hold >= LOCK_HOLD and not bool(ticket.get("eb", false)) and answers_done() and _bench_key != _board_key() and not _any_heating(): run_bench()
 	elif not locked: hold = 0.0
 
 func _any_heating() -> bool:

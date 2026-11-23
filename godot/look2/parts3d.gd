@@ -384,8 +384,8 @@ func set_needle(needle: float, uA: float) -> void:
 ## 0.6 testbed dimmer: a panel potentiometer. A steel can on three legs, a threaded bush, a ridged knob with a white line; the knob
 ## turns with the wiper (set_knob, from the engine's setPot).
 func _panel_pot() -> void:
-	for i in 3: _lead([Vector3(i * 2 * P, -MeshKit.BOARD_T, 0), Vector3(i * 2 * P, 0.003, 0), Vector3(i * 2 * P, 0.004, -0.004)])
-	var c := Vector3(2 * P, 0.0085, -0.006)
+	for i in 3: _lead([Vector3(i * 2 * P, -MeshKit.BOARD_T, 0), Vector3(i * 2 * P, 0.004, 0)])
+	var c := Vector3(2 * P, 0.0085, -0.0012)   # over its pin row, where the pointer finds it (Asha: the wheel over the knob zoomed)
 	var can := CylinderMesh.new(); can.top_radius = 0.0085; can.bottom_radius = 0.0085; can.height = 0.007; can.radial_segments = 28
 	_body(can, MeshKit.mat(Color(0.62, 0.63, 0.64), 0.35, 0.9), c)
 	var bush := CylinderMesh.new(); bush.top_radius = 0.0035; bush.bottom_radius = 0.0035; bush.height = 0.004; bush.radial_segments = 16
