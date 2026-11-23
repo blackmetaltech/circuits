@@ -1486,21 +1486,24 @@ func load_build(slot: int) -> void:
 ##   pick     1-1: pick the 220 ohm from the sorting box, the ghost rides to the pads, it is placed
 ##   supply   2-3: the VOLTAGE knob steps the supply up to 8 V, OUTPUT, then TEST
 ##   measure  2-1: meter leads on OUT (2.76 V), the divider rebuilt, the meter reads 3.35 V, TEST passes
-##   burn     1-1: the burnt LED out, a fresh one straight on 9 V, power: it burns and the rush bill lands on the ticket
+##   burn     1-1: power names the arrived-burnt LED; Ctrl+Z fits a fresh one; power again: it burns, and the rush bill lands
 func _demo(name: String) -> void:
-	var at := func(t: float, f: Callable): get_tree().create_timer(t).timeout.connect(f)
+	var f0 := Engine.get_frames_drawn()
+	while Engine.get_frames_drawn() < f0 + 30: await get_tree().process_frame   # past the splash and the first shader compiles
+	print("DEMO go ", name)   # the recorder starts capturing on this line
+	var at := func(t: float, f: Callable): get_tree().create_timer(t + 1.0).timeout.connect(f)
 	match name:
 		"pick":
 			var fam: Dictionary = {}
 			at.call(1.0, func():
 				for s in sort_box.slots: if str(s.item.partId).begins_with("res"): fam = s
 				if not fam.is_empty(): pick_part(fam.item))
-			for i in 6: at.call(1.6 + i * 0.25, func(): _hover(cam.unproject_position(board.pad_world(2 + i, 9)), true))
-			at.call(3.4, func():
+			at.call(1.5, func(): set_view(5))
+			for i in 6: at.call(2.4 + i * 0.25, func(): _hover(cam.unproject_position(board.pad_world(2 + i, 9)), true))
+			at.call(4.2, func():
 				var r := backend.place(place_item, 7, 9, 0); note = str(r.get("msg", "")); set_tool("select"); changed.emit())
 		"supply":
-			for i in 7: at.call(1.0 + i * 0.35, func(): hover_tip = ""; supply_step(0.5))
-			at.call(1.0 + 7 * 0.35, func(): supply_step(-0.5); supply_step(0.5))
+			for i in 6: at.call(1.0 + i * 0.35, func(): hover_tip = ""; supply_step(0.5))
 			at.call(4.2, func(): _hit("psu_output"))
 			at.call(5.0, func(): _hit("psu_test"))
 		"measure":
@@ -1510,11 +1513,9 @@ func _demo(name: String) -> void:
 			at.call(4.0, func(): backend.build_ref(ticket_id); sync_board(); if not backend.powered: toggle_power())
 			at.call(4.6, func(): backend.set_dial("V"); backend.set_probe("red", [14, 2]); backend.set_probe("black", [14, 8]); changed.emit())
 			at.call(6.0, func(): run_test())
-		"burn":
-			at.call(1.0, func(): backend.delete_part("x1"); note = backend.last_note; changed.emit())
-			at.call(2.0, func():
-				for s in sort_box.slots: if str(s.item.partId).begins_with("led"): pick_part(s.item))
-			at.call(2.6, func(): _hover(cam.unproject_position(board.pad_world(8, 5)), true))
-			at.call(3.2, func(): backend.place(place_item, 8, 5, 0); set_tool("select"); changed.emit())
-			at.call(4.0, func(): toggle_power())
+		"burn":   # the arrived-burnt LED is named as the customer's; Ctrl+Z fits a fresh one; still straight on 9 V, it burns and is billed
+			at.call(0.5, func(): set_view(5))
+			at.call(1.2, func(): toggle_power())
+			at.call(3.0, func(): undo())
+			at.call(4.2, func(): toggle_power())
 
