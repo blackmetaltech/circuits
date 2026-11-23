@@ -229,7 +229,7 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
         selectors: (def.selectors ?? []).map((sd) => ({ id: sd.id, label: t(sd.labelKey), options: sd.options.map((x) => t(x.labelKey)), index: tk.sel?.[sd.id] ?? sd.initial })),
         keepOut: b.keepOut ?? [],
         status: tk.live.status, issues: tk.live.issues.map((i) => ({ key: i.key, text: text(i) })), boardErrors: rig.errors.map((e) => ({ key: e.key, text: text(e) })),
-        dangling: danglingEnds(b).map((e) => ({ wid: e.wid, pad: e.pad, text: say('wire.dangling', { pad: `${e.pad[0]},${e.pad[1]}` }) })),
+        dangling: danglingEnds(b).map((e) => ({ wid: e.wid, pad: e.pad, text: say('wire.dangling', { pad: `${e.pad[0]},${e.pad[1]}`, end: t(e.first ? 'wire.end.first' : 'wire.end.last') }) })),
         openPins: openPins(b).map((e) => ({ uid: e.uid, pin: e.pin, pad: e.pad })),
         undoDepth: tk.undo.length, redoDepth: tk.redo.length, benched: tk.lastBench ? { pass: tk.lastBench.pass, stars: tk.lastBench.stars } : null,
       };

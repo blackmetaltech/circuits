@@ -35,14 +35,14 @@ export function padWhat(b: Board, pad: Pad, skipWid?: string): PadWhat {
 }
 
 /** Wire ends that meet nothing: no part pin, no connector, no other wire end on their pad. */
-export function danglingEnds(b: Board): { wid: string; pad: Pad }[] {
-  const occ = occupancy(b), out: { wid: string; pad: Pad }[] = [];
+export function danglingEnds(b: Board): { wid: string; pad: Pad; first: boolean }[] {
+  const occ = occupancy(b), out: { wid: string; pad: Pad; first: boolean }[] = [];
   for (const w of b.wires) {
-    for (const e of [w.path[0]!, w.path[w.path.length - 1]!]) {
+    for (const [i, e] of [w.path[0]!, w.path[w.path.length - 1]!].entries()) {
       const k = padKey(e);
       if (occ.pins.has(k) || occ.connectors.has(k)) continue;
       if ((occ.ends.get(k) ?? []).some((x) => x !== w.wid)) continue;
-      out.push({ wid: w.wid, pad: e });
+      out.push({ wid: w.wid, pad: e, first: i === 0 });
     }
   }
   return out;

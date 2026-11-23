@@ -230,6 +230,8 @@ func _run() -> void:
 	ok(wb.note.begins_with("Wire from here"), "a click on a pad starts a wire and says how to end it: %s" % wb.note)
 	wb._left(true, pb); wb._left(false, pb); await _frames(2)
 	ok(wb.backend.wires.size() == nw + 1, "a second click on another pad ends it (%d -> %d wires)" % [nw, wb.backend.wires.size()])
+	var ndang: int = 2 if wb.note.contains("Neither end") else wb.note.count("on a bare pad")
+	ok(ndang > 0 and wb.board._marks.size() == ndang and (wb.note.contains("first end") or wb.note.contains("second end") or wb.note.contains("Both ends are ringed red")), "a wire end on a bare pad is named (first or second) and ringed red (%d rings): %s" % [wb.board._marks.size(), wb.note])
 	wb.set_tool("select")
 	wb.back_to_title(); await _frames(5)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(wb._build_path(1)))

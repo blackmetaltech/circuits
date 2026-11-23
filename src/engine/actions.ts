@@ -213,7 +213,8 @@ function wireAdded(tk: TicketState, w: Wire): [string, Record<string, unknown>] 
   const ends = [w.path[0]!, w.path[w.path.length - 1]!] as Pad[], what = ends.map((e) => padWhat(tk.board, e, w.wid));
   const hang = danglingEnds(tk.board).filter((e) => e.wid === w.wid);
   let msg = say('wire.added', { wid: w.wid });
-  for (const h of hang) msg += ' ' + say('wire.dangling', { pad: `${h.pad[0]},${h.pad[1]}` });
+  if (hang.length === 2) msg += ' ' + say('wire.dangling.both');
+  else for (const h of hang) msg += ' ' + say('wire.dangling', { pad: `${h.pad[0]},${h.pad[1]}`, end: t(h.first ? 'wire.end.first' : 'wire.end.last') });
   // the board's honest rule, said every time it matters: only the two ends join; passing over or alongside never does
   const c = wireContacts(tk.board, w);
   for (const j of c.joins) msg += ' ' + say('wire.joins', { wid: w.wid, other: j.wid, pad: `${j.pad[0]},${j.pad[1]}` });

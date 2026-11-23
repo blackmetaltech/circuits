@@ -1,5 +1,7 @@
 extends SceneTree
-const TIP := 200   ## 0.5: the waiting customer's tip for a pass on the first TEST (service:tip, D-tip-waiting)
+## 0.6 (D-money-06): the waiting customer tips 40 % of the fee, to the nearest quarter: 1-1's $3.00 fee tips $1.25, 1-2's $4.00 tips $1.50
+const TIP_11 := 125
+const TIP_12 := 150
 ## Chapter 1 end to end on the real engine, through the stall's UI layer (pointer drags for parts, wires and probes, a click on the rocker, the dial and the
 ## BENCH key, typed predictions). All five tickets are played to their reference designs and to LOCK, and the designed naive builds fail:
 ##   godot --headless --path godot -s res://tests/ch1_engine_flow.gd         (exit code 0 = all green; needs godot/sidecar/bridge.mjs)
@@ -169,7 +171,7 @@ func _run() -> void:
 	ok(_drag_wire([8, 2], [14, 10]), "a second wire is dragged to an empty hole")
 	ok(bk.dangling.size() == 1 and bk.dangling[0].pad == [14, 10], "the engine reports that end as dangling")
 	await _frames(2)
-	ok(sc.top.toast.contains("isn't touching a part's leg") and not sc.top.toast.contains("14,10") and sc.bench.model.dangling.size() == 1, "a dangling end marker is shown and the toast says so: %s" % sc.top.toast)
+	ok(sc.top.toast.contains("second end of the wire is on a bare pad") and not sc.top.toast.contains("14,10") and sc.bench.model.dangling.size() == 1, "a dangling end marker is shown and the toast says so: %s" % sc.top.toast)
 	_ctrl_z()
 	ok(bk.wires.size() == 1 and bk.dangling.is_empty(), "Ctrl+Z takes the dangling wire back")
 	# the other leg, one pad off as well
@@ -248,7 +250,7 @@ func _run() -> void:
 	ok(bk.passed and evlog.has("paid"), "holding LOCK runs the bench and the customer pays")
 	await create_timer(0.9).timeout
 	ok(sc.props.mood == "joy" and sc.done.get("1-1", false), "Lio is happy; 1-1 is fixed")
-	ok(bk.wallet_minor == wallet0 + 500 + TIP and bk.wallet_text == "$7.00", "the coin tin shows the engine wallet: the $5.00 fee and the waiting customer's $2.00 first-test tip (%s)" % bk.wallet_text)
+	ok(bk.wallet_minor == wallet0 + 500 + TIP_11 and bk.wallet_text == "$6.25", "the coin tin shows the engine wallet: $5.00 (fee and stars) and the waiting customer's $1.25 tip, 40 %% of the fee (%s)" % bk.wallet_text)
 
 	print("== 1-2 Tail-light (fresh AND tired battery)")
 	await _start("1-2")
@@ -279,7 +281,7 @@ func _run() -> void:
 	_clock(6.0, func(): return bk.passed)
 	var g2: float = bk.scope_value()
 	ok(bk.passed and g2 >= 14.0 and g2 <= 20.0, "LOCK and a bench pass at %.2f mA (14 - 20)" % g2)
-	ok(bk.wallet_minor == wallet0 + 500 + TIP + 700 + TIP, "paid 7.00 and the $2.00 first-test tip (%s)" % bk.wallet_text)
+	ok(bk.wallet_minor == wallet0 + 500 + TIP_11 + 700 + TIP_12, "paid 7.00 and the $1.50 first-test tip (%s)" % bk.wallet_text)
 	await create_timer(0.7).timeout
 
 	print("== 1-3 Hot Resistor")

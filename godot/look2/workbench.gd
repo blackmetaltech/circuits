@@ -1021,7 +1021,16 @@ func _on_event(name: String, data: Dictionary) -> void:
 				note = "Bench test passed. Paid %s: the %s fee%s." % [str(data.get("pay_text", "")), str(backend.ticket.get("price_text", "")), tail]
 			else: note = "Bench test passed again. This job is already paid."   # was "Paid : the $4.00 fee" with the amount missing
 			last_failure = {}; changed.emit()
-		"power", "lock", "wired", "placed", "deleted":
+		"wired":
+			# Rui (0.6 replay): "it says the wire connects nothing, but which end?" The bare end gets a red ring until the next edit.
+			if board: board.set_marks(data.get("dangling", []), Color(0.95, 0.3, 0.25))
+			if not last_failure.is_empty(): last_failure = {}; capture_until = 0.0
+			changed.emit()
+		"placed", "deleted":
+			if board: board.set_marks([])
+			if not last_failure.is_empty(): last_failure = {}; capture_until = 0.0
+			changed.emit()
+		"power", "lock":
 			# an edit or a power change makes the last bench verdict stale: clear it so the ticket never shows an old failure (Noor, 1-5)
 			if name in ["wired", "placed", "deleted"] and not last_failure.is_empty(): last_failure = {}; capture_until = 0.0   # not on power: a burn explanation stays readable after switching off
 			changed.emit()
