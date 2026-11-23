@@ -86,7 +86,9 @@ function indexPage(chapters: number[]): string {
 <ul class="chapters">${list}</ul>
 <p>Chapter 1 and ticket 5-1 play on the new 3D workbench. The rest play in the classic 2D stall; the switch is on both title screens.</p>
 <h2>Free bench</h2>
-<p>Any part, the bench supply, the scope and the meter, with three save slots. On the workbench title.</p>`);
+<p>Any part, the bench supply, the scope and the meter, with three save slots. On the workbench title.</p>
+<h2>Testbed</h2>
+<p>Load a pocket torch, a weather station input or a fan driver with its working board. Probe it, break it on purpose, then pause and step time to watch what happens.</p>`);
 }
 
 function controlsPage(): string {
@@ -95,12 +97,23 @@ function controlsPage(): string {
     ['Right click a part or a wire', 'Remove it'], ['Space', 'Power on or off'], ['Enter', 'Bench test'], ['M', 'Meter leads (red, then black)'],
     ['P', 'Scope probe'], ['Tab', 'Schematic'], ['Ctrl+Z', 'Undo'], ['1 to 5', 'Camera views (5 looks straight down on the board)'],
     ['Right drag / middle drag / wheel', 'Orbit / pan / zoom'], ['Esc', 'Select tool'],
+    ['Wheel over a part on the board', 'Change its value in place (the wires stay)'], ['Wheel over the sorting box', 'Pick another value of that part'],
+    ['Wheel over the VOLTAGE knob', 'Set the bench supply'], ['Left and Right, or the wheel over the slide wire', 'Move the jockey (J changes the step)'],
+    ['K', 'Testbed: pause or run the simulation'], ['L', 'Testbed: one frame forward while paused'],
+  ];
+  const pad: [string, string][] = [
+    ['Left stick', 'Move the cursor ring (it slows over anything it can act on)'], ['A / B', 'Click / right click at the ring'],
+    ['LB / RB', 'Wheel down / up at the ring'], ['X', 'Power'], ['Y', 'Bench test'], ['D-pad up / down', 'Wire tool / meter leads'],
+    ['D-pad left / right', 'Camera views'], ['Back', 'Schematic'], ['Start', 'Select tool / menu'], ['Right stick', 'Orbit the view'],
+    ['Left stick press', 'Testbed: pause or run'], ['Right stick press', 'Testbed: step; on a job: the jockey step size'],
   ];
   return page('Controls · CIRCUITS wiki', 'Keys and mouse for the CIRCUITS workbench.',
     `<p class="crumbs"><a href="./">Wiki</a> / Controls</p>
 <h1>Controls (workbench)</h1>
 <table class="keys"><tbody>${rows.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')}</tbody></table>
-<p>No gamepad support in the workbench yet. The classic stall has its own controls on its help page.</p>`);
+<h2>Gamepad</h2>
+<table class="keys"><tbody>${pad.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')}</tbody></table>
+<p>The pad rumbles on power, on a pass and on a burn. The classic stall has its own controls on its help page.</p>`);
 }
 
 /** Every page: file name to HTML. */
