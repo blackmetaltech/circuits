@@ -50,7 +50,8 @@ func _input(e: InputEvent) -> void:
 			JOY_BUTTON_Y: if jb.pressed: _key(KEY_ENTER)
 			JOY_BUTTON_BACK: if jb.pressed: _key(KEY_TAB)
 			JOY_BUTTON_START: if jb.pressed: _key(KEY_ESCAPE)
-			JOY_BUTTON_RIGHT_STICK: if jb.pressed: _key(KEY_J)
+			JOY_BUTTON_LEFT_STICK: if jb.pressed: _key(KEY_K)   # 0.5 testbed: pause / run
+			JOY_BUTTON_RIGHT_STICK: if jb.pressed: _key(KEY_L if str(bench.mode) == "free" else KEY_J)   # free bench: step one frame; jobs: jockey step size
 			JOY_BUTTON_DPAD_UP: if jb.pressed: _key(KEY_W)
 			JOY_BUTTON_DPAD_DOWN: if jb.pressed: _key(KEY_M)
 			JOY_BUTTON_DPAD_LEFT: if jb.pressed: bench.set_view(wrapi(int(bench.view) - 1, 1, 6))

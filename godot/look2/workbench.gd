@@ -56,6 +56,8 @@ var wire_from := Vector2i(-1, -1)
 var _wire_click := false              ## the wire's first end was a click (not a drag): the next click on another pad ends it
 var wire_preview: MeshInstance3D
 var hover_pad := Vector2i(-1, -1)
+var testbed_device := ""   ## 0.5: the free bench's loaded device (Testbed.DEVICES id), "" for an open board
+var testbed_paused := false
 var note := ""
 var paused := false
 var _ft: Array = []
@@ -97,6 +99,15 @@ func _ready() -> void:
 	var start := OS.get_environment("CB_L2")
 	if start == "job": start_job()
 	elif start == "free": start_free()
+	elif start == "testbed":   # QA/shot hook: CB_TESTBED=torch|station|fan, CB_BREAK=<break id>, CB_POWER=1
+		Testbed.load_device(self, OS.get_environment("CB_TESTBED") if OS.get_environment("CB_TESTBED") != "" else "torch")
+		if OS.get_environment("CB_BREAK") != "": Testbed.apply_break(self, OS.get_environment("CB_BREAK"))
+		if OS.get_environment("CB_PIN") != "": backend.set_selector("pin", int(OS.get_environment("CB_PIN")))
+		if OS.get_environment("CB_METER") != "":
+			var mt := OS.get_environment("CB_METER").split(",")
+			if mt.size() == 4: backend.set_dial("V"); backend.set_probe("red", [int(mt[0]), int(mt[1])]); backend.set_probe("black", [int(mt[2]), int(mt[3])])
+		if OS.get_environment("CB_POWER") == "1": backend.set_power(true)
+		if OS.get_environment("CB_VIEW") != "": set_view(int(OS.get_environment("CB_VIEW")), true)
 	else: mode = "title"; changed.emit()
 	if OS.get_environment("CB_MAXFPS") != "": Engine.max_fps = int(OS.get_environment("CB_MAXFPS"))   # software-rendered harness runs: cap the CPU
 	if OS.get_environment("CB_FRAMETIME") != "":
@@ -531,7 +542,7 @@ func _ghost_demo() -> void:
 	hover_pad = Vector2i(14, 8)
 
 func start_free() -> void:
-	mode = "free"; _campaign = false
+	mode = "free"; _campaign = false; testbed_device = ""; testbed_paused = false
 	backend._act("newGame", [1, "sandbox"])
 	backend.open_ticket(TICKET)
 	backend.clear_fault()   # the free bench is an open board, not the fan repair
@@ -588,7 +599,8 @@ func _contacts() -> void:
 ## The bench is set for the job: the fan and the microcontroller only come out for 5-1; the scope stands behind the board,
 ## clear of the repair ticket on the left, so nothing on screen covers its trace.
 func _layout_for_ticket() -> void:
-	var fan_job := mode == "free" or ticket_id == TICKET
+	# the fan and the microcontroller only come out for 5-1, the open free bench (its board is 5-1's) and the testbed's fan driver
+	var fan_job := (mode == "free" and testbed_device in ["", "fan"]) or (mode != "free" and ticket_id == TICKET)
 	if fan: fan.visible = fan_job
 	if mcu: mcu.visible = fan_job
 	if scope: scope.position = Vector3(-0.10, 0, -0.30) if fan_job else Vector3(0.0, 0, -0.29); scope.rotation_degrees.y = 6.0 if fan_job else 0.0
@@ -1146,6 +1158,8 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_LEFT: jockey_step(-(0.1 if k.shift_pressed else (10.0 if k.ctrl_pressed else backend.jockey_step_mm())))
 			KEY_RIGHT: jockey_step(0.1 if k.shift_pressed else (10.0 if k.ctrl_pressed else backend.jockey_step_mm()))
 			KEY_J: jockey_cycle()
+			KEY_K: if mode == "free": Testbed.set_running(self, testbed_paused)   # 0.5 testbed: pause / run the simulation
+			KEY_L: if mode == "free" and testbed_paused: Testbed.step_once(self)   # one frame forward while paused
 			KEY_C: set_cute(not cute)
 			KEY_H: if backend.passed and not handed: hand_back()
 			KEY_BRACKETLEFT, KEY_BRACKETRIGHT:

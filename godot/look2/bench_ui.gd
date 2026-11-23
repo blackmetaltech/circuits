@@ -229,6 +229,8 @@ func _title() -> void:
 	var gap := Control.new(); gap.custom_minimum_size = Vector2(0, 8); v.add_child(gap)
 	var b1 := _key(v, "Jobs: chapters 1 to 3", func(): bench.start_job(), "", true)
 	_lab(v, "From a torch and a weather station to a metre bridge, a camera flash, an arcade button and a relay. Three exams.", 18, Color(0.72, 0.75, 0.78))
+	_key(v, "Testbed: how devices work", func(): Testbed.load_device(bench, "torch"))
+	_lab(v, "Load a torch, a weather station or a fan driver. Probe it live, break it on purpose, pause and step time.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
 	_key(v, "Free bench", func(): bench.start_free())
 	_lab(v, "Any part, the supply, scope and meter. Save a build and load it later.", 18, Color(0.72, 0.75, 0.78))
 	_key(v, "Showcase: 5-1 Fan Driver", func(): bench.start_job("5-1"))
@@ -248,8 +250,33 @@ func _title() -> void:
 	_lab(v, "Right drag orbits   Middle drag pans   Wheel zooms   Keys 1-5 views   Tab schematic", 17, Color(0.72, 0.75, 0.78), f_mono)
 	_lab(v, "v%s" % str(ProjectSettings.get_setting("application/config/version", "")), 15, Color(0.56, 0.60, 0.65), f_mono)
 
+## 0.5 testbed: the loaded device, its breaks, time controls. Every button is an edit or an engine call the player could make by
+## hand; the card only gathers them.
+func _testbed_card() -> void:
+	var d: Dictionary = Testbed.device(str(bench.testbed_device))
+	var fv := _paper(Vector2(30, 26), 430)
+	_ink(fv, "TESTBED", 17, RED_INK, f_type, false)
+	_ink(fv, str(d.get("name", "")), 28, INK, f_semi, false)
+	_ink(fv, str(d.get("what", "")), 17, INK, f_sans)
+	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 8); fv.add_child(row)
+	for dv: Dictionary in Testbed.DEVICES:
+		var id: String = dv.id
+		_key(row, str(dv.name).get_slice(" ", 0) if str(dv.name).length() > 12 else str(dv.name), func(): Testbed.load_device(bench, id), "", false, id == str(bench.testbed_device))
+	_ink(fv, "Break it on purpose:", 17, INK, f_semi, false)
+	for k: Dictionary in d.get("breaks", []):
+		var kid: String = k.id
+		_key(fv, str(k.name), func(): Testbed.apply_break(bench, kid), "", false, false)
+	var row2 := HBoxContainer.new(); row2.add_theme_constant_override("separation", 8); fv.add_child(row2)
+	_key(row2, "Reset", func(): Testbed.load_device(bench, str(bench.testbed_device)), "", false, false)
+	_key(row2, "Run" if bench.testbed_paused else "Pause", func(): Testbed.set_running(bench, bench.testbed_paused), "K", false, bench.testbed_paused)
+	var st := _key(row2, "Step", func(): Testbed.step_once(bench), "L", false, false)
+	st.disabled = not bench.testbed_paused
+	if bench.note != "": _ink(fv, bench.note, 17, Color(0.14, 0.20, 0.42), f_sans)
+
 func _job_card() -> void:
 	var t: Dictionary = bench.backend.ticket
+	if bench.mode == "free" and str(bench.testbed_device) != "":
+		_testbed_card(); return
 	if bench.mode == "free":
 		var fv := _paper(Vector2(30, 26), 430)
 		_ink(fv, "FREE BENCH", 17, RED_INK, f_type, false)

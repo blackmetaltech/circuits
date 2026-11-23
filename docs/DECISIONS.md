@@ -136,3 +136,12 @@
   stocks, in place, wires kept (the engine's setValue). Kofi found that a repair otherwise meant removing the part and rebuilding
   its wires. The wheel over empty bench still zooms; over the box it still changes the tray value; over the supply knob it sets
   volts.
+
+- **D-testbed (2026-11-23, Ingrid Solheim, Game Lead).** The owner asked for "a comfortable simulation testbed to learn how
+  various appliances and devices work". 0.5 ships it on the free bench with three devices: the pocket torch (1-1), the weather
+  station input (2-1) and the fan driver (5-1). Each loads with its working board in the engine's sandbox (no bin, no bill), so
+  the schematic (Tab), the meter and the scope work as on a job. Each has two breaks, and every break is an edit the player could
+  make by hand (a wire across a part, a part removed, a value swapped in place): the engine decides what happens, the testbed
+  never scripts a result. K pauses and runs the simulation, L steps one frame (pad: left and right stick press). Cut, written
+  down: the phone charger stage (4-1 is a mains ticket and needs the safety card flow on the free bench); free choice of fault
+  (open, short, drift) on any part; a slow-motion speed control.
