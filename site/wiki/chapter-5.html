@@ -14,37 +14,42 @@
 <h1>Chapter 5 · Switches &amp; Gain</h1>
 <p class="lede">Wren's fifth page: five jobs from the maker space on Lantern Lane. A pin runs a fan, a 3.3 V board lights a strip, loose parts become a NAND gate, a synth gets a preamp, and the exam desk asks about gain.</p>
 <section class="ticket" id="t5-1">
-<h2>5-1 · Fan Driver <span class="tag">new look</span></h2>
+<h2>5-1 · Fan Driver </h2>
+<figure class="shot"><img src="assets/jobs/5-1.jpg" alt="5-1 Fan Driver on the workbench, fixed and powered" width="960" height="540" loading="lazy"></figure>
 <p>Kit's maker space has a microcontroller whose pin gives 5 V through 25 ohm and must never give more than 20 mA here. It has to switch a 12 V fan (60 ohm and a 10 mH winding: 200 mA). A pin cannot do that alone, so a transistor does the heavy lifting: the pin gives a small base current and the transistor lets a hundred times more through the fan. The fan must see at least 11.0 V with the pin high and at most 0.5 V with it low, and the bench also switches it on and off at 100 Hz.</p>
-<p class="arrives"><b>Arrives:</b> Q1 is burnt, and nothing across the fan catches its turn-off kick.</p><h3>The bench checks</h3>
+<p class="arrives"><b>On the bench:</b> Q1 is burnt, and nothing across the fan catches its turn-off kick.</p><h3>The bench checks</h3>
 <ul><li>The fan gets at least 11.0 V when the pin is high</li><li>The fan gets at most 0.5 V when the pin is low</li><li>The pin gives at most 20 mA when it is high</li></ul>
 <p class="parts"><b>Parts tray:</b> 2N2222A NPN, BC547B NPN, TIP120, 1N4007 rectifier diode, 1N4148 signal diode, Carbon-film resistor 5 %</p>
 </section>
 <section class="ticket" id="t5-2">
-<h2>5-2 · 3.3 V Gate <span class="tag dim">classic look</span></h2>
+<h2>5-2 · 3.3 V Gate </h2>
+<figure class="shot"><img src="assets/jobs/5-2.jpg" alt="5-2 3.3 V Gate on the workbench, fixed and powered" width="960" height="540" loading="lazy"></figure>
 <p>Tess's board speaks 3.3 V and a 12 V LED strip (40 ohm, 0.3 A) hangs on it. A MOSFET is a switch you drive with voltage, not current: it conducts when the gate sits far enough above its threshold. The strip must get at least 0.28 A, the FET must stay under 125 C at 40 C, and the bench repeats the test with the threshold at its datasheet minimum, typical and maximum, because no two batches agree. A fourth test lets the pin float while the board resets: the strip must stay off.</p>
-<h3>The bench checks</h3>
+<p class="arrives"><b>On the bench:</b> The strip is soldered on. GATE comes from a 3.3 V pin: the FET has to switch fully on from that.</p><h3>The bench checks</h3>
 <ul><li>The strip gets at least 0.28 A from 3.3 V, with the threshold at minimum, typical and maximum</li><li>The strip stays under 50 mA while the pin floats at 1.8 V (reset)</li></ul>
 <p class="parts"><b>Parts tray:</b> 2N7000 FET, IRLZ44N FET, IRF540N FET, Carbon-film resistor 5 %</p>
 </section>
 <section class="ticket" id="t5-3">
-<h2>5-3 · Gate Builder <span class="tag dim">classic look</span></h2>
+<h2>5-3 · Gate Builder </h2>
+<figure class="shot"><img src="assets/jobs/5-3.jpg" alt="5-3 Gate Builder on the workbench, fixed and powered" width="960" height="540" loading="lazy"></figure>
 <p>Dev's robotics club has no logic chips left, only diodes, a transistor and a drawer of resistors. Build a NAND gate: the output Y is low only when both inputs A and B are high. The bench drives A and B with a logic low of 0.4 V (not 0 V) or a high (5 V) and tries all four combinations. When the output should be high it must hold at least 4.0 V while a 10 kilohm load pulls on it (a fan-out of a few gates); when it should be low it must hold at most 0.4 V while sinking 1 mA.</p>
-<h3>The bench checks</h3>
+<p class="arrives"><b>On the bench:</b> Empty board. Diodes, a transistor and resistors: make Y low only when A and B are both high.</p><h3>The bench checks</h3>
 <ul><li>With the output high (any input low) Y holds at least 4.0 V into a 10 kilohm load</li><li>With both inputs high Y holds at most 0.4 V while sinking 1 mA</li></ul>
 <p class="parts"><b>Parts tray:</b> 1N4148 signal diode, 2N3904 NPN, Carbon-film resistor 5 %</p>
 </section>
 <section class="ticket" id="t5-4">
-<h2>5-4 · Synth Preamp <span class="tag dim">classic look</span></h2>
+<h2>5-4 · Synth Preamp </h2>
+<figure class="shot"><img src="assets/jobs/5-4.jpg" alt="5-4 Synth Preamp on the workbench, fixed and powered" width="960" height="540" loading="lazy"></figure>
 <p>Juno's music shop has a synth whose line-out gives 100 mV peak at 1 kHz through 600 ohm. The amplifier behind it wants about ten times that, with one transistor from a 9 V supply. Build a common-emitter stage: a divider that sets the bias, a collector resistor, a small emitter resistor that fixes the gain, and a coupling capacitor at the input and the output so only the signal passes. The gain from the source must be between 8.5 and 11 with at most 5 % distortion, whatever the transistor's gain (the bench tries 100, 200 and 300).</p>
-<h3>The bench checks</h3>
+<p class="arrives"><b>On the bench:</b> IN from the synth, OUT to the amplifier. One transistor, gain about ten.</p><h3>The bench checks</h3>
 <ul><li>The output swing is 1.7 to 2.2 V peak to peak (a gain of 8.5 to 11 from the 0.1 V peak source), for transistor gains of 100, 200 and 300</li><li>The distortion of the output is at most 5 %</li></ul>
 <p class="parts"><b>Parts tray:</b> 2N3904 NPN, BC547B NPN, Carbon-film resistor 5 %, Electrolytic capacitor</p>
 </section>
 <section class="ticket" id="t5-5">
-<h2>5-5 · Exam: CE Amplifier <span class="tag">exam</span><span class="tag dim">classic look</span></h2>
+<h2>5-5 · Exam: CE Amplifier <span class="tag">exam</span></h2>
+<figure class="shot"><img src="assets/jobs/5-5.jpg" alt="5-5 Exam: CE Amplifier on the workbench, fixed and powered" width="960" height="540" loading="lazy"></figure>
 <p>Exam card: VCC = 12 V, RB = 565 kilohm from VCC to the base, RC = 3 kilohm from VCC to the collector, beta = 100, VBE = 0.7 V. Find IB, IC, VCE and the voltage gain. Predict first, then build it and measure.</p>
-<h3>The bench checks</h3>
+<p class="arrives"><b>On the bench:</b> Predict first, then build and probe.</p><h3>The bench checks</h3>
 <ul><li>IB, the base current (microamps)</li><li>IC, the collector current (milliamps)</li><li>VCE, the collector-emitter voltage (volts)</li><li>Av, the voltage gain, with its sign</li><li>The collector current agrees with the textbook answer, give or take 1 %</li><li>The collector voltage agrees with the textbook answer, give or take 1 %</li></ul>
 <p class="parts"><b>Parts tray:</b> Exact resistor, Textbook NPN</p>
 </section>

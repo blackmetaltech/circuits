@@ -4,23 +4,53 @@ import { t } from './i18n';
 import { LEVEL_DEFS, type LevelDef } from './data/levels';
 import { PARTS } from './data/parts';
 import { REGIONS } from './regions';
+import pkg from '../package.json';
+
+const VERSION: string = (pkg as { version: string }).version;
 
 const R = REGIONS.get('global').strings;
 const vars = (def?: LevelDef) => ({ customer: def ? R[`customer.${def.customer}`] ?? '' : '', mentor: R.mentor, stall: R.stall, lane: R.lane });
 const esc = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const partName = (id: string): string => { const d = PARTS.find((p) => p.id === id); return d ? t(d.nameKey) : id; };
 
-/** What a repair arrives with (decision 10b). Same words as the case-open line on the workbench (godot/look2/workbench.gd OPEN_LINE). */
+/** What is on the bench when the case opens: the workbench's own open line (godot/look2/workbench.gd OPEN_LINE), without "Case open.". */
 export const ARRIVES: Record<string, string> = {
-  '1-1': 'The LED sits straight across the 9 V clip, no resistor. It is dark now.',
-  '1-2': 'Three LEDs in series on one resistor, too dim to be seen.',
-  '1-3': 'A link wire puts the full 12 V on the heater element. It needs 8 V.',
-  '1-4': 'The load resistor is burnt.',
-  '2-1': 'A divider sized without the ADC on it: 5.6 kilohm over 3.3 kilohm reads 2.76 V, not 3.3 V.',
-  '2-3': 'A sealed module nobody makes any more. Measure it, then build its twin.',
-  '5-1': 'Q1 is burnt, and nothing across the fan catches its turn-off kick.',
+  '1-1': "The LED sits straight across the 9 V clip with no resistor: fit one in series with it.",
+  '1-2': "Three LEDs in series on one resistor. Measure the current before you change anything.",
+  '1-3': "A link wire puts the full 12 V on the heater element. It needs 8 V.",
+  '1-4': "The load resistor is burnt. Measure the pack before you choose a new one.",
+  '1-5': "Predict first, then build and probe.",
+  '2-1': "5.6 k over 3.3 k into the ADC. Measure OUT with the meter before you swap anything.",
+  '2-2': "The cable reel is the loop X, the slide wire is the bridge. Wire them to the cell and the galvanometer, then slide the jockey until the needle sits on zero.",
+  '2-3': "The sealed box sits at the lower left. Meter it: volts open, then amps short. Then set the supply: key 4 shows its VOLTAGE knob.",
+  '2-4': "Predict first, then build the potentiometer and slide the jockey to the balance.",
+  '3-1': "10 k and 22 uF make the timer. Watch OUT on the scope before you change anything.",
+  '3-2': "The button and the pull-up are soldered on, with no filter between SW and OUT. Look at OUT on the scope first.",
+  '3-3': "The relay coil is on the 24 V rail behind 560 ohm. Look at the coil current on the scope before you change anything.",
+  '3-4': "Predict first, then build both cards and let the bench measure them.",
+  '4-1': "The transformer is soldered in; its mains side sits in the red square. Build the bridge and the capacitor on the 12 V side.",
+  '4-2': "IN to OUT is empty. A resistor from IN to OUT and a Zener from OUT to GND, banded end on OUT.",
+  '4-3': "The regulator goes between IN and OUT. Switch on the thermal camera (T) and watch it heat before you choose a heatsink.",
+  '4-4': "Your own board. An LM317, two resistors, and 3.30 V on OUT at every load.",
+  '4-5': "Predict first, then build and probe.",
+  '5-1': "Q1 is burnt, and nothing across the fan catches its turn-off kick.",
+  '5-2': "The strip is soldered on. GATE comes from a 3.3 V pin: the FET has to switch fully on from that.",
+  '5-3': "Empty board. Diodes, a transistor and resistors: make Y low only when A and B are both high.",
+  '5-4': "IN from the synth, OUT to the amplifier. One transistor, gain about ten.",
+  '5-5': "Predict first, then build and probe.",
 };
-const NEW_LOOK = new Set(['1-1', '1-2', '1-3', '1-4', '1-5', '2-1', '2-3', '5-1']);
+
+/** Each job's still on the workbench (fixed and powered), shot from the game by the release's shot sweep. */
+export const JOB_SHOT = (id: string): string => `assets/jobs/${id}.jpg`;
+export const TESTBED_SHOT = (id: string): string => `assets/testbed/${id}.jpg`;
+const TESTBED: [string, string, string][] = [
+  ['torch', 'Pocket torch', 'A 9 V battery, a resistor and an LED. Breaks: a wire across the resistor, or 47 ohm in its place.'],
+  ['station', 'Weather station input', 'A divider feeds the ADC. Breaks: the builder\'s divider, or the top resistor shorted.'],
+  ['fan', 'Fan driver', 'A transistor switches a fan. Breaks: no flyback diode, or no base resistor.'],
+  ['charger', 'Phone charger stage', 'A transformer, four diodes and a capacitor make smooth DC. Breaks: no smoothing capacitor, or one diode lost.'],
+  ['dimmer', 'Lamp dimmer', 'A knob sets the current through an LED strip. Breaks: the emitter resistor shorted, or the wiper wire off.'],
+  ['relay_timer', 'Relay timer', 'A capacitor charges, a transistor follows, and the relay clicks after about 2 s. Breaks: no capacitor, or 470 uF in place of 220 uF.'],
+];
 
 function page(title: string, desc: string, body: string): string {
   return `<!doctype html>
@@ -47,10 +77,10 @@ function chapterPage(ch: number, defs: LevelDef[]): string {
   const tickets = defs.map((d) => {
     const specs = d.bench.specs.filter((x) => d.bench.names[x.id]).map((x) => `<li>${esc(t(d.bench.names[x.id]!))}</li>`).join('');
     const parts = [...new Set(d.bin.map((b) => partName(b.partId)))].map(esc).join(', ');
-    const arrives = ARRIVES[d.id] ? `<p class="arrives"><b>Arrives:</b> ${esc(ARRIVES[d.id]!)}</p>` : '';
-    const look = NEW_LOOK.has(d.id) ? '<span class="tag">new look</span>' : '<span class="tag dim">classic look</span>';
+    const arrives = ARRIVES[d.id] ? `<p class="arrives"><b>On the bench:</b> ${esc(ARRIVES[d.id]!)}</p>` : '';
     return `<section class="ticket" id="t${d.id}">
-<h2>${d.id} · ${esc(t(d.titleKey))} ${d.eb ? '<span class="tag">exam</span>' : ''}${look}</h2>
+<h2>${d.id} · ${esc(t(d.titleKey))} ${d.eb ? '<span class="tag">exam</span>' : ''}</h2>
+<figure class="shot"><img src="${JOB_SHOT(d.id)}" alt="${esc(`${d.id} ${t(d.titleKey)} on the workbench, fixed and powered`)}" width="960" height="540" loading="lazy"></figure>
 <p>${esc(t(d.briefKey, vars(d)))}</p>
 ${arrives}<h3>The bench checks</h3>
 <ul>${specs}</ul>
@@ -65,7 +95,15 @@ ${arrives}<h3>The bench checks</h3>
 ${tickets}`);
 }
 
+/** Chapters 6 to 8 are designed (docs/DESIGN.md §2.7) and not built. */
+const PLANNED: [string, string][] = [
+  ['Chapter 6 · Op-Amp Alley', 'Inverting and non-inverting amplifiers, gain-bandwidth, slew, comparators and the Schmitt trigger, the integrator.'],
+  ['Chapter 7 · Tone & Resonance', 'Reactance, RMS, RC filters and Bode plots, series LCR resonance and Q, active filters.'],
+  ['Chapter 8 · Oscillate', 'The 555 astable, the phase-shift oscillator, a buck converter, a synth voice.'],
+];
+
 function indexPage(chapters: number[]): string {
+  const jobs = LEVEL_DEFS.filter((d) => d.chapter > 0).length;
   const list = chapters.map((ch) => {
     const names = LEVEL_DEFS.filter((d) => d.chapter === ch).map((d) => esc(t(d.titleKey))).join(' · ');
     return `<li><a href="chapter-${ch}.html"><b>Chapter ${ch} · ${esc(t(`chapter.${ch}.title`))}</b></a><span>${names}</span></li>`;
@@ -73,7 +111,7 @@ function indexPage(chapters: number[]): string {
   return page('CIRCUITS wiki', 'Player guide to CIRCUITS: every repair ticket, what the bench checks, and the controls.',
     `<p class="crumbs">Wiki</p>
 <h1>CIRCUITS wiki</h1>
-<p class="lede">Every ticket in the game, what the bench checks before it pays, and the parts you get.</p>
+<p class="lede">Every job in the game, what the bench checks before it pays, and the parts you get.</p>
 <h2>How a job works</h2>
 <ol class="how">
 <li><b>Take the ticket.</b> The customer's words, the specs the fix must meet, the pay.</li>
@@ -82,15 +120,25 @@ function indexPage(chapters: number[]): string {
 <li><b>Power and test.</b> The bench test checks every spec in every condition with the power on. A part you burn comes out of the pay. A customer who waits tips 40 % of the fee on a first-test pass; each failed test takes a quarter of it.</li>
 <li><b>Hand it back.</b> The lid goes on and the customer takes the device home.</li>
 </ol>
+<h2>What is in the game now</h2>
+<p class="status">Version ${esc(VERSION)}: ${chapters.length} chapters and ${jobs} jobs, all on the 3D workbench. A testbed of ${TESTBED.length} devices. A free bench. Mouse and gamepad.</p>
 <h2>The chapters</h2>
 <ul class="chapters">${list}</ul>
-<p>All five chapters play on the 3D workbench. The classic 2D stall is an option on the title.</p>
-<h2>The condition dial</h2>
-<p>Costs $15.00 from the wallet. The live bench runs any of the ticket's test conditions, such as a tired battery, so you can check before you test. Free on the testbed and the free bench.</p>
-<h2>Free bench</h2>
-<p>Any part, the bench supply, the scope and the meter, with three save slots. On the workbench title.</p>
+<p>The classic 2D stall is an option under Settings on the title.</p>
+<h2>Planned, not built yet</h2>
+<ul class="planned">${PLANNED.map(([n, what]) => `<li><b>${esc(n)}</b><span>${esc(what)}</span></li>`).join('')}</ul>
+<h2>Money</h2>
+<ul>
+<li>Each job pays its fee, plus a bonus for each new star.</li>
+<li>A customer who waits tips 40 % of the fee for a pass on the first bench test. Each failed test takes a quarter of the tip. On 1-1 a failed test costs nothing.</li>
+<li>A part you burn is a rush order: the part plus a courier fee, out of your pay.</li>
+<li>The condition dial costs $15.00. With it, the live bench runs any of the ticket's test conditions, such as a tired battery, so you can check before you test. It is free on the testbed and the free bench.</li>
+</ul>
 <h2>Testbed</h2>
-<p>Six devices: a pocket torch, a weather station input, a fan driver, a phone charger stage, a lamp dimmer and a relay timer. Probe one, break it on purpose, then pause and step time to watch what happens.</p>`);
+<p>Known devices with their working boards. Probe one live, break it on purpose, then pause (K) and step (L) time to watch what happens.</p>
+<div class="devices">${TESTBED.map(([id, n, what]) => `<figure><img src="${TESTBED_SHOT(id)}" alt="${esc(`${n} on the testbed`)}" width="960" height="540" loading="lazy"><figcaption><b>${esc(n)}.</b> ${esc(what)}</figcaption></figure>`).join('')}</div>
+<h2>Free bench</h2>
+<p>Any part, the bench supply, the scope and the meter, with three save slots. On the title.</p>`);
 }
 
 function controlsPage(): string {

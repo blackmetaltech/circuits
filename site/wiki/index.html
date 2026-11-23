@@ -12,7 +12,7 @@
 <main class="wrap">
 <p class="crumbs">Wiki</p>
 <h1>CIRCUITS wiki</h1>
-<p class="lede">Every ticket in the game, what the bench checks before it pays, and the parts you get.</p>
+<p class="lede">Every job in the game, what the bench checks before it pays, and the parts you get.</p>
 <h2>How a job works</h2>
 <ol class="how">
 <li><b>Take the ticket.</b> The customer's words, the specs the fix must meet, the pay.</li>
@@ -21,15 +21,25 @@
 <li><b>Power and test.</b> The bench test checks every spec in every condition with the power on. A part you burn comes out of the pay. A customer who waits tips 40 % of the fee on a first-test pass; each failed test takes a quarter of it.</li>
 <li><b>Hand it back.</b> The lid goes on and the customer takes the device home.</li>
 </ol>
+<h2>What is in the game now</h2>
+<p class="status">Version 0.6.0: 5 chapters and 23 jobs, all on the 3D workbench. A testbed of 6 devices. A free bench. Mouse and gamepad.</p>
 <h2>The chapters</h2>
 <ul class="chapters"><li><a href="chapter-1.html"><b>Chapter 1 · First Light</b></a><span>Torch · Tail-light · Hot Resistor · Tired Battery · Exam: Two Batteries</span></li><li><a href="chapter-2.html"><b>Chapter 2 · Divide &amp; Measure</b></a><span>Sensor Reference · Cable Fault · Black Box · Exam: Potentiometer</span></li><li><a href="chapter-3.html"><b>Chapter 3 · Charge</b></a><span>Flash Timer · Debounce · Relay Pull-in · Exam: Capacitor Bank</span></li><li><a href="chapter-4.html"><b>Chapter 4 · Mains &amp; Rectifiers</b></a><span>Wall Wart · Zener Shunt · Hot Regulator · Bench Supply · Exam: Zener Regulator</span></li><li><a href="chapter-5.html"><b>Chapter 5 · Switches &amp; Gain</b></a><span>Fan Driver · 3.3 V Gate · Gate Builder · Synth Preamp · Exam: CE Amplifier</span></li></ul>
-<p>All five chapters play on the 3D workbench. The classic 2D stall is an option on the title.</p>
-<h2>The condition dial</h2>
-<p>Costs $15.00 from the wallet. The live bench runs any of the ticket's test conditions, such as a tired battery, so you can check before you test. Free on the testbed and the free bench.</p>
-<h2>Free bench</h2>
-<p>Any part, the bench supply, the scope and the meter, with three save slots. On the workbench title.</p>
+<p>The classic 2D stall is an option under Settings on the title.</p>
+<h2>Planned, not built yet</h2>
+<ul class="planned"><li><b>Chapter 6 · Op-Amp Alley</b><span>Inverting and non-inverting amplifiers, gain-bandwidth, slew, comparators and the Schmitt trigger, the integrator.</span></li><li><b>Chapter 7 · Tone &amp; Resonance</b><span>Reactance, RMS, RC filters and Bode plots, series LCR resonance and Q, active filters.</span></li><li><b>Chapter 8 · Oscillate</b><span>The 555 astable, the phase-shift oscillator, a buck converter, a synth voice.</span></li></ul>
+<h2>Money</h2>
+<ul>
+<li>Each job pays its fee, plus a bonus for each new star.</li>
+<li>A customer who waits tips 40 % of the fee for a pass on the first bench test. Each failed test takes a quarter of the tip. On 1-1 a failed test costs nothing.</li>
+<li>A part you burn is a rush order: the part plus a courier fee, out of your pay.</li>
+<li>The condition dial costs $15.00. With it, the live bench runs any of the ticket's test conditions, such as a tired battery, so you can check before you test. It is free on the testbed and the free bench.</li>
+</ul>
 <h2>Testbed</h2>
-<p>Six devices: a pocket torch, a weather station input, a fan driver, a phone charger stage, a lamp dimmer and a relay timer. Probe one, break it on purpose, then pause and step time to watch what happens.</p>
+<p>Known devices with their working boards. Probe one live, break it on purpose, then pause (K) and step (L) time to watch what happens.</p>
+<div class="devices"><figure><img src="assets/testbed/torch.jpg" alt="Pocket torch on the testbed" width="960" height="540" loading="lazy"><figcaption><b>Pocket torch.</b> A 9 V battery, a resistor and an LED. Breaks: a wire across the resistor, or 47 ohm in its place.</figcaption></figure><figure><img src="assets/testbed/station.jpg" alt="Weather station input on the testbed" width="960" height="540" loading="lazy"><figcaption><b>Weather station input.</b> A divider feeds the ADC. Breaks: the builder's divider, or the top resistor shorted.</figcaption></figure><figure><img src="assets/testbed/fan.jpg" alt="Fan driver on the testbed" width="960" height="540" loading="lazy"><figcaption><b>Fan driver.</b> A transistor switches a fan. Breaks: no flyback diode, or no base resistor.</figcaption></figure><figure><img src="assets/testbed/charger.jpg" alt="Phone charger stage on the testbed" width="960" height="540" loading="lazy"><figcaption><b>Phone charger stage.</b> A transformer, four diodes and a capacitor make smooth DC. Breaks: no smoothing capacitor, or one diode lost.</figcaption></figure><figure><img src="assets/testbed/dimmer.jpg" alt="Lamp dimmer on the testbed" width="960" height="540" loading="lazy"><figcaption><b>Lamp dimmer.</b> A knob sets the current through an LED strip. Breaks: the emitter resistor shorted, or the wiper wire off.</figcaption></figure><figure><img src="assets/testbed/relay_timer.jpg" alt="Relay timer on the testbed" width="960" height="540" loading="lazy"><figcaption><b>Relay timer.</b> A capacitor charges, a transistor follows, and the relay clicks after about 2 s. Breaks: no capacitor, or 470 uF in place of 220 uF.</figcaption></figure></div>
+<h2>Free bench</h2>
+<p>Any part, the bench supply, the scope and the meter, with three save slots. On the title.</p>
 </main>
 <footer class="foot wrap"><p>Generated from the game's own text by <code>src/wiki.ts</code>. People and places are made up; the circuits are not. <a href="https://github.com/blackmetaltech/circuits">Source</a></p></footer>
 </body>
