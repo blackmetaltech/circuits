@@ -22,6 +22,7 @@ import { buildConnectivity, type BoardError, type Connectivity } from '../board/
 import type { Element, Netlist, Params } from './types';
 import { MACRO_TYPES, comparatorParams, fuseParams, opampParams, regulatorParams, relayParams, timerParams } from './devices/macros';
 import { ntcResistance } from './devices/ntc';
+import { bjtEval } from './devices/bjt';
 
 // ---------------------------------------------------------------- values
 const SUFFIX: [string, number][] = [['meg', 6], ['mil', 0], ['f', -15], ['p', -12], ['n', -9], ['u', -6], ['µ', -6], ['m', -3], ['k', 3], ['g', 9], ['t', 12]];
@@ -218,11 +219,42 @@ const bjt = (pol: number): Expander => (x) => {
   for (const k of ['is', 'bf', 'br', 'vaf', 'ideal', 'vf', 'ron', 'vcesat', 'ronc']) if (m[k] !== undefined) p[k] = m[k];   // (ideal = 1: the textbook transistor, constant Vbe 0.7 V and a fixed beta)
   return [el(x, 'Q', [pinNode(x, 'C'), pinNode(x, 'B'), pinNode(x, 'E')], p)];
 };
-/** DARLINGTON: pins B C E → DAR [C, B, E]. Model: composite hFEmin, Rb, Re. Per-stage bf solves bf·(bf + 1) = hFE (two cascaded stages), per-stage Is 1e-12 A
- *  is an ESTIMATE (power-transistor class; the datasheet gives no junction data). */
+/** Composite DC gain IC/IB of the DAR macro (two stages of gain bf, Rb across B–M, Re across M–E) at collector current ic and VCE vce, evaluated
+ *  with the device's own bjtEval (so it is the number the simulator measures): bisect VB for IC, and inside it VM for KCL at the internal node. */
+export function darlingtonHfe(bf: number, is: number, rb: number, re: number, ic: number, vce: number): number {
+  const p = { is, bf, br: 1 }, g = 1e-12;
+  const solve = (vb: number): { ic: number; ib: number } => {
+    let lo = 0, hi = vb, q1 = bjtEval(p, vb, vb - vce, g), q2 = bjtEval(p, 0, -vce, g);
+    for (let k = 0; k < 80; k++) {            // current into M from Q1's emitter and Rb, minus Q2's base and Re: decreasing in vm
+      const vm = (lo + hi) / 2;
+      q1 = bjtEval(p, vb - vm, vb - vce, g); q2 = bjtEval(p, vm, vm - vce, g);
+      if (q1.ic + q1.ib + (vb - vm) / rb - q2.ib - vm / re > 0) lo = vm; else hi = vm;
+    }
+    const vm = (lo + hi) / 2;
+    return { ic: q1.ic + q2.ic, ib: q1.ib + (vb - vm) / rb };
+  };
+  let lo = 0, hi = 3, r = solve(1.5);
+  for (let k = 0; k < 80; k++) { const vb = (lo + hi) / 2; r = solve(vb); if (r.ic > ic) hi = vb; else lo = vb; }
+  return r.ic / r.ib;
+}
+const DAR_BF = new Map<string, number>();
+/** Per-stage bf such that the COMPOSITE gain (shunts included) equals hfe at (ic, vce): the datasheet's minimum at its test point. Cached. */
+export function darlingtonBf(hfe: number, is: number, rb: number, re: number, ic: number, vce: number): number {
+  const key = [hfe, is, rb, re, ic, vce].join(',');
+  const hit = DAR_BF.get(key);
+  if (hit !== undefined) return hit;
+  let lo = 1, hi = 1000;
+  for (let k = 0; k < 50; k++) { const m = (lo + hi) / 2; if (darlingtonHfe(m, is, rb, re, ic, vce) >= hfe * (1 + 1e-6)) hi = m; else lo = m; }   // 1 ppm up: the OP solver's tolerance never lands it under the minimum
+  DAR_BF.set(key, hi);
+  return hi;
+}
+/** DARLINGTON: pins B C E → DAR [C, B, E]. Model: composite hFEmin at its test point (hFEtestIc, hFEtestVce), Rb, Re. The per-stage bf is solved so the
+ *  composite gain WITH the internal shunts meets hFEmin there (0.7: the old bf·(bf + 1) = hFE ignored the shunts and gave 681 at 0.5 A for 1000).
+ *  Without a test point it falls back to bf·(bf + 1) = hFE. Per-stage Is 1e-12 A is an ESTIMATE (power-transistor class; no junction data). */
 const darlington: Expander = (x) => {
-  const m = modelOf(x), hfe = m.hfemin ?? 1000, bf = (Math.sqrt(1 + 4 * hfe) - 1) / 2;
-  return [el(x, 'DAR', [pinNode(x, 'C'), pinNode(x, 'B'), pinNode(x, 'E')], { is: m.is ?? 1e-12, bf, br: 1, rb: m.rb ?? 8000, re: m.re ?? 120 })];
+  const m = modelOf(x), hfe = m.hfemin ?? 1000, is = m.is ?? 1e-12, rb = m.rb ?? 8000, re = m.re ?? 120;
+  const bf = m.hfetestic !== undefined ? darlingtonBf(hfe, is, rb, re, m.hfetestic, m.hfetestvce ?? 3) : (Math.sqrt(1 + 4 * hfe) - 1) / 2;
+  return [el(x, 'DAR', [pinNode(x, 'C'), pinNode(x, 'B'), pinNode(x, 'E')], { is, bf, br: 1, rb, re })];
 };
 /** NMOS: pins D G S (any order) → M [D, G, S]; model Vt / Kp / lambda (+ optional body diode Dis / Dn). */
 const mosfet: Expander = (x) => {

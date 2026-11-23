@@ -3,7 +3,7 @@ import { PARTS } from '../../data/parts';
 import { solveCards, near } from '../oracles/util';
 import { compileNetlist } from './compile';
 import { fetlim, limvds, pnjlim, vcritOf } from './limit';
-import { EXPANDERS, parseNetlist } from './netlist';
+import { EXPANDERS, darlingtonHfe, parseNetlist } from './netlist';
 import { solveOp } from './op';
 import { elementPower, terminalCurrents } from './stamp';
 import type { Netlist } from './types';
@@ -96,9 +96,11 @@ describe('catalogue hookup (netlist expanders)', () => {
     expect(pin('2n7000', { D: 1, G: 2, S: 3 })[0]).toMatchObject({ kind: 'M', nodes: [1, 2, 3], p: { vt: 2.1, kp: 0.0527, lambda: 0.02, pol: 1 } });
     expect(pin('irlz44n', { D: 1, G: 2, S: 3 })[0].nodes).toEqual([1, 2, 3]);
   });
-  it('TIP120 -> one DAR macro with the internal 8k / 120 ohm and per-stage beta from the composite hFE', () => {
+  it('TIP120 -> one DAR macro with the internal 8k / 120 ohm and per-stage beta solved so the composite (shunts included) is hFE 1000 at 0.5 A, VCE 3 V', () => {
     const e = pin('tip120', { C: 1, B: 2, E: 3 })[0]; expect(e).toMatchObject({ kind: 'DAR', nodes: [1, 2, 3] });
-    expect(e.p.rb).toBe(8000); expect(e.p.re).toBe(120); near(e.p.bf * (e.p.bf + 1), 1000, 1e-9);
+    expect(e.p.rb).toBe(8000); expect(e.p.re).toBe(120);
+    near(darlingtonHfe(e.p.bf, e.p.is, 8000, 120, 0.5, 3), 1000, 1e-5);
+    expect(e.p.bf * (e.p.bf + 1)).toBeGreaterThan(1600);          // the old rule bf(bf + 1) = 1000 ignored the shunts and gave 681 (see tip120.test.ts)
   });
   it('every catalogue transistor compiles and solves in a bias circuit', () => {
     for (const d of PARTS.filter((x) => ['NPN', 'PNP', 'DARLINGTON', 'NMOS'].includes(x.kind))) {

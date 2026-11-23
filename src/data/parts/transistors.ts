@@ -53,17 +53,20 @@ export const qBc547b: PartDef = {
   verified: false, scope: 'sandbox', simplifications: ['part.simplify.bjt-em-lite'],
 };
 
-/** TIP120 Darlington. Per-stage Is/Bf are not datasheet items; the composite hFE and the internal resistors are (onsemi TIP120/D Rev 9 per DESIGN [V]). */
+/** TIP120 Darlington. Per-stage Is/Bf are not datasheet items; the composite hFE and the internal resistors are (onsemi TIP120/D Rev 10, re-read 0.7).
+ *  The expander solves the stage gain so the composite (with the 8 k / 120 ohm shunts) is exactly hFEmin at the test point IC 0.5 A, VCE 3 V. */
 export const qTip120: PartDef = {
   id: 'tip120', kind: 'DARLINGTON', nameKey: 'part.tip120.name', footprint: 'to220', pins: ['B', 'C', 'E'],
   variants: [variant('TO220', { Vceo: 60, Ic: 5, IcPeak: 8, Ptot: 65, PtotAir: 2, VceSatMax: 2.0, hFEmin: 1000 },
     semiThermal(62.5, 150, TAU.to220Bare, { thetaJC: 1.92, heatsinkable: true }))],
-  model: { hFEmin: 1000, Rb: 8000, Re: 120, VceSat: 2.0 },
+  model: { hFEmin: 1000, hFEtestIc: 0.5, hFEtestVce: 3, Rb: 8000, Re: 120, VceSat: 2.0 },
   tolerance: { hFE: [1000, 5000] },
   source: {
-    doc: 'onsemi TIP120/D Rev 9 (DESIGN §4.2 [V]: hFE >= 1000 at 0.5 A and 3 A, Vce(sat) 2.0 V max at 3 A / IB 12 mA, 5 A (8 A peak), 65 W at Tc 25 C, 2 W free air, Vceo 60 V, thetaJC 1.92)',
+    doc: 'onsemi TIP120/D Rev 10, June 2024 (hFE >= 1000 at 0.5 A and 3 A, Vce(sat) 2.0 V max at 3 A / IB 12 mA, 5 A (8 A peak), 65 W at Tc 25 C, 2 W free air, Vceo 60 V, thetaJC 1.92)',
     url: 'https://www.onsemi.com/pdf/datasheet/tip120-d.pdf', accessed: ACCESSED,
-    note: 'Ratings carried from the DESIGN [V] mark (not re-read: onsemi answers 403 to scripted fetch). thetaJA 62.5 C/W is derived from the 2 W free-air-at-25-C rating as (150-25)/2 W (Tj max 150 C), not read. Model: only composite hFE and the internal 8 k / 120 ohm are datasheet items (per-stage Is/Bf are not given; the compiler derives them, DESIGN §3.3). The upper hFE tolerance 5000 is a placeholder window (UNVERIFIED part of the tolerance only). ' + TAU_R,
+    note: '0.7: re-read from TIP120/D Rev 10 (June 2024): ON CHARACTERISTICS hFE min 1000 at IC 0.5 A and at 3.0 A (VCE 3 V), hFE 2500 typ at 4 A (features), VCE(sat) 2.0 V max at 3 A / 12 mA, VBE(on) 2.5 V max at 3 A; '
+      + 'MAXIMUM RATINGS VCEO 60 V, IC 5 A (8 A peak), IB 120 mA, PD 65 W (TC 25 C) / 2 W (TA 25 C), TJ -65..150 C; THERMAL RthJC 1.92, RthJA 62.5 C/W (now read, not derived); shunts ~8.0 k / ~120 ohm. '
+      + 'The model sits AT the minimum: hFE 1000 at 0.5 A and about 1530 at 3 A (above 1000; the typical part is higher). Model: only composite hFE and the internal 8 k / 120 ohm are datasheet items (per-stage Is/Bf are not given; the compiler derives them, DESIGN §3.3). The upper hFE tolerance 5000 is a placeholder window (UNVERIFIED part of the tolerance only). ' + TAU_R,
   },
   verified: true, scope: 'campaign', simplifications: ['part.simplify.bjt-em-lite', 'part.simplify.darlington'],
 };
