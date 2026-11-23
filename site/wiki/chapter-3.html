@@ -15,7 +15,7 @@
 <p class="lede">Wren's third page: four jobs at Stall 14, Lantern Lane, and this is where time comes in. Time a camera flash with a capacitor, calm a bouncing arcade button, speed up a relay with a bigger supply, then sit the capacitor-bank exam.</p>
 <section class="ticket" id="t3-1">
 <h2>3-1 · Flash Timer <span class="tag dim">classic look</span></h2>
-<p>Ines runs the camera shop. The flash's ready-light must come on 1 second after power-on. Build a timer from a resistor and an electrolytic capacitor: the resistor from IN to OUT, the capacitor from OUT to GND. The ready-light turns on when OUT reaches 6.32 V, which is 63.2 % of the 10 V supply, and the ticket wants that at 1.00 s, give or take 5 %. Wren: a capacitor charges through the resistor, and how long it takes depends on R times C. Watch the curve form on the scope.</p>
+<p>Ines runs the camera shop. The flash's ready-light must come on 1 second after power-on. The flash came in with a 10 kilohm resistor and a 22 microfarad capacitor already on it, and its light comes on after about a fifth of a second, long before the flash has charged. The resistor goes from IN to OUT and the capacitor from OUT to GND; the light turns on when OUT reaches 6.32 V, which is 63.2 % of the 10 V supply, and the ticket wants that at 1.00 s, give or take 5 %. Change the timer. Wren: a capacitor charges through the resistor, and how long it takes depends on R times C. Watch the curve form on the scope.</p>
 <h3>The bench checks</h3>
 <ul><li>OUT crosses 6.32 V (63 % of the 10 V supply) between 0.95 s and 1.05 s after power-on, with the scope probe on it</li><li>The whole curve stays inside the amber tube around 10 V x (1 - e^(-t / 1 s))</li></ul>
 <p class="parts"><b>Parts tray:</b> Carbon-film resistor 5 %, Electrolytic capacitor</p>
@@ -29,7 +29,7 @@
 </section>
 <section class="ticket" id="t3-3">
 <h2>3-3 · Relay Pull-in <span class="tag dim">classic look</span></h2>
-<p>Sami's greenhouse irrigation controller needs its relay to pull in within 0.4 ms of switch-on, or the valves drift out of step. The relay (soldered on the board) has a 200 ohm coil with 100 millihenry of inductance, pulls in at 40 mA and is rated for 60 mA. The board has a 12 V rail and a 24 V rail: wire one of them to the COIL pad, with or without a resistor. Wren: a coil's current rises the way a capacitor's voltage does, with a time constant of L over R. Watch the current on the scope.</p>
+<p>Sami's greenhouse irrigation controller needs its relay to pull in within 0.4 ms of switch-on, or the valves drift out of step. It came in wired to the 24 V rail through a 560 ohm resistor, and the relay does not click at all. The relay (soldered on the board) has a 200 ohm coil with 100 millihenry of inductance, pulls in at 40 mA and is rated for 60 mA. The board has a 12 V rail and a 24 V rail: wire one of them to the COIL pad, with or without a resistor. Wren: a coil's current rises the way a capacitor's voltage does, with a time constant of L over R. Watch the current on the scope.</p>
 <h3>The bench checks</h3>
 <ul><li>The coil current reaches the 40 mA pull-in within 0.40 ms of switch-on</li><li>The steady coil current is between 50 mA and 66 mA (the coil is rated 60 mA), and no part is over its rating</li></ul>
 <p class="parts"><b>Parts tray:</b> Carbon-film resistor 5 %</p>
