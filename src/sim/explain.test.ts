@@ -12,6 +12,7 @@ import type { RatedPart, Window } from './thermal';
 import { simEn } from '../locales/sim.en';
 import { ch4En } from '../locales/ch4.en';
 import { ch5En } from '../locales/ch5.en';
+import { ch6En } from '../locales/ch6.en';
 import * as X from './explain';
 
 const i18n = createI18n({ en: simEn });
@@ -135,7 +136,7 @@ describe('failures from the solver and the topology check', () => {
 });
 
 describe('locales', () => {
-  const all: Record<string, string> = { ...simEn, ...ch4En, ...ch5En };   // chapters 4 and 5 keep their explainers in their own locale files
+  const all: Record<string, string> = { ...simEn, ...ch4En, ...ch5En, ...ch6En };   // chapters 4, 5 and 6 keep their explainers in their own locale files
   const keys = Object.keys(all).filter((k) => k.startsWith('explain.'));
   it('every explain.* key is produced by explain.ts and every key it produces exists', async () => {
     const { readFileSync } = await import('node:fs'); const { fileURLToPath } = await import('node:url');
@@ -145,7 +146,7 @@ describe('locales', () => {
     expect([...new Set(used)].sort()).toEqual([...keys].sort());
   });
   it('every explain.* string has plain-words text and balanced placeholders; checkLocales is clean', () => {
-    expect(keys.length).toBe(47 + Object.keys(ch4En).filter((k) => k.startsWith('explain.')).length + Object.keys(ch5En).filter((k) => k.startsWith('explain.')).length);
+    expect(keys.length).toBe(47 + Object.keys(ch4En).filter((k) => k.startsWith('explain.')).length + Object.keys(ch5En).filter((k) => k.startsWith('explain.')).length + Object.keys(ch6En).filter((k) => k.startsWith('explain.')).length);
     expect(checkLocales({ en: all, fr: { ...all } }, 'en')).toEqual({ missing: [], extra: [], badPlaceholders: [] });
     for (const k of keys) expect(all[k].match(/\{/g)?.length, k).toBe(all[k].match(/\}/g)?.length);
   });

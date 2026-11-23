@@ -113,7 +113,8 @@ describe('catalogue provenance (DESIGN §4.0)', () => {
         expect(m.lambda, p.id).toBeGreaterThanOrEqual(0);
         for (const v of p.variants) expect(v.ratings.Vds, p.id).toBeGreaterThan(0);
       }
-      if (p.kind === 'OPAMP') {
+      if (p.kind === 'OPAMP' && p.source.definition) expect(m.ideal, p.id).toBe(1);   // the textbook op-amp (6-7) is defined by the ideal macro: it has no GBW or slew rate to check
+      if (p.kind === 'OPAMP' && !p.source.definition) {
         expect(m.GBW, p.id).toBeGreaterThan(1e4);
         expect(m.GBW, p.id).toBeLessThan(1e9);
         expect(m.SR, p.id).toBeGreaterThan(1e4);

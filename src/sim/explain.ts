@@ -440,6 +440,8 @@ export interface ExplainContext {
   gate?: { nDiodes: number; rc: number; rl: number; vcc: number; vlow: number; hasPulldown: boolean };
   amp?: { r1: number; r2: number; rc: number; re: number; vcc: number; rsrc: number; rload: number; beta: { low: number; mid: number; high: number } };
   ce?: { rb: number; rc: number; beta: number; vcc: number; vbe: number };
+  /** Chapter 6: the op-amp and comparator channels on the board (as built) and the ticket's fixed figures. */
+  oa?: OaCtx;
   /** How many failures the player already had on this ticket (the first burn teaches the cause, a repeat gives the worked formula). */
   prior?: number;
 }
@@ -456,11 +458,69 @@ function named(e: Explained, ctx: ExplainContext): Explained {
   const nameOf = ctx.miss.names[uid] ?? uid;
   return { key: e.key, vars: { ...e.vars, part: nameOf, Part: capFirst(nameOf) } };
 }
+/** Chapter 6: one op-amp (or comparator) channel as built. `rfMinus` / `rfPlus`: resistance from its OUT to its - / + input (0 = none); `rIn`: from the ticket's IN pad to its - input;
+ *  `capFb`: a capacitor from OUT to the - input; `pinPlus`: the + input's pin number; `gbw` (Hz) and `sr` (V/s) from the catalogue (0 for a comparator). */
+export interface OaChannel { part: string; pinPlus: number; rfMinus: number; rfPlus: number; rIn: number; rToGnd: number; capFb: boolean; gbw: number; sr: number }
+export interface OaCtx { ticket: string; amps: OaChannel[]; rs: number; pullup: boolean; heat?: [number, number][] }
+/** Chapter 6 failures in plain words, from what the bench measured and what is on the board. Null when the failure is not one of theirs. */
+function explainChapter6(f: BenchFailure, ctx: ExplainContext): Explained | null {
+  const o = ctx.oa; if (!o || ctx.miss?.mode !== 'opamp') return null;
+  const v = f.vars, id = String(v.id ?? ''), value = Number(v.value), cond = String(v.cond ?? '');
+  const miss = f.key === 'bench.level.fail' || f.key === 'bench.metric.fail' || f.key === 'bench.metric.nan';
+  const latched = o.amps.find((a) => a.rfPlus > 0 && a.rfMinus === 0);
+  if (o.ticket === '6-1' && miss && (id === 'gain' || id === 'centre')) {
+    if (latched) return { key: 'explain.oa.latched', vars: { pin: latched.pinPlus } };
+    if (id === 'centre') return { key: 'explain.oa.stuck', vars: { v: sig(value) } };
+    if (value < 0.05) return { key: 'explain.oa.gainNone', vars: { value: sig(value) } };
+    return { key: 'explain.oa.gain', vars: { value: sig(value), gain: sig(value / 0.02), want: '47 (+-5 %)', rs: si(o.rs, 'Ω') } };
+  }
+  if (o.ticket === '6-2' && miss && /^out/.test(id)) {
+    const emf = Number(/([\d.]+) V/.exec(cond)?.[1] ?? NaN), ratio = value / emf, a = o.amps[0];
+    if (!Number.isFinite(ratio)) return null;
+    if (ratio < 0 && Math.abs(ratio) > 1.6) return { key: 'explain.oa.sign', vars: { value: sig(value), emf: sig(emf) } };
+    if (a && a.rIn > 0) return { key: 'explain.oa.loaded', vars: { value: sig(value), emf: sig(emf), pct: sig(Math.abs(ratio) * 50, 2), rs: si(o.rs, 'Ω'), rin: si(a.rIn, 'Ω') } };
+    return { key: 'explain.oa.ratio', vars: { value: sig(value), emf: sig(emf), ratio: sig(ratio) } };
+  }
+  if (o.ticket === '6-3' && f.key === 'bench.mask.fail') {
+    const fq = Number(v.f), lo = Number(v.lo), a = o.amps.filter((x) => x.rfMinus > 0 && x.gbw > 0).map((x) => ({ x, g: x.rfMinus / Math.max(x.rIn || x.rToGnd || 1, 1) })).sort((p, q) => q.g - p.g)[0];
+    if (fq >= 2000 && value < lo && a && a.g > 1) {
+      const bw = a.x.gbw / (1 + a.g), g2 = Math.sqrt(a.g);
+      return { key: 'explain.oa.gbw', vars: { f: sig(fq), value: sig(value), part: a.x.part, gbw: si(a.x.gbw, 'Hz'), gain: sig(a.g), bw: si(bw, 'Hz'), g2: sig(g2, 2), bw2: si(a.x.gbw / (1 + g2), 'Hz') } };
+    }
+    return { key: 'explain.oa.flat', vars: { f: sig(fq), value: sig(value), lo: sig(lo), hi: sig(Number(v.hi)) } };
+  }
+  if (o.ticket === '6-4' && miss && (id === 'swing' || id === 'thd')) {
+    const a = o.amps.find((x) => x.sr > 0 && x.sr < 3.14e6);
+    if (a) return { key: 'explain.oa.slew', vars: { part: a.part, slew: sig(a.sr / 1e6) } };
+    if (id === 'swing') return { key: 'explain.oa.gain', vars: { value: sig(value), gain: sig(value / 4), want: '5 (19 to 21 V peak to peak)', rs: si(o.rs, 'Ω') } };
+    return null;
+  }
+  if (o.ticket === '6-5' && miss) {
+    if (id === 'high') return { key: 'explain.oa.pullup', vars: { value: sig(value) } };
+    if (id === 'flips') return { key: value > 2 && !o.amps.some((x) => x.rfPlus > 0) ? 'explain.oa.chatter' : 'explain.oa.never', vars: { value: sig(value) } };
+    if ((id === 'off' || id === 'on') && o.heat && Number.isFinite(value)) {
+      const p = o.heat; let tc = p[p.length - 1]![1];
+      for (let k = 1; k < p.length; k++) if (value <= p[k]![0]) { const [t0, y0] = p[k - 1]!, [t1, y1] = p[k]!; tc = y0 + ((value - t0) / (t1 - t0)) * (y1 - y0); break; }
+      return { key: id === 'off' ? 'explain.oa.trip.off' : 'explain.oa.trip.on', vars: { tc: sig(tc) } };
+    }
+    return null;
+  }
+  if (o.ticket === '6-6' && miss && (id === 'vpp' || id === 'centre')) {
+    const drift = o.amps.some((x) => x.capFb && x.rfMinus === 0);
+    if (drift && id === 'centre') return { key: 'explain.oa.drift', vars: { v: sig(value) } };
+    if (drift) return null;
+    if (id === 'vpp') return { key: 'explain.oa.ramp', vars: { value: sig(value) } };
+    return null;
+  }
+  if (o.ticket === '6-7' && miss && /^v\d$/.test(id)) return { key: 'explain.oa.exam', vars: { value: sig(value), cond, want: sig((Number(v.lo) + Number(v.hi)) / 2) } };
+  return null;
+}
 function explainRaw(f: BenchFailure, ctx: ExplainContext): Explained {
   const v = f.vars, part = String(v.part ?? '');
   const num = (k: string): number => Number(v[k]);
   const e4 = explainChapter4(f, ctx); if (e4) return e4;
   const e5 = explainChapter5(f, ctx); if (e5) return e5;
+  const e6 = explainChapter6(f, ctx); if (e6) return e6;
   switch (f.key) {
     case 'rating.resistor.power': case 'smoke.resistor': {
       const r = ctx.resistance?.[part];

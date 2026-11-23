@@ -59,7 +59,7 @@ export interface CampaignBlocker { partId: string; tickets: string[]; reason: st
 export const CAMPAIGN_BLOCKERS: CampaignBlocker[] = [
   { partId: 'cap-el', tickets: ['3-1', '3-2', '4-1', '8-1'], reason: 'Panasonic EEU-FR rows are verified for 220-4700 uF at 10/16/25/35 V where the series lists them (valueData, incl. 4-1 680 and 1000 uF at 25 V). NOT in the series and so unverified/Sandbox-only: 330 uF at 10 V, 330 uF at 16 V, 4700 uF at 25 V, 4700 uF at 35 V, 3300 uF at 35 V; 4-1 must not offer them in a campaign bin. Tickets 3-1/3-2/8-1 still need their values (below 220 uF, 6.3/50 V) read.' },
   { partId: 'xfmr-12', tickets: ['4-1'], reason: 'GAME-DEFINED level fixture (6 VA / 1.5 ohm / 10 H), no datasheet by design (DESIGN marks it [R]): ticket 4-1 must carry it as a fixed board part, not a shop bin item. Needs no data work; open items are the region-driven turns ratio and the 9 V tap / 12-0-12 versions (need a 5-pin footprint).' },
-  { partId: 'cap-cer', tickets: ['3-2', '7-2', '8-5'], reason: 'Murata/TDK C0G/X7R tables not read.' },
+  { partId: 'cap-cer', tickets: ['3-2', '6-6', '7-2', '8-5'], reason: 'Murata/TDK C0G/X7R tables not read.' },
   { partId: 'cap-x2', tickets: ['7-1'], reason: 'Generic X2 film capacitor, IEC 60384-14 not read.' },
   { partId: 'cap-var', tickets: ['7-3'], reason: 'Generic AM tuning gang, no datasheet.' },
   { partId: 'ind-pwr', tickets: ['8-3'], reason: 'Wurth WE-PD table not read; DCR values are estimates.' },

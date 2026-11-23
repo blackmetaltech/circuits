@@ -38,6 +38,13 @@ export const ARRIVES: Record<string, string> = {
   '5-3': "Empty board. Diodes, a transistor and resistors: make Y low only when A and B are both high.",
   '5-4': "IN from the synth, OUT to the amplifier. One transistor, gain about ten.",
   '5-5': "Predict first, then build and probe.",
+  '6-1': "A TL072 on +-12 V. Look where the 470 k feedback resistor lands: pin 3 is the + input.",
+  '6-2': "The probe feeds 10 k into pin 2, and the probe itself sits behind 100 k.",
+  '6-3': "One LM358 stage at a gain of 100. The second op-amp in the chip (pins 5 to 7) is unused.",
+  '6-4': "An LM741 drives the cleaner. Clip the scope on OUT and look at the shape.",
+  '6-5': "The NTC probe sits on the 5 V pad. An LM393 compares it with half of 5 V, with nothing from OUT back to pin 3.",
+  '6-6': "Your own generator. 11 k in, 22 nF from OUT to pin 2, and nothing else across the capacitor.",
+  '6-7': "Predict first, then build and probe.",
 };
 
 /** Each job's still on the workbench (fixed and powered), shot from the game by the release's shot sweep. */
@@ -100,7 +107,6 @@ ${tickets}`);
 
 /** Chapters 6 to 8 are designed (docs/DESIGN.md §2.7) and not built. */
 const PLANNED: [string, string][] = [
-  ['Chapter 6 · Op-Amp Alley', 'Inverting and non-inverting amplifiers, gain-bandwidth, slew, comparators and the Schmitt trigger, the integrator.'],
   ['Chapter 7 · Tone & Resonance', 'Reactance, RMS, RC filters and Bode plots, series LCR resonance and Q, active filters.'],
   ['Chapter 8 · Oscillate', 'The 555 astable, the phase-shift oscillator, a buck converter, a synth voice.'],
 ];

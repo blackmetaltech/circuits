@@ -25,6 +25,13 @@ import { L5_2 } from './5-2';
 import { L5_3 } from './5-3';
 import { L5_4 } from './5-4';
 import { L5_5 } from './5-5';
+import { L6_1 } from './6-1';
+import { L6_2 } from './6-2';
+import { L6_3 } from './6-3';
+import { L6_4 } from './6-4';
+import { L6_5 } from './6-5';
+import { L6_6 } from './6-6';
+import { L6_7 } from './6-7';
 
 export type * from './types';
-export const LEVEL_DEFS: readonly LevelDef[] = [L0_0, L1_1, L1_2, L1_3, L1_4, L1_5, L2_1, L2_2, L2_3, L2_4, L3_1, L3_2, L3_3, L3_4, L4_1, L4_2, L4_3, L4_4, L4_5, L5_1, L5_2, L5_3, L5_4, L5_5];
+export const LEVEL_DEFS: readonly LevelDef[] = [L0_0, L1_1, L1_2, L1_3, L1_4, L1_5, L2_1, L2_2, L2_3, L2_4, L3_1, L3_2, L3_3, L3_4, L4_1, L4_2, L4_3, L4_4, L4_5, L5_1, L5_2, L5_3, L5_4, L5_5, L6_1, L6_2, L6_3, L6_4, L6_5, L6_6, L6_7];

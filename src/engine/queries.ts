@@ -8,7 +8,7 @@ import type { LevelDef } from '../data/levels/types';
 import type { Pad } from '../sim/board/types';
 import { pinPads } from '../sim/board/footprints';
 import { checkRatings, ratingProbes } from '../sim/ratings';
-import { explainFailure, si, sig, type DebCtx, type ExplainContext, type LedLoop } from '../sim/explain';
+import { explainFailure, si, sig, type DebCtx, type ExplainContext, type LedLoop, type OaChannel } from '../sim/explain';
 import { nameVars, partNames } from './names';
 import { elementPowers, thermalState } from '../sim/thermal';
 import { SCOPE_SCREEN_POINTS } from '../sim/live';
@@ -164,6 +164,22 @@ function explainCtx(tk: TicketState | null, def: LevelDef | undefined, prior = 0
   if (def.explain === 'amplifierexam' && q5) {
     const n = nodesOf(q5.uid), nB = n[1] ?? -1, nC = n[0] ?? -1, nV = rig.conn.nodeOfPad([2, 2]);
     ctx.ce = { rb: resBetween(nV, nB) || 565e3, rc: resBetween(nV, nC) || 3e3, beta: 100, vcc: 12, vbe: 0.7 };
+  }
+  // chapter 6: every op-amp / comparator channel as built (feedback to each input, input resistor from IN, a capacitor across), the source's resistance, the pull-up, the heat program
+  if (def.explain === 'opamp') {
+    const amps: OaChannel[] = [], gnd = cn.GND ?? -1, nIn = cn.IN ?? -2;
+    const capBetween = (a: number, b: number): boolean => tk.board.parts.some((p) => { const k = getDef(p.partId)?.kind, n = nodesOf(p.uid); return (k === 'C' || k === 'CE') && ((n[0] === a && n[1] === b) || (n[0] === b && n[1] === a)); });
+    for (const p of tk.board.parts) {
+      const d = getDef(p.partId); if (!d || (d.kind !== 'OPAMP' && d.kind !== 'CMP')) continue;
+      const ns = nodesOf(p.uid), at = (pin: string): number => ns[d.pins.indexOf(pin)] ?? -3;
+      for (const [ip, im, op] of d.pins.includes('OUT') ? [['IN+', 'IN-', 'OUT']] : [['IN1+', 'IN1-', 'OUT1'], ['IN2+', 'IN2-', 'OUT2']]) {
+        const nP = at(ip!), nM = at(im!), nO = at(op!), rfMinus = resBetween(nO, nM), rfPlus = resBetween(nO, nP), capFb = capBetween(nO, nM);
+        if (rfMinus === 0 && rfPlus === 0 && !capFb && nO !== cn.OUT) continue;   // an unused channel
+        amps.push({ part: p.uid, pinPlus: d.pins.indexOf(ip!) + 1, rfMinus, rfPlus, rIn: resBetween(nIn, nM), rToGnd: resBetween(nM, gnd), capFb, gbw: d.model.GBW ?? 0, sr: d.model.SR ?? 0 });
+      }
+    }
+    const src = def.supplies.find((x) => x.kind === 'pin');
+    ctx.oa = { ticket: def.id, amps, rs: src?.kind === 'pin' ? src.rOut : 0, pullup: cn.V5 !== undefined && resBetween(cn.V5, cn.OUT ?? -1) > 0, heat: def.bench.heat?.pts };
   }
   for (const p of tk.board.parts) {
     const d = getDef(p.partId); if (!d) continue;

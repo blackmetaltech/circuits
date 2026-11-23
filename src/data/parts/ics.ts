@@ -141,4 +141,14 @@ export const lm317: PartDef = {
   verified: true, scope: 'campaign', simplifications: ['part.simplify.regulator-macro'],
 };
 
-export const ICS: PartDef[] = [lm741, lm358, tl072, ne5532, mcp6002, lm393, ne555, lm7805, lm317];
+/** Textbook op-amp (ticket 6-7, the exam): gain 1e6, no bandwidth or slew limit, no input current, no output resistance, and the output clips exactly at the rails (the ideal macro of DESIGN §3.7).
+ *  The single-amp DIP-8 pinout of the LM741 (pins 1, 5 and 8 unused). Textbook bins only. */
+export const opampTextbook: PartDef = {
+  id: 'opamp-textbook', kind: 'OPAMP', nameKey: 'part.opamp-textbook.name', footprint: 'dip8', pins: ['NC1', 'IN-', 'IN+', 'V-', 'NC5', 'OUT', 'V+', 'NC8'],
+  variants: [variant('ideal', {}, { thetaJA: 1, tauS: 1, tMax: 1000, tFail: 2000 })],
+  model: { ideal: 1 },
+  source: { doc: 'Textbook ideal element, defined by its constitutive equation (no datasheet, no physical data)', definition: true, note: 'Open-loop gain 1e6, input resistance 1e12 ohm, no bandwidth, slew or output-resistance limit; the output swings exactly to the rails (no headroom). Textbook bins only (DESIGN ticket 6-7: "ideal op-amp with +-15 V rails"). [R] no thermal model.' },
+  verified: true, scope: 'campaign', simplifications: ['part.simplify.opamp-textbook'],
+};
+
+export const ICS: PartDef[] = [lm741, lm358, tl072, ne5532, mcp6002, lm393, ne555, lm7805, lm317, opampTextbook];

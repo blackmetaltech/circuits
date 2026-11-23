@@ -9,7 +9,7 @@ import { partPrice } from './metrics';
 import { REGIONS } from '../regions';
 
 const def = (id: string) => LEVEL_DEFS.find((d) => d.id === id)!;
-const REPAIRS = ['1-1', '1-2', '1-3', '1-4', '2-1', '3-1', '3-3', '5-1'];   // 2-1 since 0.4.0 (D-bench-ch2 delivered): the weather station arrives with its unloaded divider; 3-1 and 3-3 since D-bench-ch23
+const REPAIRS = ['1-1', '1-2', '1-3', '1-4', '2-1', '3-1', '3-3', '5-1', '6-1', '6-2', '6-3', '6-4', '6-5', '6-6'];   // chapter 6 since 0.7: every op-amp job arrives faulty   // 2-1 since 0.4.0 (D-bench-ch2 delivered): the weather station arrives with its unloaded divider; 3-1 and 3-3 since D-bench-ch23
 function open(id: string): Engine<NodeState> {
   const e = new Engine(GAME, { mode: 'learner' }); e.autosave = false;
   const st = structuredClone(e.state) as NodeState;
@@ -22,7 +22,7 @@ const ok = (e: Engine<NodeState>, name: string, ...args: unknown[]) => { const r
 const tk = (e: Engine<NodeState>) => (e.state as NodeState).ticket!;
 
 describe('repair tickets arrive faulty', () => {
-  it('exactly the eight repair tickets carry a faulty board; the exam and the other chapters do not', () => {
+  it('exactly the repair tickets carry a faulty board; the exam and the other chapters do not', () => {
     expect(LEVEL_DEFS.filter((d) => d.fault).map((d) => d.id)).toEqual(REPAIRS);
   });
   it.each(REPAIRS.map((id) => [id]))('%s: the board arrives as the customer left it, it fails the bench, and the ref replay from the arrival passes', (id) => {

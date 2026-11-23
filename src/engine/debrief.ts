@@ -99,11 +99,28 @@ function buildAmpDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: n
   return { node: 'amp', equation: say('debrief.amp.equation'), working, answer: say('debrief.amp.answer', { ib: num(ib * 1e6), ic: num(ic * 1000), vce: num(vce), av: num(av) }), currents: [], rows: full, starsText, ...retryOf(built, stars) };
 }
 
+/** The 6-7 slip: the summing amplifier worked from the printed card (the - input a virtual ground: each input's current V/R, all of it through Rf), the doubled and tripled cases, and the
+ *  reality check: a TL072 on the same rails stops 1.5 V short of each (the catalogue's typical headroom), so the tripled case clips. */
+function buildSumDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: number, built: boolean): Debrief {
+  const s = f.sources, rf = f.load.ohm, rails = f.sum!.rails, i = s.map((x) => x.volts / x.r.ohm), itot = i.reduce((a, b) => a + b, 0), vout = -rf * itot, swing = 1.5;
+  const kOhm = (r: number): string => `${num(r / 1000)} kΩ`;
+  const working = [
+    say('debrief.sum.currents', { v1: num(s[0]!.volts), r1: kOhm(s[0]!.r.ohm), i1: num(i[0]! * 1000), v2: num(s[1]!.volts), r2: kOhm(s[1]!.r.ohm), i2: num(i[1]! * 1000), v3: num(s[2]!.volts), r3: kOhm(s[2]!.r.ohm), i3: num(i[2]! * 1000), itot: num(itot * 1000) }),
+    say('debrief.sum.out', { rf: kOhm(rf), itot: num(itot * 1000), vout: num(vout) }),
+    say('debrief.sum.scale', { v2x: num(2 * vout), v3x: num(3 * vout), rails: num(rails) }),
+    say('debrief.sum.real', { rails: num(rails), swing: num(swing), clip: num(rails - swing), v3x: num(3 * vout) }),
+  ];
+  const full = rows.map((x) => ({ ...x, ok: x.grade !== 'miss' }));
+  const starsText = say(!built ? 'debrief.stars.fail' : stars >= 3 ? 'debrief.stars.3' : stars === 2 ? 'debrief.stars.2' : 'debrief.stars.1.sum');
+  return { node: 'sum', equation: say('debrief.sum.equation'), working, answer: say('debrief.sum.answer', { vout: num(vout), v2x: num(2 * vout), v3x: num(3 * vout) }), currents: [], rows: full, starsText, ...retryOf(built, stars) };
+}
+
 export function buildDebrief(f: ExamFigure, rows: Omit<DebriefRow, 'ok'>[], stars: number, built: boolean, measured?: Record<string, number>): Debrief {
   if (f.kind === 'pot' && f.pot) return buildPotDebrief(f, rows, stars, built);
   if (f.kind === 'caps' && f.caps) return buildCapsDebrief(f, rows, stars, built, measured);
   if (f.kind === 'zener' && f.zener) return buildZenerDebrief(f, rows, stars, built);
   if (f.kind === 'amp' && f.amp) return buildAmpDebrief(f, rows, stars, built);
+  if (f.kind === 'sum' && f.sum) return buildSumDebrief(f, rows, stars, built);
   const { a, into } = solveFigure(f), n = f.node;
   const eq = f.sources.map((s) => `(${num(s.volts)} − ${n})/${num(s.r.ohm)}`).join(' + ') + ` = ${n}/${num(f.load.ohm)}`;
   const mult = f.sources.every((s) => Number.isInteger(s.r.ohm)) && Number.isInteger(f.load.ohm) ? leastCommon([...f.sources.map((s) => s.r.ohm), f.load.ohm]) : 0;
