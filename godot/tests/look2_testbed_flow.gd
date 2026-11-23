@@ -89,6 +89,9 @@ func _run() -> void:
 	ok(not wb.backend.parts.any(func(p): return str(p.partId) == "cap-el"), "break: the smoothing capacitor comes out")
 	ok(Testbed.load_device(wb, "dimmer"), "the lamp dimmer loads on 5-2's bench")
 	ok(wb.note == "Lamp dimmer loaded. Space powers it.", "the note does not repeat the card: %s" % wb.note)
+	var f1n = wb.parts3d.get("f1", null)
+	ok(f1n != null and f1n.anim.has("strip") and wb.board.connectors.any(func(c): return str(c.id) == "DRAIN"), "the dimmer's 3D bench is 5-2's board with its LED strip, not the free bench's 5-1 fan (Sigrid)")
+	ok(wb.view == 2, "the testbed opens in the work view (view %d)" % wb.view)
 	var pot := ""
 	for p in wb.backend.parts: if str(p.partId) == "pot-panel": pot = str(p.uid)
 	ok(pot != "" and wb.backend.parts.any(func(p): return str(p.partId) == "tip120"), "the knob and the transistor are on the board")

@@ -65,6 +65,7 @@ static func load_device(wb, id: String) -> bool:
 	var b = wb.backend
 	b.set_power(false)
 	if not b.open_ticket(str(d.ticket)): return false
+	wb._after_open()   # Sigrid (0.6): the host ticket's own board and connectors; the 3D bench kept 5-1's (a fan where 5-2's strip is, FAN and COLL labels)
 	var ok := true
 	if d.has("board"):
 		# a board that is not the ticket's own repair (src/data/testbed.ts through the testbedBoard query), on the host ticket's bench
@@ -81,6 +82,7 @@ static func load_device(wb, id: String) -> bool:
 	wb.testbed_device = id; wb.testbed_paused = false
 	wb._layout_for_ticket()   # the fan and the microcontroller stand on the bench only for the fan driver
 	wb.note = "%s loaded. Space powers it." % str(d.name)   # Sigrid: the card already says what it is; the note repeated it word for word
+	wb.set_view(2)   # Sigrid: the testbed opens in the work view like the jobs
 	wb.sync_board(); wb._cables(); wb.changed.emit()
 	return ok
 

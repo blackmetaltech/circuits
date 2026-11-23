@@ -473,8 +473,9 @@ func set_view(v: int, snap := false) -> void:
 
 ## View 2's camera goal for a window aspect: [target, yaw, pitch, distance] (look2_frame_flow measures the case with it).
 func work_pose(aspect: float) -> Array:
-	var d := 0.39 * (1.6 / clampf(aspect, 1.25, 2.4))
-	return [board_centre() + Vector3(-0.115 * d, -0.004, 0.012), deg_to_rad(8.0), deg_to_rad(-40.0), d]
+	# Sigrid's re-score: the case in the lower half and the scope and supply screens in the top third (the 3-1 curve is the proof)
+	var d := 0.43 * (1.6 / clampf(aspect, 1.25, 2.4))
+	return [board_centre() + Vector3(-0.115 * d, 0.0, -0.04), deg_to_rad(8.0), deg_to_rad(-29.0), d * 1.04]
 
 func _update_camera(dt: float) -> void:
 	var k := 1.0 - exp(-dt * 6.0)
@@ -602,6 +603,7 @@ func _after_open() -> void:
 	var c := Vector3((board.w - 1) * P * 0.5, 0, (board.h - 1) * P * 0.5)
 	board.position = Vector3(-0.02, 0.003 + 0.012 + MeshKit.BOARD_T, 0.07) - c
 	board.set_keepout(backend.bench_q.get("keepOut", []), str(backend.mains.get("keepOut", "")))   # 4-1: the mains side of the board
+	if thermal: _thermal_room(false)
 	thermal = false; backend.camera = false
 	_contacts()
 	if case_node: case_node.queue_free(); case_node = null
@@ -641,7 +643,7 @@ func _layout_for_ticket() -> void:
 	if iso_box:
 		iso_box.visible = not backend.mains.is_empty() and mode != "free"
 		iso_box.position = Vector3(0.30, 0.0, -0.085); iso_box.rotation_degrees.y = -30.0   # in front of the supply's lower right, under its display, behind the meter
-	if mcu: mcu.position = Vector3(-0.07, 0.003, 0.215); mcu.rotation_degrees.y = 0.0   # in front of the case; the sorting box stands at its left
+	if mcu: mcu.position = Vector3(-0.20, 0.003, -0.08); mcu.rotation_degrees.y = 20.0   # Sigrid: behind-left of the case, not in the foreground over the rail
 
 ## Drawer rows: the ticket's shoebox (job) or the whole catalogue (free bench), grouped by kind.
 func drawer() -> Array:
@@ -712,7 +714,7 @@ func sync_board() -> void:
 		_sig_parts = sp
 		var keep := {}
 		for p in shown:
-			var key := "%s:%d:%d:%d" % [p.uid, p.x, p.y, p.rot]
+			var key := "%s:%s:%d:%d:%d" % [p.uid, p.partId, p.x, p.y, p.rot]   # partId too: 5-1's fixed fan and 5-2's strip are both uid f1
 			keep[str(p.uid)] = true
 			if parts3d.has(p.uid) and str(parts3d[p.uid].get_meta("key", "")) == key: continue
 			if parts3d.has(p.uid): parts3d[p.uid].queue_free()
@@ -1511,8 +1513,20 @@ func read_safety() -> void:
 func toggle_thermal() -> void:
 	if not backend.camera_ok or mode != "job": return
 	thermal = not thermal; backend.camera = thermal
+	_thermal_room(thermal)
 	note = "Thermal camera on. Dark blue is room temperature, white is 150 C." if thermal else "Thermal camera off."
 	changed.emit()
+
+## Sigrid (0.6): with the camera on, the room dims and greys so the false colours read as an instrument's picture. Not a full grey:
+## the adjustment is global, so the parts' own heat colours would grey out too.
+var _env_was := {}
+func _thermal_room(on: bool) -> void:
+	if env == null: return
+	if on:
+		_env_was = {"en": env.adjustment_enabled, "b": env.adjustment_brightness, "s": env.adjustment_saturation}
+		env.adjustment_enabled = true; env.adjustment_brightness = 0.6; env.adjustment_saturation = 0.55
+	elif not _env_was.is_empty():
+		env.adjustment_enabled = bool(_env_was.en); env.adjustment_brightness = float(_env_was.b); env.adjustment_saturation = float(_env_was.s); _env_was = {}
 
 ## The camera's reading: the hottest part and its temperature (the engine's number), for the tip plate.
 func thermal_text() -> String:
