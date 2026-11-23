@@ -4,19 +4,22 @@
 
 Customers bring broken devices to your bench. Open them, measure them, swap the faulty parts, and hand them back.
 
-> **v0.5.0, pre-alpha.** Chapters 1 to 3 play on the 3D bench; chapters 4 and 5 play in the classic 2D look. A testbed lets you break known devices on purpose. Linux and Windows builds on the [releases page](https://github.com/blackmetaltech/circuits/releases/latest).
+> **v0.6.0, pre-alpha.** All five chapters play on the 3D bench. A testbed of six devices lets you break them on purpose. The wallet buys a condition dial. Linux and Windows builds on the [releases page](https://github.com/blackmetaltech/circuits/releases/latest).
 
 ![A burnt LED is replaced and burns again on 9 V: the ticket bills the part plus a $1.50 courier](docs/readme/wb-burn-1-1.gif)
 
 | | |
 |---|---|
+| ![](docs/readme/wb-flash-3-1.jpg)<br>**3-1 Flash timer, fixed.** The scope shows the charge curve crossing 63 % at one second. | ![](docs/readme/wb-testbed-dimmer.gif)<br>**Testbed: lamp dimmer.** Turn the knob and the strip current climbs from 0 mA. |
+| ![](docs/readme/wb-wallwart-4-1.jpg)<br>**4-1 Wall wart.** Simulated mains behind an isolation transformer. The safety card comes first. | ![](docs/readme/wb-thermal-4-3.jpg)<br>**4-3 Hot regulator.** The thermal camera: the 7805 at 87 C, the spare at room temperature. |
+| ![](docs/readme/wb-strip-5-2.jpg)<br>**5-2 3.3 V gate.** A logic-level MOSFET drives the 12 V strip from a 3.3 V pin. | ![](docs/readme/wb-igpu-low-5-1.jpg)<br>**Low tier on an integrated GPU.** 5-1 averages 17 ms a frame on a Radeon iGPU. |
 | ![](docs/readme/wb-swap-3-1.gif)<br>**3-1 Flash timer.** It arrives with a 22 µF capacitor. The wheel steps it to 100 µF, and it passes. | ![](docs/readme/wb-testbed-fan.gif)<br>**Testbed.** Pull the fan driver's flyback diode. The coil kicks to 2000 V and the transistor dies. |
 | ![](docs/readme/wb-relay-3-3.jpg)<br>**3-3 Relay pull-in.** The relay never clicks. The customer is waiting, and a first-test fix earns a tip. | ![](docs/readme/wb-cable-2-2.jpg)<br>**2-2 Cable fault.** Slide the jockey until the needle sits on zero. |
 | ![](docs/readme/wb-testbed-station.jpg)<br>**Testbed: weather station.** Fit the builder's divider and the meter reads 2.76 V. | |
 | ![](docs/readme/wb-pick-1-1.gif)<br>**Pick and place.** Take a part from the box. Drop it on the pads. | ![](docs/readme/wb-measure-2-1.gif)<br>**Measure, then fix.** 2.76 V before, 3.35 V after. |
 | ![](docs/readme/wb-supply-2-3.gif)<br>**The supply keys.** VOLTAGE steps the bench supply. TEST runs the bench test. | ![](docs/readme/wb-sortbox-1-1.jpg)<br>**Passed.** Printed tabs on the parts box. |
 | ![](docs/readme/wb-weather-2-1.jpg)<br>**2-1 Weather station.** It reads low. The meter's face says 2.76 V. | ![](docs/readme/wb-cute-2-1.jpg)<br>**Cute mode.** Beads ride the wires that carry current. |
-| ![](docs/readme/wb-sealed-2-3.jpg)<br>**2-3 Sealed box.** Meter it, then build its twin. | ![](docs/readme/wb-igpu-low-1-1.png)<br>**Low tier** on an integrated GPU (0.3 shot). 0.4.1 measures 8.4 ms a frame. |
+| ![](docs/readme/wb-sealed-2-3.jpg)<br>**2-3 Sealed box.** Meter it, then build its twin. | |
 | ![](docs/readme/wb-1280x800-2-1.jpg)<br>**Steam Deck size** (1280x800). Every instrument in view. | |
 
 ## What you do
@@ -54,7 +57,7 @@ Cute mode shows current as beads riding the wires. In the classic look, LEDs get
 
 The front end is Godot 4.7. The engine is a deterministic TypeScript circuit solver, run through a Node sidecar.
 
-## The classic look (chapters 4 and 5 still play here)
+## The classic look (an option under Settings)
 
 | | |
 |---|---|
@@ -97,4 +100,5 @@ core/               cobanana-core submodule: bridge, saves, settings, layout, QA
 
 ## Status and known gaps
 - No human has played the 3D bench yet. No human has heard its sounds or held a pad on it.
-- Details: [docs/CRITIQUE-0.4.md](docs/CRITIQUE-0.4.md).
+- The TIP120 model's gain is under the datasheet minimum.
+- Details: [docs/CRITIQUE-0.6.md](docs/CRITIQUE-0.6.md).

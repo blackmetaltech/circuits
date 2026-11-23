@@ -2,6 +2,57 @@
 
 All notable changes to CIRCUITS (called NODE until v0.1.0). The release workflow publishes the section whose heading contains `[x.y.z]`.
 
+## [0.6.0] - 2026-11-23 · "One Bench"
+All five chapters play on the 3D bench. The wallet buys something. The testbed has six devices.
+
+### Added
+- Chapters 4 and 5 on the bench: 4-1 Wall Wart (mains behind an isolation transformer; the safety card comes first), 4-2 radio rail, 4-3 Hot Regulator with a thermal camera (T), 4-4 your own 3.3 V rail, 4-5 exam, 5-2 LED strip, 5-3 NAND from parts, 5-4 synth preamp, 5-5 exam. Next job runs from 1-1 to 5-5. The classic 2D look is an option on the title.
+- The condition dial ($15.00): the live bench runs any of a ticket's test conditions, such as 1-2's tired battery, so you can check before you test. Free on the testbed and the free bench.
+- Testbed: a phone charger stage, a lamp dimmer (turn the knob with the wheel) and a relay timer, next to the torch, the weather station input and the fan driver. Each has two breaks.
+- The relay clicks when it pulls in or drops out.
+- A wire end on a bare pad is named (first, second or neither end) and ringed red on the board.
+- With a wire tool, a click one hole off a leg snaps to the leg, and the rings show through tall parts such as 1-3's heater.
+- A pad legend shows while the pad's ring is on screen.
+- Tests: look2_ch45_flow (247 checks), look2_async_flow (7), testbed06.test (6), tip.test (10); look2_testbed_flow 36, look2_ch1_flow 129, look2_frame_flow 72. CI now also runs the classic stall flows.
+
+### Changed
+- The title is a strip at the left with the bench behind it: Jobs, Testbed, Free bench. The showcase, the classic look, graphics, Cute and Sound are under Settings.
+- Jobs and the testbed open into a closer work view: the case fills the lower half, the scope and supply screens the top. Key 1 still shows the whole bench.
+- The thermal camera dims the room.
+- The tool rail wraps to a second row instead of shrinking its text. Each key shows its shortcut as a keycap.
+- The tip is 40 % of the fee, and each failed test takes a quarter of it. On 1-1 a failed test costs nothing. Nobody waits on 4-4, your own bench.
+- Build cost moved off the money line: in Learner mode parts never leave the wallet.
+- The 9 V battery sits two rows back, so its leads and pads show. Connector tabs near the edge sit in front of the pad and say + or minus.
+- With a wire, lead or probe in hand, the pad name follows the cursor. From an untouched view the camera goes top-down; after you zoom or orbit it stays where you put it.
+- A current keeps its sign where the sign matters (the galvanometer either side of balance) and shows its size where the band is all negative (1-2's battery).
+- Right-click on a burnt part fits a fresh one in the same holes; its wires stay.
+- The wheel changes a part's value only after the pointer rests on it, so a zoom that sweeps over a part leaves it alone.
+- A testbed break lands paused, so Step shows the frame in which a part burns.
+- The live simulation runs on a worker thread. 5-1 at 1920x1080 on an RTX 4090: worst frame 10.4 ms (15.1 ms on the main thread).
+- The mains safety card is four short lines.
+- 1-1's open line says what to do: fit a resistor in series with the LED.
+- A failure line says right-click fits a fresh part. It said Ctrl+Z, which does not replace a part that arrived burnt.
+
+### Fixed
+- An unexplained $1.53 charge after Ctrl+Z: undo turned the customer's burnt LED into a fresh one, it burned again, and you paid for it.
+- 1-2 showed three different currents for three LEDs in series, and a negative battery current.
+- A relay switching a load on its contacts burned at pull-in (the engine billed it a power spike).
+- Below 1280 px wide the ticket ran off the bottom and the tool rail ran off both sides.
+- The failure text kept the first failed test's numbers through later tests.
+- The hover tip kept a part's old value after a wheel step, and carried into the next job.
+- The scope printed "us/div" for µs/div.
+- After a pad was unplugged, the mouse lost hover until restart.
+- Two testbed break texts were wrong: with 47 k the relay timer never pulls in at all (the break is now 470 uF, about 4.2 s), and a shorted emitter resistor saturates the transistor.
+- 1-3 as it arrives said "v(out) ... not on the board yet". It now says the link wire joins OUT straight to IN and what to do.
+- The testbed's phone charger ran 4-1's bench test by itself and said "Paid $15.00". The testbed never runs a ticket's test now.
+- The wheel over the dimmer's knob zoomed the camera instead of turning it.
+- The testbed showed parts of the free bench's 5-1 board on other devices: on the dimmer, a fan where the LED strip is, the microcontroller lead hanging off the bench, and 5-2's threshold keys.
+
+### Known
+- No human has played, listened to or held a pad on this build.
+- The TIP120 model's gain is under the datasheet minimum (about 700 at 0.5 A against 1000).
+- In the work view the meter is cropped at the right; its reading shows on the tip.
+
 ## [0.5.0] - 2026-11-23 · "Whole Chapters"
 Chapters 1 to 3 now play on the 3D bench, with nothing left in the classic look. A testbed lets you break known devices on purpose. A customer waits, and guessing costs the tip.
 
