@@ -427,21 +427,36 @@ func set_heat(k: float) -> void:
 func set_strip(k: float) -> void:
 	for mi in anim.get("strip", []):
 		var m := (mi as MeshInstance3D).get_active_material(0) as StandardMaterial3D
-		if m: m.emission_energy_multiplier = sqrt(clampf(k, 0.0, 1.0)) * 6.0   # 0.6: the eye's response; 85 mA on the dimmer read as dark
+		if m:   # 0.6 (Sigrid): warm, on the eye's curve (85 mA read as dark), with a little light on the board around it
+			var kk := sqrt(clampf(k, 0.0, 1.0))
+			m.emission = Color(1.0, 0.82, 0.55); m.emission_energy_multiplier = kk * 8.0; m.albedo_color = Color(1.0, 0.95, 0.85).lerp(Color(1.0, 0.85, 0.6), kk)
+	var lt: OmniLight3D = anim.get("strip_light", null)
+	if lt == null and anim.has("strip"):
+		lt = OmniLight3D.new(); lt.light_color = Color(1.0, 0.82, 0.55); lt.omni_range = 0.05; lt.shadow_enabled = false
+		lt.position = Vector3(3.0 * P, 0.012, 0); add_child(lt); anim["strip_light"] = lt
+	if lt: lt.light_energy = sqrt(clampf(k, 0.0, 1.0)) * 1.2; lt.visible = k > 0.01
 
 ## Chapter 4's thermal camera: the part's body in false colour from the engine's temperature (tc in degrees C; below 0 is off,
 ## and the next set_heat puts the normal look back).
 var _thermal := -1.0
+var _th_meshes := {}
 func set_thermal(tc: float) -> void:
 	if _smoked or absf(tc - _thermal) < 0.5: return
 	_thermal = tc
+	if _th_meshes.is_empty():   # 0.6: every mesh of the part but its leads (4-3's clip-on heatsink is not a body mesh and stayed copper)
+		for mi in find_children("*", "MeshInstance3D", true, false):
+			if not _is_lead(mi) and not body_meshes.has(mi): _th_meshes[mi] = (mi as MeshInstance3D).material_override
 	if tc < 0.0:
 		_heat = -1.0
 		for i in body_meshes.size(): (body_meshes[i] as MeshInstance3D).material_override = _body_mats[i]
+		for mi in _th_meshes: if is_instance_valid(mi): (mi as MeshInstance3D).material_override = _th_meshes[mi]
 		return
 	var col := thermal_colour(tc)
-	var m := MeshKit.mat(col, 0.9, 0.0, {"emission": col, "emission_energy": 0.9, "normal": 0.0, "rough_tex": false})
+	# Sigrid (0.6): the false colour lights itself, like a camera's picture, so 87 C reads hot and not as pink copper in the dimmed room
+	var m := StandardMaterial3D.new(); m.albedo_color = col * 0.3; m.roughness = 1.0
+	m.emission_enabled = true; m.emission = col; m.emission_energy_multiplier = 1.6   # HDR: it blooms through the dimmed room
 	for mi in body_meshes: (mi as MeshInstance3D).material_override = m
+	for mi in _th_meshes: if is_instance_valid(mi): (mi as MeshInstance3D).material_override = m
 
 ## The camera's iron palette: dark blue at room temperature, purple, red, orange, yellow, white at 150 degrees C and over.
 static func thermal_colour(tc: float) -> Color:

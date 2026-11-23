@@ -475,7 +475,7 @@ func set_view(v: int, snap := false) -> void:
 func work_pose(aspect: float) -> Array:
 	# Sigrid's re-score: the case in the lower half and the scope and supply screens in the top third (the 3-1 curve is the proof)
 	var d := 0.43 * (1.6 / clampf(aspect, 1.25, 2.4))
-	return [board_centre() + Vector3(-0.115 * d, 0.0, -0.04), deg_to_rad(8.0), deg_to_rad(-29.0), d * 1.04]
+	return [board_centre() + Vector3(-0.115 * d, 0.01, -0.04), deg_to_rad(8.0), deg_to_rad(-29.0), d * 1.04]
 
 func _update_camera(dt: float) -> void:
 	var k := 1.0 - exp(-dt * 6.0)
@@ -1524,7 +1524,7 @@ func _thermal_room(on: bool) -> void:
 	if env == null: return
 	if on:
 		_env_was = {"en": env.adjustment_enabled, "b": env.adjustment_brightness, "s": env.adjustment_saturation}
-		env.adjustment_enabled = true; env.adjustment_brightness = 0.6; env.adjustment_saturation = 0.55
+		env.adjustment_enabled = true; env.adjustment_brightness = 0.7; env.adjustment_saturation = 1.0
 	elif not _env_was.is_empty():
 		env.adjustment_enabled = bool(_env_was.en); env.adjustment_brightness = float(_env_was.b); env.adjustment_saturation = float(_env_was.s); _env_was = {}
 

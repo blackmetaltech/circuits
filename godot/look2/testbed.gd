@@ -81,7 +81,7 @@ static func load_device(wb, id: String) -> bool:
 	b._act("setRunning", [true])
 	wb.testbed_device = id; wb.testbed_paused = false
 	wb._layout_for_ticket()   # the fan and the microcontroller stand on the bench only for the fan driver
-	wb.note = "%s loaded. Space powers it." % str(d.name)   # Sigrid: the card already says what it is; the note repeated it word for word
+	wb.note = "%s loaded. Space powers it." % str(d.name) if not b.powered else "%s loaded and powered." % str(d.name)   # Sigrid: the card already says what it is; the note repeated it word for word
 	wb.set_view(2)   # Sigrid: the testbed opens in the work view like the jobs
 	wb.sync_board(); wb._cables(); wb.changed.emit()
 	return ok
