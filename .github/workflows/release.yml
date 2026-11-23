@@ -174,8 +174,23 @@ jobs:
             echo "release $GITHUB_REF_NAME exists (local, smoke-tested): not publishing"; echo "skip=1" >> "$GITHUB_OUTPUT"
           else echo "skip=0" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/download-artifact@v4
-        if: steps.exists.outputs.skip == '0'
         with: { pattern: dist-*, path: dist, merge-multiple: true }
+      # 0.4.0: a local release carries only the smoke-tested Linux build; add the CI platform builds it lacks (Windows, macOS),
+      # never replacing an asset that is already there, with their own checksum file.
+      - name: Add missing platform builds to the local release
+        if: steps.exists.outputs.skip == '1'
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          have=$(gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name')
+          cd dist; added=()
+          for f in *; do
+            case "$f" in *linux*) continue;; esac
+            if printf '%s\n' "$have" | grep -qxF "$f"; then echo "keep $f (already on the release)"; continue; fi
+            added+=("$f")
+          done
+          [ ${#added[@]} -eq 0 ] && { echo "nothing to add"; exit 0; }
+          sha256sum "${added[@]}" > SHA256SUMS-ci.txt
+          gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" "${added[@]}" SHA256SUMS-ci.txt
       - name: Release notes from CHANGELOG.md
         if: steps.exists.outputs.skip == '0'
         run: |

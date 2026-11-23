@@ -18,3 +18,10 @@ Procedural (code in `godot/look2/`, no external files): every component, the per
 |---|---|---|
 | `Kalam-Regular.ttf` | Google Fonts | SIL OFL 1.1 (`OFL-Kalam.txt`) |
 | `ShareTechMono-Regular.ttf` | Google Fonts | SIL OFL 1.1 (`OFL-ShareTechMono.txt`) |
+
+## Sound (both looks, `godot/stall/stall_sfx.gd`)
+No audio files. Every cue is synthesised at run time from a short recipe of sine, triangle, square and noise sweeps (`StallSfx.RECIPES`),
+written for this game; nothing is sampled or downloaded, so there is no third-party licence. The new look (0.4.0) plays the same
+recipes on its own events: OUTPUT click, part thunk, wire zip, part removed clack, resistor pop, LED crack, failed-test buzz, pass
+chime, pay ring, case clack, hand-back page, VOLTAGE tick. Title keys "Sound on/off"; `CB_MUTE=1` silences it for harness runs.
+**No human has listened to the new look's sounds.** Levels and timing were set by reading the recipes, not by ear.

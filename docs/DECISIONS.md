@@ -64,3 +64,25 @@
   now costs $1.53 of a $5 job; three burns eat most of it. The ticket says so the moment it happens. Cut, written down: customer
   deadlines and a reputation score were considered and left out of this layer (both need a campaign clock and a save field);
   they go to the next layer's list. The sandbox still never bills; arrived-burnt parts are still free.
+
+- **D-bench-ch2 delivered (2026-11-23, Ingrid Solheim, Game Lead).** The cut line held: 2-1 and 2-3 play on the bench after 1-5;
+  2-2 (cable bridge) and the 2-4 exam stay on the classic stall, said on the title. 2-1 now arrives faulty in both looks (the
+  `fault` board: 5.6 k over 3.3 k, 3.34 V open, 2.76 V on the 10 k ADC); the 2-1 tests clear the customer's board first, as the
+  chapter 1 repair tests do, and the replay test still plays the whole path from the arrived board. 2-3 needed a control the bench
+  did not have: the VOLTAGE knob on the supply (wheel 0.1 V, Shift 0.01 V, Ctrl 1 V). The sealed box and the ADC header got their
+  own models instead of terminal blocks.
+
+- **D-cute-bench (2026-11-23, Ingrid Solheim, Game Lead).** The new look gets a Cute mode, on by default (owner concern S), with one
+  element this layer: amber beads ride every wire that carries current, at the engine's own dot speed, in the direction of
+  conventional current; a wire with no current carries none. It maps to one band (is current flowing here, and how much) and fakes
+  no number. Toggle: C, or "Cute on/off" on the title; saved. Strongest argument against (art direction, from the phase B look
+  notes): the bench is meant to read as a real repair bench, and glowing beads are not real. Answer: they are off with one key,
+  and they answer the question a 14-year-old asks first ("is anything happening?") without a meter. Cut and written down: the
+  classic look's cat, part faces and electron-flow option are not ported this layer.
+
+- **D-pad-first-pass (2026-11-23, Ingrid Solheim, Game Lead).** Gamepad on the bench is a cursor, not a second UI: the left stick
+  drives a ring, A and B are left and right click at the ring, the bumpers are the wheel, and X, Y, D-pad, Back and Start send the
+  bench's own keys. One input language, and every pad action is a mouse or key action the flows already test. Found on the way:
+  parsed mouse events are in window pixels, so the ring is mapped through the window's stretch; without it every pad click lands
+  off target on a window not at the base size. Not done: pad navigation of the paper ticket's keys (they are reached with the
+  ring), rumble, and a hand test with a real controller; no human has held a pad on this build.

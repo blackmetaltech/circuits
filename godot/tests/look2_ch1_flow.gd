@@ -35,10 +35,10 @@ func _run() -> void:
 	ok(names.has("Quit") and names.has("High") and names.has("Low"), "the title has Quit and the graphics tiers (%s)" % str(names))
 	var wallet0 := -1
 	wb.start_job(); await _frames(10)
-	for id in ["1-1", "1-2", "1-3", "1-4", "1-5"]:
+	for id in ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-3"]:
 		print("== ", id)
 		ok(wb.ticket_id == id and str(wb.backend.ticket.get("id", "")) == id, "%s is the open job" % id)
-		var repair: bool = id != "1-5"
+		var repair: bool = id != "1-5" and id != "2-3"   # 2-3 is a replacement: the sealed box stays, the player builds its twin
 		ok(wb.case_closed(), "the device arrives in its closed case")
 		wb.open_case(); await _frames(5)
 		ok(not wb.case_closed() and wb.note != "", "the case opens and says what is inside: %s" % wb.note)
@@ -83,6 +83,36 @@ func _run() -> void:
 			(boxes[0] as LineEdit).text = "6.667"; (boxes[1] as LineEdit).text = "0.5556"
 			(boxes[1] as LineEdit).text_submitted.emit("0.5556"); await _frames(3)
 			ok(wb.backend.predictions_done(), "Enter in a box locks the predictions in: %s" % wb.note)
+		if id == "2-1":
+			# phase C: chapter 2 on the bench; the station arrives with the unloaded divider and reads low
+			ok(DeviceCase.device_of("2-1")[0] == "KAYA WX", "the weather station has its own case")
+			if not wb.backend.powered: wb.toggle_power()
+			await _step(0.6)
+			wb.backend.set_dial("V"); wb.backend.set_probe("red", [14, 2]); wb.backend.set_probe("black", [14, 8]); await _step(0.2)
+			ok(wb.meter_text().contains("2.7"), "the meter reads the loaded divider low (%s)" % wb.meter_text())
+			# Cute mode (on by default): beads ride the wires that carry current, at the engine's speed; off, none
+			await _frames(3)
+			var beads := func() -> int:
+				var n := 0
+				for wid in wb.wires3d: for b in (wb.wires3d[wid] as Wire3D)._beads: if b.visible: n += 1
+				return n
+			ok(wb.cute and beads.call() > 0, "Cute mode puts current beads on the live wires (%d)" % beads.call())
+			wb.set_cute(false); await _frames(2)
+			ok(beads.call() == 0, "Cute off: no beads")
+			wb.set_cute(true)
+			wb.backend.set_probe("red", null); wb.backend.set_probe("black", null)
+			if wb.backend.powered: wb.toggle_power()
+		if id == "2-3":
+			await _frames(3)
+			var bb: Part3D = wb.parts3d.get("f1", null)
+			ok(bb != null and bb.body_meshes.size() >= 1 and str(bb.part.get("partId", "")) == "blackbox", "the sealed box stands on the board as a module")
+			var v0: float = wb.backend.supply_volts()
+			ok(wb.supply_step(0.1) and is_equal_approx(wb.backend.supply_volts(), v0 + 0.1), "the VOLTAGE knob steps the supply 0.1 V (%.2f -> %.2f)" % [v0, wb.backend.supply_volts()])
+			wb.supply_step(1.0); wb.supply_step(-0.01)
+			ok(is_equal_approx(wb.backend.supply_volts(), v0 + 1.09), "Ctrl steps 1 V and Shift 0.01 V (%.2f V)" % wb.backend.supply_volts())
+			ok(wb.hover_tip.begins_with("VOLTAGE"), "the tip line says the new setting: %s" % wb.hover_tip)
+			wb.run_test(); await _frames(2)
+			ok(not wb.backend.passed and str(wb.last_failure.get("text", "")).begins_with("Measure the sealed box first"), "the bench refuses the twin before the box has been metered: %s" % str(wb.last_failure.get("text", "")).left(70))
 		if id == "1-5":
 			# the tray arrows change the part in hand, not only the label (Noor placed a 6 ohm while the tile showed 2 ohm)
 			var fam: Array = wb.drawer().filter(func(d): return str(d.partId) == "res-exact")
@@ -129,7 +159,7 @@ func _run() -> void:
 		wb.hand_back(); await _frames(5)
 		ok(wb.handed and wb.case_node.state == "handed", "the device goes back to the customer")
 		wb.next_job(); await _frames(10)
-	ok(wb.mode == "title", "after the exam the bench goes back to the title")
+	ok(wb.mode == "title", "after 2-3, the last bench job, the bench goes back to the title")
 	print("== free bench")
 	wb.start_free(); await _frames(10)
 	var item := {}

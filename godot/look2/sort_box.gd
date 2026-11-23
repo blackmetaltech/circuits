@@ -14,7 +14,7 @@ const WALL := 0.002
 const H := 0.022
 const SAMPLE_SCALE := 1.7  ## a sample is drawn a little larger than life so a 6 mm resistor reads at the bench distance
 
-var slots: Array = []      ## [{fam: Dictionary, item: Dictionary}] for the visible page
+var slots: Array = []      ## [{fam, item, cell: Node3D}] for the visible page
 var page := 0
 var pages := 1
 var _content: Node3D
@@ -56,10 +56,10 @@ func fill(fams: Array, idx_of: Callable, held: Dictionary) -> void:
 		var fam: Dictionary = fams[fi]
 		var items: Array = fam.items
 		var it: Dictionary = items[clampi(int(idx_of.call(fam)), 0, items.size() - 1)]
-		slots.append({"fam": fam, "item": it})
 		var cx := -w * 0.5 + (s % COLS) * CW + CW * 0.5 + WALL * 0.5
 		var cz := -d * 0.5 + (rows - 1 - s / COLS) * CD + CD * 0.5 + WALL * 0.5   # fill from the front row: nearest the hand, clear of the ticket
 		var cell := Node3D.new(); cell.position = Vector3(cx, 0.003, cz); _content.add_child(cell)
+		slots.append({"fam": fam, "item": it, "cell": cell})
 		var sample := Part3D.make({"partId": it.partId, "kind": it.kind, "value": it.value, "variant": it.variant, "label": it.label, "footprint": it.footprint, "uid": "tray%d" % s})
 		sample.scale = Vector3.ONE * SAMPLE_SCALE
 		cell.add_child(sample)
@@ -93,6 +93,7 @@ func _short_name(fam: Dictionary, it: Dictionary) -> String:
 	for pre in ["2N", "1N", "BC", "TIP", "IRL", "IRF", "LM", "NE", "BZX", "TL", "MCP"]:
 		if up.begins_with(pre): return up.get_slice("-", 0)
 	if pid.begins_with("led-"): return "LED " + pid.get_slice("-", 1)
+	if pid == "trimmer": return "Trimmer"
 	var vr := str(it.get("variant", ""))
 	if pid.begins_with("res"):
 		var watt: String = {"0.25W": " ¼ W", "0.5W": " ½ W", "0.167W": ""}.get(vr, (" " + vr.trim_suffix("W") + " W") if vr.ends_with("W") else "")

@@ -220,20 +220,22 @@ func _title() -> void:
 	_lab(v, "CIRCUITS", 44, TXT, f_engr)
 	_lab(v, "A repair bench. Customers bring broken devices; you probe, fix, and hand them back.", 22, Color(0.80, 0.82, 0.84), f_sans, true)
 	var gap := Control.new(); gap.custom_minimum_size = Vector2(0, 8); v.add_child(gap)
-	var b1 := _key(v, "Jobs: chapter 1, Current and Voltage", func(): bench.start_job(), "", true)
-	_lab(v, "A torch, a bike light, a fish-tank heater, a toy car, and the exam.", 18, Color(0.72, 0.75, 0.78))
+	var b1 := _key(v, "Jobs: chapters 1 and 2", func(): bench.start_job(), "", true)
+	_lab(v, "A torch, a bike light, a heater, a toy car, the exam, a weather station and a sealed box.", 18, Color(0.72, 0.75, 0.78))
 	_key(v, "Free bench", func(): bench.start_free())
 	_lab(v, "Any part, the supply, scope and meter. Save a build and load it later.", 18, Color(0.72, 0.75, 0.78))
 	_key(v, "Showcase: 5-1 Fan Driver", func(): bench.start_job("5-1"))
 	_lab(v, "The chapter 5 fan repair in the new look.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
 	_key(v, "Classic look: all five chapters", func(): bench.get_parent().call("set_look", "classic") if bench.get_parent().has_method("set_look") else null)
-	_lab(v, "Chapters 2 to 5 are in the classic 2D stall for now. Its title has the way back.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
+	_lab(v, "The rest of chapter 2 and chapters 3 to 5 are in the classic 2D stall for now.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
 	b1.call_deferred("grab_focus")
 	var qrow := HBoxContainer.new(); qrow.add_theme_constant_override("separation", 8); v.add_child(qrow)
 	_lab(qrow, "Graphics", 18, Color(0.72, 0.75, 0.78), f_sans)
 	for q in ["high", "medium", "low"]:
 		var qq: String = q
 		_key(qrow, qq.capitalize(), func(): bench.set_quality_saved(qq), "", false, bench.quality == qq)
+	_key(qrow, "Cute on" if bench.cute else "Cute off", func(): bench.set_cute(not bench.cute), "", false, bench.cute)
+	_key(qrow, "Sound on" if bench.sfx.enabled else "Sound off", func(): bench.set_sound(not bench.sfx.enabled), "", false, bench.sfx.enabled)
 	var spacer := Control.new(); spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL; qrow.add_child(spacer)
 	_key(qrow, "Quit", func(): bench.get_tree().quit(), "", false, false)
 	_lab(v, "Right drag orbits   Middle drag pans   Wheel zooms   Keys 1-5 views   Tab schematic", 17, Color(0.72, 0.75, 0.78), f_mono)
@@ -502,18 +504,33 @@ func _tools() -> void:
 	_key(h, "Undo", func(): bench.undo(), "Ctrl+Z")
 	_key(h, "Schematic", func(): toggle_schematic(), "Tab", false, schem)
 	_key(h, "Menu", func(): bench.back_to_title())
-	var tip: String = bench.hover_tip
-	if tip == "" and bench.backend.dial != "OFF": tip = "Meter  " + bench.meter_text()
-	var vk := _eng(h, tip if tip != "" else "Views 1-5", 14); vk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	if tip != "": vk.add_theme_color_override("font_color", AMBER)
-	_tip_label = vk
+	var vk := _eng(h, "Views 1-5", 14); vk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	pc.position.x = (1920 - pc.get_combined_minimum_size().x) * 0.5
 	pc.position.y = _canvas_h() - 16.0 - pc.get_combined_minimum_size().y
+	_rail_h = pc.get_combined_minimum_size().y
+	# the hover tip and the meter reading sit on their own plate above the rail: a long tip used to widen the rail past the
+	# window and push Power and Test off the left edge at 1280 x 800 (phase C GPU shot of 2-3)
+	var tip: String = bench.hover_tip
+	if tip == "" and bench.backend.dial != "OFF": tip = "Meter  " + bench.meter_text()
+	var tv := _plate(Vector2.ZERO, "")
+	_tip_plate = tv.get_parent()
+	_tip_label = _eng(tv, tip, 15); _tip_label.add_theme_color_override("font_color", AMBER)
+	(_tip_plate as Control).visible = tip != ""
+	_place_tip()
+
+var _tip_plate: Control
+var _rail_h := 72.0
+func _place_tip() -> void:
+	if _tip_plate == null or not is_instance_valid(_tip_plate): return
+	_tip_plate.reset_size()
+	var sz := _tip_plate.get_combined_minimum_size()
+	_tip_plate.position = Vector2((1920 - sz.x) * 0.5, _canvas_h() - 16.0 - _rail_h - 10.0 - sz.y)
 
 var _tip_label: Label
 func _refresh_live() -> void:
 	var b = bench.backend
-	if _tip_label and is_instance_valid(_tip_label) and bench.hover_tip == "" and b.dial != "OFF": _tip_label.text = ("Meter  " + bench.meter_text()).to_upper()
+	if _tip_label and is_instance_valid(_tip_label) and bench.hover_tip == "" and b.dial != "OFF":
+		_tip_label.text = ("Meter  " + bench.meter_text()).to_upper(); _tip_plate.visible = true; _place_tip()
 	if _status and is_instance_valid(_status): _status.text = "POWER %s" % ("ON" if b.powered else "OFF")
 	if _readout and is_instance_valid(_readout): _readout.text = bench.readout_text()
 	if _meter and is_instance_valid(_meter): _meter.text = "METER  " + bench.meter_text()

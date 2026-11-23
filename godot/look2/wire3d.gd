@@ -8,6 +8,11 @@ const COLS := [Color(0.62, 0.07, 0.05), Color(0.04, 0.04, 0.045), Color(0.85, 0.
 
 var wid := ""
 var _mi: MeshInstance3D
+var _path_pts := PackedVector3Array()   ## the wire's centre line, for the Cute-mode current beads
+var _cum: Array[float] = []
+var _beads: Array[MeshInstance3D] = []
+var _phase := 0.0
+const BEAD_GAP := 3.0 * P                ## one bead every three pads
 var _mat: StandardMaterial3D
 
 static func palette(i: int) -> Color: return COLS[posmod(i, COLS.size())]
@@ -43,6 +48,9 @@ func build(path: Array, color: Color, fixed: bool, board: Board3D, lift := 0.0) 
 		ins[0] = body[0].move_toward(body[1], 0.0016)
 		ins[ins.size() - 1] = body[body.size() - 1].move_toward(body[body.size() - 2], 0.0016)
 	_mi = MeshKit.add(self, MeshKit.tube(ins, r, 10), _mat)
+	_path_pts = body; _cum = [0.0]
+	for i in range(1, body.size()): _cum.append(_cum[i - 1] + body[i - 1].distance_to(body[i]))
+	_beads.clear()
 	for e in [0, path.size() - 1]:
 		var top := pts[e]
 		var bot := top - Vector3(0, y + MeshKit.BOARD_T, 0)
@@ -57,3 +65,30 @@ func set_highlight(on: bool) -> void:
 		var h: StandardMaterial3D = _mat.duplicate(); h.emission_enabled = true; h.emission = Color(0.91, 0.64, 0.24); h.emission_energy_multiplier = 0.6
 		_mi.material_override = h
 	else: _mi.material_override = _mat
+
+## Cute mode (phase C, D-cute-bench): amber beads ride the wire at the engine's own dot speed (pads/s, `liveFrame` wires[].speed),
+## in the direction of conventional current (the sign of i, path start to end). No current, no beads: a dead wire looks dead.
+func set_flow(amps: float, speed_pads: float, dt: float, on: bool) -> void:
+	var live := on and absf(amps) > 1e-9 and _cum.size() >= 2
+	if not live:
+		for b in _beads: b.visible = false
+		return
+	var total: float = _cum[_cum.size() - 1]
+	var n := maxi(1, int(total / BEAD_GAP))
+	if _beads.size() != n:
+		for b in _beads: b.queue_free()
+		_beads.clear()
+		var sm := SphereMesh.new(); sm.radius = 0.0013; sm.height = 0.0026; sm.radial_segments = 10; sm.rings = 5
+		var bm := MeshKit.mat(Color(1.0, 0.80, 0.30), 0.4, 0.0, {"emission": Color(1.0, 0.70, 0.20), "emission_energy": 1.2, "normal": 0.0, "rough_tex": false})
+		for i in n: _beads.append(MeshKit.add(self, sm, bm, Vector3.ZERO))
+	_phase = fposmod(_phase + signf(amps) * speed_pads * P * dt, BEAD_GAP)
+	for i in n:
+		var d := fposmod(_phase + i * total / n, total)
+		_beads[i].position = _at(d) + Vector3(0, 0.0008, 0); _beads[i].visible = true
+
+func _at(d: float) -> Vector3:
+	for i in range(1, _cum.size()):
+		if d <= _cum[i]:
+			var seg: float = maxf(_cum[i] - _cum[i - 1], 1e-9)
+			return _path_pts[i - 1].lerp(_path_pts[i], (d - _cum[i - 1]) / seg)
+	return _path_pts[_path_pts.size() - 1]

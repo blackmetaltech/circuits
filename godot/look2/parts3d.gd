@@ -68,6 +68,8 @@ func _build() -> void:
 			if pid.begins_with("bat-pp3"): _pp3(pid)
 			elif pid == "heater": _heater()
 			elif pid == "ideal-vsource": _vsource()
+			elif pid == "blackbox": _sealed()
+			elif pid == "adc-in": _adc()
 			elif footprint == "block2": _terminals()
 			else: _module(str(part.get("label", pid)), 2)
 
@@ -290,6 +292,32 @@ func _heater() -> void:
 	var glass := CylinderMesh.new(); glass.top_radius = 0.0055; glass.bottom_radius = 0.0055; glass.height = 6 * P - 0.001
 	MeshKit.add(self, glass, MeshKit.m("glass"), Vector3(3 * P, 0.0095, 0), Vector3(0, 0, PI / 2))
 	_labels.append(MeshKit.label(self, "HEATER 50Ω", 0.00004, Vector3(3 * P, 0.0003, 0.0075), Color(0.9, 0.9, 0.88)))
+
+## Ticket 2-3's sealed module: a potted black brick over its OUT and GND pads, a yellow "do not open" sticker; what is inside is only measured.
+func _sealed() -> void:
+	# the brick stands BEHIND its pin row and inside the two pads, so the OUT and GND pads stay open for the meter leads
+	# (Dagny: legs under tall parts must be easy to hit) and the fixed ground wire up column 8 stays in sight
+	var c := Vector3(3 * P, 0.0075, -0.0105)
+	_body(MeshKit.rounded_box(Vector3(6 * P - 0.004, 0.013, 0.014), 0.0015), MeshKit.mat(Color(0.05, 0.05, 0.055), 0.75, 0.0), c)
+	MeshKit.add(self, MeshKit.rounded_box(Vector3(0.0105, 0.0004, 0.0095), 0.0003), MeshKit.mat(Color(0.93, 0.76, 0.12), 0.6), c + Vector3(0, 0.0066, 0))
+	_labels.append(MeshKit.label(self, "SEALED", 0.000032, c + Vector3(0, 0.0071, -0.0018), Color(0.08, 0.06, 0.03), true))
+	_labels.append(MeshKit.label(self, "DO NOT OPEN", 0.000022, c + Vector3(0, 0.0071, 0.0022), Color(0.08, 0.06, 0.03), true))
+	_labels.append(MeshKit.label(self, "OUT", 0.00005, Vector3(0, 0.0004, 0.0055), Color(0.95, 0.3, 0.2)))
+	_labels.append(MeshKit.label(self, "GND", 0.00005, Vector3(6 * P, 0.0004, 0.0055), Color(0.85, 0.85, 0.85)))
+	for i in 2:
+		var x := float(i) * 6.0 * P
+		var xin := 0.0025 if i == 0 else 6.0 * P - 0.0025
+		_lead([Vector3(x, -MeshKit.BOARD_T, 0), Vector3(x, 0.0025, 0), Vector3(xin, 0.004, -0.0035)], 0.0005)
+
+## Ticket 2-1's ADC input: the weather station's sensor header, a blue stub board whose input is a fixed 10 kΩ to ground.
+func _adc() -> void:
+	_body(MeshKit.rounded_box(Vector3(6 * P + 0.004, 0.0016, 0.012), 0.0005), MeshKit.mat(Color(0.08, 0.20, 0.45), 0.5), Vector3(3 * P, 0.006, 0))
+	_body(MeshKit.rounded_box(Vector3(0.008, 0.005, 0.006), 0.0005), MeshKit.m("black_plastic"), Vector3(3 * P, 0.0093, 0))
+	_labels.append(MeshKit.label(self, "ADC  10 kΩ", 0.00004, Vector3(3 * P, 0.0072, 0.0042), Color(0.95, 0.95, 0.92), true))
+	for i in 2:
+		var x := float(i) * 6.0 * P
+		_body(MeshKit.rounded_box(Vector3(0.0035, 0.006, 0.0035), 0.0004), MeshKit.m("black_plastic"), Vector3(x, 0.003, 0))
+		_lead([Vector3(x, -MeshKit.BOARD_T, 0), Vector3(x, 0.0068, 0)])
 
 ## An exam-rig source: a grey module with its EMF printed and + and - marks over the pads.
 func _vsource() -> void:

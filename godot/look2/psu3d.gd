@@ -49,6 +49,7 @@ func _init() -> void:
 		var x := -0.032 if k == 0 else 0.032
 		Instruments3D.knob(self, Vector3(x, CY - 0.0065, Z0), 0.0185, 0.02, MeshKit.m("anodised"), cap)
 		MeshKit.label(self, "VOLTAGE" if k == 0 else "CURRENT", 0.00006, Vector3(x, CY - 0.0065 - 0.0255, Z0 + 0.0001), Color(0.6, 0.62, 0.64), false, Vector3.ZERO)
+		if k == 0: Instruments3D.hit(self, "psu_volt", Vector3(0.04, 0.04, 0.03), Vector3(x, CY - 0.0065, Z0 + 0.01))   # wheel sets the volts
 	# OUTPUT button with ring LED
 	var bx := -0.043; var by := CY - 0.0525
 	MeshKit.add(self, MeshKit.rounded_box(Vector3(0.0205, 0.0125, 0.007), 0.0025, 2), MeshKit.mat(Color(0.07, 0.07, 0.075), 0.45, 0.0, {"normal": 0.0}), Vector3(bx, by, Z0 + 0.0035))

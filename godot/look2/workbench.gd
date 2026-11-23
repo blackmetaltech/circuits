@@ -9,10 +9,15 @@ signal changed
 
 const P := MeshKit.PITCH
 const TICKET := "5-1"   ## the chapter-5 showcase slice
-const CH1 := ["1-1", "1-2", "1-3", "1-4", "1-5"]
+## The bench campaign: chapter 1, then chapter 2's 2-1 and 2-3 (D-ch2-bench cut line: 2-2 and the 2-4 exam stay on the classic stall this layer).
+const BENCH_JOBS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-3"]
+const CH1 := BENCH_JOBS   # old name, kept for the flows
 var ticket_id := "1-1"
 
 var backend: EngineBench
+var sfx: StallSfx
+var pad: PadCursor
+var cute := true                     ## Cute mode (D-cute-bench): current beads on live wires; on by default, C or the title toggles it
 var mode := "title"                  ## title | job | free
 var quality := "high"
 var board: Board3D
@@ -75,8 +80,13 @@ func _ready() -> void:
 	_instruments()
 	sort_box = SortBox.new(); add_child(sort_box); sort_box.position = SORT_BOX_AT; sort_box.rotation_degrees.y = 6.0; sort_box.visible = false
 	changed.connect(_refresh_tray)
+	sfx = StallSfx.new(); add_child(sfx)   # phase C: the classic stall's procedural cues, on the bench's own events (no asset files; no human has listened yet)
+	sfx.enabled = OS.get_environment("CB_MUTE") == "" and _load_sound_pref()
+	var cfc := ConfigFile.new(); if cfc.load("user://look2.cfg") == OK: cute = bool(cfc.get_value("look", "cute", true))
+	if OS.get_environment("CB_CUTE") != "": cute = OS.get_environment("CB_CUTE") == "1"
 	ui = load("res://look2/bench_ui.gd").new(); ui.bench = self
 	var cl := CanvasLayer.new(); cl.add_child(ui); add_child(cl)
+	pad = PadCursor.new(); pad.bench = self; cl.add_child(pad)   # phase C: the gamepad drives a cursor ring and the bench's own keys
 	backend = EngineBench.new()
 	backend.event.connect(_on_event)
 	set_view(2, true)
@@ -474,7 +484,7 @@ func case_closed() -> bool: return case_node != null and case_node.state != "ope
 
 func open_case() -> void:
 	if case_node == null or case_node.state == "open": return
-	case_node.set_state("open"); note = str(OPEN_LINE.get(ticket_id, "Case open. The board is on the bench."))
+	case_node.set_state("open"); note = str(OPEN_LINE.get(ticket_id, "Case open. The board is on the bench.")); if sfx: sfx.play("clack")
 	set_view(1); changed.emit()
 
 ## After a pass: the lid goes back on and the fan goes home running.
@@ -486,7 +496,7 @@ func hand_back() -> void:
 	if probe_node: probe_node.visible = false
 	if probe_cable: probe_cable.visible = false
 	backend.set_probe("ch1", null)
-	case_node.set_state("handed"); handed = true
+	case_node.set_state("handed"); handed = true; if sfx: sfx.play("page", 0.7)
 	if not backend.powered: backend.set_power(true)
 	if ticket_id == TICKET: backend.set_selector("pin", 0)
 	note = "%s: \"%s\"" % [str(backend.ticket.get("customer", "")), str(backend.ticket.get("thanks", ""))]
@@ -603,7 +613,10 @@ func tray_families() -> Array:
 	return fams
 
 func _fam_name(it: Dictionary) -> String:
-	if str(it.kind) == "R": return "Resistor" + ("  %s" % str(it.get("tag", ""))).strip_edges().replace("Resistor", "")
+	if str(it.kind) == "R":
+		if str(it.partId) == "trimmer": return "Trimmer"
+		var t := str(it.get("tag", "")).replace("Resistor", "").strip_edges()
+		return "Resistor" + ((" " + t) if t != "" else "")
 	var l := str(it.label)
 	return l if it.get("value", null) == null else str(it.get("tag", l))
 
@@ -753,6 +766,7 @@ func _process(dt: float) -> void:
 	_live(dt)
 
 func _live(dt: float) -> void:
+	_flow(dt)
 	var f: Dictionary = backend.frame
 	# the engine's board list says which parts are burnt (a repair's arrived-burnt part stays charred with the power off)
 	var burnt := {}
@@ -814,7 +828,50 @@ func _frametime(dt: float) -> void:
 
 ## ------------------------------------------------------------------------------------------------ engine events
 
+## One cue per bench event: the rocker clicks, a part thunks into its holes, a wire zips, a burnt resistor pops and an LED cracks,
+## a failed test buzzes low, a pass chimes and the pay rings up. Recipes in StallSfx.RECIPES.
+func _sound(name: String, data: Dictionary) -> void:
+	if sfx == null: return
+	match name:
+		"power": sfx.play("click")
+		"placed": sfx.play("thunk")
+		"wired": sfx.play("zip", 0.7)
+		"deleted": sfx.play("clack", 0.8)
+		"smoked": sfx.play("crack" if str(data.get("kind", "")) == "LED" else "pop")
+		"bench_failed": sfx.play("bad", 0.8)
+		"paid":
+			sfx.play("chime")
+			if int(data.get("pay", 0)) > 0: get_tree().create_timer(0.45).timeout.connect(func(): sfx.play("kaching", 0.8))
+
+func _flow(dt: float) -> void:
+	var on := cute and backend.powered and mode != "title"
+	var fw := {}
+	if on:
+		for w in backend.frame.get("wires", []): fw[str(w.wid)] = w
+	for id in wires3d:
+		var w: Dictionary = fw.get(id, {})
+		(wires3d[id] as Wire3D).set_flow(float(w.get("i", 0.0)), float(w.get("speed", 0.0)), dt, on and not w.is_empty())
+
+func set_cute(on: bool) -> void:
+	cute = on
+	if not _nosave():
+		var cf := ConfigFile.new(); cf.load("user://look2.cfg"); cf.set_value("look", "cute", on); cf.save("user://look2.cfg")
+	note = "Cute mode on: beads ride every wire that carries current, at the engine's speed." if on else "Cute mode off."
+	changed.emit()
+
+func set_sound(on: bool) -> void:
+	sfx.enabled = on
+	if not _nosave():
+		var cf := ConfigFile.new(); cf.load("user://look2.cfg"); cf.set_value("audio", "sound", on); cf.save("user://look2.cfg")
+	if on: sfx.play("tick")
+	changed.emit()
+
+func _load_sound_pref() -> bool:
+	var cf := ConfigFile.new()
+	return cf.load("user://look2.cfg") != OK or bool(cf.get_value("audio", "sound", true))
+
 func _on_event(name: String, data: Dictionary) -> void:
+	_sound(name, data)
 	match name:
 		"smoked":
 			var n: Part3D = parts3d.get(str(data.uid), null)
@@ -963,7 +1020,10 @@ func _unhandled_input(e: InputEvent) -> void:
 	if e is InputEventMouseButton:
 		var mb := e as InputEventMouseButton
 		var over_tray := {} if not (mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]) else _tray_slot_hit(ray_hit(mb.position))
-		if not over_tray.is_empty():
+		var over_volt := mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and ray_hit(mb.position) == "psu_volt"
+		if over_volt:
+			if mb.pressed: supply_step((1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else -1) * (0.01 if mb.shift_pressed else (1.0 if mb.ctrl_pressed else 0.1)))
+		elif not over_tray.is_empty():
 			if mb.pressed:
 				var fam: Dictionary = over_tray.fam
 				tray_step(_fam_key(fam), fam.items, tray_index(fam) + (1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else -1))
@@ -992,8 +1052,9 @@ func _unhandled_input(e: InputEvent) -> void:
 		if not tsl.is_empty():
 			var t2 := "%s %s: click picks it%s" % [str(tsl.fam.name), str(tsl.item.label).get_slice("  ", 0) if tsl.item.get("value", null) != null else "", ", wheel changes the value" if (tsl.fam.items as Array).size() > 1 else ""]
 			if t2 != hover_tip: hover_tip = t2; changed.emit()
-		elif hid == "psu_output" or hid == "psu_test" or hid == "tray_page":
-			var t3: String = {"psu_output": "OUTPUT: power on or off (Space)", "psu_test": "TEST: run the bench test (Enter)", "tray_page": "Next drawer of parts"}[hid]
+		elif hid == "psu_output" or hid == "psu_test" or hid == "tray_page" or hid == "psu_volt":
+			var t3: String = {"psu_output": "OUTPUT: power on or off (Space)", "psu_test": "TEST: run the bench test (Enter)", "tray_page": "Next drawer of parts",
+				"psu_volt": "VOLTAGE %.2f V: wheel 0.1 V, Shift 0.01 V, Ctrl 1 V" % backend.supply_volts()}[hid]
 			if t3 != hover_tip: hover_tip = t3; changed.emit()
 		elif tool == "select" and _drag == "" and not case_closed(): _set_pick_hl(_pick_item(mm.position))
 		elif hover_tip != "" and _pick_hl.is_empty(): hover_tip = ""; changed.emit()
@@ -1014,6 +1075,7 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_R:
 				if tool == "place": place_rot = (place_rot + 1) % 4; _hover(get_viewport().get_mouse_position())
 			KEY_O: open_case()
+			KEY_C: set_cute(not cute)
 			KEY_H: if backend.passed and not handed: hand_back()
 			KEY_BRACKETLEFT, KEY_BRACKETRIGHT:
 				if tool == "place":
@@ -1240,6 +1302,8 @@ const OPEN_LINE := {
 	"1-3": "Case open. A link wire puts the full 12 V on the heater element. It needs 8 V.",
 	"1-4": "Case open. The load resistor is burnt. Measure the pack before you choose a new one.",
 	"1-5": "Exam rig open. Predict first, then build and probe.",
+	"2-1": "Case open. 5.6 k over 3.3 k into the ADC. Measure OUT with the meter before you swap anything.",
+	"2-3": "Case open. The sealed box sits at the lower left. Meter it: volts open, then amps short. Then set the supply.",
 	"5-1": "Case open. Q1 is burnt, and nothing across the fan catches its turn-off kick.",
 }
 const ARRIVE_LINE := {
@@ -1248,15 +1312,27 @@ const ARRIVE_LINE := {
 	"1-3": "Mr. Brook brought the heater in a bucket. The fish were too warm.",
 	"1-4": "Bo's car crawls. The battery pack came with it.",
 	"1-5": "The exam rig is on the bench. No customer: this one is graded.",
+	"2-1": "Kaya's weather station reads low. Someone sized its divider without the ADC on it.",
+	"2-3": "Tomo's sealed sensor box died. Nobody makes it any more: measure it, then build its twin.",
 	"5-1": "The fan came in with its driver board. Open the case to work on it.",
 }
+## The VOLTAGE knob: steps the bench supply (0 - 15 V, 0.01 V resolution) and says the new setting on the tip line.
+func supply_step(dv: float) -> bool:
+	if backend.supply_volts() <= 0.0 and not backend.bench_q.get("instruments", {}).has("supply"): return false
+	var r: Dictionary = backend.set_supply(backend.supply_volts() + dv)
+	hover_tip = ("VOLTAGE %.2f V" % backend.supply_volts()) if r.ok else str(r.msg)
+	if r.ok and sfx: sfx.play("tick")
+	changed.emit()
+	return bool(r.ok)
+
 func arrival_line() -> String: return str(ARRIVE_LINE.get(ticket_id, "The device is on the bench. Open the case to work on it."))
 
-## The first chapter-1 ticket not yet passed (the campaign's next job), else 1-1.
+## The first bench job not yet passed (the campaign's next job), else 1-1.
 func first_open_ticket() -> String:
 	if not _campaign: return CH1[0]
 	var done := {}
-	for row in backend.progress(1).get("tickets", []): if bool(row.get("done", false)): done[str(row.id)] = true
+	for ch in [1, 2]:
+		for row in backend.progress(ch).get("tickets", []): if bool(row.get("done", false)): done[str(row.id)] = true
 	for id in CH1: if not done.has(id): return id
 	return CH1[0]
 
