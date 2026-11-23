@@ -142,7 +142,7 @@ The first release: the stall, the circuit engine and chapters 1 to 4 (18 tickets
 - The version (v0.1.0) is shown on the title screen.
 
 ### Changed
-- Renamed NODE to CIRCUITS: neon title sign, Godot project name and window title, package name, export presets, app id `in.ixaxaar.cobanana.circuits`, README, docs, site. The repo slug `node-circuits` (engine id, saves, QA harness) and the local folder keep the old name for now.
+- Renamed NODE to CIRCUITS: neon title sign, Godot project name and window title, package name, export presets, app id `tech.blackmetal.circuits`, README, docs, site. The repo slug `node-circuits` (engine id, saves, QA harness) and the local folder keep the old name for now.
 - Layout: long messages on a handheld are a wide four-line card with its page counter in its own row (none needs more than two pages); the speech bubble sits above the customer's head in a band that touches nothing; the customer sits lower; the coin total stays inside the window; the key hints moved to the top of the board (desktop only); the board view zooms to the used region on seven small tickets; every chit grows to hold its spec (fee line dropped when it would not fit); no text under 16 px on screen; shoebox names step down in size, then use a short name.
 - The V+ and GND brass bars on one row no longer cover each other's engraved names.
 - The FIXED stamp hangs below the last line instead of over it.

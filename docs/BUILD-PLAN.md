@@ -3,7 +3,7 @@
 > For the CIRCUITS build director (Opus, level 1). Implementation and serious testing go to Sonnet workers; volume work goes to Haiku.
 > Spec: `DESIGN.md` (authoritative, revised by the review). Review: `REVIEW.md`. Contract: `PROGRAM.md` (user decisions 1-5), `cobanana-core/CORE.md`,
 > `cobanana-scores/docs/API.md`.
-> Repo: this one · title CIRCUITS · app id `in.ixaxaar.cobanana.circuits` · port 47904 · Xvfb :260-:279
+> Repo: this one · title CIRCUITS · app id `tech.blackmetal.circuits` · port 47904 · Xvfb :260-:279
 > (desk testers a..h :261-:268, shot1 :270, ph :271, titles :272, tour :273) · phone `flock …/.locks/phone.lock`, pad `…/.locks/pad.lock`.
 
 ## Rules for every task
@@ -27,7 +27,7 @@ Model key: **S** = Sonnet, **H** = Haiku, **O** = the director (Opus).
 ## M0: scaffold from core (half a day)
 | task | model | deliverable | acceptance |
 |---|---|---|---|
-| M0-1 | O | `cobanana-core/scaffold/new-game.sh node-circuits CIRCUITS in.ixaxaar.cobanana.circuits 47904`; set `qa.env` (`CB_DISP_BASE=260`); keep the template tank as a smoke fixture until M1 replaces it | `pnpm typecheck && pnpm test` green; `CB_SMOKE=1 godot --headless --path godot` prints `SMOKE OK`; first commit |
+| M0-1 | O | `cobanana-core/scaffold/new-game.sh node-circuits CIRCUITS tech.blackmetal.circuits 47904`; set `qa.env` (`CB_DISP_BASE=260`); keep the template tank as a smoke fixture until M1 replaces it | `pnpm typecheck && pnpm test` green; `CB_SMOKE=1 godot --headless --path godot` prints `SMOKE OK`; first commit |
 | M0-2 | S | Skeleton: `src/regions/{index,global,in,na}` (core `defineRegion`; `global` shipping, `in` draft with the Appendix A strings and `leakMarkers`, `na` test-only); `src/locales/en.ts`; the `NodeState` type (§8.3) with `newGame`, empty actions, a `snapshot` override; the `regions.test.ts` pattern from the template | Template region tests pass with three packs; leak test green; `state.size.test.ts` scaffolded |
 
 ## Gate 0: week-1 go/no-go spike (in parallel with M1 lane A; no M2 work starts until it is GO)
