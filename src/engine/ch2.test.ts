@@ -6,17 +6,19 @@ import { GAME } from '../game';
 import { LEVEL_DEFS } from '../data/levels';
 import { eseries } from '../data/eseries';
 import { solveCards } from '../sim/oracles/util';
-import { refActions } from './replay';
+import { clearFaultActions, refActions } from './replay';
 import { newTicketProgress, type NodeState } from './state';
 
 const def = (id: string) => LEVEL_DEFS.find((d) => d.id === id)!;
 /** A fresh engine with the earlier tickets passed (so `id` is unlocked), the ticket open. */
-function open(id: string, passed: string[] = ['1-4', '2-1', '2-2'], mode = 'learner'): Engine<NodeState> {
+function open(id: string, passed: string[] = ['1-4', '2-1', '2-2'], mode = 'learner', clear = true): Engine<NodeState> {
   const e = new Engine(GAME, { mode }); e.autosave = false;
   const st = structuredClone(e.state) as NodeState;
   for (const d of passed) st.progress.tickets[d] = { ...newTicketProgress(), passed: true, stars: 1 };
   e.setState(st);
   expect(e.act('openTicket', [id]).ok, `open ${id}`).toBe(true);
+  // a repair ticket (2-1 since phase C) arrives with the customer's board: the player clears the old work first, as in ch1.test
+  if (clear) for (const a of clearFaultActions(LEVEL_DEFS.find((d) => d.id === id)!)) expect(e.act(a.name, a.args ?? []).ok, `${a.name} ${String(a.args)}`).toBe(true);
   return e;
 }
 const st = (e: Engine<NodeState>): NodeState => e.state as NodeState;
@@ -25,7 +27,7 @@ const bad = (e: Engine<NodeState>, name: string, ...args: unknown[]) => { const 
 const q = (e: Engine<NodeState>, name: string, ...args: unknown[]) => e.q(name, args) as any;
 const bench = (e: Engine<NodeState>) => { ok(e, 'runBench'); return q(e, 'benchResult'); };
 const spec = (b: any, id: string) => b.specs.find((x: any) => x.id === id);
-const runRef = (e: Engine<NodeState>, id: string) => { for (const a of refActions(def(id)).filter((x) => x.name !== 'runBench' && x.name !== 'power' && x.name !== 'advance')) ok(e, a.name, ...(a.args ?? [])); };
+const runRef = (e: Engine<NodeState>, id: string) => { for (const a of refActions(def(id)).slice(clearFaultActions(def(id)).length).filter((x) => x.name !== 'runBench' && x.name !== 'power' && x.name !== 'advance')) ok(e, a.name, ...(a.args ?? [])); };
 const powerUp = (e: Engine<NodeState>, frames = 3) => { ok(e, 'power', true); return ok(e, 'advance', frames); };
 const galvo = (e: Engine<NodeState>) => q(e, 'liveFrame').parts.find((p: any) => p.galvo).galvo;
 const texts = (b: any): string => b.failures.map((f: any) => f.text).join(' | ');
@@ -283,7 +285,7 @@ describe('2-4 EB: Slide-wire Potentiometer', () => {
 describe('chapter 2 as a whole', () => {
   it('every ticket 2-x replays its reference through the player actions and passes', () => {
     for (const id of ['2-1', '2-2', '2-3', '2-4']) {
-      const e = open(id, ['1-4', '2-1', '2-2', '2-3']);
+      const e = open(id, ['1-4', '2-1', '2-2', '2-3'], 'learner', false);   // as it arrives: the replay clears the customer's board itself
       for (const a of refActions(def(id))) { if (a.name === 'advance') continue; ok(e, a.name, ...(a.args ?? [])); }
       expect(q(e, 'benchResult').pass, id).toBe(true);
     }

@@ -16,9 +16,11 @@ export const ARRIVES: Record<string, string> = {
   '1-2': 'Three LEDs in series on one resistor, too dim to be seen.',
   '1-3': 'A link wire puts the full 12 V on the heater element. It needs 8 V.',
   '1-4': 'The load resistor is burnt.',
+  '2-1': 'A divider sized without the ADC on it: 5.6 kilohm over 3.3 kilohm reads 2.76 V, not 3.3 V.',
+  '2-3': 'A sealed module nobody makes any more. Measure it, then build its twin.',
   '5-1': 'Q1 is burnt, and nothing across the fan catches its turn-off kick.',
 };
-const NEW_LOOK = new Set(['1-1', '1-2', '1-3', '1-4', '1-5', '5-1']);
+const NEW_LOOK = new Set(['1-1', '1-2', '1-3', '1-4', '1-5', '2-1', '2-3', '5-1']);
 
 function page(title: string, desc: string, body: string): string {
   return `<!doctype html>

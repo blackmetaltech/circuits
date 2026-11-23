@@ -9,7 +9,7 @@ import { partPrice } from './metrics';
 import { REGIONS } from '../regions';
 
 const def = (id: string) => LEVEL_DEFS.find((d) => d.id === id)!;
-const REPAIRS = ['1-1', '1-2', '1-3', '1-4', '5-1'];
+const REPAIRS = ['1-1', '1-2', '1-3', '1-4', '2-1', '5-1'];   // 2-1 since 0.4.0 (D-bench-ch2 delivered): the weather station arrives with its unloaded divider
 function open(id: string): Engine<NodeState> {
   const e = new Engine(GAME, { mode: 'learner' }); e.autosave = false;
   const st = structuredClone(e.state) as NodeState;
@@ -22,7 +22,7 @@ const ok = (e: Engine<NodeState>, name: string, ...args: unknown[]) => { const r
 const tk = (e: Engine<NodeState>) => (e.state as NodeState).ticket!;
 
 describe('repair tickets arrive faulty', () => {
-  it('exactly the five repair tickets carry a faulty board; the exam and the other chapters do not', () => {
+  it('exactly the six repair tickets carry a faulty board; the exam and the other chapters do not', () => {
     expect(LEVEL_DEFS.filter((d) => d.fault).map((d) => d.id)).toEqual(REPAIRS);
   });
   it.each(REPAIRS.map((id) => [id]))('%s: the board arrives as the customer left it, it fails the bench, and the ref replay from the arrival passes', (id) => {

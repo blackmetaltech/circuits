@@ -135,7 +135,7 @@ export const en: Record<string, string> = {
   'err.unwire.none': 'There is no wire ending at that spot.',
   // chapter 2 "Divide & Measure" (tickets 2-1 .. 2-4)
   'ticket.2-1.title': 'Sensor Reference',
-  'ticket.2-1.brief': "{customer}'s weather station reads its sensors with a converter chip (the ADC). The chip's input pin needs 3.3 V, give or take 2 %, and it behaves like a 10 kilohm resistor to ground, soldered between OUT and GND. The bench supply gives 9 V. Build a voltage divider from IN down to GND with OUT in the middle, so that OUT is 3.3 V with the ADC attached. {mentor}: the divider formula in your head forgets the load, and the load is part of the circuit. A low-power divider earns the extra star.",
+  'ticket.2-1.brief': "{customer}'s weather station reads its sensors with a converter chip (the ADC). The chip's input pin needs 3.3 V, give or take 2 %, and it behaves like a 10 kilohm resistor to ground, soldered between OUT and GND. The bench supply gives 9 V. It came in with a divider already on, 5.6 kilohm over 3.3 kilohm, and it reads low. Measure OUT, then fix the divider from IN down to GND with OUT in the middle, so that OUT is 3.3 V with the ADC attached. {mentor}: the divider formula in your head forgets the load, and the load is part of the circuit. A low-power divider earns the extra star.",
   'ticket.2-1.short': 'OUT 3.23-3.37 V, ADC attached',
   'ticket.2-1.thanks.exact': 'Dead on: {v} volts.',
   'ticket.2-1.thanks.near': 'In the band: {v} volts.',

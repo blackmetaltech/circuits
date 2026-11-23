@@ -20,6 +20,8 @@ export const L2_1: LevelDef = {
     ],
   },
   fixed: [{ uid: 'f1', partId: 'adc-in', value: null, variant: '10k', x: 14, y: 2, rot: 1, flip: false, fixed: true }],
+  // the station arrives with the divider its builder sized unloaded: 5.6k over 3.3k gives 3.34 V open but 2.76 V with the 10 k ADC hung on it (phase C: devices arrive faulty)
+  fault: { parts: [{ partId: 'res-cf', value: 5600, variant: '0.25W', x: 4, y: 2, rot: 0, flip: false }, { partId: 'res-cf', value: 3300, variant: '0.25W', x: 8, y: 4, rot: 1, flip: false }], wires: [[[2, 2], [4, 2]], [[8, 2], [14, 2]], [[8, 4], [8, 2]], [[8, 8], [14, 8]]], smoked: [] },
   supplies: [{ id: 'psu', kind: 'bench', plus: 'IN', minus: 'GND' }],
   instruments: { supply: { v: 9, ilim: 0.5 }, scope: { timePerDiv: 1e-3, voltsPerDiv: [0.8, 1] } },
   bin: [{ partId: 'res-cf', values: eseries('E12', 1e3, 1e5), variants: ['0.25W'] }],

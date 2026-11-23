@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Engine } from '@core/kit';
 import { GAME } from '../game';
 import { LEVEL_DEFS } from '../data/levels';
-import { refActions } from './replay';
+import { clearFaultActions, refActions } from './replay';
 import { newTicketProgress, type NodeState } from './state';
 
 const def = (id: string) => LEVEL_DEFS.find((d) => d.id === id)!;
@@ -14,12 +14,14 @@ function open(id: string, passed: string[] = ['1-4', '2-1', '2-2', '2-3']): Engi
   for (const d of passed) st.progress.tickets[d] = { ...newTicketProgress(), passed: true, stars: 1 };
   e.setState(st);
   expect(e.act('openTicket', [id]).ok, `open ${id}`).toBe(true);
+  // a repair ticket (2-1 since phase C) arrives with the customer's board: the player clears the old work first, as in ch1.test
+  for (const a of clearFaultActions(LEVEL_DEFS.find((d) => d.id === id)!)) expect(e.act(a.name, a.args ?? []).ok, `${a.name} ${String(a.args)}`).toBe(true);
   return e;
 }
 const ok = (e: Engine<NodeState>, name: string, ...args: unknown[]) => { const r = e.act(name, args); expect(r.ok, `${name} ${JSON.stringify(args)}: ${r.message}`).toBe(true); return r; };
 const q = (e: Engine<NodeState>, name: string, ...args: unknown[]) => e.q(name, args) as any;
 const bench = (e: Engine<NodeState>) => { ok(e, 'runBench'); return q(e, 'benchResult'); };
-const runRef = (e: Engine<NodeState>, id: string) => { for (const a of refActions(def(id)).filter((x) => x.name !== 'runBench' && x.name !== 'power' && x.name !== 'advance')) ok(e, a.name, ...(a.args ?? [])); };
+const runRef = (e: Engine<NodeState>, id: string) => { for (const a of refActions(def(id)).slice(clearFaultActions(def(id)).length).filter((x) => x.name !== 'runBench' && x.name !== 'power' && x.name !== 'advance')) ok(e, a.name, ...(a.args ?? [])); };
 const texts = (b: any): string => b.failures.map((f: any) => f.text).join(' | ');
 const allCoach = (e: Engine<NodeState>): string => q(e, 'coach').steps.map((s: any) => s.text).join(' | ');
 
