@@ -69,15 +69,13 @@ func fill(fams: Array, idx_of: Callable, held: Dictionary) -> void:
 		var floor_m := MeshKit.mat(Color(0.95, 0.62, 0.18) if active else Color(0.12, 0.22, 0.27), 0.6, 0.0, {"normal": 0.0, "emission": Color(0.95, 0.55, 0.12), "emission_energy": 0.6 if active else 0.0})
 		_rims.append(MeshKit.add(cell, MeshKit.rounded_box(Vector3(CW - WALL * 1.5, 0.0008, CD - WALL * 1.5), 0.0006, 1), floor_m, Vector3(0, 0.0004, 0)))
 		# 0.4.1 (Sigrid): a printed paper tab on the compartment's front wall, tilted up to the bench camera, instead of a label floating
-		# beside the box. The value is large (7 mm: about 16 px cap at 1280x800 in view 1), the price small; the name is on the hover tip.
+		# beside the box. The value is large (7 mm: about 16 px cap at 1280x800 in view 1); the name and the price are on the hover tip
+		# (0.5: a price line small enough to fit the tab was 8 px on screen, under the 16 px floor).
 		var tab := Node3D.new(); tab.position = Vector3(0, H + 0.001, CD * 0.5 - WALL * 0.2); tab.rotation_degrees.x = -45.0; cell.add_child(tab)
 		MeshKit.add(tab, MeshKit.rounded_box(Vector3(CW - WALL * 1.6, 0.0135, 0.0006), 0.0008, 1), MeshKit.mat(Color(0.93, 0.90, 0.80), 0.85, 0.0, {"normal": 0.0}), Vector3(0, 0.0, 0))
 		var big := Label3D.new(); big.text = _tab_value(fam, it); big.font = load(Instruments3D.FONT_UI)
 		big.font_size = 64; big.pixel_size = 0.00011; big.modulate = Color(0.08, 0.08, 0.09); big.outline_size = 0
 		big.position = Vector3(0, 0.0022, 0.0005); big.double_sided = false; tab.add_child(big); _labels.append(big)
-		var small := Label3D.new(); small.text = ("‹ %s ›" % str(it.get("price_text", ""))) if items.size() > 1 else str(it.get("price_text", "")); small.font = load(Instruments3D.FONT_UI)
-		small.font_size = 64; small.pixel_size = 0.00005; small.modulate = Color(0.30, 0.28, 0.24); small.outline_size = 0
-		small.position = Vector3(0, -0.0042, 0.0005); small.double_sided = false; tab.add_child(small); _labels.append(small)
 		Instruments3D.hit(cell, "tray:%d" % s, Vector3(CW - WALL, H, CD - WALL), Vector3(0, H * 0.5, 0))
 	if pages > 1:
 		var tab := Node3D.new(); tab.position = Vector3(0, 0, d * 0.5 + 0.016); _content.add_child(tab)

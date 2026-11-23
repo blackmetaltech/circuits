@@ -19,9 +19,10 @@ var _powered := true
 
 class Screen extends Control:
 	const GX0 := 20.0
-	const GY0 := 40.0
+	const GY0 := 84.0   ## 0.5: the bars above and below the grid hold 62 px type (16 px on screen at 1280x800 in view 1)
+	const FS := 62
 	const DIVW := 76.0
-	const DIVH := 48.0
+	const DIVH := 39.0
 	var samples: Array = []
 	var dt := 78e-6
 	var vdiv := 5.0
@@ -47,9 +48,15 @@ class Screen extends Control:
 	func _vy(v: float) -> float: return clampf(_gy() - v / vdiv * DIVH, GY0 - 2.0, GY0 + 8.0 * DIVH + 2.0)
 
 	static func _fmt_t(t: float) -> String:
-		if t >= 1.0: return "%.2f s/div" % t
-		if t >= 1e-3: return "%.2f ms/div" % (t * 1e3)
-		return "%.2f us/div" % (t * 1e6)
+		if t >= 1.0: return "%s s/div" % _trim(t)
+		if t >= 1e-3: return "%s ms/div" % _trim(t * 1e3)
+		return "%s us/div" % _trim(t * 1e6)
+
+	## 2.00 -> "2", 0.50 -> "0.5": the bar has room for short numbers only.
+	static func _trim(x: float) -> String:
+		var s := "%.2f" % x
+		while s.contains(".") and (s.ends_with("0") or s.ends_with(".")): s = s.substr(0, s.length() - 1)
+		return s
 
 	func _draw() -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0.012, 0.014, 0.016))
@@ -89,7 +96,6 @@ class Screen extends Control:
 		# ground marker
 		var gy := _gy()
 		draw_colored_polygon(PackedVector2Array([Vector2(GX0 - 16, gy - 7), Vector2(GX0 - 3, gy), Vector2(GX0 - 16, gy + 7)]), Color(1.0, 0.87, 0.14))
-		draw_string(_mono, Vector2(GX0 - 14, gy + 5), "1", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.05, 0.05, 0.05))
 		# off-scale capture
 		if cap:
 			var x := GX0 + cap_t * 10 * DIVW
@@ -98,28 +104,24 @@ class Screen extends Control:
 			draw_line(Vector2(x, gy), Vector2(x, GY0 + 22), Color(red.r, red.g, red.b, 0.5), 5.0, true)
 			draw_line(Vector2(x, gy), Vector2(x, GY0 + 22), Color(1.0, 0.45, 0.38), 2.0, true)
 			draw_colored_polygon(PackedVector2Array([Vector2(x, GY0 + 2), Vector2(x - 11, GY0 + 24), Vector2(x + 11, GY0 + 24)]), red)
-			var txt := "%d V peak (off scale)   Vceo %d V" % [int(round(cap_peak)), int(round(cap_limit))]
-			var tw := _mono.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 19).x
+			var txt := "%d V peak" % int(round(cap_peak))   # the rating it broke is in the failure explanation
+			var tw := _ui.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, FS).x
 			var tx := x + 18 if x + 18 + tw < GX0 + 10 * DIVW - 4 else x - 18 - tw
-			draw_string(_mono, Vector2(tx + 1, GY0 + 36), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(0, 0, 0, 0.8))
-			draw_string(_mono, Vector2(tx, GY0 + 35), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color(1.0, 0.32, 0.26))
-		# top status bar
-		draw_rect(Rect2(0, 0, 800, 31), Color(0.055, 0.065, 0.075))
-		draw_line(Vector2(0, 31), Vector2(800, 31), Color(0.25, 0.28, 0.3), 1.0)
+			draw_string(_ui, Vector2(tx + 2, GY0 + 64), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, FS, Color(0, 0, 0, 0.85))
+			draw_string(_ui, Vector2(tx, GY0 + 62), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, FS, Color(1.0, 0.32, 0.26))
+		# top bar: a run/stop badge (colour, no word), time per division, volts per division (yellow: CH1)
+		draw_rect(Rect2(0, 0, 800, 78), Color(0.055, 0.065, 0.075))
+		draw_line(Vector2(0, 78), Vector2(800, 78), Color(0.25, 0.28, 0.3), 1.0)
 		var stopped := status.begins_with("STOP")
 		var badge := Color(0.78, 0.16, 0.13) if stopped else (Color(0.16, 0.62, 0.28) if status.begins_with("RUN") else Color(0.85, 0.6, 0.12))
-		var sw := _mono.get_string_size(status, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
-		draw_rect(Rect2(8, 5, sw + 16, 21), badge)
-		draw_string(_mono, Vector2(16, 21), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.97, 0.97, 0.97))
-		draw_string(_mono, Vector2(0, 21), _fmt_t(tdiv), HORIZONTAL_ALIGNMENT_CENTER, 800, 16, Color(0.82, 0.86, 0.88))
-		draw_rect(Rect2(574, 5, 218, 21), Color(0.19, 0.17, 0.05))
-		draw_string(_mono, Vector2(582, 21), "CH1 %.2f V/div" % vdiv, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1.0, 0.87, 0.14))
-		# bottom measurement strip
-		draw_rect(Rect2(0, 430, 800, 50), Color(0.055, 0.065, 0.075))
-		draw_line(Vector2(0, 430), Vector2(800, 430), Color(0.25, 0.28, 0.3), 1.0)
-		for i in mini(lines.size(), 4):
-			var cx := 14.0 + i * 196.0
-			draw_string(_mono, Vector2(cx, 462), str(lines[i]), HORIZONTAL_ALIGNMENT_LEFT, 190, 17, Color(0.96, 0.9, 0.55) if i % 2 == 0 else Color(0.8, 0.9, 0.95))
+		draw_circle(Vector2(30, 39), 15, badge)
+		draw_string(_ui, Vector2(62, 61), _fmt_t(tdiv), HORIZONTAL_ALIGNMENT_LEFT, -1, FS, Color(0.86, 0.9, 0.92))
+		draw_string(_ui, Vector2(0, 61), "%s V/div" % _trim(vdiv), HORIZONTAL_ALIGNMENT_RIGHT, 786, FS, Color(1.0, 0.87, 0.14))
+		# bottom strip: the first two measurements (max, min), as large as the bar above
+		draw_rect(Rect2(0, 402, 800, 78), Color(0.055, 0.065, 0.075))
+		draw_line(Vector2(0, 402), Vector2(800, 402), Color(0.25, 0.28, 0.3), 1.0)
+		for i in mini(lines.size(), 2):
+			draw_string(_ui, Vector2(14.0 + i * 400.0, 463), str(lines[i]), HORIZONTAL_ALIGNMENT_LEFT, 380, FS, Color(0.96, 0.9, 0.55) if i == 0 else Color(0.8, 0.9, 0.95))
 
 func _init() -> void:
 	var body := MeshKit.mat(Color(0.115, 0.12, 0.128), 0.5, 0.0, {"normal": 0.12})

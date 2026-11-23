@@ -820,7 +820,7 @@ func _live(dt: float) -> void:
 		if not v.is_empty():
 			var mx := -1e9; var mn := 1e9
 			for x in v: mx = maxf(mx, float(x)); mn = minf(mn, float(x))
-			lines = ["Vmax %s V" % EngineBench._g(mx, 3), "Vmin %s V" % EngineBench._g(mn, 3)]
+			lines = ["max %s V" % EngineBench._g(mx, 3), "min %s V" % EngineBench._g(mn, 3)]
 			if sel == "100 Hz": lines.append("Freq 100 Hz")
 		_call(scope, "set_measure", [lines])
 	for s in smoke_fx:
@@ -1070,7 +1070,7 @@ func _unhandled_input(e: InputEvent) -> void:
 		var hid := ray_hit(mm.position) if _drag == "" else ""
 		var tsl := _tray_slot_hit(hid)
 		if not tsl.is_empty():
-			var t2 := "%s %s: click picks it%s" % [str(tsl.fam.name), str(tsl.item.label).get_slice("  ", 0) if tsl.item.get("value", null) != null else "", ", wheel changes the value" if (tsl.fam.items as Array).size() > 1 else ""]
+			var t2 := "%s %s, %s each: click picks it%s" % [str(tsl.fam.name), str(tsl.item.label).get_slice("  ", 0) if tsl.item.get("value", null) != null else "", str(tsl.item.get("price_text", "")), ", wheel changes the value" if (tsl.fam.items as Array).size() > 1 else ""]
 			if t2 != hover_tip: hover_tip = t2; changed.emit()
 		elif hid == "psu_output" or hid == "psu_test" or hid == "tray_page" or hid == "psu_volt":
 			var t3: String = {"psu_output": "OUTPUT: power on or off (Space)", "psu_test": "TEST: run the bench test (Enter)", "tray_page": "Next drawer of parts",

@@ -179,7 +179,14 @@ func _paper(pos: Vector2, w: float) -> VBoxContainer:
 	return v
 
 func _ink(parent: Node, text: String, size := 19, col := INK, font: Font = null, wrap := true) -> Label:
-	return _lab(parent, text, size, col, font if font else f_type, wrap)
+	return _lab(parent, nb_units(text), size, col, font if font else f_type, wrap)
+
+## A number keeps its unit on the same line: "2 %" never wraps as "2 / %" (Sigrid, 0.4.1 at 1280x800). The space after a digit
+## becomes a no-break space when a unit follows (%, V, A, ohm, W, F, H, Hz, s with an SI prefix); "E1 and E2" is left alone.
+static var _re_nb: RegEx
+static func nb_units(text: String) -> String:
+	if _re_nb == null: _re_nb = RegEx.create_from_string("(\\d) (?=(?:%|[kMmµun]?(?:Hz|ohm|V|A|Ω|W|F|H|s))(?![A-Za-z]))")
+	return _re_nb.sub(text, "$1\u00a0", true)
 
 class Stamp extends Control:
 	var text := "PASSED"

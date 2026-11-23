@@ -77,7 +77,7 @@ func _run() -> void:
 			var boxes := wb.find_children("*", "LineEdit", true, false)
 			ok(boxes.size() == 2, "the exam ticket has a box per prediction (%d)" % boxes.size())
 			var says := false
-			for lb in wb.find_children("*", "Label", true, false): if (lb as Label).text.contains("R3 = 6 ohm"): says = true
+			for lb in wb.find_children("*", "Label", true, false): if (lb as Label).text.replace("\u00a0", " ").contains("R3 = 6 ohm"): says = true   # numbers carry a no-break space before their unit (0.5)
 			ok(says, "the exam ticket states the network to predict (R1, R2, R3, E1, E2)")
 			wb.run_test(); await _frames(2)
 			ok(not wb.backend.passed and wb.note.begins_with("Predict first"), "the bench asks for predictions first: %s" % wb.note)
