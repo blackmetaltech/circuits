@@ -11,7 +11,7 @@ Customers bring broken devices to your bench. Open them, measure them, swap the 
 | | |
 |---|---|
 | ![](docs/readme/wb-flash-3-1.jpg)<br>**3-1 Flash timer, fixed.** The scope shows the charge curve crossing 63 % at one second. | ![](docs/readme/wb-testbed-dimmer.gif)<br>**Testbed: lamp dimmer.** Turn the knob and the strip current climbs from 0 mA. |
-| ![](docs/readme/wb-wallwart-4-1.jpg)<br>**4-1 Wall wart.** Simulated mains behind an isolation transformer. The safety card comes first. | ![](docs/readme/wb-thermal-4-3.jpg)<br>**4-3 Hot regulator.** The thermal camera: the 7805 at 87 C, the spare at room temperature. |
+| ![](docs/readme/wb-wallwart-4-1.jpg)<br>**4-1 Wall wart.** Simulated mains behind an isolation transformer. The safety card comes first. | ![](docs/readme/wb-thermal-4-3.jpg)<br>**4-3 Hot regulator.** The thermal camera on: the regulator and the load glow warm, the spare stays cool. Hottest part: 81 C. |
 | ![](docs/readme/wb-strip-5-2.jpg)<br>**5-2 3.3 V gate.** A logic-level MOSFET drives the 12 V strip from a 3.3 V pin. | ![](docs/readme/wb-igpu-low-5-1.jpg)<br>**Low tier on an integrated GPU.** 5-1 averages 17 ms a frame on a Radeon iGPU. |
 | ![](docs/readme/wb-swap-3-1.gif)<br>**3-1 Flash timer.** It arrives with a 22 µF capacitor. The wheel steps it to 100 µF, and it passes. | ![](docs/readme/wb-testbed-fan.gif)<br>**Testbed.** Pull the fan driver's flyback diode. The coil kicks to 2000 V and the transistor dies. |
 | ![](docs/readme/wb-relay-3-3.jpg)<br>**3-3 Relay pull-in.** The relay never clicks. The customer is waiting, and a first-test fix earns a tip. | ![](docs/readme/wb-cable-2-2.jpg)<br>**2-2 Cable fault.** Slide the jockey until the needle sits on zero. |
