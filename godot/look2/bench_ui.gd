@@ -598,6 +598,7 @@ func _tools() -> void:
 	if bench.mode == "job": _key(h, "Test", func(): bench.run_test(), "Enter", false)
 	for sl in bench.backend.selectors:
 		if str(sl.id) == "pin": continue   # the pin switch is on the microcontroller board (click it); not a rail key
+		if bench.mode == "free" and not Testbed.device(str(bench.testbed_device)).get("board", "").is_empty(): continue   # Sigrid: 5-2's THRESHOLD keys showed on the dimmer
 		var sll := _eng(h, str(sl.get("label", "")), 13); sll.size_flags_vertical = Control.SIZE_SHRINK_CENTER   # 4-1 has two: which keys are MAINS and which LOAD
 		var opts: Array = sl.options
 		for i in opts.size():

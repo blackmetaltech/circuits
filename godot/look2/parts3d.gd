@@ -427,7 +427,7 @@ func set_heat(k: float) -> void:
 func set_strip(k: float) -> void:
 	for mi in anim.get("strip", []):
 		var m := (mi as MeshInstance3D).get_active_material(0) as StandardMaterial3D
-		if m: m.emission_energy_multiplier = clampf(k, 0.0, 1.0) * 6.0
+		if m: m.emission_energy_multiplier = sqrt(clampf(k, 0.0, 1.0)) * 6.0   # 0.6: the eye's response; 85 mA on the dimmer read as dark
 
 ## Chapter 4's thermal camera: the part's body in false colour from the engine's temperature (tc in degrees C; below 0 is off,
 ## and the next set_heat puts the normal look back).

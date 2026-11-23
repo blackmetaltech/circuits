@@ -61,6 +61,7 @@ static func load_device(wb, id: String) -> bool:
 	var d := device(id)
 	if d.is_empty(): return false
 	wb.start_free()
+	wb.testbed_device = id   # before any sync: the cables read it (Sigrid's dimmer shot had 5-1's PIN lead hanging to the mat)
 	var b = wb.backend
 	b.set_power(false)
 	if not b.open_ticket(str(d.ticket)): return false
@@ -79,8 +80,8 @@ static func load_device(wb, id: String) -> bool:
 	b._act("setRunning", [true])
 	wb.testbed_device = id; wb.testbed_paused = false
 	wb._layout_for_ticket()   # the fan and the microcontroller stand on the bench only for the fan driver
-	wb.note = "%s. %s" % [str(d.name), str(d.what)]
-	wb.sync_board(); wb.changed.emit()
+	wb.note = "%s loaded. Space powers it." % str(d.name)   # Sigrid: the card already says what it is; the note repeated it word for word
+	wb.sync_board(); wb._cables(); wb.changed.emit()
 	return ok
 
 ## Apply break `brk` of the loaded device. Returns false if an edit was refused (the note says why).

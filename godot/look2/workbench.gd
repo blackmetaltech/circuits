@@ -1727,9 +1727,18 @@ func live_specs() -> Dictionary:
 		if uid == "": continue
 		var fp: Dictionary = backend._frame_part(uid)
 		if fp.is_empty(): continue
-		var amps := backend.led_current(uid) if fp.has("led") else backend.part_current(uid)
-		out[str(s.id)] = BenchUI.si(amps, "A")
+		var amps := backend.led_current(uid) if fp.has("led") else (float(fp.pins[0].i) if fp.has("pins") and (fp.pins as Array).size() > 0 else 0.0)
+		out[str(s.id)] = BenchUI.si(_shown_current(str(s.id), amps), "A")
 	return out
+
+## Ravi (0.6): a current shows as its size only when the spec's whole band is at or below zero (1-2's battery: -25 mA .. 0, current
+## into its plus terminal while it delivers). A band that crosses zero keeps the sign, because the sign is the lesson there (2-2's
+## galvanometer either side of balance, 5-2's strip when off).
+func _shown_current(id: String, amps: float) -> float:
+	for src in [backend.card, backend.ticket]:
+		for tg in (src as Dictionary).get("targets", []):
+			if str(tg.get("id", "")) == id and tg.get("hi", null) != null: return -amps if float(tg.hi) <= 0.0 else amps
+	return amps
 
 static var _re_ip: RegEx
 static func _re_ipart() -> RegEx:
@@ -1757,7 +1766,7 @@ func spec_text(id: String, v: float) -> String:
 	for s in backend.ticket.get("specs", []): if str(s.id) == id: nm = str(s.get("name", "")).to_lower(); eu = str(s.get("unit", ""))
 	var g = backend.card.get("gauge", null)
 	if eu == "" and g is Dictionary and str(g.get("spec", "")) == id: eu = str(g.get("unit", ""))
-	if eu == "A": v = absf(v)   # a current is shown as its size (the battery's terminal current is negative when it delivers)
+	if eu == "A": v = _shown_current(id, v)   # Ravi: the size only where the band is all at or below zero (1-2's battery)
 	if eu != "" and id != "ipin": return BenchUI.si(v, eu)   # the engine's own unit (level probe or gauge): 2-1 printed "3.27 W" when "with" matched " w"
 	var words := nm.replace(",", " ").replace("(", " ").replace(")", " ").split(" ", false)
 	var unit := "V"
@@ -1849,6 +1858,21 @@ func _demo(name: String) -> void:
 		"testbed":   # 0.5: the fan driver switching at 100 Hz; the flyback diode comes out; the coil's kick burns the transistor
 			at.call(0.6, func(): backend.set_selector("pin", 2); if not backend.powered: toggle_power())
 			at.call(3.2, func(): Testbed.apply_break(self, "no_diode"))
+		"dimmer":   # 0.6 testbed (CB_L2=testbed CB_TESTBED=dimmer): power; the knob turns from 10 % to full; the strip brightens
+			at.call(0.4, func(): set_view(5))
+			at.call(0.9, func(): if not backend.powered: toggle_power())
+			var pot := ""
+			for p in backend.parts: if str(p.partId) == "pot-panel": pot = str(p.uid)
+			for i in 19: at.call(1.4 + i * 0.3, func():
+				var a := 0.1 + 0.05 * i
+				backend._act("setPot", [pot, a]); pot_alpha[pot] = a
+				var pn = parts3d.get(pot, null)
+				if pn: pn.set_knob(a)
+				note = "Knob at %d %%. Strip current %.0f mA." % [int(round(a * 100)), absf(backend.part_current("f1")) * 1000.0]; changed.emit())
+		"thermal43":   # 0.6: 4-3 with the reference built; power, half an amp, the thermal camera shows the 7805 heating
+			at.call(0.4, func(): open_case(); backend.build_ref(ticket_id); sync_board(); set_view(5))
+			at.call(1.0, func(): if not backend.powered: toggle_power())
+			at.call(1.6, func(): toggle_thermal())
 		"burn":   # the arrived-burnt LED is named as the customer's; Ctrl+Z fits a fresh one; still straight on 9 V, it burns and is billed
 			at.call(0.5, func(): set_view(5))
 			at.call(1.2, func(): toggle_power())

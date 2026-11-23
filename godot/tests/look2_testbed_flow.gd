@@ -88,6 +88,7 @@ func _run() -> void:
 	Testbed.apply_break(wb, "no_cap"); Testbed.set_running(wb, true); await _frames(40)
 	ok(not wb.backend.parts.any(func(p): return str(p.partId) == "cap-el"), "break: the smoothing capacitor comes out")
 	ok(Testbed.load_device(wb, "dimmer"), "the lamp dimmer loads on 5-2's bench")
+	ok(wb.note == "Lamp dimmer loaded. Space powers it.", "the note does not repeat the card: %s" % wb.note)
 	var pot := ""
 	for p in wb.backend.parts: if str(p.partId) == "pot-panel": pot = str(p.uid)
 	ok(pot != "" and wb.backend.parts.any(func(p): return str(p.partId) == "tip120"), "the knob and the transistor are on the board")
@@ -98,12 +99,27 @@ func _run() -> void:
 	ok(i_full > i_dim + 0.05, "turning the knob up raises the strip current (%.3f A -> %.3f A)" % [i_dim, i_full])
 	Testbed.apply_break(wb, "wiper_off"); Testbed.set_running(wb, true); await _frames(60)
 	ok(wb.backend.part_current("f1") < 0.005, "wiper wire off: the strip goes dark (%.4f A)" % wb.backend.part_current("f1"))
+	await _frames(2)
+	ok(not wb.mcu.visible and wb.cables_root.get_child_count() == 8, "the dimmer's bench has only the supply's two leads, no microcontroller lead (%d cable meshes)" % wb.cables_root.get_child_count())
 	ok(Testbed.load_device(wb, "relay_timer"), "the relay timer loads on 1-3's bench")
 	await _power_and_run(10)
 	var early: bool = bool(wb.backend.frame.get("parts", []).any(func(p): return p.has("relay") and bool(p.relay.get("operated", false))))
 	for i in 120: wb.backend.step(0.05); await process_frame
 	var late: bool = bool(wb.backend.frame.get("parts", []).any(func(p): return p.has("relay") and bool(p.relay.get("operated", false))))
 	ok(not early and late and _smoked_ids().is_empty(), "the relay waits, then pulls in, and nothing burns (early %s, late %s, t %.2f s)" % [str(early), str(late), _t()])
+	# a fresh board with the bigger capacitor (with the power off, the charged 220 uF has no path to discharge)
+	Testbed.load_device(wb, "relay_timer"); Testbed.apply_break(wb, "big_c"); Testbed.set_running(wb, true)
+	if not wb.backend.powered: wb.toggle_power()
+	var tb0 := _t()
+	for i in 400:
+		if _t() - tb0 >= 2.5: break
+		wb.backend.step(0.05); await process_frame
+	var at2: bool = bool(wb.backend.frame.get("parts", []).any(func(p): return p.has("relay") and bool(p.relay.get("operated", false))))
+	for i in 400:
+		if _t() - tb0 >= 5.5: break
+		wb.backend.step(0.05); await process_frame
+	var at5: bool = bool(wb.backend.frame.get("parts", []).any(func(p): return p.has("relay") and bool(p.relay.get("operated", false))))
+	ok(not at2 and at5, "break 470 uF: the relay is still out at 2.5 s and in by 5.5 s (Ravi: 4.22 s; out %s, in %s)" % [str(not at2), str(at5)])
 	# pause and step
 	Testbed.load_device(wb, "torch"); await _power_and_run(30)
 	Testbed.set_running(wb, false); await _frames(2)
