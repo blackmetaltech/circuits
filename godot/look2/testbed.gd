@@ -38,7 +38,7 @@ const DEVICES := [
 		]},
 	{"id": "dimmer", "ticket": "5-2", "board": "dimmer", "name": "Lamp dimmer", "what": "The knob sets a voltage; a transistor and a 10 ohm resistor turn it into current for the LED strip. Wheel over the knob.",
 		"breaks": [
-			{"id": "short_re", "name": "Short the emitter resistor", "what": "Nothing sets the current now but the transistor's gain: the strip jumps to full.",
+			{"id": "short_re", "name": "Short the emitter resistor", "what": "Nothing holds the current down now. The transistor turns fully on and only the strip limits it: about 0.28 A, more than the 0.22 A the knob gives at its top.",
 				"do": [["wire", [18, 12], [22, 12]]]},
 			{"id": "wiper_off", "name": "Wiper wire off", "what": "The base floats: the strip goes dark whatever the knob says.",
 				"do": [["unwire_at", [10, 8]]]},
@@ -47,8 +47,8 @@ const DEVICES := [
 		"breaks": [
 			{"id": "no_cap", "name": "Remove the capacitor", "what": "Nothing to charge: the relay clicks at once.",
 				"do": [["delete", "cap-el"]]},
-			{"id": "big_r", "name": "Swap 4.7 k for 47 k", "what": "Ten times the charging time, and ten times less base current to spare.",
-				"do": [["value_at", 2, 4, 47000]]},
+			{"id": "big_c", "name": "Swap 220 uF for 470 uF", "what": "About twice the capacitance, so about twice the wait: the relay clicks at about 4.2 s instead of 2 s.",
+				"do": [["value_at", 6, 6, 0.00047]]},
 		]},
 ]
 

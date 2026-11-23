@@ -94,6 +94,32 @@ describe('relay: pull-in / drop-out hysteresis', () => {
   });
 });
 
+describe('relay: contact power at pull-in (0.6 fix) is neither invented nor hidden', () => {
+  // coil ramps 0 -> 12 V over 50 ms (pull-in at 8 V, about 33 ms); COM at 12 V. The sample taken at pull-in was solved with the contacts
+  // still open, so its contact current must use that armature: 12 V over 50 mohm would bill 2.9 kW for one sample. A genuine overload must
+  // still show from the next step on.
+  const run = (load: string) => {
+    const nl = withWave(parseNetlist(`Vc a 0 0\nVs com 0 12\nU1 a 0 com no nc rl\nRn no 0 ${load}\n.model rl relay ()`), 'Vc', pwl([[0, 0], [0.05, 12], [0.1, 12]]));
+    const c = compileNetlist(nl);
+    if (!c.ok) throw new Error('compile');
+    const r = runTran(c.circuit, { h: 5e-5, tStop: 0.08, probes: ['p(U1)', 'v(no)'] });
+    expect(r.ok).toBe(true);
+    return { t: r.t, p: r.series['p(U1)'], no: r.series['v(no)'] };
+  };
+  it('a 50 ohm heater on NO: the relay never takes more than its coil power plus I^2 Ron (0.72 W + 0.003 W)', () => {
+    const { p, no } = run('50');
+    expect(no[no.length - 1]).toBeGreaterThan(11.9);                       // operated: the heater has 12 V
+    expect(Math.max(...p)).toBeLessThan(0.75);
+  });
+  it('a 0.1 ohm near-short on NO: the contact dissipation (12/0.15 = 80 A, I^2 x 50 mohm = 320 W) shows from the step after pull-in', () => {
+    const { t, p } = run('0.1');
+    const k = p.findIndex((v) => v > 100);
+    expect(k).toBeGreaterThan(0);
+    near(t[k], (8 / 12) * 0.05, 0.03);                                    // at pull-in, not later
+    near(p[p.length - 1], 0.72 + 80 * 80 * 0.05, 0.01);
+  });
+});
+
 describe('fuse I²t', () => {
   const run = (rl: string, tStop: number, h: number) => tranCards(`V1 a 0 12\nU1 a b fz\nRl b 0 ${rl}\n.model fz fuse (irated=1)`, { h, tStop, probes: ['i(U1)'] });
   it('does not blow at 0.9 A for 0.5 s', () => {

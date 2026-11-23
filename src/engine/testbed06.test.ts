@@ -43,6 +43,38 @@ describe('testbed devices (0.6)', () => {
     e.act('power', [true]); for (let i = 0; i < 5; i++) e.act('advance', [1]);
     expect(frame().parts.find((p: any) => p.relay).relay.operated).toBe(true);
   });
+  it('relay timer, 220 uF swapped for 470 uF in place (the testbed break): the pull-in time scales with C, about 2.0 s to about 4.2 s', () => {
+    const t = (c: number | null) => {
+      const { e, tk, frame } = load('relay_timer');
+      if (c !== null) expect(e.act('setValue', [tk().board.parts.find((p) => p.partId === 'cap-el')!.uid, c]).ok).toBe(true);
+      e.act('power', [true]);
+      for (let i = 0; i < 400; i++) { e.act('advance', [1]); const f = frame(); if (f.parts.find((p: any) => p.relay)?.relay.operated) { expect(tk().live.smoked).toEqual([]); return f.t as number; } }
+      return -1;
+    };
+    const t1 = t(null), t2 = t(470e-6);
+    expect(t1).toBeGreaterThan(1.8); expect(t1).toBeLessThan(2.2);
+    expect(t2).toBeGreaterThan(4.0); expect(t2).toBeLessThan(4.4);
+    expect(t2 / t1).toBeGreaterThan(0.95 * 470 / 220); expect(t2 / t1).toBeLessThan(1.05 * 470 / 220);
+  });
+  it('dimmer, emitter resistor shorted (the testbed break): the transistor saturates and the strip takes about 0.28 A, above the 0.225 A the knob gives at its top', () => {
+    const { e, tk, frame } = load('dimmer');
+    const pot = tk().board.parts.find((p) => p.partId === 'pot-panel')!.uid;
+    const run = () => { for (let k = 0; k < 10; k++) e.act('advance', [8]); return frame(); };
+    const strip = (f: any) => Math.abs(f.parts.find((p: any) => p.uid === 'f1').pins[0].i);
+    e.act('power', [true]);
+    expect(e.act('setPot', [pot, 0.005]).ok).toBe(true);
+    const top = strip(run());
+    expect(top).toBeGreaterThan(0.22); expect(top).toBeLessThan(0.23);
+    expect(e.act('setPot', [pot, 0.75]).ok).toBe(true);
+    const before = strip(run());
+    expect(e.act('addWire', [[[18, 12], [22, 12]]]).ok).toBe(true);
+    const f = run(), after = strip(f);
+    expect(before).toBeLessThan(0.1);
+    expect(after).toBeGreaterThan(0.26); expect(after).toBeLessThan(0.30);
+    const q = f.parts.find((p: any) => p.uid === tk().board.parts.find((p) => p.partId === 'tip120')!.uid);
+    expect(q.power / after).toBeLessThan(1.0);                           // Vce = P / I under 1 V: saturated, so the gain no longer sets the current
+    expect(tk().live.smoked).toEqual([]);
+  });
   it('dimmer: the strip current rises as the wiper moves toward the 12 V end, up to about 0.22 A, and nothing burns', () => {
     const { e, tk, frame } = load('dimmer');
     const pot = tk().board.parts.find((p) => p.partId === 'pot-panel')!.uid;
