@@ -41,7 +41,7 @@ rm -rf "$smoke"; log "smoke OK"
 v=${ver#v}
 awk -v v="$v" '/^## \[/{p=index($0,"["v"]")>0; next} p' CHANGELOG.md > "$out/notes.md"
 [ -s "$out/notes.md" ] || { echo "no CHANGELOG entry for $v" >&2; exit 1; }
-printf '\n---\nBuilt locally from tag %s. Extract and run; Node.js is bundled.\n- **Linux (x86_64)**: unzip, run `CIRCUITS/node-circuits.sh` (needs a Vulkan driver).\n- Windows and macOS builds come from the CI release workflow; this release is Linux only.\n' "$ver" >> "$out/notes.md"
+printf '\n---\nBuilt locally from tag %s. Extract and run; Node.js is bundled.\n- **Linux (x86_64)**: unzip, run `CIRCUITS/node-circuits.sh` (needs a Vulkan driver).\n- **Windows** and **macOS**: the CI release workflow adds their archives (and SHA256SUMS-ci.txt) to this release within the hour; builds are unsigned.\n' "$ver" >> "$out/notes.md"
 ls -la "$out/dist"
 if [ $upload = 1 ]; then
   title=$(grep -m1 "^## \[$v\]" CHANGELOG.md | sed -E 's/^## \[[^]]*\] - //; s/ \(tag.*//')
