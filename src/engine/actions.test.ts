@@ -29,7 +29,7 @@ describe('ticket 0-0: open, build, bench, stars', () => {
     expect(tk.board.parts.map((p) => [p.uid, p.fixed])).toEqual([['f1', true]]);
     expect(tk.board.connectors.map((c) => c.id)).toEqual(['VP', 'GND']);
     expect(JSON.stringify(e.snapshot())).not.toContain('"hidden"');
-    const card = e.q('ticketCard') as any; expect(card.specs).toEqual([{ id: 'led', name: 'LED current between 10 mA and 20 mA' }]); expect(card.brief).toContain('Lio');
+    const card = e.q('ticketCard') as any; expect(card.specs).toEqual([{ id: 'led', name: 'LED current between 10 mA and 20 mA', unit: 'A' }]); expect(card.brief).toContain('Lio');
   });
   it('the reference passes the bench with ★2 (cost at par) and records progress', () => {
     const e = fresh();

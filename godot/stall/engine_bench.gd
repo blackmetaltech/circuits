@@ -83,6 +83,7 @@ var _bench_key := ""
 var _was_lock := false
 var _all_parts: Array = []
 var _smoke_seen := {}
+var arrived_burnt := {}   ## uid -> true: burnt when the ticket opened (a repair's customer damage)
 var selectors: Array = []                 ## the ticket's live switches [{id, label, options:[text], index}] (chapter 4: mains tolerance, load)
 var mains: Dictionary = {}                ## ticketCard().mains: the safety card, the ribbon, the keep-out and isolation words (empty off a mains ticket)
 var camera := false                       ## the thermal camera overlay (chapter 4)
@@ -114,6 +115,12 @@ func open_ticket(id: String) -> bool:
 	powered = false; locked = false; passed = false; smoked.clear(); temps.clear(); hold = 0.0; t = 0.0; _accum = 0.0; _was_lock = false
 	probes = {"red": null, "black": null, "ch1": null}; dial = "OFF"; dmm_used = false; dmm_loaded = false
 	frame = {}; last_result = {}; _bench_key = ""; _smoke_seen.clear(); _coach_max = 0
+	# a repair's parts that arrived burnt (0.4.0, Noor): the first frame that "sees" them smoked must not read as a fresh burn
+	# ("LED burnt: too much current") of a circuit the player wired right. Filled before _load_ticket, whose first frame already
+	# shows them. A part swapped for a fresh one leaves the set.
+	arrived_burnt.clear()
+	var bq = _q("board")   # the board query carries each part's smoked flag
+	if bq is Dictionary: for p in bq.get("parts", []): if bool(p.get("smoked", false)): arrived_burnt[str(p.uid)] = true
 	_load_ticket()
 	return true
 
@@ -367,7 +374,7 @@ func delete_wire(wid: String) -> Dictionary:
 func undo() -> Dictionary:
 	if not smoked.is_empty():   # a burnt part blocks the bench: the first undo after a burn swaps in a fresh one (the history stays)
 		var n := 0
-		for uid in smoked.keys(): if _act("replaceSmoked", [str(uid)]).get("ok", false): n += 1
+		for uid in smoked.keys(): if _act("replaceSmoked", [str(uid)]).get("ok", false): n += 1; arrived_burnt.erase(str(uid))
 		if n > 0:
 			smoked.clear(); _smoke_seen.clear(); _after_edit()
 			powered = false; frame = {}
@@ -731,7 +738,7 @@ func _emit_smoke(uid: String) -> void:
 	var pp := _frame_part(uid)
 	var amps := 0.0
 	if pp.has("pins") and (pp.pins as Array).size() > 0: amps = absf(_n(pp.pins[0].get("i", 0.0)))
-	event.emit("smoked", {"uid": uid, "kind": str(part_by(uid).get("kind", "R")), "amps": amps, "watts": _n(pp.get("power", 0.0)), "text": str(ev.get("text", "")), "fx": str(ev.get("kind", "smoke"))})
+	event.emit("smoked", {"uid": uid, "kind": str(part_by(uid).get("kind", "R")), "amps": amps, "watts": _n(pp.get("power", 0.0)), "text": str(ev.get("text", "")), "fx": str(ev.get("kind", "smoke")), "arrived": arrived_burnt.has(uid)})   # it cannot burn twice; a swapped part has left the set
 
 func _frame_part(uid: String) -> Dictionary:
 	for p in frame.get("parts", []): if str(p.uid) == uid: return p

@@ -115,7 +115,7 @@ func _build(id: String) -> bool:
 
 func _start(id: String) -> void:
 	sc.size = Vector2(1920, 1080)
-	sc.start_ticket(id)
+	sc.start_ticket(id); bk.clear_fault()   # 2-1 arrives with the customer's divider since 0.4.0: clear it, as ch1_engine_flow does for repairs
 	await _frames(4)
 	evlog.clear()
 
@@ -161,9 +161,16 @@ func _run() -> void:
 	for w in [[[2, 2], [4, 2]], [[8, 2], [14, 2]], [[8, 4], [8, 2]], [[8, 8], [14, 8]]]: _drag_wire(w[0], w[w.size() - 1])
 	_rocker(); _clock(0.5)
 	sc.run_bench(); await _frames(2)
+	ok(not bk.passed and sc.top.toast.begins_with("Measure it first: put the meter leads on OUT"), "2-1 refuses the bench until OUT has been metered: %s" % sc.top.toast.left(70))
+	evlog.clear()
+	_drag_probe("red", [14, 2]); _drag_probe("black", [14, 8]); _clock(0.3)
+	sc.run_bench(); await _frames(2)
 	ok(evlog.has("bench_failed") and sc.top.toast.contains("2.76 V") and sc.top.toast.contains("10 kΩ") and sc.top.toast.contains("parallel") and _no_id(sc.top.toast), "NAIVE 5.6 k / 3.3 k: the bench explains the load in plain words: %s" % sc.top.toast.left(80))
 	var cv: Dictionary = bk.coach_view()
-	ok(cv.steps.size() == 7 and str(cv.steps[cv.cur].id) == "measure", "the coach asks for a meter reading (%s)" % str(cv.steps[cv.cur].id))
+	# 0.4.0: 2-1 makes you meter OUT before the bench, so by now the coach's measure step is behind the player
+	var mi := -1
+	for i in cv.steps.size(): if str(cv.steps[i].id) == "measure": mi = i
+	ok(cv.steps.size() == 7 and mi >= 0 and (int(cv.cur) > mi or int(cv.cur) < 0), "the coach's meter-reading step is done once OUT was metered (now at %s)" % str(cv.steps[cv.cur].id))
 	await _start("2-1")
 	ok(_build("2-1"), "the reference divider (15 k over 82 k) is built by pointer")
 	_rocker(); _drag_probe("ch1", [14, 2])

@@ -21,7 +21,7 @@ const DEVICES := {
 	"1-3": ["AQUATHERM", "AQUARIUM HEATER  12 V", Color(0.30, 0.42, 0.50), Color(0.70, 0.72, 0.74)],
 	"1-4": ["ZIPPY", "TOY CAR PACK  9 V", Color(0.66, 0.27, 0.05), Color(0.10, 0.10, 0.11)],
 	"1-5": ["EXAM", "KIRCHHOFF TEST RIG", Color(0.50, 0.52, 0.54), Color(0.12, 0.30, 0.62)],
-	"2-1": ["KAYA WX", "WEATHER STATION  ADC 3.3 V", Color(0.86, 0.87, 0.84), Color(0.10, 0.36, 0.60)],
+	"2-1": ["KAYA WX", "WEATHER STATION  ADC 3.3 V", Color(0.60, 0.61, 0.58), Color(0.10, 0.36, 0.60)],
 	"2-3": ["TOMO", "SENSOR MODULE  SEALED", Color(0.12, 0.13, 0.14), Color(0.90, 0.72, 0.10)],
 	"5-1": ["BREEZE", "DESK FAN  12 V  0.2 A", Color(0.60, 0.60, 0.57), Color(0.10, 0.52, 0.56)],
 }

@@ -52,6 +52,9 @@ export const L2_1: LevelDef = {
   specShort: 'ticket.2-1.short',
   thanks: { spec: 'vout', target: 3.3, within: 0.01, exactKey: 'ticket.2-1.thanks.exact', nearKey: 'ticket.2-1.thanks.near' },
   scope: 'must',
+  // 0.4.0: a repair that needs the meter before any change (the 0.3 -> 0.4 gate): the bench refuses until OUT has been measured
+  measureFirst: true,
+  measureFirstKey: 'bench.measureFirst.adc',
   after: ['1-4|1-5'],
   pay: { fee: 500, perStar: 150 },
   gauge: { spec: 'vout', unit: 'V', clip: 'OUT' },

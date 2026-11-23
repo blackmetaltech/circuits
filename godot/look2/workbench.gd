@@ -3,7 +3,7 @@ extends Node3D
 ## LOOK2 vertical slice: the tech wizard's workbench in 3D on top of the unchanged engine (EngineBench drives the sidecar exactly as
 ## the old stall did). Jobs: ticket 5-1 Fan Driver. Free bench: the engine's sandbox mode on the same bench.
 ## Env: CB_L2=title|job|free (start screen), CB_L2_REF=1 (reference build), CB_L2_NODIODE=1 (reference without the flyback diode),
-## CB_POWER=1, CB_PIN=0|1|2, CB_VIEW=1..4, CB_SCHEM=1, CB_QUALITY=high|medium|low, CB_FRAMETIME=<seconds> (prints FRAMETIME and quits).
+## CB_POWER=1, CB_METER=rx,ry,bx,by, CB_PIN=0|1|2, CB_VIEW=1..4, CB_SCHEM=1, CB_QUALITY=high|medium|low, CB_FRAMETIME=<seconds> (prints FRAMETIME and quits).
 
 signal changed
 
@@ -50,6 +50,7 @@ var place_item: Dictionary = {}
 var place_rot := 0
 var ghost: Part3D
 var wire_from := Vector2i(-1, -1)
+var _wire_click := false              ## the wire's first end was a click (not a drag): the next click on another pad ends it
 var wire_preview: MeshInstance3D
 var hover_pad := Vector2i(-1, -1)
 var note := ""
@@ -464,6 +465,9 @@ func start_job(id := "") -> void:
 	if cs in ["open", "handed"] and case_node: case_node.set_state("open", false)
 	if OS.get_environment("CB_PROBE") != "" and id == TICKET:
 		backend.set_probe("ch1", [16, 8]); backend.set_dial("V"); backend.set_probe("red", [16, 2]); backend.set_probe("black", [22, 2])
+	if OS.get_environment("CB_METER") != "":   # QA/shot hook: CB_METER=rx,ry,bx,by puts the red and black leads on two pads, dial on V
+		var m := OS.get_environment("CB_METER").split(",")
+		if m.size() == 4: backend.set_dial("V"); backend.set_probe("red", [int(m[0]), int(m[1])]); backend.set_probe("black", [int(m[2]), int(m[3])])
 	if OS.get_environment("CB_PIN") != "": backend.set_selector("pin", int(OS.get_environment("CB_PIN")))
 	if OS.get_environment("CB_POWER") == "1": backend.set_power(true)
 	if OS.get_environment("CB_POWER_AT") != "":   # QA/clip hook: switch the bench on after N seconds (the clip shows the moment)
@@ -837,7 +841,7 @@ func _sound(name: String, data: Dictionary) -> void:
 		"placed": sfx.play("thunk")
 		"wired": sfx.play("zip", 0.7)
 		"deleted": sfx.play("clack", 0.8)
-		"smoked": sfx.play("crack" if str(data.get("kind", "")) == "LED" else "pop")
+		"smoked": if not bool(data.get("arrived", false)): sfx.play("crack" if str(data.get("kind", "")) == "LED" else "pop")
 		"bench_failed": sfx.play("bad", 0.8)
 		"paid":
 			sfx.play("chime")
@@ -873,6 +877,11 @@ func _load_sound_pref() -> bool:
 func _on_event(name: String, data: Dictionary) -> void:
 	_sound(name, data)
 	match name:
+		"smoked" when bool(data.get("arrived", false)):
+			# the customer's burn, seen on the first powered frame: no smoke, no blame, and the way out
+			var nm: String = {"LED": "LED", "R": "resistor"}.get(str(data.get("kind", "")), "part")
+			last_failure = {"title": "This %s arrived burnt" % nm, "text": "It was already burnt when the %s came in. A burnt part passes no current, whatever you wire around it. Right-click it to take it out, then fit a new one from the sorting box." % str(DeviceCase.device_of(ticket_id)[1]).get_slice("  ", 0).to_lower(), "uid": str(data.uid)}
+			changed.emit()
 		"smoked":
 			var n: Part3D = parts3d.get(str(data.uid), null)
 			if n: _smoke_at(n.global_transform * n._centre())
@@ -999,7 +1008,7 @@ func ray_hit(mp: Vector2) -> String:
 func set_tool(t: String) -> void:
 	tool = t
 	if t != "place": _clear_ghost()
-	if t != "wire": wire_from = Vector2i(-1, -1); _clear_wire_preview()
+	wire_from = Vector2i(-1, -1); _wire_click = false; _clear_wire_preview()   # any tool change (W again, Esc) drops a half-drawn wire
 	changed.emit()
 
 func pick_part(item: Dictionary) -> void:
@@ -1128,7 +1137,11 @@ func _left(pressed: bool, mp: Vector2) -> void:
 					var r := backend.place(place_item, pad.x, pad.y, place_rot)
 					note = str(r.get("msg", "")); if r.ok: set_tool("select")
 			"wire":
-				if pad.x >= 0: wire_from = pad
+				if pad.x >= 0:
+					if _wire_click and wire_from.x >= 0 and pad != wire_from:   # click, then click: the second click ends the wire
+						var rw := backend.add_wire([wire_from.x, wire_from.y], [pad.x, pad.y])
+						note = str(rw.get("note", rw.get("msg", ""))); wire_from = Vector2i(-1, -1); _wire_click = false; _clear_wire_preview()
+					else: wire_from = pad; _wire_click = false
 			"probe":
 				if pad.x >= 0: var r2 := backend.set_probe("ch1", [pad.x, pad.y]); note = str(r2.get("msg", "")); set_tool("select")
 			"red", "black":
@@ -1142,7 +1155,10 @@ func _left(pressed: bool, mp: Vector2) -> void:
 			if pad.x >= 0 and pad != wire_from:
 				var r := backend.add_wire([wire_from.x, wire_from.y], [pad.x, pad.y])
 				note = str(r.get("note", r.get("msg", "")))
-			wire_from = Vector2i(-1, -1); _clear_wire_preview(); changed.emit()
+			elif pad == wire_from:
+				# released where it started: a click, not a drag (Noor clicked twice and nothing happened, 0.4 hand play). Stay armed.
+				_wire_click = true; note = "Wire from here: click the other end, or drag. Esc cancels."; changed.emit(); return
+			wire_from = Vector2i(-1, -1); _wire_click = false; _clear_wire_preview(); changed.emit()
 
 func _right_click(mp: Vector2) -> void:
 	if tool != "select": set_tool("select"); return
@@ -1303,7 +1319,7 @@ const OPEN_LINE := {
 	"1-4": "Case open. The load resistor is burnt. Measure the pack before you choose a new one.",
 	"1-5": "Exam rig open. Predict first, then build and probe.",
 	"2-1": "Case open. 5.6 k over 3.3 k into the ADC. Measure OUT with the meter before you swap anything.",
-	"2-3": "Case open. The sealed box sits at the lower left. Meter it: volts open, then amps short. Then set the supply.",
+	"2-3": "Case open. The sealed box sits at the lower left. Meter it: volts open, then amps short. Then set the supply: key 4 shows its VOLTAGE knob.",
 	"5-1": "Case open. Q1 is burnt, and nothing across the fan catches its turn-off kick.",
 }
 const ARRIVE_LINE := {
@@ -1408,11 +1424,15 @@ static func _sig3(sv: Dictionary) -> String:
 
 ## A measured bench value in the spec's unit (from the spec name: current, power, voltage).
 func spec_text(id: String, v: float) -> String:
-	var nm := ""
-	for s in backend.ticket.get("specs", []): if str(s.id) == id: nm = str(s.get("name", "")).to_lower()
+	var nm := ""; var eu := ""
+	for s in backend.ticket.get("specs", []): if str(s.id) == id: nm = str(s.get("name", "")).to_lower(); eu = str(s.get("unit", ""))
+	var g = backend.card.get("gauge", null)
+	if eu == "" and g is Dictionary and str(g.get("spec", "")) == id: eu = str(g.get("unit", ""))
+	if eu != "" and id != "ipin": return BenchUI.si(v, eu)   # the engine's own unit (level probe or gauge): 2-1 printed "3.27 W" when "with" matched " w"
+	var words := nm.replace(",", " ").replace("(", " ").replace(")", " ").split(" ", false)
 	var unit := "V"
-	if "current" in nm or "ma" in nm.split(" ") or id.begins_with("i"): unit = "A"
-	elif "power" in nm or " w" in nm: unit = "W"
+	if "current" in words or "ma" in words or id.begins_with("i"): unit = "A"
+	elif "power" in words or "w" in words or "watts" in words: unit = "W"
 	if id == "ipin": unit = "A"
 	return BenchUI.si(v, unit)
 

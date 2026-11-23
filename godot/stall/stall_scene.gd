@@ -277,6 +277,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 		"deleted":
 			top.edited(); sfx.play("page", 0.5)
 			if str(data.get("note", "")) != "": top.say(str(data.note))   # e.g. "p1 removed, and 2 wire(s) that were only held by its legs."
+		"smoked" when bool(data.get("arrived", false)):   # the customer's burn, seen on the first powered frame (0.4.0): no pop, no blame
+			top.say("That %s arrived burnt. It passes no current whatever you wire around it: take it out and fit a new one." % ("LED" if data.kind == "LED" else "part"))
 		"smoked":
 			sfx.play("crack" if data.kind == "LED" else "pop"); sfx.play("meow", 0.5)
 			props.mood = "wow"; _smoke_mood_until = t + 4.0

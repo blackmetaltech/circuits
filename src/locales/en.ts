@@ -218,6 +218,7 @@ export const en: Record<string, string> = {
   'bench.part.missing': 'The test "{id}" looks at {probe}, but that part is not on the board yet ({cond} test).',
   'bench.predict.missing': 'You have not entered a prediction for "{id}" yet ({cond} test).',
   'pay.explain': 'fee {fee} + {perStar} per new star',
+  'bench.measureFirst.adc': "Measure it first: put the meter leads on OUT and GND and read what the ADC sees before you bench it. Then work out why it is not the 3.3 V the divider was drawn for.",
   'bench.measureFirst': "Measure it first: put the meter leads on the battery before you bench it. Read the open-circuit volts, then the volts with the load on. How far the voltage sags under load is the battery's own resistance, and finding that is the lesson here.",
   'coach.optional': 'Optional: {text}',
   'coach.burned.cap': '{Part} vented: undo it (Ctrl+Z) or swap it for a fresh part, then check which way round it goes (the stripe is minus) and that its voltage rating is above what it sees.',

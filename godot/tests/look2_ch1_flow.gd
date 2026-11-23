@@ -64,6 +64,10 @@ func _run() -> void:
 		if repair:
 			wb._hit("psu_output"); await _step(0.4)
 			ok(wb.backend.powered, "OUTPUT on the bench supply powers the bench")
+			if id == "1-1":
+				# the torch's LED arrived burnt: the first powered frame must say so, not blame the player with a fresh burn (Noor, 0.4)
+				await _frames(3)
+				ok(str(wb.last_failure.get("title", "")).begins_with("This LED arrived burnt"), "an arrived-burnt part is named as the customer's damage: %s" % str(wb.last_failure.get("title", "")))
 			wb._hit("psu_test"); await _frames(3)
 			ok(not wb.backend.passed, "the bench fails the device as it came in")
 			if wb.backend.powered: wb.toggle_power()
@@ -132,6 +136,7 @@ func _run() -> void:
 		wb.backend.set_dial("V"); wb.backend.set_probe("red", cs[0].pad); wb.backend.set_probe("black", cs[1].pad); await _step(0.2)
 		wb.run_test(); await _frames(5)
 		ok(wb.backend.passed, "the bench passes %s" % id)
+		if id == "2-1": ok(wb.spec_text("vout", 3.27) == "3.27 V", "the measured value carries the engine's unit (%s; it read \"3.27 W\")" % wb.spec_text("vout", 3.27))
 		if id == "1-5":
 			wb.changed.emit(); await _frames(3)
 			var marked := false; var working_key: Button = null
@@ -193,6 +198,15 @@ func _run() -> void:
 	wb._right_click(wb.cam.unproject_position(top))
 	ok(wb.backend.parts.size() == n_before - 1 and wb.note.contains("removed"), "right-click on a part's body removes it: %s" % wb.note)
 	ok(wb.note.contains("wire") and wb.note.contains("Ctrl+Z"), "and says which wires went with it (%s)" % wb.note)
+	# click, then click draws a wire (Noor clicked twice and nothing happened; drag was the only way)
+	var nw: int = wb.backend.wires.size()
+	wb.set_tool("wire")
+	var pa := wb.cam.unproject_position(wb.board.pad_world(12, 14)); var pb := wb.cam.unproject_position(wb.board.pad_world(16, 14))
+	wb._left(true, pa); wb._left(false, pa); await _frames(2)
+	ok(wb.note.begins_with("Wire from here"), "a click on a pad starts a wire and says how to end it: %s" % wb.note)
+	wb._left(true, pb); wb._left(false, pb); await _frames(2)
+	ok(wb.backend.wires.size() == nw + 1, "a second click on another pad ends it (%d -> %d wires)" % [nw, wb.backend.wires.size()])
+	wb.set_tool("select")
 	wb.back_to_title(); await _frames(5)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(wb._build_path(1)))
 	ok(trap.count == 0, "zero script errors in the whole session (%d: %s)" % [trap.count, str(trap.lines.slice(0, 3))])

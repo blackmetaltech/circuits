@@ -222,7 +222,7 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
       return {
         id: def.id, chapter: def.chapter, title: t(def.titleKey), brief: t(def.briefKey, { customer, mentor, stall, lane }), customerId: def.customer, customer, mentor, stall, lane,
         examHidden, sources,
-        specs: def.bench.specs.filter((x) => def.bench.names[x.id] && !(examHidden && (x.kind === 'level' || x.kind === 'metric'))).map((x) => ({ id: x.id, name: t(def.bench.names[x.id]!) })),
+        specs: def.bench.specs.filter((x) => def.bench.names[x.id] && !(examHidden && (x.kind === 'level' || x.kind === 'metric'))).map((x) => ({ id: x.id, name: t(def.bench.names[x.id]!), ...(x.kind === 'level' ? { unit: ({ i: 'A', p: 'W', v: 'V' } as Record<string, string>)[x.probe.trim().toLowerCase()[0] ?? 'v'] ?? 'V' } : {}) })),
         bin: def.bin.map((b) => ({ partId: b.partId, values: allowedValues(getDef(b.partId)!, b), variants: allowedVariants(getDef(b.partId)!, b), max: b.max ?? null })),
         maxParts: def.constraints?.maxParts ?? 40, stars: def.stars, instruments: { supply: def.supplies.some((x) => x.kind === 'bench'), gen: def.supplies.some((x) => x.kind === 'gen'), scope: !!def.instruments.scope },
         hasHints: !!def.hints, hintRung: o.tk.hintRung,
