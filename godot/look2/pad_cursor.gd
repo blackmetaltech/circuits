@@ -8,6 +8,7 @@ extends Control
 ##   LB / RB     wheel at cursor (part value, supply volts, zoom)
 ##   X  power (Space)   Y  bench test (Enter)   RT  rotate the part in hand (R)
 ##   D-pad up wire (W), down meter leads (M), left / right previous / next view   Back  schematic (Tab)   Start  select tool (Esc)
+##   Slide wire (2-2, 2-4): A held on the wire and the left stick drag the jockey, LB / RB over the wire step it, pressing the right stick changes the step (J)
 ## On the title the pad uses Godot's own focus navigation (A presses the focused key); the cursor only appears on the bench.
 
 const SPEED := 900.0         ## px/s at full stick
@@ -49,6 +50,7 @@ func _input(e: InputEvent) -> void:
 			JOY_BUTTON_Y: if jb.pressed: _key(KEY_ENTER)
 			JOY_BUTTON_BACK: if jb.pressed: _key(KEY_TAB)
 			JOY_BUTTON_START: if jb.pressed: _key(KEY_ESCAPE)
+			JOY_BUTTON_RIGHT_STICK: if jb.pressed: _key(KEY_J)
 			JOY_BUTTON_DPAD_UP: if jb.pressed: _key(KEY_W)
 			JOY_BUTTON_DPAD_DOWN: if jb.pressed: _key(KEY_M)
 			JOY_BUTTON_DPAD_LEFT: if jb.pressed: bench.set_view(wrapi(int(bench.view) - 1, 1, 6))

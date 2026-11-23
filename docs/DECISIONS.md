@@ -105,3 +105,20 @@
   what matters: the meter's tilted outline covers none of the three controls or their labels, and the scope and supply cabinets
   do not overlap on the bench. Strongest argument against (Sigrid): a hidden post reads as clutter. Answer: true; the fix is a
   smaller meter or a second view, not a layout that breaks two other checks.
+
+- **D-bench-ch23 (2026-11-23, Kofi Mensah, Programmer; the lead's call, the choices below are mine).** Chapters 2 and 3 play on the
+  bench: the campaign is 1-1 to 1-5, 2-1 to 2-4, 3-1 to 3-4 in the engine's order, and the title says chapters 4 and 5 stay classic.
+  Choices: (1) 3-1 arrives with a 22 uF timing capacitor (10 k x 22 uF: the ready-light at 0.22 s against the 0.95 s floor) and 3-3
+  with a 560 ohm series resistor on the 24 V rail (31.6 mA, under the 40 mA pull-in, so it never closes). Both are `LevelDef.fault`
+  boards like 2-1's; the numbers are the engine's, and repair.test.ts shows each fails and that changing the one value repairs it.
+  2-2, 3-2 and the two exams carry no fault: 2-2 arrives as the shorted cable it is, 3-2 with its bouncing contact and no filter.
+  (2) The jockey is moved on the bench by a press or drag on the wire, by the wheel over it (the supply knob's pattern: the engine's
+  step, Shift 0.1 mm, Ctrl 10 mm), by Left and Right, and J changes the step; on the pad A held on the wire with the stick drags,
+  LB and RB step, and the right stick key is J. Why the fine step exists: one millimetre is about 16 uA at R = 5 ohm and the band is
+  10 uA, so a coarse step cannot reach the null. (3) The galvanometer, slide wire, cells, rheostat, relay, cable reel, pull-up, logic
+  input and the two capacitor kinds got models of their own (`parts_lab.gd`), the arcade button and knife switch are board props
+  driven by the engine's `contacts` (`contact3d.gd`); a part that falls back to a plain labelled box now sets `generic` and the new
+  flow fails on it. The meter, cell and cable models lie on their own pin row, because the tickets run wires round them. Strongest
+  argument against (a classic-stall player): a 1 m slide wire drawn at 2x scale is mostly empty board. Answer: it is the part the
+  lesson is about, and the ruler is what a student reads the balance length from. Not done: a way to change a placed part's value in
+  place (a repair means removing the part and placing another), the same as 1-2's.

@@ -9,8 +9,8 @@ signal changed
 
 const P := MeshKit.PITCH
 const TICKET := "5-1"   ## the chapter-5 showcase slice
-## The bench campaign: chapter 1, then chapter 2's 2-1 and 2-3 (D-ch2-bench cut line: 2-2 and the 2-4 exam stay on the classic stall this layer).
-const BENCH_JOBS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-3"]
+## The bench campaign: chapters 1, 2 and 3 in the engine's order (D-bench-ch23). Chapters 4 and 5 stay in the classic stall.
+const BENCH_JOBS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4"]
 const CH1 := BENCH_JOBS   # old name, kept for the flows
 var ticket_id := "1-1"
 
@@ -24,6 +24,9 @@ var board: Board3D
 var board_root: Node3D
 var parts3d := {}                    ## uid -> Part3D
 var wires3d := {}                    ## wid -> Wire3D
+var contacts3d := {}                 ## contact id -> Contact3D (3-2's arcade button, 3-4's knife switch)
+var _jockey_drag := false
+var _jockey_tip_ms := 0
 var _sig_parts := ""
 var _sig_wires := ""
 var scope: Node3D
@@ -557,6 +560,7 @@ func _after_open() -> void:
 	board.build(int(backend.ticket.board.w), int(backend.ticket.board.h), backend.ticket.board.connectors)
 	var c := Vector3((board.w - 1) * P * 0.5, 0, (board.h - 1) * P * 0.5)
 	board.position = Vector3(-0.02, 0.003 + 0.012 + MeshKit.BOARD_T, 0.07) - c
+	_contacts()
 	if case_node: case_node.queue_free(); case_node = null
 	handed = false
 	if mode == "job":
@@ -566,6 +570,20 @@ func _after_open() -> void:
 		case_node.set_state("closed", false)
 	_layout_for_ticket()
 	_cables()
+
+## The bench-driven contacts of the ticket (its `contact` supplies) stand on the board between their two pads.
+func _contacts() -> void:
+	contacts3d.clear()
+	for sd in backend.card.get("supplies", []):
+		if str(sd.get("kind", "")) != "contact": continue
+		var pa := Vector2(-1, -1); var pb := Vector2(-1, -1)
+		for c in backend.ticket.board.connectors:
+			if str(c.id) == str(sd.plus): pa = Vector2(float(c.pad[0]), float(c.pad[1]))
+			if str(c.id) == str(sd.minus): pb = Vector2(float(c.pad[0]), float(c.pad[1]))
+		if pa.x < 0 or pb.x < 0: continue
+		var ct := Contact3D.new(); board.add_child(ct)
+		ct.build(str(sd.id), board.pad_local(int(pa.x), int(pa.y)), board.pad_local(int(pb.x), int(pb.y)))
+		contacts3d[str(sd.id)] = ct
 
 ## The bench is set for the job: the fan and the microcontroller only come out for 5-1; the scope stands behind the board,
 ## clear of the repair ticket on the left, so nothing on screen covers its trace.
@@ -792,8 +810,23 @@ func _live(dt: float) -> void:
 		n.set_heat(backend._heat(p))
 		n.set_smoked(bool(p.get("smoked", false)) or backend.smoked.has(str(p.uid)) or burnt.has(str(p.uid)))
 		if p.has("led"): n.set_led(float(p.led.get("mA", 0.0)), float(p.led.get("bloom", 0.0)))
+		if p.has("galvo"): n.set_needle(float(p.galvo.get("needle", 0.0)), float(p.galvo.get("uA", 0.0)))
+		if p.has("relay"): n.set_relay(bool(p.relay.get("operated", false)), float(p.relay.get("mA", 0.0)))
+		if p.has("cap") and n.anim.has("level"):
+			var vf := float(p.cap.get("vfull", 0.0))
+			if vf > 0.0: n.set_level(float(p.cap.get("v", 0.0)) / vf)
 	if not backend.powered:   # power off: every LED goes dark (the frame stops listing them, which left the last glow on)
-		for u in parts3d: (parts3d[u] as Part3D).set_led(0.0, 0.0)
+		for u in parts3d:
+			var pn: Part3D = parts3d[u]
+			pn.set_led(0.0, 0.0)
+			if pn.anim.has("needle"): pn.set_needle(0.0, 0.0)
+			if pn.anim.has("armature"): pn.set_relay(false, 0.0)
+			if pn.anim.has("level"): pn.set_level(1.0)   # a capacitor that arrives charged
+	for sp in backend.parts:   # the jockey is the engine's number, with the power off too
+		if str(sp.kind) == "SLIDE" and parts3d.has(str(sp.uid)): (parts3d[str(sp.uid)] as Part3D).set_jockey(float(sp.pos) if sp.get("pos", null) != null else 0.5)
+	var closed := {}
+	for ct in f.get("contacts", []): closed[str(ct.id)] = bool(ct.closed)
+	for cid in contacts3d: (contacts3d[cid] as Contact3D).set_closed(bool(closed.get(cid, false)) and backend.powered, dt)
 	for u in parts3d: if not backend.powered: (parts3d[u] as Part3D).set_smoked(burnt.has(u) or backend.smoked.has(u))
 	# the fan: speed from its own current (200 mA = full speed)
 	var fi := 0.0
@@ -1041,7 +1074,10 @@ func _unhandled_input(e: InputEvent) -> void:
 		var mb := e as InputEventMouseButton
 		var over_tray := {} if not (mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]) else _tray_slot_hit(ray_hit(mb.position))
 		var over_volt := mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and ray_hit(mb.position) == "psu_volt"
-		if over_volt:
+		var over_wire := mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and not over_volt and ray_hit(mb.position) == "slidewire"
+		if over_wire:
+			if mb.pressed: jockey_step((1.0 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else -1.0) * (0.1 if mb.shift_pressed else (10.0 if mb.ctrl_pressed else backend.jockey_step_mm())))
+		elif over_volt:
 			if mb.pressed: supply_step((1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else -1) * (0.01 if mb.shift_pressed else (1.0 if mb.ctrl_pressed else 0.1)))
 		elif not over_tray.is_empty():
 			if mb.pressed:
@@ -1059,6 +1095,7 @@ func _unhandled_input(e: InputEvent) -> void:
 		_last_mouse = mb.position
 	elif e is InputEventMouseMotion:
 		var mm := e as InputEventMouseMotion
+		if _jockey_drag: _jockey_to(mm.position); return
 		if _drag == "orbit_pending" and mm.position.distance_to(_last_mouse) > 4.0: _drag = "orbit"
 		if _drag == "orbit":
 			g_yaw -= mm.relative.x * 0.005; g_pitch = clampf(g_pitch - mm.relative.y * 0.004, deg_to_rad(-88), deg_to_rad(-5))
@@ -1072,6 +1109,9 @@ func _unhandled_input(e: InputEvent) -> void:
 		if not tsl.is_empty():
 			var t2 := "%s %s, %s each: click picks it%s" % [str(tsl.fam.name), str(tsl.item.label).get_slice("  ", 0) if tsl.item.get("value", null) != null else "", str(tsl.item.get("price_text", "")), ", wheel changes the value" if (tsl.fam.items as Array).size() > 1 else ""]
 			if t2 != hover_tip: hover_tip = t2; changed.emit()
+		elif hid == "slidewire":
+			var t5 := "JOCKEY %.1f mm: drag on the wire, wheel steps %s mm (Shift 0.1, Ctrl 10), J changes the step" % [backend.jockey_mm(), String.num(backend.jockey_step_mm())]
+			if t5 != hover_tip: hover_tip = t5; changed.emit()
 		elif hid == "psu_output" or hid == "psu_test" or hid == "tray_page" or hid == "psu_volt":
 			var t3: String = {"psu_output": "OUTPUT: power on or off (Space)", "psu_test": "TEST: run the bench test (Enter)", "tray_page": "Next drawer of parts",
 				"psu_volt": "VOLTAGE %.2f V: wheel 0.1 V, Shift 0.01 V, Ctrl 1 V" % backend.supply_volts()}[hid]
@@ -1095,6 +1135,9 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_R:
 				if tool == "place": place_rot = (place_rot + 1) % 4; _hover(get_viewport().get_mouse_position())
 			KEY_O: open_case()
+			KEY_LEFT: jockey_step(-(0.1 if k.shift_pressed else (10.0 if k.ctrl_pressed else backend.jockey_step_mm())))
+			KEY_RIGHT: jockey_step(0.1 if k.shift_pressed else (10.0 if k.ctrl_pressed else backend.jockey_step_mm()))
+			KEY_J: jockey_cycle()
 			KEY_C: set_cute(not cute)
 			KEY_H: if backend.passed and not handed: hand_back()
 			KEY_BRACKETLEFT, KEY_BRACKETRIGHT:
@@ -1138,6 +1181,10 @@ func _left(pressed: bool, mp: Vector2) -> void:
 	if case_closed() and not handed:
 		if pressed: open_case()
 		return
+	if pressed and tool == "select" and ray_hit(mp) == "slidewire" and not backend.slide_part().is_empty():
+		_jockey_drag = true; _jockey_to(mp); return
+	if not pressed and _jockey_drag:
+		_jockey_drag = false; changed.emit(); return
 	var pad := ray_pad(mp)
 	if pressed:
 		var hit := ray_hit(mp)
@@ -1330,7 +1377,13 @@ const OPEN_LINE := {
 	"1-4": "Case open. The load resistor is burnt. Measure the pack before you choose a new one.",
 	"1-5": "Exam rig open. Predict first, then build and probe.",
 	"2-1": "Case open. 5.6 k over 3.3 k into the ADC. Measure OUT with the meter before you swap anything.",
+	"2-2": "Case open. The cable reel is the loop X, the slide wire is the bridge. Wire them to the cell and the galvanometer, then slide the jockey until the needle sits on zero.",
 	"2-3": "Case open. The sealed box sits at the lower left. Meter it: volts open, then amps short. Then set the supply: key 4 shows its VOLTAGE knob.",
+	"2-4": "Exam rig open. Predict first, then build the potentiometer and slide the jockey to the balance.",
+	"3-1": "Case open. 10 k and 22 uF make the timer. Watch OUT on the scope before you change anything.",
+	"3-2": "Case open. The button and the pull-up are soldered on, with no filter between SW and OUT. Look at OUT on the scope first.",
+	"3-3": "Case open. The relay coil is on the 24 V rail behind 560 ohm. Look at the coil current on the scope before you change anything.",
+	"3-4": "Exam rig open. Predict first, then build both cards and let the bench measure them.",
 	"5-1": "Case open. Q1 is burnt, and nothing across the fan catches its turn-off kick.",
 }
 const ARRIVE_LINE := {
@@ -1340,9 +1393,48 @@ const ARRIVE_LINE := {
 	"1-4": "Bo's car crawls. The battery pack came with it.",
 	"1-5": "The exam rig is on the bench. No customer: this one is graded.",
 	"2-1": "Kaya's weather station reads low. Someone sized its divider without the ADC on it.",
+	"2-2": "The crew's telephone cable has shorted under the lane. They need to know where to dig.",
 	"2-3": "Tomo's sealed sensor box died. Nobody makes it any more: measure it, then build its twin.",
+	"2-4": "The exam rig is on the bench: a slide-wire potentiometer. No customer: this one is graded.",
+	"3-1": "{c}'s camera flash lights its ready-light after a fraction of a second, long before the flash has charged.",
+	"3-2": "{c}'s arcade button counts one press as several. The game sees a burst of presses.",
+	"3-3": "{c}'s irrigation controller does not click. The relay never pulls in, so the valves stay shut.",
+	"3-4": "The exam rig is on the bench: two capacitor cards. No customer: this one is graded.",
 	"5-1": "The fan came in with its driver board. Open the case to work on it.",
 }
+## The slide wire's jockey (2-2, 2-4): a press or drag on the wire puts it under the pointer, the wheel, the arrow keys (and LB / RB
+## on the pad, over the wire) step it by the engine's step (10, 1 or 0.1 mm; J or the right stick key changes it).
+func jockey_to_mm(mm: float) -> bool:
+	if backend.slide_part().is_empty(): return false
+	var r: Dictionary = backend.set_jockey(snappedf(mm, 0.1))
+	if not bool(r.ok): note = str(r.msg)
+	return bool(r.ok)
+
+func jockey_step(dmm: float) -> bool:
+	var ok := jockey_to_mm(backend.jockey_mm() + dmm)
+	if ok:
+		hover_tip = "JOCKEY %.1f mm" % backend.jockey_mm()
+		if sfx: sfx.play("tick")
+		changed.emit()
+	return ok
+
+func jockey_cycle() -> void:
+	if backend.slide_part().is_empty(): return
+	backend.cycle_jockey_step()
+	hover_tip = "Jockey step %s mm" % String.num(backend.jockey_step_mm()); changed.emit()
+
+func _jockey_to(mp: Vector2) -> void:
+	var sp: Dictionary = backend.slide_part()
+	if sp.is_empty() or board == null: return
+	var hit = _plane_at(0.0050).intersects_ray(cam.project_ray_origin(mp), cam.project_ray_normal(mp))   # the wire's own height: the pointer is over the wire, not over the board below it
+	if hit == null: return
+	var lp: Vector3 = board.to_local(hit)
+	var a := Vector2(float(sp.pins[0][0]), float(sp.pins[0][1])); var b := Vector2(float(sp.pins[2][0]), float(sp.pins[2][1]))
+	var t := clampf((Vector2(lp.x / P, lp.z / P) - a).dot(b - a) / (b - a).length_squared(), 0.0, 1.0)
+	jockey_to_mm(t * 1000.0)
+	if Time.get_ticks_msec() - _jockey_tip_ms > 120:   # the paper ticket rebuilds on every change: not on every mouse move
+		_jockey_tip_ms = Time.get_ticks_msec(); hover_tip = "JOCKEY %.1f mm" % backend.jockey_mm(); changed.emit()
+
 ## The VOLTAGE knob: steps the bench supply (0 - 15 V, 0.01 V resolution) and says the new setting on the tip line.
 func supply_step(dv: float) -> bool:
 	if backend.supply_volts() <= 0.0 and not backend.bench_q.get("instruments", {}).has("supply"): return false
@@ -1352,13 +1444,13 @@ func supply_step(dv: float) -> bool:
 	changed.emit()
 	return bool(r.ok)
 
-func arrival_line() -> String: return str(ARRIVE_LINE.get(ticket_id, "The device is on the bench. Open the case to work on it."))
+func arrival_line() -> String: return str(ARRIVE_LINE.get(ticket_id, "The device is on the bench. Open the case to work on it.")).replace("{c}", str(backend.ticket.get("customer", "The customer")))
 
 ## The first bench job not yet passed (the campaign's next job), else 1-1.
 func first_open_ticket() -> String:
 	if not _campaign: return CH1[0]
 	var done := {}
-	for ch in [1, 2]:
+	for ch in [1, 2, 3]:
 		for row in backend.progress(ch).get("tickets", []): if bool(row.get("done", false)): done[str(row.id)] = true
 	for id in CH1: if not done.has(id): return id
 	return CH1[0]

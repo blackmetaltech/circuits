@@ -24,9 +24,9 @@ const FLAVOUR := {
 	"2-2": {"gadget": "cable", "ask": "Where do we dig?", "thanks": "Found it, right at your mark!"},
 	"2-3": {"gadget": "module", "ask": "Nobody makes this box any more.", "thanks": "Drop-in. It behaves just like the old one."},
 	"2-4": {"gadget": "exam", "ask": "Predict first, then probe.", "thanks": "The numbers agree!"},
-	"3-1": {"gadget": "flash", "ask": "The flash should be ready one second after I switch on.", "thanks": "Ready on the dot! One second."},
+	"3-1": {"gadget": "flash", "ask": "The flash says ready far too soon.", "thanks": "Ready on the dot! One second."},
 	"3-2": {"gadget": "arcade", "ask": "My button counts one press as ten.", "thanks": "One press, one press. The game is fair again."},
-	"3-3": {"gadget": "relay", "ask": "My relay is too slow to pull in.", "thanks": "Click, right on time. The valves are in step."},
+	"3-3": {"gadget": "relay", "ask": "My relay does not click.", "thanks": "Click, right on time. The valves are in step."},
 	"3-4": {"gadget": "exam", "ask": "Predict first, then probe.", "thanks": "The numbers agree!"},
 	"4-1": {"gadget": "wallwart", "ask": "My adapter hums and the radio crackles.", "thanks": "Quiet at last. Thank you!"},
 	"4-2": {"gadget": "radio", "ask": "My radio needs a steady 5 volts.", "thanks": "Clear as a bell, rain or shine."},
@@ -113,6 +113,7 @@ func open_ticket(id: String) -> bool:
 		else: ticket = {}
 		return false
 	powered = false; locked = false; passed = false; smoked.clear(); temps.clear(); hold = 0.0; t = 0.0; _accum = 0.0; _was_lock = false
+	jockey_step_i = 1   # a new ticket starts at the 1 mm jockey step
 	probes = {"red": null, "black": null, "ch1": null}; dial = "OFF"; dmm_used = false; dmm_loaded = false
 	frame = {}; last_result = {}; _bench_key = ""; _smoke_seen.clear(); _coach_max = 0
 	# a repair's parts that arrived burnt (0.4.0, Noor): the first frame that "sees" them smoked must not read as a fresh burn

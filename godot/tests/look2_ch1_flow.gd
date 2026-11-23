@@ -164,7 +164,13 @@ func _run() -> void:
 		wb.hand_back(); await _frames(5)
 		ok(wb.handed and wb.case_node.state == "handed", "the device goes back to the customer")
 		wb.next_job(); await _frames(10)
-	ok(wb.mode == "title", "after 2-3, the last bench job, the bench goes back to the title")
+		if id == "2-1":
+			# the bench campaign runs 2-1, 2-2, 2-3 (D-bench-ch23; look2_ch23_flow plays 2-2): this flow goes on to 2-3 by name
+			ok(wb.ticket_id == "2-2", "'Next job' after 2-1 opens 2-2, the bench's next job (%s)" % wb.ticket_id)
+			wb.start_job("2-3"); await _frames(10)
+	ok(wb.ticket_id == "2-4", "'Next job' after 2-3 opens 2-4: chapter 2 goes on on the bench (%s)" % wb.ticket_id)
+	wb.back_to_title(); await _frames(5)
+	ok(wb.mode == "title", "back to the title")
 	print("== free bench")
 	wb.start_free(); await _frames(10)
 	var item := {}
