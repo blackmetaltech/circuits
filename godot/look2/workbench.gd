@@ -1898,12 +1898,12 @@ func _demo(name: String) -> void:
 			at.call(0.9, func(): if not backend.powered: toggle_power())
 			var pot := ""
 			for p in backend.parts: if str(p.partId) == "pot-panel": pot = str(p.uid)
-			for i in 19: at.call(1.4 + i * 0.3, func():
-				var a := 0.1 + 0.05 * i
+			for i in 17: at.call(1.4 + i * 0.35, func():
+				var a := 0.97 - 0.025 * i   # from the dark end up to full (the wiper's alpha runs from end A; the knob reads 1 - alpha)
 				backend._act("setPot", [pot, a]); pot_alpha[pot] = a
 				var pn = parts3d.get(pot, null)
 				if pn: pn.set_knob(a)
-				note = "Knob at %d %%. Strip current %.0f mA." % [int(round(a * 100)), absf(backend.part_current("f1")) * 1000.0]; changed.emit())
+				note = "Knob at %d %%. Strip current %.0f mA." % [int(round((1.0 - a) * 100)), absf(backend.part_current("f1")) * 1000.0]; changed.emit())
 		"thermal43":   # 0.6: 4-3 with the reference built; power, half an amp, the thermal camera shows the 7805 heating
 			at.call(0.4, func(): open_case(); backend.build_ref(ticket_id); sync_board(); set_view(5))
 			at.call(1.0, func(): if not backend.powered: toggle_power())
