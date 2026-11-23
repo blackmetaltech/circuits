@@ -4,12 +4,15 @@
 
 Customers bring broken devices to your bench. Open them, measure them, swap the faulty parts, and hand them back.
 
-> **v0.4.2, pre-alpha.** Chapter 1, 2-1 and 2-3 play on the 3D bench; the rest plays in the classic 2D look. Linux and Windows builds on the [releases page](https://github.com/blackmetaltech/circuits/releases/latest).
+> **v0.5.0, pre-alpha.** Chapters 1 to 3 play on the 3D bench; chapters 4 and 5 play in the classic 2D look. A testbed lets you break known devices on purpose. Linux and Windows builds on the [releases page](https://github.com/blackmetaltech/circuits/releases/latest).
 
 ![A burnt LED is replaced and burns again on 9 V: the ticket bills the part plus a $1.50 courier](docs/readme/wb-burn-1-1.gif)
 
 | | |
 |---|---|
+| ![](docs/readme/wb-swap-3-1.gif)<br>**3-1 Flash timer.** It arrives with a 22 µF capacitor. The wheel steps it to 100 µF, and it passes. | ![](docs/readme/wb-testbed-fan.gif)<br>**Testbed.** Pull the fan driver's flyback diode. The coil kicks to 2000 V and the transistor dies. |
+| ![](docs/readme/wb-relay-3-3.jpg)<br>**3-3 Relay pull-in.** The relay never clicks. The customer is waiting, and a first-test fix earns a tip. | ![](docs/readme/wb-cable-2-2.jpg)<br>**2-2 Cable fault.** Slide the jockey until the needle sits on zero. |
+| ![](docs/readme/wb-testbed-station.jpg)<br>**Testbed: weather station.** Fit the builder's divider and the meter reads 2.76 V. | |
 | ![](docs/readme/wb-pick-1-1.gif)<br>**Pick and place.** Take a part from the box. Drop it on the pads. | ![](docs/readme/wb-measure-2-1.gif)<br>**Measure, then fix.** 2.76 V before, 3.35 V after. |
 | ![](docs/readme/wb-supply-2-3.gif)<br>**The supply keys.** VOLTAGE steps the bench supply. TEST runs the bench test. | ![](docs/readme/wb-sortbox-1-1.jpg)<br>**Passed.** Printed tabs on the parts box. |
 | ![](docs/readme/wb-weather-2-1.jpg)<br>**2-1 Weather station.** It reads low. The meter's face says 2.76 V. | ![](docs/readme/wb-cute-2-1.jpg)<br>**Cute mode.** Beads ride the wires that carry current. |
@@ -51,7 +54,7 @@ Cute mode shows current as beads riding the wires. In the classic look, LEDs get
 
 The front end is Godot 4.7. The engine is a deterministic TypeScript circuit solver, run through a Node sidecar.
 
-## The classic look (2-2, 2-4, chapters 3 to 5)
+## The classic look (chapters 4 and 5 still play here)
 
 | | |
 |---|---|

@@ -497,6 +497,7 @@ func start_job(id := "") -> void:
 	if OS.get_environment("CB_POWER") == "1": backend.set_power(true)
 	if OS.get_environment("CB_POWER_AT") != "":   # QA/clip hook: switch the bench on after N seconds (the clip shows the moment)
 		get_tree().create_timer(float(OS.get_environment("CB_POWER_AT"))).timeout.connect(func(): toggle_power())
+	if OS.get_environment("CB_OPEN") == "1": open_case(); set_view(int(OS.get_environment("CB_VIEW")) if OS.get_environment("CB_VIEW") != "" else 1, true)   # shot hook
 	if OS.get_environment("CB_DEMO") != "": _demo(OS.get_environment("CB_DEMO"))
 	if OS.get_environment("CB_OPEN_AT") != "":    # QA/clip hook: open the case after N seconds
 		get_tree().create_timer(float(OS.get_environment("CB_OPEN_AT"))).timeout.connect(func(): open_case())
@@ -1673,12 +1674,12 @@ func _demo(name: String) -> void:
 			at.call(0.4, func(): open_case(); set_view(5))
 			at.call(1.6, func(): if not backend.powered: toggle_power())
 			at.call(3.0, func(): toggle_power())
-			for i in 4: at.call(3.6 + i * 0.45, func():
-				for p in backend.parts: if str(p.partId) == "cap-el" and not bool(p.get("fixed", false)):
+			for i in 8: at.call(3.6 + i * 0.4, func():
+				for p in backend.parts: if str(p.partId) == "cap-el" and not bool(p.get("fixed", false)) and float(p.value) < 99e-6:
 					var n3: Node3D = parts3d.get(str(p.uid), null)
-					if n3: _wheel_value(cam.unproject_position(n3.global_position), 1))
-			at.call(6.0, func(): if not backend.powered: toggle_power())
-			at.call(7.6, func(): run_test())
+					if n3: _wheel_value(cam.unproject_position(n3.global_position + Vector3(0, 0.004, 0)), 1))
+			at.call(7.2, func(): if not backend.powered: toggle_power())
+			at.call(9.6, func(): run_test())
 		"jockey22":   # 0.5: 2-2 cable fault: the jockey slides along the wire and the galvanometer needle swings through zero
 			at.call(0.4, func(): open_case(); set_view(5))
 			at.call(1.0, func(): if not backend.powered: toggle_power())

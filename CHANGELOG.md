@@ -2,6 +2,34 @@
 
 All notable changes to CIRCUITS (called NODE until v0.1.0). The release workflow publishes the section whose heading contains `[x.y.z]`.
 
+## [0.5.0] - 2026-11-23 · "Whole Chapters"
+Chapters 1 to 3 now play on the 3D bench, with nothing left in the classic look. A testbed lets you break known devices on purpose. A customer waits, and guessing costs the tip.
+
+### Added
+- 2-2 Cable Fault, 2-4 Exam: Potentiometer, 3-1 Flash Timer, 3-2 Debounce, 3-3 Relay Pull-in and 3-4 Exam: Capacitor Bank on the bench, in campaign order. Each has its own case and parts: a slide wire with a jockey you move, a galvanometer, an arcade button, a relay that pulls in, capacitors with charge gauges.
+- 3-1 and 3-3 arrive faulty. The flash's ready-light comes on at 0.22 s on a 22 µF capacitor. The relay never pulls in through 560 ohm.
+- The wheel over a part on the board changes its value in place, and its wires stay. That is how 3-1 and 3-3 are fixed.
+- Testbed (title menu): load the pocket torch, the weather station input or the fan driver with its working board. Break it on purpose, then pause (K) and step (L) time.
+- A waiting customer: a pass on the first bench test earns a $2.00 tip, and each failed test takes $0.50 off. The ticket shows what the next pass would earn.
+- With a wire, meter or scope tool in hand, every pad an end can go to shows a ring, and the pad under the cursor says what it is ("GND: ground, the supply's minus"). A playtester lost 20 minutes looking for the battery's ground lead.
+- Tests: look2_ch23_flow (123 checks), look2_swap_flow (13), look2_testbed_flow (21), sfx_flow (42), tip.test (6), all in CI.
+
+### Fixed
+- The gamepad's A button pressed nothing on the title or in menus. A now accepts and B cancels.
+- A testbed break that burns a part now shows the engine's explanation. Opening a new board clears the last scope capture and the smoke.
+- The wiki said the workbench had no gamepad support. It now lists the pad, the value wheel, the jockey keys and the testbed.
+
+### Known
+- Below 1280 px wide, a long failure line can run off the bottom of the ticket.
+- The testbed's torch burns in the first frame, so Step cannot show the current rising.
+
+### Changed
+- The scope's screen text is 16 px on screen at 1280x800. The sorting-box tabs drop the price line (it is on the hover tip). Numbers and their units no longer wrap apart on the ticket.
+- The frame test also checks that the meter covers none of the supply's controls and that the scope and supply stand apart (55 checks).
+- Sound: clicks are filtered noise instead of hiss, each cue has a short room tail, and repeats vary a little in pitch. No human has listened yet.
+- Gamepad: the ring slows over anything it can act on, and the pad rumbles on power, a pass and a burn. No human has held a pad on it yet.
+- Docs linked from the README no longer use the banned selling word. The app ids and the Windows publisher name are blackmetal.tech.
+
 ## [0.4.2] - 2026-11-23 · "Plain Words"
 A text patch. The game, the site, the wiki and the release notes drop the selling phrases the owner banned (bible 09). They say what you do, and each sentence keeps its fact.
 
