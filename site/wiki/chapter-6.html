@@ -18,7 +18,7 @@
 <p class="lede">Wren's sixth page: six repairs and an exam, all with op-amps. A mic preamp, a pH meter, a studio preamp, a piezo driver, a thermostat and your own generator came in broken.</p>
 <section class="ticket" id="t6-1">
 <h2>6-1 · Mic Preamp </h2>
-<figure class="shot"><img src="assets/jobs/6-1.jpg" alt="6-1 Mic Preamp on the workbench, fixed and powered" width="960" height="540" loading="lazy"></figure>
+<figure class="shot"><img src="assets/jobs/6-1.jpg" alt="6-1 Mic Preamp on the workbench, as it arrives, case open" width="960" height="540" loading="lazy"></figure>
 <p>Rafa busks with a dynamic mic. Its preamp should turn the mic's 10 mV into 470 mV (an inverting gain of 47), but the output is stuck at one rail and the mic does nothing. Find out why and fix it.</p>
 <p class="arrives"><b>On the bench:</b> A TL072 on +-12 V. Look where the 470 k feedback resistor lands: pin 3 is the + input.</p><h3>The bench checks</h3>
 <ul><li>OUT swings 0.893 to 0.987 V peak to peak (a gain of 47 +-5 % on the 10 mV peak mic)</li><li>OUT is centred: its average stays between -1 and +1 V</li></ul>
@@ -26,7 +26,7 @@
 </section>
 <section class="ticket" id="t6-2">
 <h2>6-2 · Sensor Buffer </h2>
-<figure class="shot"><img src="assets/jobs/6-2.jpg" alt="6-2 Sensor Buffer on the workbench, fixed and powered" width="960" height="540" loading="lazy"></figure>
+<figure class="shot"><img src="assets/jobs/6-2.jpg" alt="6-2 Sensor Buffer on the workbench, as it arrives, case open" width="960" height="540" loading="lazy"></figure>
 <p>Dr. Okafor's pH meter reads about a tenth of what it should, and below zero. The probe gives 0.2 to 1.0 V but only through 100 kΩ, so it cannot drive any current. The meter wants exactly twice the probe's voltage (+-1 %).</p>
 <p class="arrives"><b>On the bench:</b> The probe feeds 10 k into pin 2, and the probe itself sits behind 100 k.</p><h3>The bench checks</h3>
 <ul><li>OUT reads 1.98 to 2.02 V with the probe at 1.0 V</li><li>OUT reads 1.188 to 1.212 V with the probe at 0.6 V</li><li>OUT reads 0.396 to 0.404 V with the probe at 0.2 V</li></ul>
@@ -34,7 +34,7 @@
 </section>
 <section class="ticket" id="t6-3">
 <h2>6-3 · Studio Preamp </h2>
-<figure class="shot"><img src="assets/jobs/6-3.jpg" alt="6-3 Studio Preamp on the workbench, fixed and powered" width="960" height="540" loading="lazy"></figure>
+<figure class="shot"><img src="assets/jobs/6-3.jpg" alt="6-3 Studio Preamp on the workbench, as it arrives, case open" width="960" height="540" loading="lazy"></figure>
 <p>Studio Nine wants 40 dB of gain (x100), flat from 20 Hz to 20 kHz, from one LM358 (two op-amps in one chip). The preamp they built sounds dull: the treble is gone. The bench sweeps it from 20 Hz to 20 kHz.</p>
 <p class="arrives"><b>On the bench:</b> One LM358 stage at a gain of 100. The second op-amp in the chip (pins 5 to 7) is unused.</p><h3>The bench checks</h3>
 <ul><li>The gain from IN to OUT stays between 38.5 and 41 dB from 20 Hz to 20 kHz</li><li>The 1 kHz test tone swings 1.65 to 2.3 V peak to peak at OUT</li></ul>
@@ -42,7 +42,7 @@
 </section>
 <section class="ticket" id="t6-4">
 <h2>6-4 · Big Swing </h2>
-<figure class="shot"><img src="assets/jobs/6-4.jpg" alt="6-4 Big Swing on the workbench, fixed and powered" width="960" height="540" loading="lazy"></figure>
+<figure class="shot"><img src="assets/jobs/6-4.jpg" alt="6-4 Big Swing on the workbench, as it arrives, case open" width="960" height="540" loading="lazy"></figure>
 <p>Kit's ultrasonic cleaner drives its piezo with 20 V peak to peak at 50 kHz, made from a 4 V peak-to-peak signal (a gain of 5). The output came back a small triangle instead of a big sine.</p>
 <p class="arrives"><b>On the bench:</b> An LM741 drives the cleaner. Clip the scope on OUT and look at the shape.</p><h3>The bench checks</h3>
 <ul><li>OUT swings 19 to 21 V peak to peak at 50 kHz</li><li>The distortion of OUT is at most 3 %</li></ul>
@@ -50,7 +50,7 @@
 </section>
 <section class="ticket" id="t6-5">
 <h2>6-5 · Thermostat </h2>
-<figure class="shot"><img src="assets/jobs/6-5.jpg" alt="6-5 Thermostat on the workbench, fixed and powered" width="960" height="540" loading="lazy"></figure>
+<figure class="shot"><img src="assets/jobs/6-5.jpg" alt="6-5 Thermostat on the workbench, as it arrives, case open" width="960" height="540" loading="lazy"></figure>
 <p>Mina's science-fair incubator should heat below 47 C and stop above 53 C. Instead the heater relay chatters around 50 C. The bench warms the probe from 40 to 60 C and cools it back, with some noise on the probe.</p>
 <p class="arrives"><b>On the bench:</b> The NTC probe sits on the 5 V pad. An LM393 compares it with half of 5 V, with nothing from OUT back to pin 3.</p><h3>The bench checks</h3>
 <ul><li>OUT switches exactly twice in the run: once off, once on</li><li>The heater goes off between 51 and 55 C on the way up</li><li>The heater comes back on between 45 and 49 C on the way down</li><li>OUT reads at least 4.0 V while the heater is on</li></ul>
@@ -58,7 +58,7 @@
 </section>
 <section class="ticket" id="t6-6">
 <h2>6-6 · Ramp </h2>
-<figure class="shot"><img src="assets/jobs/6-6.jpg" alt="6-6 Ramp on the workbench, fixed and powered" width="960" height="540" loading="lazy"></figure>
+<figure class="shot"><img src="assets/jobs/6-6.jpg" alt="6-6 Ramp on the workbench, as it arrives, case open" width="960" height="540" loading="lazy"></figure>
 <p>Your own function generator makes its triangle by integrating its square wave. The triangle has gone wrong: it sits down at the -10.5 V rail, flattened. The square is +-1 V at 1 kHz, but it carries 50 mV of DC it should not.</p>
 <p class="arrives"><b>On the bench:</b> Your own generator. 11 k in, 22 nF from OUT to pin 2, and nothing else across the capacitor.</p><h3>The bench checks</h3>
 <ul><li>OUT swings 1.8 to 2.2 V peak to peak</li><li>OUT is centred: its average stays between -0.3 and +0.3 V</li><li>OUT is a triangle, not a square: its distortion against a sine is at most 25 % (a clean triangle is 12 %)</li></ul>
@@ -66,7 +66,7 @@
 </section>
 <section class="ticket" id="t6-7">
 <h2>6-7 · Exam: Summing Amp <span class="tag">exam</span></h2>
-<figure class="shot"><img src="assets/jobs/6-7.jpg" alt="6-7 Exam: Summing Amp on the workbench, fixed and powered" width="960" height="540" loading="lazy"></figure>
+<figure class="shot"><img src="assets/jobs/6-7.jpg" alt="6-7 Exam: Summing Amp on the workbench, as it arrives, case open" width="960" height="540" loading="lazy"></figure>
 <p>The exam desk: three voltages, each through its own resistor, into the - input of an op-amp with Rf from OUT. Work out OUT, then for every input doubled, then tripled. Then build it from the textbook parts and check.</p>
 <p class="arrives"><b>On the bench:</b> Predict first, then build and probe.</p><h3>The bench checks</h3>
 <ul><li>OUT with the inputs as printed (V)</li><li>OUT with every input doubled (V)</li><li>OUT with every input tripled (V)</li><li>M reads -4.75 V (+-1 %) with the inputs as printed</li><li>M reads -9.50 V (+-1 %) with every input doubled</li><li>M reads -14.25 V (+-1 %) with every input tripled</li></ul>

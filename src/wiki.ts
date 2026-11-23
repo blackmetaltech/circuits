@@ -90,7 +90,7 @@ function chapterPage(ch: number, defs: LevelDef[]): string {
     const arrives = ARRIVES[d.id] ? `<p class="arrives"><b>On the bench:</b> ${esc(ARRIVES[d.id]!)}</p>` : '';
     return `<section class="ticket" id="t${d.id}">
 <h2>${d.id} · ${esc(t(d.titleKey))} ${d.eb ? '<span class="tag">exam</span>' : ''}</h2>
-<figure class="shot"><img src="${JOB_SHOT(d.id)}" alt="${esc(`${d.id} ${t(d.titleKey)} on the workbench, fixed and powered`)}" width="960" height="540" loading="lazy"></figure>
+<figure class="shot"><img src="${JOB_SHOT(d.id)}" alt="${esc(`${d.id} ${t(d.titleKey)} on the workbench, ${d.chapter >= 6 ? 'as it arrives, case open' : 'fixed and powered'}`)}" width="960" height="540" loading="lazy"></figure>
 <p>${esc(t(d.briefKey, vars(d)))}</p>
 ${arrives}<h3>The bench checks</h3>
 <ul>${specs}</ul>
