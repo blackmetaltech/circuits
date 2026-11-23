@@ -218,7 +218,13 @@ func _run() -> void:
 	ok(wb.note.contains("wire") and wb.note.contains("Ctrl+Z"), "and says which wires went with it (%s)" % wb.note)
 	# click, then click draws a wire (Noor clicked twice and nothing happened; drag was the only way)
 	var nw: int = wb.backend.wires.size()
-	wb.set_tool("wire")
+	# Rui (0.6 replay): W after a zoom kept jumping to the top view and threw the zoom away
+	var v_was: int = wb.view
+	wb.set_tool("select"); wb.set_view(1, true); wb.g_dist *= 0.9; wb.set_tool("wire")
+	ok(wb.view == 1, "after a zoom, the wire tool leaves the camera where the player put it (view %d)" % wb.view)
+	wb.set_tool("select"); wb.set_view(1, true); wb.set_tool("wire")
+	ok(wb.view == 5, "untouched view 1: the wire tool goes to the top-down board view (view %d)" % wb.view)
+	wb.set_view(v_was, true); wb.set_tool("wire")
 	var pa := wb.cam.unproject_position(wb.board.pad_world(12, 14)); var pb := wb.cam.unproject_position(wb.board.pad_world(16, 14))
 	wb._left(true, pa); wb._left(false, pa); await _frames(2)
 	ok(wb.note.begins_with("Wire from here"), "a click on a pad starts a wire and says how to end it: %s" % wb.note)

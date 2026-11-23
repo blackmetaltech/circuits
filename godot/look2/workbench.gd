@@ -462,6 +462,7 @@ func set_view(v: int, snap := false) -> void:
 		3: g_tgt = (scope.global_position + Vector3(-0.06, 0.075, 0)) if scope else Vector3(-0.3, 0.08, -0.25); g_yaw = deg_to_rad(14.0); g_pitch = deg_to_rad(-10.0); g_dist = 0.48
 		4: g_tgt = (fan.global_position + Vector3(0, 0.07, 0)) if fan else Vector3(0.03, 0.07, -0.24); g_yaw = deg_to_rad(-20.0); g_pitch = deg_to_rad(-14.0); g_dist = 0.42
 	if snap: tgt = g_tgt; yaw = g_yaw; pitch = g_pitch; dist = g_dist
+	_view_pose = [g_tgt, g_yaw, g_pitch, g_dist]
 	if ui: ui.call_deferred("_rebuild")
 
 func _update_camera(dt: float) -> void:
@@ -857,7 +858,12 @@ func _live(dt: float) -> void:
 		n.set_smoked(bool(p.get("smoked", false)) or backend.smoked.has(str(p.uid)) or burnt.has(str(p.uid)))
 		if p.has("led"): n.set_led(float(p.led.get("mA", 0.0)), float(p.led.get("bloom", 0.0)))
 		if p.has("galvo"): n.set_needle(float(p.galvo.get("needle", 0.0)), float(p.galvo.get("uA", 0.0)))
-		if p.has("relay"): n.set_relay(bool(p.relay.get("operated", false)), float(p.relay.get("mA", 0.0)))
+		if p.has("relay"):
+			var op := bool(p.relay.get("operated", false))
+			# 0.6: the armature is heard when it pulls in or drops out (the relay timer, 3-3); nobody has listened to it yet
+			if sfx and op != bool(_relay_was.get(str(p.uid), false)): sfx.play("clack", 1.25 if op else 0.9)
+			_relay_was[str(p.uid)] = op
+			n.set_relay(op, float(p.relay.get("mA", 0.0)))
 		if p.has("cap") and n.anim.has("level"):
 			var vf := float(p.cap.get("vfull", 0.0))
 			if vf > 0.0: n.set_level(float(p.cap.get("v", 0.0)) / vf)
@@ -1137,10 +1143,18 @@ func ray_hit(mp: Vector2) -> String:
 	while c != null and not c.has_meta("hit") and c is Node and (c as Node).get_parent() != null: c = (c as Node).get_parent()
 	return str(c.get_meta("hit")) if c != null and c.has_meta("hit") else ""
 
+var _view_pose: Array = []   ## the camera goal set_view left (target, yaw, pitch, distance)
+
+## True when the player has zoomed, orbited or panned since the last view key.
+func _cam_moved() -> bool:
+	if _view_pose.size() < 4: return false
+	return g_tgt.distance_to(_view_pose[0]) > 0.002 or absf(g_yaw - float(_view_pose[1])) > 0.01 or absf(g_pitch - float(_view_pose[2])) > 0.01 or absf(g_dist - float(_view_pose[3])) > 0.002
+
 func set_tool(t: String) -> void:
 	# 0.6 (Tess, 15 minutes on 1-1): in the wide views the battery hid its own leads. A wire, lead or probe tool picked there moves
 	# the camera to the top-down board view (key 5); keys 1-4 still go back.
-	if t in ["wire", "red", "black", "probe"] and tool != t and view in [1, 2] and mode in ["job", "free"] and board != null and not case_closed():
+	# Rui (0.6 replay): the jump threw away his zoom; it happens only while the camera still sits where the view key put it.
+	if t in ["wire", "red", "black", "probe"] and tool != t and view in [1, 2] and not _cam_moved() and mode in ["job", "free"] and board != null and not case_closed():
 		set_view(5)
 	tool = t
 	if t != "place": _clear_ghost()
@@ -1372,6 +1386,7 @@ func _pick_item(mp: Vector2) -> Dictionary:
 
 var _pick_hl := {}
 var _pick_hl_ms := 0
+var _relay_was := {}   ## 0.6: the last armature state per relay uid (for its click)
 var pot_alpha := {}   ## 0.6: the wiper position the wheel set on each panel pot (uid -> 0..1 from end A)
 func _set_pick_hl(it: Dictionary) -> void:
 	if str(it.get("id", "")) == str(_pick_hl.get("id", "")): return
