@@ -1,5 +1,7 @@
 // Relay macro (DESIGN §3.7). Kind 'RLY'. Terminals [C1, C2, COM, NO, NC]; one branch unknown i = coil current C1→C2; state [i, vL, f]
-// (coil current and inductive voltage after the last accepted step, armature f: 0 = released (NC–COM closed), 1 = operated (NO–COM closed)).
+// (coil current and inductive voltage after the last accepted step, armature f: 0 = released (NC–COM closed), 1 = operated (NO–COM closed)),
+// plus the armature the last accepted solution was computed with (0.6: the contact currents of the sample taken at a pull-in used the new
+// armature with the old voltages, 12 V across 50 mohm, and billed one sample of kilowatts to the relay: a load switched by the contacts burned it).
 //   coil     C1 − C2 = R·i + L·di/dt   (inductor companion as in l.ts with the series R)
 //   contacts COM–NO and COM–NC are switches: Ron (50 mΩ) closed, Roff (1e9) open, chosen by f
 //   events   g = Ipull − |i| while released, g = |i| − Idrop while operated  (pull-in / drop-out hysteresis, crossing located by tran.ts)
@@ -11,7 +13,7 @@ const [C1, C2, COM, NO, NC] = [0, 1, 2, 3, 4];
 
 export const RLY: Device = {
   kind: 'RLY', terminals: 5, isLinear: false,
-  branches: () => 1, internalNodes: () => 0, stateSize: () => 3,
+  branches: () => 1, internalNodes: () => 0, stateSize: () => 4,
   validate(el: Element) { const p = el.p; return p.rcoil > 0 && p.lcoil >= 0 && p.ipull > p.idrop && p.idrop >= 0 && p.ron > 0 && p.roff > 0 ? null : `${el.id}: relay parameters are not usable`; },
   stampDC(e, c) { stamp(e, c, 0, 0); },
   stampTran(e, c, method, h) {
@@ -24,12 +26,12 @@ export const RLY: Device = {
     const go = 1 / p.ron, gf = 1 / p.roff;
     c.y(n[COM], n[NC], go); c.y(n[COM], n[NO], gf);   // AC analysis is taken at the released state
   },
-  update(e, x, state) { const i = x[e.branch[0]]; state[e.so] = i; state[e.so + 1] = vOf(x, e.nodes[C1]) - vOf(x, e.nodes[C2]) - e.el.p.rcoil * i; },
-  initState(e, x, state) { state[e.so] = x[e.branch[0]]; state[e.so + 1] = 0; },
+  update(e, x, state) { const i = x[e.branch[0]]; state[e.so] = i; state[e.so + 1] = vOf(x, e.nodes[C1]) - vOf(x, e.nodes[C2]) - e.el.p.rcoil * i; state[e.so + 3] = state[e.so + 2] ?? 0; },
+  initState(e, x, state) { state[e.so] = x[e.branch[0]]; state[e.so + 1] = 0; state[e.so + 3] = state[e.so + 2] ?? 0; },
   eventValue(e, x, state) { const i = Math.abs(x[e.branch[0]]), p = e.el.p; return state[e.so + 2] >= 0.5 ? i - p.idrop : p.ipull - i; },
   fire(e, _x, state) { state[e.so + 2] = state[e.so + 2] >= 0.5 ? 0 : 1; },
   terminalCurrents(e, x, state) {
-    const n = e.nodes, p = e.el.p, i = x[e.branch[0]], f = (state[e.so + 2] ?? 0) >= 0.5;
+    const n = e.nodes, p = e.el.p, i = x[e.branch[0]], f = (state[e.so + 3] ?? state[e.so + 2] ?? 0) >= 0.5;   // the armature x was solved with
     const gno = f ? 1 / p.ron : 1 / p.roff, gnc = f ? 1 / p.roff : 1 / p.ron;
     const ino = gno * (vOf(x, n[COM]) - vOf(x, n[NO])), inc = gnc * (vOf(x, n[COM]) - vOf(x, n[NC]));
     return [i, -i, ino + inc, -ino, -inc];

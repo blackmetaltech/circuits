@@ -112,3 +112,13 @@ describe('the condition dial (0.6, D-money-06)', () => {
     expect(e.act('setCondition', [null]).ok).toBe(true);
   });
 });
+
+describe('no customer waits on your own bench (0.6)', () => {
+  it('4-4 is your own 3.3 V rail: no tip and no waiting line', () => {
+    const e = open('4-4');
+    expect((e.q('bench') as any).waiting ?? false).toBe(false);
+    fix(e, '4-4');
+    const r = e.act('runBench', [true]);
+    expect((r as any).pass).toBe(true); expect((r as any).tip ?? 0).toBe(0);
+  });
+});

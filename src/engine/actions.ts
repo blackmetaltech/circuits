@@ -43,7 +43,7 @@ function open(s: NodeState, defs: Defs): { tk: TicketState; def: LevelDef } {
 }
 const sandbox = (s: NodeState): boolean => s.mode === 'sandbox';
 /** A customer is waiting at the counter (0.5): a paid job in the campaign that is not an exam card. */
-const waiting = (s: NodeState, def: LevelDef): boolean => !sandbox(s) && !!def.pay && def.eb !== true;
+const waiting = (s: NodeState, def: LevelDef): boolean => !sandbox(s) && !!def.pay && def.eb !== true && def.customer !== 'ownbench';   // 4-4 is your own rail: nobody waits (Kofi, 0.6)
 /** A part the player burned costs its replacement: added to the ticket's burn bill, which comes out of the pay (decision 10b). Fixed parts (the customer's own) and sandbox are free. */
 function chargeBurn(s: NodeState, tk: TicketState, uid: string): void {
   if (sandbox(s)) return;

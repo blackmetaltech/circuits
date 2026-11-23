@@ -390,7 +390,7 @@ export function shoebox(s: NodeState, tk: TicketState, def: LevelDef): unknown[]
 /** The waiting customer's tip as the ticket shows it (0.5, stakes): what the next passing TEST would earn. Absent for exams, the
  *  sandbox and a ticket already passed. */
 function waitingCard(s: NodeState, def: LevelDef, tk: TicketState): { waiting?: boolean; tipLeft?: number; tipLeftText?: string; tipStep?: number; tipStepText?: string; failedTests?: number } {
-  if (s.mode === 'sandbox' || !def.pay || def.eb === true || s.progress.tickets[def.id]?.passed) return {};
+  if (s.mode === 'sandbox' || !def.pay || def.eb === true || def.customer === 'ownbench' || s.progress.tickets[def.id]?.passed) return {};
   const pack = REGIONS.get(s.region);
   const left = tipLeft(s, def, tk), step = tipStep(s, def);
   return { waiting: true, tipLeft: left, tipLeftText: formatMinor(left, pack), tipStep: step, tipStepText: formatMinor(step, pack), failedTests: tk.failedTests ?? 0 };

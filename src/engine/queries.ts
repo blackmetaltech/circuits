@@ -1,5 +1,6 @@
 // Queries (DESIGN §8.5): everything the UI shows. Read-only: none of these mutates the state; derived data is recomputed from the saved
 // solution (live.x / live.hist) on the saved board, so a loaded save answers exactly as the running game did.
+import { TESTBED_BOARDS } from '../data/testbed';
 import { dmath } from '@core/numerics';
 import type { QueryFn } from '@core/kit';
 import { PARTS } from '../data/parts';
@@ -420,6 +421,8 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
     },
     /** The candidate actions the agents and personas choose from (probe-filtered by the core env). */
     legalActions: (s, full?: unknown) => candidateActions(s, defs, full === true),
+    /** 0.6 testbed: a device board that is not a ticket's own (src/data/testbed.ts), for the Godot testbed to load on its host. */
+    testbedBoard: (_s, id?: unknown) => (typeof id === 'string' ? TESTBED_BOARDS[id] ?? null : Object.keys(TESTBED_BOARDS)),
     caps: () => ({ undo: UNDO_CAP, failureLog: FAILURE_LOG_CAP, scopePoints: SCOPE_POINTS_CAP }),
   };
   Object.assign(Q, makeUiQueries({ defs, Q, mine: mineSolution, regionString, explained: explainedText }));
