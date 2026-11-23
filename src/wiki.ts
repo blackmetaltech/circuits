@@ -60,6 +60,9 @@ function page(title: string, desc: string, body: string): string {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
+<meta name="theme-color" content="#120f0c">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
 <link rel="stylesheet" href="../style.css">
 </head>
 <body class="wiki">
@@ -105,8 +108,10 @@ const PLANNED: [string, string][] = [
 function indexPage(chapters: number[]): string {
   const jobs = LEVEL_DEFS.filter((d) => d.chapter > 0).length;
   const list = chapters.map((ch) => {
-    const names = LEVEL_DEFS.filter((d) => d.chapter === ch).map((d) => esc(t(d.titleKey))).join(' · ');
-    return `<li><a href="chapter-${ch}.html"><b>Chapter ${ch} · ${esc(t(`chapter.${ch}.title`))}</b></a><span>${names}</span></li>`;
+    const defs = LEVEL_DEFS.filter((d) => d.chapter === ch);
+    const names = defs.map((d) => esc(t(d.titleKey))).join(' · ');
+    const first = defs[0]!;
+    return `<li><a href="chapter-${ch}.html"><img src="${JOB_SHOT(first.id)}" alt="${esc(`${first.id} ${t(first.titleKey)} on the workbench`)}" width="960" height="540" loading="lazy"><b>Chapter ${ch} · ${esc(t(`chapter.${ch}.title`))}</b><span>${names}</span></a></li>`;
   }).join('');
   return page('CIRCUITS wiki', 'Player guide to CIRCUITS: every repair ticket, what the bench checks, and the controls.',
     `<p class="crumbs">Wiki</p>
@@ -136,7 +141,7 @@ function indexPage(chapters: number[]): string {
 </ul>
 <h2>Testbed</h2>
 <p>Known devices with their working boards. Probe one live, break it on purpose, then pause (K) and step (L) time to watch what happens.</p>
-<div class="devices">${TESTBED.map(([id, n, what]) => `<figure><img src="${TESTBED_SHOT(id)}" alt="${esc(`${n} on the testbed`)}" width="960" height="540" loading="lazy"><figcaption><b>${esc(n)}.</b> ${esc(what)}</figcaption></figure>`).join('')}</div>
+<div class="rigs">${TESTBED.map(([id, n, what]) => `<figure><img src="${TESTBED_SHOT(id)}" alt="${esc(`${n} on the testbed`)}" width="960" height="540" loading="lazy"><figcaption><b>${esc(n)}.</b> ${esc(what)}</figcaption></figure>`).join('')}</div>
 <h2>Free bench</h2>
 <p>Any part, the bench supply, the scope and the meter, with three save slots. On the title.</p>`);
 }
