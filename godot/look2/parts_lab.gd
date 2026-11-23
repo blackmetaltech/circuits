@@ -306,7 +306,8 @@ static func led_strip(n: Part3D) -> void:
 		_box(n, Vector3(0.0030, 0.0008, 0.0040), MeshKit.m("solder"), Vector3(x, 0.0036, 0), 0.0003)
 	n._labels.append(MeshKit.label(n, "12V", 0.000040, Vector3(L * 0.55, 0.0035, 0.0040), Color(0.15, 0.15, 0.15), true))
 
-## 5-4's load: the synth's amplifier input, a 6.35 mm jack socket on a small panel (47 k in, written on the panel).
+## 5-4 and 6-4: the next stage's input (the synth's amplifier, the cleaner's piezo driver), a 6.35 mm jack on a small panel. The panel says
+## "IN 47 k" (0.7: it said "AMP IN", wrong for 6-4's cleaner).
 static func amp_input(n: Part3D) -> void:
 	var L := 6.0 * P
 	n._body(MeshKit.rounded_box(Vector3(L + 0.0040, 0.0016, 0.0130), 0.0005), MeshKit.m("brushed_alu"), Vector3(L * 0.5, 0.0060, 0))
@@ -314,7 +315,7 @@ static func amp_input(n: Part3D) -> void:
 	_cyl(n, 0.0048, 0.0020, MeshKit.m("steel"), Vector3(L * 0.5, 0.0077, 0), Vector3.ZERO, 6)            # the nut
 	_cyl(n, 0.0036, 0.0030, MeshKit.mat(Color(0.82, 0.83, 0.85), 0.2, 1.0), Vector3(L * 0.5, 0.0083, 0), Vector3.ZERO, 24)
 	_cyl(n, 0.0021, 0.0034, MeshKit.mat(Color(0.01, 0.01, 0.01), 0.9), Vector3(L * 0.5, 0.0085, 0), Vector3.ZERO, 20)   # the socket hole
-	n._labels.append(MeshKit.label(n, "AMP IN  47 k", 0.000040, Vector3(L * 0.5, 0.0069, 0.0052), Color(0.08, 0.08, 0.08), true))
+	n._labels.append(MeshKit.label(n, "IN  47 k", 0.000040, Vector3(L * 0.5, 0.0069, 0.0052), Color(0.08, 0.08, 0.08), true))
 	for i in 2:
 		var x := float(i) * L
 		n._lead([Vector3(x, -T, 0), Vector3(x, 0.0050, 0), Vector3(L * 0.5 + (x - L * 0.5) * 0.3, 0.0050, 0)], 0.0005)
