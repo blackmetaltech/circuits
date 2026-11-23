@@ -122,3 +122,17 @@
   argument against (a classic-stall player): a 1 m slide wire drawn at 2x scale is mostly empty board. Answer: it is the part the
   lesson is about, and the ruler is what a student reads the balance length from. Not done: a way to change a placed part's value in
   place (a repair means removing the part and placing another), the same as 1-2's.
+
+- **D-tip-waiting (2026-11-23, Ingrid Solheim, Game Lead).** Stakes for 0.5: the customer waits at the counter. Fixed on the first
+  bench test (the player's own TEST key), they tip `service:tip` (US$2.00); each failed TEST before the pass takes
+  `service:tipStep` (US$0.50) off, never below zero; the fee is never touched. The ticket says what the next passing test earns.
+  Exams and the sandbox have no customer; a scripted bench run neither earns nor loses it. Why counted in tests, not minutes: a
+  wall clock punishes the learner who measures before acting, which is the habit the game teaches; a test counter punishes
+  guessing. Strongest argument against (Dagny's line of tension): a test count does not feel like someone tapping the counter.
+  Answer: the tip line is on the ticket in the customer's name and changes on every failed test; a clock is still cut, written
+  down for a later layer with a reputation score.
+
+- **D-value-swap (2026-11-23, Ingrid Solheim, Game Lead).** The wheel over a placed part steps its value through what the box
+  stocks, in place, wires kept (the engine's setValue). Kofi found that a repair otherwise meant removing the part and rebuilding
+  its wires. The wheel over empty bench still zooms; over the box it still changes the tray value; over the supply knob it sets
+  volts.

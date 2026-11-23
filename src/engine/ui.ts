@@ -201,7 +201,7 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       const o = defOf(s); if (!o) return null;
       const { tk, def } = o, b = tk.board, rig = liveRig(tk, def), ins = tk.instruments;
       return {
-        ticket: def.id, burnCost: tk.burnCost ?? 0, burnCostText: formatMinor(tk.burnCost ?? 0, REGIONS.get(s.region)), rushFeeText: formatMinor(REGIONS.get(s.region).data.prices['service:rush'] ?? 0, REGIONS.get(s.region)), fault: def.fault ? true : false, w: b.w, h: b.h, connectors: b.connectors.map((c) => ({ id: c.id, pad: c.pad, role: c.role })),
+        ticket: def.id, burnCost: tk.burnCost ?? 0, burnCostText: formatMinor(tk.burnCost ?? 0, REGIONS.get(s.region)), rushFeeText: formatMinor(REGIONS.get(s.region).data.prices['service:rush'] ?? 0, REGIONS.get(s.region)), ...waitingCard(s, def, tk), fault: def.fault ? true : false, w: b.w, h: b.h, connectors: b.connectors.map((c) => ({ id: c.id, pad: c.pad, role: c.role })),
         parts: b.parts.map((p) => {
           const d = getDef(p.partId)!, pads = pinPads(p, d), v = d.variants.find((x) => x.id === p.variant) ?? d.variants[0]!;
           return {
@@ -385,3 +385,13 @@ export function shoebox(s: NodeState, tk: TicketState, def: LevelDef): unknown[]
     };
   });
 }
+
+/** The waiting customer's tip as the ticket shows it (0.5, stakes): what the next passing TEST would earn. Absent for exams, the
+ *  sandbox and a ticket already passed. */
+function waitingCard(s: NodeState, def: LevelDef, tk: TicketState): { waiting?: boolean; tipLeft?: number; tipLeftText?: string; tipStepText?: string; failedTests?: number } {
+  if (s.mode === 'sandbox' || !def.pay || def.eb === true || s.progress.tickets[def.id]?.passed) return {};
+  const pack = REGIONS.get(s.region), pr = pack.data.prices;
+  const left = Math.max(0, (pr['service:tip'] ?? 0) - (pr['service:tipStep'] ?? 0) * (tk.failedTests ?? 0));
+  return { waiting: true, tipLeft: left, tipLeftText: formatMinor(left, pack), tipStepText: formatMinor(pr['service:tipStep'] ?? 0, pack), failedTests: tk.failedTests ?? 0 };
+}
+

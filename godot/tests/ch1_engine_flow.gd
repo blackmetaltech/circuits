@@ -1,4 +1,5 @@
 extends SceneTree
+const TIP := 200   ## 0.5: the waiting customer's tip for a pass on the first TEST (service:tip, D-tip-waiting)
 ## Chapter 1 end to end on the real engine, through the stall's UI layer (pointer drags for parts, wires and probes, a click on the rocker, the dial and the
 ## BENCH key, typed predictions). All five tickets are played to their reference designs and to LOCK, and the designed naive builds fail:
 ##   godot --headless --path godot -s res://tests/ch1_engine_flow.gd         (exit code 0 = all green; needs godot/sidecar/bridge.mjs)
@@ -247,7 +248,7 @@ func _run() -> void:
 	ok(bk.passed and evlog.has("paid"), "holding LOCK runs the bench and the customer pays")
 	await create_timer(0.9).timeout
 	ok(sc.props.mood == "joy" and sc.done.get("1-1", false), "Lio is happy; 1-1 is fixed")
-	ok(bk.wallet_minor == wallet0 + 500 and bk.wallet_text == "$5.00", "the coin tin shows the engine wallet (%s)" % bk.wallet_text)
+	ok(bk.wallet_minor == wallet0 + 500 + TIP and bk.wallet_text == "$7.00", "the coin tin shows the engine wallet: the $5.00 fee and the waiting customer's $2.00 first-test tip (%s)" % bk.wallet_text)
 
 	print("== 1-2 Tail-light (fresh AND tired battery)")
 	await _start("1-2")
@@ -278,7 +279,7 @@ func _run() -> void:
 	_clock(6.0, func(): return bk.passed)
 	var g2: float = bk.scope_value()
 	ok(bk.passed and g2 >= 14.0 and g2 <= 20.0, "LOCK and a bench pass at %.2f mA (14 - 20)" % g2)
-	ok(bk.wallet_minor == wallet0 + 500 + 700, "paid 7.00 (%s)" % bk.wallet_text)
+	ok(bk.wallet_minor == wallet0 + 500 + TIP + 700 + TIP, "paid 7.00 and the $2.00 first-test tip (%s)" % bk.wallet_text)
 	await create_timer(0.7).timeout
 
 	print("== 1-3 Hot Resistor")

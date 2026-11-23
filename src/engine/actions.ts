@@ -41,6 +41,8 @@ function open(s: NodeState, defs: Defs): { tk: TicketState; def: LevelDef } {
   return { tk: s.ticket!, def: def! };
 }
 const sandbox = (s: NodeState): boolean => s.mode === 'sandbox';
+/** A customer is waiting at the counter (0.5): a paid job in the campaign that is not an exam card. */
+const waiting = (s: NodeState, def: LevelDef): boolean => !sandbox(s) && !!def.pay && def.eb !== true;
 /** A part the player burned costs its replacement: added to the ticket's burn bill, which comes out of the pay (decision 10b). Fixed parts (the customer's own) and sandbox are free. */
 function chargeBurn(s: NodeState, tk: TicketState, uid: string): void {
   if (sandbox(s)) return;
@@ -574,7 +576,11 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
         // payment: the fee on the first pass plus a bonus for every star earned for the first time (never paid twice)
         const first = !rec.passed, newStars = Math.max(0, result.stars - rec.stars), gross = def.pay ? (first ? def.pay.fee : 0) + def.pay.perStar * newStars : 0;
         // burnt parts come out of the pay (never below zero; what is left over comes out of a later star bonus)
-        const burnt = Math.min(gross, Math.max(0, (tk.burnCost ?? 0) - (tk.burnDeducted ?? 0))), pay = gross - burnt;
+        // the waiting customer's tip (0.5, stakes): a customer job (not an exam, not the sandbox), first pass, from the player's own TEST
+        const prices = REGIONS.get(s.region).data.prices;
+        const tip = waiting(s, def) && first && coached === true ? Math.max(0, (prices['service:tip'] ?? 0) - (prices['service:tipStep'] ?? 0) * (tk.failedTests ?? 0)) : 0;
+        if (tip > 0) result.tip = tip;
+        const burnt = Math.min(gross + tip, Math.max(0, (tk.burnCost ?? 0) - (tk.burnDeducted ?? 0))), pay = gross + tip - burnt;
         if (burnt > 0) { tk.burnDeducted = (tk.burnDeducted ?? 0) + burnt; result.burnt = burnt; }
         if (pay > 0) { s.progress.wallet += pay; result.pay = pay; s.log.push({ tick: s.tick, level: 'good', text: say('wallet.paid', { amount: formatMinor(pay, REGIONS.get(s.region)) }) }); }
         rec.passed = true; rec.stars = Math.max(rec.stars, result.stars) as 0 | 1 | 2 | 3;
@@ -582,9 +588,10 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
         if (rec.best === null || (result.metrics[head] ?? 0) < (rec.best[head] ?? 0)) rec.best = { ...result.metrics };
         const pack = REGIONS.get(s.region);
         s.log.push({ tick: s.tick, level: 'good', text: say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }) });
-        return ok((autoPower ? say('bench.autoPower') + ' ' : '') + say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }), { pass: true, stars: result.stars, metrics: result.metrics, pay: result.pay ?? 0, burnt: result.burnt ?? 0, autoPowered: autoPower });
+        return ok((autoPower ? say('bench.autoPower') + ' ' : '') + say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }), { pass: true, stars: result.stars, metrics: result.metrics, pay: result.pay ?? 0, burnt: result.burnt ?? 0, tip: result.tip ?? 0, tipText: formatMinor(result.tip ?? 0, pack), autoPowered: autoPower });
       }
-      return ok((autoPower ? say('bench.autoPower') + ' ' : '') + say('bench.fail', { id: tk.id, n: result.failures.length }), { pass: false, stars: 0, metrics: result.metrics, autoPowered: autoPower });
+      if (coached === true && waiting(s, def) && !rec.passed) tk.failedTests = (tk.failedTests ?? 0) + 1;
+      return ok((autoPower ? say('bench.autoPower') + ' ' : '') + say('bench.fail', { id: tk.id, n: result.failures.length }), { pass: false, stars: 0, metrics: result.metrics, autoPowered: autoPower, failedTests: tk.failedTests ?? 0 });
     },
 
     // ---- history

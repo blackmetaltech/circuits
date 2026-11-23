@@ -65,6 +65,8 @@ export interface BenchResult {
   pay?: number;
   /** Minor units of burnt-part replacements taken out of this pass's pay. */
   burnt?: number;
+  /** Minor units the waiting customer tipped on this pass (0.5: included in `pay`). */
+  tip?: number;
 }
 
 export interface TicketProgress {
@@ -171,6 +173,8 @@ export interface TicketState {
   burned?: boolean;
   /** Minor units: replacement price of every part the player burned on this ticket (a repair's arrived-burnt parts are free), and how much of it has come out of the pay so far. */
   burnCost?: number;
+  /** The player's own bench tests (the TEST key) that failed on this ticket: each takes `service:tipStep` off the waiting customer's tip (0.5). */
+  failedTests?: number;
   burnDeducted?: number;
   tolerance: { done: number; total: number; failures: number } | null;
   /** Chapter 4: the position of each live switch (mains tolerance, load) by selector id; absent = the ticket's initial positions. */

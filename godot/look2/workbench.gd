@@ -956,7 +956,14 @@ func _on_event(name: String, data: Dictionary) -> void:
 			if int(data.get("pay", 0)) > 0 or _paid_text == "":   # a repeat pass pays nothing: keep the first pay on the ticket
 				_paid_text = str(data.get("pay_text", "")) if int(data.get("pay", 0)) > 0 else "nothing more (already paid)"
 				if int(data.get("burnt", 0)) > 0: _paid_text += " after %s for burnt parts" % burn_cost_text()
-			if int(data.get("pay", 0)) > 0: note = "Bench test passed. Paid %s: the %s fee%s." % [str(data.get("pay_text", "")), str(backend.ticket.get("price_text", "")), (" and %d new star%s" % [st, "" if st == 1 else "s"]) if st > 0 else ""]
+			if int(data.get("pay", 0)) > 0:
+				var extras: Array = []
+				if st > 0: extras.append("%d new star%s" % [st, "" if st == 1 else "s"])
+				if int(data.get("tip", 0)) > 0: extras.append("a %s tip from %s, who waited" % [str(data.get("tip_text", "")), str(backend.ticket.get("customer", "the customer"))])
+				var tail := ""
+				if extras.size() == 1: tail = " and " + str(extras[0])
+				elif extras.size() == 2: tail = ", " + str(extras[0]) + " and " + str(extras[1])
+				note = "Bench test passed. Paid %s: the %s fee%s." % [str(data.get("pay_text", "")), str(backend.ticket.get("price_text", "")), tail]
 			else: note = "Bench test passed again. This job is already paid."   # was "Paid : the $4.00 fee" with the amount missing
 			last_failure = {}; changed.emit()
 		"power", "lock", "wired", "placed", "deleted":

@@ -307,6 +307,10 @@ func _job_card() -> void:
 		_spec_vals[str(s.id)] = [mark, val]
 	_ink(v, "Pays %s." % str(t.get("pay_text", "")).trim_prefix("fee "), 17, Color(0.30, 0.28, 0.25), f_sans)
 	_ink(v, "Parts %s   Burnt parts %s   Wallet %s" % [str(bench.backend.last_result.get("costText", "$0.00")), bench.burn_cost_text(), bench.backend.wallet_text], 17, Color(0.30, 0.28, 0.25), f_sans)
+	if bool(bench.backend.bench_q.get("waiting", false)) and not bench.backend.passed:
+		# 0.5 stakes: the customer is waiting at the counter; each failed TEST takes some of the tip
+		var left := int(bench.backend.bench_q.get("tipLeft", 0)); var who := str(t.get("customer", "The customer"))
+		_ink(v, ("%s is waiting: a %s tip if the next test passes. Each failed test takes %s off." % [who, str(bench.backend.bench_q.get("tipLeftText", "")), str(bench.backend.bench_q.get("tipStepText", ""))]) if left > 0 else ("%s is still waiting. The tip is gone; the fee is not." % who), 15, Color(0.16, 0.36, 0.52) if left > 0 else RED_INK, f_sans)
 	if int(bench.backend.bench_q.get("burnCost", 0)) > 0:
 		# a burn is a rush order: say what it costs, on the ticket, the moment it happens
 		_ink(v, "Each burnt part is a rush order: the part plus %s courier, out of your pay." % str(bench.backend.bench_q.get("rushFeeText", "")), 15, RED_INK, f_sans)

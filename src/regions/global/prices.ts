@@ -12,6 +12,10 @@ export const PRICES_GLOBAL_CENTS: Record<string, number> = {
   // Services, not parts (phase C, Dagny: a burn must cost something that hurts). A part burnt on a customer's job is replaced by a rush
   // order from the wholesaler: its price plus this courier fee, per burnt part. US$1.50 is a game value, about a local same-day courier.
   'service:rush': 150,
+  // A customer waiting at the counter (0.5, stakes): fixed on the first bench test, they tip this; each failed test takes tipStep off,
+  // never below zero. Measuring first pays; guessing costs. Game values.
+  'service:tip': 200,
+  'service:tipStep': 50,
   // Resistors (per rating; DESIGN §4.1 "priced per rating"). 1 W (7) is dearer than two 1/2 W (2 x 3 = 6), so ticket 1-3's Ref B (2 x 47 ohm 1/2 W) is the cheaper design (DESIGN §2.8). Game values, ordered 1/6 < 1/4 < 1/2 < 1 < 2 < 5 W wirewound.
   'res-cf:0.167W': 1, 'res-cf:0.25W': 2, 'res-cf:0.5W': 3, 'res-cf:1W': 7, 'res-cf:2W': 10,
   'res-ww5:5W': 40, 'res-mf:0.25W': 3, 'pot-trim:0.5W': 30, 'pot-panel:0.25W': 15,

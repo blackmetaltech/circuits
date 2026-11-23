@@ -468,11 +468,13 @@ func run_bench() -> Dictionary:
 		event.emit("power", {"on": true, "auto": true})
 	var res = _q("benchResult")
 	last_result = res if res is Dictionary else {}
+	var bq2 = _q("bench")   # 0.5: a failed TEST changes the waiting customer's tip; the ticket reads it from here
+	if bq2 is Dictionary: bench_q = bq2
 	_bench_key = _board_key()
 	refresh_wallet()
 	if r.get("ok", false) and bool(r.get("pass", false)):
 		passed = true; ticket["stars"] = int(r.get("stars", 0))
-		event.emit("paid", {"burnt": int(r.get("burnt", 0)), "pay": int(r.get("pay", 0)), "pay_text": str(last_result.get("payText", "")), "stars": int(r.get("stars", 0)), "result": last_result})
+		event.emit("paid", {"burnt": int(r.get("burnt", 0)), "pay": int(r.get("pay", 0)), "tip": int(r.get("tip", 0)), "tip_text": str(r.get("tipText", "")), "pay_text": str(last_result.get("payText", "")), "stars": int(r.get("stars", 0)), "result": last_result})
 	else:
 		var why := str(r.get("message", ""))
 		var fl: Array = last_result.get("failures", [])
