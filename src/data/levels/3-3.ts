@@ -28,6 +28,8 @@ export const L3_3: LevelDef = {
   fixed: [{ uid: 'f1', partId: 'relay-12v', value: null, variant: '5A', x: 16, y: 4, rot: 0, flip: false, fixed: true }],
   // the contact side is wired to GND (the valve it would switch is the customer's, not part of this puzzle); the coil's far end C2 is on the GND pad
   fixedWires: [[[12, 4], [16, 4]], [[12, 8], [16, 8]], [[20, 4], [22, 4], [22, 10], [12, 10], [12, 8]]],
+  // the controller arrives with a 560 ohm 1 W series resistor on the 24 V rail: 24 V / 760 ohm = 31.6 mA, under the relay's 40 mA pull-in, so it never closes
+  fault: { parts: [{ partId: 'res-cf', value: 560, variant: '1W', x: 6, y: 5, rot: 0, flip: false }], wires: [[[2, 5], [6, 5]], [[10, 5], [12, 5], [12, 4]]], smoked: [] },
   supplies: [
     { id: 'psu12', kind: 'bench', plus: 'V12', minus: 'GND', fixed: 12 },
     { id: 'psu24', kind: 'bench', plus: 'V24', minus: 'GND', fixed: 24 },

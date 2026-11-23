@@ -6,7 +6,7 @@ import { GAME } from '../game';
 import { LEVEL_DEFS } from '../data/levels';
 import { buildConnectivity } from '../sim/board/connectivity';
 import { getDef } from './board';
-import { refActions } from './replay';
+import { clearFaultActions, refActions } from './replay';
 import { newTicketProgress, type NodeState } from './state';
 
 const def = (id: string) => LEVEL_DEFS.find((d) => d.id === id)!;
@@ -145,7 +145,7 @@ describe('3-3 the feedback teaches tau = L / R', () => {
     expect(q(e, 'coach').text).toMatch(/tau = L \/ R/); expect(q(e, 'coach').text).toMatch(/more volts/);
   });
   it('the slow explainers (first miss and repeat) carry the trade-off', () => {
-    const slow = () => { const e = open('3-3', ['1-4', '2-3', '3-1']); ok(e, 'addWire', [[2, 2], [12, 2], [12, 4]]); return e; };   // 12 V alone
+    const slow = () => { const e = open('3-3', ['1-4', '2-3', '3-1']); for (const a of clearFaultActions(def('3-3'))) ok(e, a.name, ...(a.args ?? [])); ok(e, 'addWire', [[2, 2], [12, 2], [12, 4]]); return e; };   // 12 V alone
     const e = slow(); const b1 = bench(e); expect(b1.pass).toBe(false);
     expect(b1.failures.map((f: any) => f.text).join(' ')).toMatch(/tau = L \/ R: a bigger R makes the current rise faster, but needs more volts/);
     const b2 = bench(e); expect(b2.failures.map((f: any) => f.text).join(' ')).toMatch(/Remember tau = L \/ R: a bigger R makes the current rise faster/);

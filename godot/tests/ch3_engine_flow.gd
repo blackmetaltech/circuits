@@ -111,7 +111,7 @@ func _build(id: String) -> bool:
 
 func _start(id: String) -> void:
 	sc.size = Vector2(1920, 1080)
-	sc.start_ticket(id)
+	sc.start_ticket(id); bk.clear_fault()   # 3-1 and 3-3 arrive with the customer's faulty board (D-bench-ch23): clear it, as ch2_engine_flow does for 2-1
 	await _frames(4)
 	evlog.clear()
 

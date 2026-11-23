@@ -6,7 +6,7 @@ import { GAME } from '../game';
 import { LEVEL_DEFS } from '../data/levels';
 import { getDef } from './board';
 import { runTicketBench } from '../sim/bench/ticket';
-import { refActions } from './replay';
+import { clearFaultActions, refActions } from './replay';
 import { refBoard } from './tickets';
 import { newTicketProgress, type NodeState } from './state';
 
@@ -18,6 +18,8 @@ function open(id: string, passed: string[] = ['1-4', '2-3', '3-1', '3-2'], mode 
   for (const d of passed) st.progress.tickets[d] = { ...newTicketProgress(), passed: true, stars: 1 };
   e.setState(st);
   expect(e.act('openTicket', [id]).ok, `open ${id}`).toBe(true);
+  // 3-1 and 3-3 arrive with the customer's faulty board (repair.test.ts covers the arrival): these tests start from the cleared board, as the ch1 and ch2 ones do
+  for (const a of clearFaultActions(def(id))) expect(e.act(a.name, a.args ?? []).ok, `${a.name} ${String(a.args)}`).toBe(true);
   return e;
 }
 const ok = (e: Engine<NodeState>, name: string, ...args: unknown[]) => { const r = e.act(name, args); expect(r.ok, `${name} ${JSON.stringify(args)}: ${r.message}`).toBe(true); return r; };
@@ -25,7 +27,7 @@ const bad = (e: Engine<NodeState>, name: string, ...args: unknown[]) => { const 
 const q = (e: Engine<NodeState>, name: string, ...args: unknown[]) => e.q(name, args) as any;
 const bench = (e: Engine<NodeState>) => { ok(e, 'runBench'); return q(e, 'benchResult'); };
 const spec = (b: any, id: string) => b.specs.find((x: any) => x.id === id);
-const runRef = (e: Engine<NodeState>, id: string) => { for (const a of refActions(def(id)).filter((x) => x.name !== 'runBench' && x.name !== 'power' && x.name !== 'advance')) ok(e, a.name, ...(a.args ?? [])); };
+const runRef = (e: Engine<NodeState>, id: string) => { for (const a of refActions(def(id)).slice(clearFaultActions(def(id)).length).filter((x) => x.name !== 'runBench' && x.name !== 'power' && x.name !== 'advance')) ok(e, a.name, ...(a.args ?? [])); };
 const texts = (b: any): string => b.failures.map((f: any) => f.text).join(' | ');
 const frames = (e: Engine<NodeState>, n: number) => { for (let i = 0; i < n; i += 8) ok(e, 'advance', Math.min(8, n - i)); };
 

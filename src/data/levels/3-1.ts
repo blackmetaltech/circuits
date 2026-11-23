@@ -22,6 +22,8 @@ export const L3_1: LevelDef = {
     ],
   },
   fixed: [],
+  // the flash arrives with a 22 uF timing capacitor where 100 uF belongs: 10 k x 22 uF = 0.22 s, so the ready-light comes on in about a fifth of the time (the engine's crossing is 0.22 s against the 0.95 s floor)
+  fault: { parts: [{ partId: 'res-cf', value: 10000, variant: '0.25W', x: 4, y: 2, rot: 0, flip: false }, { partId: 'cap-el', value: 22e-6, variant: '16V', x: 14, y: 4, rot: 1, flip: false }], wires: [[[2, 2], [4, 2]], [[8, 2], [14, 2]], [[14, 2], [14, 4]], [[14, 6], [14, 8]]], smoked: [] },
   supplies: [{ id: 'psu', kind: 'bench', plus: 'IN', minus: 'GND', fixed: 10 }],
   instruments: { supply: { v: 10, ilim: 0.5 }, scope: { timePerDiv: 0.2, voltsPerDiv: [2, 2] } },
   bin: [

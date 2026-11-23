@@ -9,7 +9,7 @@ import { partPrice } from './metrics';
 import { REGIONS } from '../regions';
 
 const def = (id: string) => LEVEL_DEFS.find((d) => d.id === id)!;
-const REPAIRS = ['1-1', '1-2', '1-3', '1-4', '2-1', '5-1'];   // 2-1 since 0.4.0 (D-bench-ch2 delivered): the weather station arrives with its unloaded divider
+const REPAIRS = ['1-1', '1-2', '1-3', '1-4', '2-1', '3-1', '3-3', '5-1'];   // 2-1 since 0.4.0 (D-bench-ch2 delivered): the weather station arrives with its unloaded divider; 3-1 and 3-3 since D-bench-ch23
 function open(id: string): Engine<NodeState> {
   const e = new Engine(GAME, { mode: 'learner' }); e.autosave = false;
   const st = structuredClone(e.state) as NodeState;
@@ -22,7 +22,7 @@ const ok = (e: Engine<NodeState>, name: string, ...args: unknown[]) => { const r
 const tk = (e: Engine<NodeState>) => (e.state as NodeState).ticket!;
 
 describe('repair tickets arrive faulty', () => {
-  it('exactly the six repair tickets carry a faulty board; the exam and the other chapters do not', () => {
+  it('exactly the eight repair tickets carry a faulty board; the exam and the other chapters do not', () => {
     expect(LEVEL_DEFS.filter((d) => d.fault).map((d) => d.id)).toEqual(REPAIRS);
   });
   it.each(REPAIRS.map((id) => [id]))('%s: the board arrives as the customer left it, it fails the bench, and the ref replay from the arrival passes', (id) => {
@@ -37,6 +37,32 @@ describe('repair tickets arrive faulty', () => {
     const f = open(id);
     for (const a of refActions(d)) ok(f, a.name, ...(a.args ?? []));
     expect((f.q('benchResult') as any).pass).toBe(true);
+  });
+  it('3-1: the flash timer arrives with a 22 uF timing capacitor: the ready-light comes on after about 0.22 s, not 1 s, and the bench says so', () => {
+    const e = open('3-1'); ok(e, 'power', true); ok(e, 'advance', 4);
+    const r = ok(e, 'runBench'); expect(r.pass).toBe(false);
+    const b = e.q('benchResult') as any;
+    const t = b.specs.find((x: any) => x.id === 'tcross');
+    expect(t.pass).toBe(false);
+    expect(b.measured.tcross).toBeGreaterThan(0.2); expect(b.measured.tcross).toBeLessThan(0.24);   // 10 k x 22 uF: 0.22 s to reach 63 %, clearly short of the 0.95 s floor
+    expect(tk(e).board.parts.filter((p) => !p.fixed).map((p) => [p.partId, p.value])).toEqual([['res-cf', 10000], ['cap-el', 22e-6]]);
+  });
+  it('3-1: changing only the capacitor to 100 uF repairs it', () => {
+    const e = open('3-1'); ok(e, 'setValue', 'x2', 100e-6); ok(e, 'power', true); ok(e, 'advance', 4);
+    expect(ok(e, 'runBench').pass).toBe(true);
+  });
+  it('3-3: the irrigation relay arrives behind a 560 ohm series resistor: the coil only gets about 32 mA, it never pulls in (40 mA), and the bench fails it', () => {
+    const e = open('3-3'); ok(e, 'power', true); ok(e, 'advance', 4);
+    expect(ok(e, 'runBench').pass).toBe(false);
+    const b = e.q('benchResult') as any;
+    const pull = b.specs.find((x: any) => x.id === 'tpull'), steady = b.specs.find((x: any) => x.id === 'isteady');
+    expect(pull.pass).toBe(false); expect(steady.pass).toBe(false);
+    expect(b.measured.isteady).toBeGreaterThan(0.031); expect(b.measured.isteady).toBeLessThan(0.032);   // 24 V / (200 + 560) ohm = 31.6 mA
+    expect(tk(e).burnCost ?? 0).toBe(0);                                    // 24 V x 31.6 mA = 0.76 W in 760 ohm: the 1 W resistor does not burn
+  });
+  it('3-3: changing only the series resistor to 200 ohm repairs it', () => {
+    const e = open('3-3'); ok(e, 'setValue', 'x1', 200); ok(e, 'power', true); ok(e, 'advance', 4);
+    expect(ok(e, 'runBench').pass).toBe(true);
   });
   it('1-1: the arrived torch is dark: its LED is open, so no current flows while the PP3 still reads 9 V', () => {
     const e = open('1-1'); ok(e, 'power', true); ok(e, 'advance', 4);

@@ -9,7 +9,7 @@ export const ch3En: Record<string, string> = {
   'trace.locked': 'Locked: the whole curve sits in the amber tube.',
   // 3-1 Flash Timer
   'ticket.3-1.title': 'Flash Timer',
-  'ticket.3-1.brief': "{customer} runs the camera shop. The flash's ready-light must come on 1 second after power-on. Build a timer from a resistor and an electrolytic capacitor: the resistor from IN to OUT, the capacitor from OUT to GND. The ready-light turns on when OUT reaches 6.32 V, which is 63.2 % of the 10 V supply, and the ticket wants that at 1.00 s, give or take 5 %. {mentor}: a capacitor charges through the resistor, and how long it takes depends on R times C. Watch the curve form on the scope.",
+  'ticket.3-1.brief': "{customer} runs the camera shop. The flash's ready-light must come on 1 second after power-on. The flash came in with a 10 kilohm resistor and a 22 microfarad capacitor already on it, and its light comes on after about a fifth of a second, long before the flash has charged. The resistor goes from IN to OUT and the capacitor from OUT to GND; the light turns on when OUT reaches 6.32 V, which is 63.2 % of the 10 V supply, and the ticket wants that at 1.00 s, give or take 5 %. Change the timer. {mentor}: a capacitor charges through the resistor, and how long it takes depends on R times C. Watch the curve form on the scope.",
   'ticket.3-1.short': 'OUT reaches 6.32 V at 1.00 s, give or take 5 %',
   'ticket.3-1.spec.tcross': 'OUT crosses 6.32 V (63 % of the 10 V supply) between 0.95 s and 1.05 s after power-on, with the scope probe on it',
   'ticket.3-1.spec.tube': 'The whole curve stays inside the amber tube around 10 V x (1 - e^(-t / 1 s))',
@@ -39,7 +39,7 @@ export const ch3En: Record<string, string> = {
   'coach.3-2.s6': "{customer}'s game counts one press at a time.",
   // 3-3 Relay Pull-in
   'ticket.3-3.title': 'Relay Pull-in',
-  'ticket.3-3.brief': "{customer}'s greenhouse irrigation controller needs its relay to pull in within 0.4 ms of switch-on, or the valves drift out of step. The relay (soldered on the board) has a 200 ohm coil with 100 millihenry of inductance, pulls in at 40 mA and is rated for 60 mA. The board has a 12 V rail and a 24 V rail: wire one of them to the COIL pad, with or without a resistor. {mentor}: a coil's current rises the way a capacitor's voltage does, with a time constant of L over R. Watch the current on the scope.",
+  'ticket.3-3.brief': "{customer}'s greenhouse irrigation controller needs its relay to pull in within 0.4 ms of switch-on, or the valves drift out of step. It came in wired to the 24 V rail through a 560 ohm resistor, and the relay does not click at all. The relay (soldered on the board) has a 200 ohm coil with 100 millihenry of inductance, pulls in at 40 mA and is rated for 60 mA. The board has a 12 V rail and a 24 V rail: wire one of them to the COIL pad, with or without a resistor. {mentor}: a coil's current rises the way a capacitor's voltage does, with a time constant of L over R. Watch the current on the scope.",
   'ticket.3-3.short': 'pull in (40 mA) within 0.4 ms, 50 to 66 mA steady',
   'ticket.3-3.spec.tpull': 'The coil current reaches the 40 mA pull-in within 0.40 ms of switch-on',
   'ticket.3-3.spec.isteady': 'The steady coil current is between 50 mA and 66 mA (the coil is rated 60 mA), and no part is over its rating',
