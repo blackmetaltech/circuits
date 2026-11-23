@@ -4,46 +4,147 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CIRCUITS · fix broken electronics on your own bench</title>
-<meta name="description" content="CIRCUITS is a free game about repairing electronics. A circuit simulator sets every number you measure.">
+<meta name="description" content="CIRCUITS is a free game about repairing electronics. Open the case, measure, fix the faulty part and hand it back. A circuit simulator sets every number. Linux and Windows.">
+<meta name="theme-color" content="#120f0c">
 <link rel="canonical" href="https://circuits.blackmetal.tech/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CIRCUITS">
 <meta property="og:title" content="CIRCUITS: fix broken electronics on your own bench">
-<meta property="og:description" content="Open the case, measure, and swap the faulty part. Free, for Linux and Windows.">
+<meta property="og:description" content="Open the case, measure, fix the faulty part and hand it back. Free, for Linux and Windows.">
 <meta property="og:image" content="https://circuits.blackmetal.tech/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The CIRCUITS workbench with the thermal camera on a hot regulator">
 <meta property="og:url" content="https://circuits.blackmetal.tech/">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://circuits.blackmetal.tech/assets/og.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
-<header class="nav"><a class="logo" href="./">CIRCUITS</a><nav><a href="wiki/">Wiki</a><a href="#download" class="btn mini">Download</a></nav></header>
-<main class="wrap">
-<section class="hero">
-  <div>
+<body class="home">
+<header class="nav"><a class="logo" href="./">CIRCUITS</a><nav><a href="#job">How it plays</a><a href="#chapters">Chapters</a><a href="wiki/">Wiki</a><a href="#download" class="btn mini">Download</a></nav></header>
+
+<main>
+<section class="hero wrap" id="top">
+  <div class="hero-text">
+    <p class="kicker">A repair bench game</p>
     <h1>CIRCUITS</h1>
     <p class="tag-line">Fix broken electronics on your own bench.</p>
-    <p class="lede">Customers bring broken devices to your bench. Open them, measure them, swap the faulty parts.</p>
-    <p><a class="btn go" id="download" href="https://github.com/blackmetaltech/circuits/releases/latest">Download v0.5.0</a> <a class="btn" href="wiki/">Player wiki</a></p>
-    <p class="note">Pre-alpha. Free. Linux and Windows. Chapters 1 to 3 are on the 3D bench, with a testbed of devices to break.</p>
+    <p class="lede">Customers bring broken devices. You open the case, measure, find the faulty part, fix it and hand it back. A circuit simulator sets every number you read.</p>
+    <p class="cta"><a class="btn go" id="dl-main" href="https://github.com/blackmetaltech/circuits/releases/latest"><b id="dl-main-label">Download v0.6.0</b><span id="dl-main-sub">Linux and Windows · free</span></a> <a class="btn" href="wiki/">Wiki</a></p>
   </div>
-  <figure><img src="assets/burn.gif" alt="A fresh LED straight on 9 V burns; the ticket bills the part plus a $1.50 courier" width="960" height="540"><figcaption>Straight on 9 V, the LED burns. You pay the courier.</figcaption></figure>
+  <figure class="screen hero-clip">
+    <video autoplay muted loop playsinline preload="metadata" poster="assets/job-loop-poster.jpg" width="960" height="540" aria-label="One job on the bench: the camera flash arrives, the case opens, the timing capacitor is stepped from 22 to 100 microfarad, and the bench test passes">
+      <source src="assets/job-loop.webm" type="video/webm">
+      <source src="assets/job-loop.mp4" type="video/mp4">
+    </video>
+    <figcaption>One job, start to finish: a camera flash that fires too soon.</figcaption>
+  </figure>
 </section>
 
-<h2>How it plays</h2>
-<div class="grid">
-  <figure><img src="assets/measure.gif" alt="The meter reads 2.76 V at the weather station's output; after the fix it reads 3.35 V and the ticket passes" loading="lazy" width="960" height="540"><figcaption><b>Measure first.</b> 2.76 V, not 3.3 V. Fix it, and it reads 3.35 V.</figcaption></figure>
-  <figure><img src="assets/pick.gif" alt="A 220 ohm resistor taken from the sorting box and placed on the torch's board" loading="lazy" width="960" height="540"><figcaption><b>Fix it.</b> Take a part from the box. Drop it on the pads.</figcaption></figure>
-  <figure><img src="assets/supply.gif" alt="The supply's VOLTAGE key steps the bench supply up to 8 V" loading="lazy" width="960" height="540"><figcaption><b>Set the supply.</b> VOLTAGE steps it. TEST runs the bench test.</figcaption></figure>
-  <figure><img src="assets/swap.gif" alt="The flash timer's 22 microfarad capacitor is stepped to 100 microfarad with the wheel; the bench test passes" loading="lazy" width="960" height="540"><figcaption><b>Find the wrong value.</b> 22 µF flashes too soon. 100 µF passes.</figcaption></figure>
-  <figure><img src="assets/testbed.gif" alt="Testbed: the fan driver's flyback diode is removed; the scope shows 2000 V peak and the transistor smokes" loading="lazy" width="960" height="540"><figcaption><b>Break it on purpose.</b> Pull the flyback diode and watch the coil kick.</figcaption></figure>
-  <figure><img src="assets/sealed-2-3.jpg" alt="A sealed black module and its twin built from two resistors" loading="lazy" width="1600" height="900"><figcaption><b>Copy it.</b> Meter a sealed box, then build its twin.</figcaption></figure>
-  <figure><img src="assets/cute-2-1.jpg" alt="Top view after a pass: beads on the wires that carry current, the ticket stamped PASSED" loading="lazy" width="1600" height="900"><figcaption><b>Passed.</b> Cute mode shows where current flows.</figcaption></figure>
-</div>
+<section class="band" id="job">
+  <div class="wrap">
+    <h2>How a job goes</h2>
+    <p class="sub">Every job has a paper ticket: what the customer says, what the bench will test, and what it pays.</p>
+    <ol class="steps">
+      <li><figure class="screen"><img src="assets/step-arrives.jpg" alt="A camera flash sits closed on the bench next to its repair ticket" width="960" height="540" loading="lazy"></figure>
+        <p><b>The device arrives.</b> Read the ticket. The customer waits at the counter.</p></li>
+      <li><figure class="screen"><img src="assets/step-measure.jpg" alt="The meter reads 3.35 V at the weather station's output" width="960" height="540" loading="lazy"></figure>
+        <p><b>Open it and measure.</b> Put the meter or the scope on it before you change anything.</p></li>
+      <li><figure class="screen"><img src="assets/step-fix.jpg" alt="Close-up of the flash board after the capacitor was changed; the ticket is stamped passed" width="960" height="540" loading="lazy"></figure>
+        <p><b>Fix it.</b> Swap the wrong value, add the missing part, rewire. Then run the bench test.</p></li>
+      <li><figure class="screen"><img src="assets/step-pass.jpg" alt="Top view after a pass: current beads on the wires and the ticket stamped passed" width="1280" height="720" loading="lazy"></figure>
+        <p><b>Hand it back.</b> Pass first time and the customer tips. A burnt part comes out of your pay.</p></li>
+    </ol>
+  </div>
+</section>
 
-<h2>Honest by design</h2>
-<p>A circuit simulator owns every number. A burnt part stays burnt.</p>
-<p>Five chapters, 23 tickets. The <a href="wiki/">wiki</a> lists them all.</p>
+<section class="band dark" id="testbed">
+  <div class="wrap split">
+    <div>
+      <h2>The testbed</h2>
+      <p class="sub">Six working devices to take apart. Probe them live, break them on purpose, then pause and step time to see what happened.</p>
+      <ul class="devices">
+        <li><img src="wiki/assets/testbed/torch.jpg" alt="" width="160" height="90" loading="lazy" onerror="this.style.visibility='hidden'"><b>Pocket torch</b><span>An LED, a resistor, a 9 V battery.</span></li>
+        <li><img src="wiki/assets/testbed/station.jpg" alt="" width="160" height="90" loading="lazy" onerror="this.style.visibility='hidden'"><b>Weather station input</b><span>A divider feeding an ADC.</span></li>
+        <li><img src="wiki/assets/testbed/fan.jpg" alt="" width="160" height="90" loading="lazy" onerror="this.style.visibility='hidden'"><b>Fan driver</b><span>A transistor switch and its flyback diode.</span></li>
+        <li><img src="wiki/assets/testbed/charger.jpg" alt="" width="160" height="90" loading="lazy" onerror="this.style.visibility='hidden'"><b>Phone charger stage</b><span>A bridge rectifier and its capacitor.</span></li>
+        <li><img src="wiki/assets/testbed/dimmer.jpg" alt="" width="160" height="90" loading="lazy" onerror="this.style.visibility='hidden'"><b>Lamp dimmer</b><span>A knob, a transistor, an LED strip.</span></li>
+        <li><img src="wiki/assets/testbed/relay_timer.jpg" alt="" width="160" height="90" loading="lazy" onerror="this.style.visibility='hidden'"><b>Relay timer</b><span>A capacitor that switches a heater on after about two seconds.</span></li>
+      </ul>
+    </div>
+    <figure class="screen">
+      <video autoplay muted loop playsinline preload="none" poster="assets/dimmer-poster.jpg" width="800" height="450" aria-label="Testbed: the lamp dimmer's knob turns and the LED strip current climbs">
+        <source src="assets/dimmer.webm" type="video/webm">
+        <source src="assets/dimmer.mp4" type="video/mp4">
+      </video>
+      <figcaption>Turn the dimmer's knob and watch the strip current climb.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="band" id="chapters">
+  <div class="wrap">
+    <h2>Five chapters, 23 jobs</h2>
+    <p class="sub">Each chapter ends in an exam: predict the numbers first, then build it and let the bench measure.</p>
+    <ol class="tickets">
+      <li class="tk"><img src="assets/ch1.jpg" alt="The pocket torch on the bench with the parts box" width="1280" height="720" loading="lazy">
+        <div><p class="tk-no">Chapter 1</p><h3>First Light</h3><p>Ohm's law, LED current, power ratings and a tired battery.</p><p class="jobs">Torch · Tail-light · Hot Resistor · Tired Battery · Exam</p></div></li>
+      <li class="tk"><img src="assets/ch2.jpg" alt="The weather station board with the meter on its output" width="1280" height="720" loading="lazy">
+        <div><p class="tk-no">Chapter 2</p><h3>Divide &amp; Measure</h3><p>Dividers under load, a bridge balanced to zero, and a sealed box measured and copied.</p><p class="jobs">Sensor Reference · Cable Fault · Black Box · Exam</p></div></li>
+      <li class="tk"><img src="assets/ch3.jpg" alt="The camera flash board with the scope trace of its timer" width="1280" height="720" loading="lazy">
+        <div><p class="tk-no">Chapter 3</p><h3>Charge</h3><p>RC timing, a filter for a bouncing button, a relay's pull-in current and shared charge.</p><p class="jobs">Flash Timer · Debounce · Relay Pull-in · Exam</p></div></li>
+      <li class="tk"><img src="assets/ch4.jpg" alt="The wall adapter behind the simulated isolation transformer, with the safety card on the ticket" width="1280" height="720" loading="lazy">
+        <div><p class="tk-no">Chapter 4</p><h3>Mains &amp; Rectifiers</h3><p>Transformer, bridge and ripple behind a simulated isolated mains, Zener rails, regulator heat, an LM317.</p><p class="jobs">Wall Wart · Zener Shunt · Hot Regulator · Bench Supply · Exam</p></div></li>
+      <li class="tk"><img src="assets/ch5.jpg" alt="The LED strip driver with a logic-level MOSFET" width="1280" height="720" loading="lazy">
+        <div><p class="tk-no">Chapter 5</p><h3>Switches &amp; Gain</h3><p>A transistor switch and its flyback diode, a 3.3 V MOSFET gate, a NAND from parts, a one-transistor preamp.</p><p class="jobs">Fan Driver · 3.3 V Gate · Gate Builder · Synth Preamp · Exam</p></div></li>
+    </ol>
+    <h3 class="planned-head">Planned</h3>
+    <p class="sub">Designed on paper and not built yet.</p>
+    <ul class="planned">
+      <li><b>Chapter 6 · Op-Amp Alley</b><span>Amplifiers, comparators, an integrator.</span></li>
+      <li><b>Chapter 7 · Tone &amp; Resonance</b><span>Filters, resonance and Q, a Bode plotter.</span></li>
+      <li><b>Chapter 8 · Oscillate</b><span>A 555, an oscillator, a buck converter, a synth voice.</span></li>
+    </ul>
+  </div>
+</section>
+
+<section class="band dark" id="free">
+  <div class="wrap split rev">
+    <figure class="screen"><img src="assets/free.jpg" alt="The free bench: an open board with parts placed, the supply, scope and meter" width="1280" height="720" loading="lazy"></figure>
+    <div>
+      <h2>The free bench</h2>
+      <p class="sub">No ticket, no customer. Any part from the catalogue, the bench supply, the scope and the meter. Build what you like and keep it in one of three save slots.</p>
+      <p class="facts"><span>Any part</span><span>Bench supply</span><span>Scope</span><span>Meter</span><span>Schematic view</span><span>Three save slots</span></p>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="download">
+  <div class="wrap">
+    <h2>Download</h2>
+    <p class="sub">Free. Unzip and play. Pre-alpha: five chapters and 23 jobs are built; chapters 6 to 8 are planned.</p>
+    <div class="platforms">
+      <a class="plat" id="dl-linux" href="https://github.com/blackmetaltech/circuits/releases/latest"><b>Linux</b><span>x86_64 · zip</span></a>
+      <a class="plat" id="dl-windows" href="https://github.com/blackmetaltech/circuits/releases/latest"><b>Windows</b><span>x64 · zip</span></a>
+    </div>
+    <p class="small">All builds and checksums: <a href="https://github.com/blackmetaltech/circuits/releases/latest">releases on GitHub</a>. <span id="dl-ver"></span></p>
+  </div>
+</section>
+
+<section class="band dark" id="wiki">
+  <div class="wrap wiki-cta">
+    <div>
+      <h2>The wiki</h2>
+      <p class="sub">Every job, what the bench tests before it pays, the parts in each box, and the controls.</p>
+    </div>
+    <a class="btn go" href="wiki/">Open the wiki</a>
+  </div>
+</section>
 </main>
+
 <footer class="foot wrap"><p>From <a href="https://blackmetal.tech">blackmetal.tech</a>, a small house that replaces textbooks with games. <a href="https://github.com/blackmetaltech/circuits">Source on GitHub</a>.</p></footer>
+<script src="app.js" defer></script>
 </body>
 </html>

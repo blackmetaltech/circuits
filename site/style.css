@@ -1,29 +1,165 @@
-:root{--bg:#14110e;--panel:#1f1a15;--paper:#e9e1cf;--fg:#efe7d8;--dim:#b4a893;--acc:#f2a33a;--line:#3a3128}
-@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f4efe4;--panel:#fffaf0;--fg:#1d1914;--dim:#5d5446;--acc:#b5650e;--line:#d8cdb8}}
+/* CIRCUITS site and wiki: the workbench at night. Warm lamp light on dark anodised panels, instrument type, and the paper
+   repair ticket (cream, red ink) as the accent. Shared by index.html and the generated wiki pages (src/wiki.ts). */
+:root{
+  --bg:#120f0c; --bg2:#17130f; --panel:#1c1c1f; --panel2:#232427; --edge:#2e2f33; --line:#34302a;
+  --fg:#efe7d8; --dim:#b3a892; --faint:#7d7466;
+  --amber:#f2a33a; --amber2:#ffcf7a; --paper:#ece3cf; --paper2:#e2d6bc; --ink:#2a241c; --red:#b3261e;
+  --lcd:#ff5a36; --radius:10px;
+  --mono:"IBM Plex Mono",ui-monospace,monospace; --sans:"IBM Plex Sans",system-ui,sans-serif;
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.55 "IBM Plex Sans",system-ui,sans-serif}
-a{color:var(--acc)}
-.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
-.nav{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;padding:14px 16px;max-width:1040px;margin:0 auto}
-.nav nav a{margin-left:12px;text-decoration:none;color:var(--fg)}
-.logo{font:700 20px/1 "IBM Plex Mono",monospace;letter-spacing:.12em;text-decoration:none;color:var(--acc)}
-.btn{display:inline-block;padding:12px 20px;border:1px solid var(--acc);border-radius:8px;color:var(--fg);text-decoration:none}
-.btn.go{background:var(--acc);color:#1b1206;font-weight:600}
-.btn.mini{padding:6px 12px}
-h1{font-size:clamp(40px,8vw,80px);line-height:1;margin:24px 0 8px;letter-spacing:.04em}
-h2{margin-top:48px}
-.tag-line{font-size:22px;color:var(--fg);margin:0 0 12px}
-.lede,p{color:var(--dim)}
-img{max-width:100%;height:auto;border-radius:8px;display:block}
-figure{margin:0}
-figcaption{color:var(--dim);font-size:15px;margin-top:6px}
-.hero{display:grid;gap:24px;padding:24px 0}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
-.note{border-left:3px solid var(--acc);padding:4px 12px;background:var(--panel)}
-.foot{padding:48px 16px;color:var(--dim);font-size:14px}
-.crumbs{margin-top:24px;font-size:14px}
-.ticket{border-top:1px solid var(--line);padding-top:8px}
-.tag{font:500 12px "IBM Plex Mono",monospace;border:1px solid var(--acc);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle;color:var(--acc)}
-.tag.dim{border-color:var(--line);color:var(--dim)}
-.chapters{list-style:none;padding:0}.chapters li{padding:8px 0;border-bottom:1px solid var(--line)}.chapters span{display:block;color:var(--dim)}
-.keys th{text-align:left;padding:6px 16px 6px 0;font-family:"IBM Plex Mono",monospace;font-weight:500}.keys td{color:var(--dim)}
+html{scroll-behavior:smooth}
+body{margin:0;background-color:var(--bg);background-repeat:no-repeat;color:var(--fg);font:17px/1.6 var(--sans);overflow-x:hidden;
+  background-image:radial-gradient(1100px 620px at 72% -120px,rgba(242,163,58,.16),transparent 70%),radial-gradient(900px 500px at 10% 0,rgba(255,207,122,.05),transparent 70%)}
+a{color:var(--amber)}
+a:hover{color:var(--amber2)}
+img,video{max-width:100%;height:auto;display:block}
+h1,h2,h3{line-height:1.15;font-weight:600}
+h2{font-family:var(--mono);font-weight:700;font-size:clamp(26px,4vw,38px);letter-spacing:.02em;margin:0 0 10px}
+h3{font-size:20px;margin:0 0 6px}
+p{margin:0 0 12px}
+code{font-family:var(--mono);font-size:.92em;color:var(--amber2)}
+.wrap{max-width:1160px;margin:0 auto;padding:0 16px}
+
+/* ---- top bar: an engraved faceplate */
+.nav{position:sticky;top:0;z-index:10;display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between;align-items:center;
+  padding:10px max(16px,calc((100% - 1160px)/2 + 16px));background:rgba(18,15,12,.88);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.nav nav{display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px}
+.nav nav a{text-decoration:none;color:var(--dim);font-size:15px}
+.nav nav a:hover{color:var(--fg)}
+.logo{font:700 19px/1 var(--mono);letter-spacing:.16em;text-decoration:none;color:var(--amber)}
+.logo::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--lcd);box-shadow:0 0 8px var(--lcd);margin-right:10px;vertical-align:1px}
+
+/* ---- keys: raised keycaps like the bench's own */
+.btn{display:inline-flex;flex-direction:column;justify-content:center;gap:2px;padding:12px 22px;border-radius:7px;text-decoration:none;font-weight:600;
+  color:var(--fg);background:linear-gradient(#2c2d31,#232427);border:1px solid #0b0b0c;border-bottom-width:4px;box-shadow:0 6px 14px rgba(0,0,0,.35);line-height:1.2}
+.btn:hover{color:var(--fg);filter:brightness(1.12)}
+.btn:active{border-bottom-width:1px;transform:translateY(3px)}
+.btn.go{color:#1b1206;background:linear-gradient(#f6b453,#e0901f);border-color:#6a3f08}
+.btn.go:hover{color:#1b1206}
+.btn span{font:500 12px/1.2 var(--mono);opacity:.75}
+.nav .btn.mini,.btn.mini{padding:6px 14px;border-bottom-width:3px;font-size:14px;color:#1b1206;background:linear-gradient(#f6b453,#e0901f);border-color:#6a3f08}
+
+/* ---- the hero: text on the left, the bench on a screen at the right */
+.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:40px;align-items:center;padding:56px 16px 64px}
+.kicker{font:500 13px var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--amber)}
+.hero h1{font:700 clamp(46px,7vw,84px)/1 var(--mono);letter-spacing:.06em;margin:4px 0 14px;text-shadow:0 0 40px rgba(242,163,58,.25)}
+.tag-line{font-size:clamp(20px,2.4vw,26px);color:var(--fg);margin:0 0 14px}
+.lede{color:var(--dim)}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+
+/* a screen: a dark anodised bezel round a shot or a clip */
+.screen{margin:0;padding:10px;border-radius:12px;background:linear-gradient(#26272b,#18191b);border:1px solid #0a0a0b;
+  box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 24px 50px rgba(0,0,0,.5),0 0 80px rgba(242,163,58,.06)}
+.screen img,.screen video{border-radius:6px;width:100%}
+.screen figcaption{font:500 13px var(--mono);color:var(--faint);margin:8px 2px 0}
+
+/* ---- bands */
+.band{padding:72px 0;border-top:1px solid var(--line)}
+.band.dark{background:linear-gradient(var(--bg2),#0f0d0b)}
+.sub{color:var(--dim);max-width:680px;margin-bottom:28px}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:44px;align-items:center}
+.split.rev>figure{order:0}
+
+/* how a job goes: four numbered steps */
+.steps{list-style:none;counter-reset:step;padding:0;margin:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px}
+.steps li{counter-increment:step}
+.steps .screen{padding:6px;margin-bottom:12px}
+.steps p{color:var(--dim);font-size:15.5px}
+.steps p b{display:block;color:var(--fg);font-size:17px}
+.steps p b::before{content:counter(step);display:inline-grid;place-items:center;width:24px;height:24px;margin-right:8px;border-radius:50%;
+  font:700 13px var(--mono);color:#1b1206;background:var(--amber);vertical-align:1px}
+
+/* testbed devices (home and wiki) */
+.devices{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.devices li{display:grid;grid-template-columns:72px minmax(0,1fr);column-gap:12px;align-items:center;padding:10px;border-radius:8px;background:var(--panel);border:1px solid var(--edge)}
+.devices img{grid-row:span 2;width:72px;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:4px;background:#0c0c0d}
+.devices b{font-size:15.5px}
+.devices span{font-size:14px;color:var(--dim);line-height:1.4}
+
+/* chapters as repair tickets: cream paper, red typed header */
+.tickets{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:22px}
+.tk{background:var(--paper);color:var(--ink);border-radius:4px;overflow:hidden;box-shadow:0 18px 36px rgba(0,0,0,.45);border-top:5px solid var(--red)}
+.tk img{width:100%;aspect-ratio:16/9;object-fit:cover}
+.tk>div{padding:14px 18px 18px}
+.tk-no{font:500 13px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--red);margin:0 0 4px}
+.tk h3{color:var(--ink);font-size:22px}
+.tk p{color:#4a4134;font-size:15.5px}
+.tk .jobs{font:500 13px/1.5 var(--mono);color:#6b604f;border-top:1px dashed #b7a98d;padding-top:10px;margin:0}
+.planned-head{margin-top:44px;font-family:var(--mono)}
+.planned{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.planned li{padding:14px 16px;border:1px dashed #5a5246;border-radius:6px;color:var(--dim)}
+.planned li b{display:block;color:var(--fg)}
+.planned li span{font-size:14.5px}
+
+.facts{display:flex;flex-wrap:wrap;gap:8px}
+.facts span{font:500 13px var(--mono);padding:4px 10px;border-radius:4px;border:1px solid var(--edge);background:var(--panel);color:var(--dim)}
+
+/* download */
+.platforms{display:grid;grid-template-columns:repeat(2,minmax(0,280px));gap:16px}
+.plat{display:block;padding:20px 22px;border-radius:10px;text-decoration:none;color:var(--fg);background:linear-gradient(#26272b,#1b1c1f);border:1px solid #0a0a0b;border-bottom-width:4px}
+.plat b{display:block;font:700 22px var(--mono)}
+.plat span{font:500 13px var(--mono);color:var(--faint)}
+.plat:hover{color:var(--fg);filter:brightness(1.1)}
+.plat.mine{border-color:#6a3f08;box-shadow:0 0 0 1px var(--amber) inset,0 0 30px rgba(242,163,58,.18)}
+.small{font-size:14px;color:var(--faint);margin-top:18px}
+.wiki-cta{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;align-items:center}
+.wiki-cta .sub{margin-bottom:0}
+
+/* footer */
+.foot{padding:40px 16px 56px;color:var(--faint);font-size:14px;border-top:1px solid var(--line)}
+.home .foot{border-top:0}
+
+/* ---- wiki pages (generated by src/wiki.ts): same bench, paper tickets for the jobs */
+.wiki main.wrap{max-width:900px;padding-bottom:40px}
+.wiki h1{font:700 clamp(30px,5vw,46px)/1.1 var(--mono);margin:8px 0 12px}
+.wiki h2{font-size:clamp(22px,3vw,28px);margin-top:40px}
+.wiki p,.wiki li{color:var(--dim)}
+.wiki b{color:var(--fg)}
+.crumbs{margin:28px 0 0;font:500 13px var(--mono);color:var(--faint)}
+.crumbs a{text-decoration:none}
+.how{padding-left:22px}.how li{margin:8px 0}
+.chapters{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.chapters li{padding:14px 16px;background:var(--panel);border:1px solid var(--edge);border-left:4px solid var(--red);border-radius:6px}
+.chapters a{text-decoration:none}
+.chapters span{display:block;color:var(--dim);font-size:14.5px;margin-top:2px}
+.ticket{background:var(--paper);color:var(--ink);border-radius:4px;border-top:5px solid var(--red);padding:16px 20px 18px;margin:26px 0;box-shadow:0 14px 30px rgba(0,0,0,.4)}
+.ticket h2{margin:0 0 8px;color:var(--ink);font-size:21px}
+.ticket h3{color:var(--red);font:500 13px var(--mono);letter-spacing:.14em;text-transform:uppercase;margin:16px 0 6px}
+.ticket p,.ticket li{color:#4a4134}
+.ticket b{color:var(--ink)}
+.ticket a{color:var(--red)}
+.ticket .parts{font-size:15px;border-top:1px dashed #b7a98d;padding-top:10px;margin-top:12px}
+.arrives{font-style:italic;color:#5c5142}
+.tag{font:500 12px var(--mono);border:1px solid var(--amber);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle;color:var(--amber);white-space:nowrap}
+.tag.dim{border-color:#5a5246;color:var(--faint)}
+.ticket .tag{border-color:var(--red);color:var(--red)}
+.ticket .tag.dim{border-color:#b7a98d;color:#7a6e5b}
+.shot{margin:14px 0}
+.shot img{border-radius:6px;box-shadow:0 10px 24px rgba(0,0,0,.35);width:100%}
+.shot figcaption{font:500 13px var(--mono);color:var(--faint);margin-top:6px}
+.ticket .shot figcaption{color:#7a6e5b}
+.status{border-left:3px solid var(--amber);background:var(--panel);padding:10px 14px;border-radius:0 6px 6px 0;color:var(--dim)}
+.keys{border-collapse:collapse;width:100%;max-width:100%;display:block;overflow-x:auto}
+.keys th{text-align:left;padding:7px 18px 7px 0;font:500 14px var(--mono);color:var(--amber2);white-space:nowrap;vertical-align:top}
+.keys td{color:var(--dim);padding:7px 0;border-bottom:1px solid var(--line)}
+
+/* ---- narrow screens */
+@media (max-width:900px){
+  .hero{grid-template-columns:minmax(0,1fr);gap:28px;padding:32px 16px 44px}
+  .split{grid-template-columns:minmax(0,1fr);gap:28px}
+  .split.rev>figure{order:2}
+  .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .band{padding:52px 0}
+}
+@media (max-width:560px){
+  body{font-size:16px}
+  .nav nav a:not(.btn){font-size:14px}
+  .nav nav a[href="#job"],.nav nav a[href="#chapters"]{display:none}
+  .steps{grid-template-columns:minmax(0,1fr)}
+  .devices{grid-template-columns:minmax(0,1fr)}
+  .tickets{grid-template-columns:minmax(0,1fr)}
+  .platforms{grid-template-columns:minmax(0,1fr)}
+  .cta .btn{flex:1 1 auto;text-align:center}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
