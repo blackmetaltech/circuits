@@ -251,3 +251,14 @@
 - **Note on D-conditions-06 (2026-11-24, Ingrid).** "About 700 at 0.5 A" is history: Ravi's 54486ba makes the TIP120's composite
   gain 1000 at 0.5 A and 1530 at 3 A (onsemi TIP120/D, hFE min 1000 at 0.5 A and 3 A); 1f0fb7c moved the testbed numbers
   (relay timer pull-in 1.86 s, 3.98 s with 470 uF; dimmer 0.101 A). No ticket changed pass or fail.
+
+- **D-cuts-07 (2026-11-24, Ingrid Solheim, Game Lead).** Cut from 0.7, written here so nobody finds them by surprise:
+  1. Chapter 6 is on the 3D bench only. The classic 2D stall does not list it (Kofi). The stall is the fallback renderer; nobody
+     plays it by default since 0.5. Revisit if the low tier on an integrated GPU cannot carry the bench.
+  2. An op-amp on more than its rated supply does not burn, and its inputs have no common-mode limit (Ravi). Every chapter-6 job
+     fixes the supply at ±12 V, so no player can reach either today. They are needed before any job lets the player set the
+     rails; chapter 7 must add both, with tests, before such a job.
+  3. Sound (owner: later).
+  The strongest argument against cut 2 (Ravi): a learner who reads the codex learns the rails as free. Answer: he is right, and
+  there is none yet. The ±18 V limit is in the parts data (src/data/parts/ics.ts) but no text a player reads says it. Open item for 0.8:
+  the op-amp's codex page states it, and the model enforces it once a job lets the player reach it.
