@@ -126,13 +126,17 @@ func _pick_quality() -> String:
 	if dev.contains("nvidia") or dev.contains("rtx") or dev.contains("radeon rx"): return "high"
 	return "medium"
 
-## Anti-aliasing per tier: high = 4x MSAA for edges plus TAA for shading and thin leads; medium = 2x MSAA; low = FXAA only.
+## Anti-aliasing per tier: high = 4x MSAA for edges plus TAA for shading and thin leads; medium = 2x MSAA; low = 2x MSAA on Compatibility, FXAA elsewhere.
 func _aa() -> void:
 	var vp := get_viewport()
 	match quality:
 		"high": vp.msaa_3d = Viewport.MSAA_4X; vp.use_taa = true; vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
 		"medium": vp.msaa_3d = Viewport.MSAA_2X; vp.use_taa = false; vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
-		_: vp.msaa_3d = Viewport.MSAA_DISABLED; vp.use_taa = false; vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
+		_:
+			# FXAA does not exist in the Compatibility renderer the low tier runs on (0.4.1: it warned and did nothing, so the low tier
+			# had no AA at all); there it gets 2x MSAA, which Compatibility supports
+			if RenderingServer.get_current_rendering_method() == "gl_compatibility": vp.msaa_3d = Viewport.MSAA_2X; vp.use_taa = false
+			else: vp.msaa_3d = Viewport.MSAA_DISABLED; vp.use_taa = false; vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
 	if OS.get_environment("CB_AA") == "none": vp.msaa_3d = Viewport.MSAA_DISABLED; vp.use_taa = false   # measurement hook
 
 ## Low tier (integrated GPUs, Deck class, the Compatibility renderer): one soft lamp shadow at a small atlas, no moon shadow,
@@ -385,7 +389,7 @@ func _new_class(cname: String) -> Node3D:
 
 func _instruments() -> void:
 	scope = _new_class("Scope3D"); psu = _new_class("Psu3D"); dmm = _new_class("Dmm3D"); mcu = _new_class("Mcu3D"); fan = _new_class("Fan3D")
-	var spots := [[scope, Vector3(-0.31, 0, -0.25), 14.0], [psu, Vector3(0.33, 0, -0.27), -16.0], [dmm, Vector3(0.27, 0, 0.0), -28.0], [mcu, Vector3(-0.19, 0.003, 0.13), 90.0], [fan, Vector3(0.11, 0.0, -0.11), -18.0]]
+	var spots := [[scope, Vector3(-0.31, 0, -0.25), 14.0], [psu, Vector3(0.25, 0, -0.25), -22.0], [dmm, Vector3(0.195, 0, 0.065), -30.0], [mcu, Vector3(-0.19, 0.003, 0.13), 90.0], [fan, Vector3(0.11, 0.0, -0.11), -18.0]]
 	for s in spots:
 		if s[0] == null: continue
 		var n: Node3D = s[0]; add_child(n); n.position = s[1]; n.rotation_degrees.y = s[2]
@@ -417,10 +421,16 @@ func _used_bounds() -> AABB:
 	for q in pts: bb = bb.expand(board.pad_world(int(q[0]), int(q[1])))
 	return bb.grow(0.012)
 
+const V1_TGT := Vector3(0.02, 0.03, -0.06)
+const V1_YAW := 4.0
+const V1_PITCH := -30.0
+const V1_DIST := 0.62
 func set_view(v: int, snap := false) -> void:
 	view = v
 	match v:
-		1: g_tgt = board_centre() + Vector3(-0.055, 0.02, -0.02); g_yaw = deg_to_rad(4.0); g_pitch = deg_to_rad(-33.0); g_dist = 0.50   # higher horizon: pegboard and lamp in the top of the frame
+		1:   # 0.4.1 (Sigrid): device, scope, supply and meter all in frame at 16:9 and 16:10; tests/look2_frame_flow.gd holds it
+			var asp1 := get_viewport().get_visible_rect().size.aspect()
+			g_tgt = board_centre() + Vector3(V1_TGT.x, V1_TGT.y, V1_TGT.z); g_yaw = deg_to_rad(V1_YAW); g_pitch = deg_to_rad(V1_PITCH); g_dist = V1_DIST * (1.78 / clampf(asp1, 1.3, 2.4))
 		5:
 			var bb := _used_bounds()
 			# the board sits above the tray: aim below its centre and pull back on narrow (16:10) windows
@@ -472,6 +482,7 @@ func start_job(id := "") -> void:
 	if OS.get_environment("CB_POWER") == "1": backend.set_power(true)
 	if OS.get_environment("CB_POWER_AT") != "":   # QA/clip hook: switch the bench on after N seconds (the clip shows the moment)
 		get_tree().create_timer(float(OS.get_environment("CB_POWER_AT"))).timeout.connect(func(): toggle_power())
+	if OS.get_environment("CB_DEMO") != "": _demo(OS.get_environment("CB_DEMO"))
 	if OS.get_environment("CB_OPEN_AT") != "":    # QA/clip hook: open the case after N seconds
 		get_tree().create_timer(float(OS.get_environment("CB_OPEN_AT"))).timeout.connect(func(): open_case())
 	if OS.get_environment("CB_VIEW_AT") != "":    # QA/clip hook: "view@seconds,view@seconds" camera moves
@@ -1468,3 +1479,42 @@ func load_build(slot: int) -> void:
 		if bool(r2.get("ok", true)): wired += 1
 	note = "Loaded build %d: %d parts, %d wires." % [slot, placed, wired]
 	sync_board(); changed.emit()
+
+## ------------------------------------------------------------------------------------------------ 0.4.1 README clips (QA only)
+
+## CB_DEMO=<name>: a timed sequence through the bench's own methods, for the README GIFs (recorded from a GPU window).
+##   pick     1-1: pick the 220 ohm from the sorting box, the ghost rides to the pads, it is placed
+##   supply   2-3: the VOLTAGE knob steps the supply up to 8 V, OUTPUT, then TEST
+##   measure  2-1: meter leads on OUT (2.76 V), the divider rebuilt, the meter reads 3.35 V, TEST passes
+##   burn     1-1: the burnt LED out, a fresh one straight on 9 V, power: it burns and the rush bill lands on the ticket
+func _demo(name: String) -> void:
+	var at := func(t: float, f: Callable): get_tree().create_timer(t).timeout.connect(f)
+	match name:
+		"pick":
+			var fam: Dictionary = {}
+			at.call(1.0, func():
+				for s in sort_box.slots: if str(s.item.partId).begins_with("res"): fam = s
+				if not fam.is_empty(): pick_part(fam.item))
+			for i in 6: at.call(1.6 + i * 0.25, func(): _hover(cam.unproject_position(board.pad_world(2 + i, 9)), true))
+			at.call(3.4, func():
+				var r := backend.place(place_item, 7, 9, 0); note = str(r.get("msg", "")); set_tool("select"); changed.emit())
+		"supply":
+			for i in 7: at.call(1.0 + i * 0.35, func(): hover_tip = ""; supply_step(0.5))
+			at.call(1.0 + 7 * 0.35, func(): supply_step(-0.5); supply_step(0.5))
+			at.call(4.2, func(): _hit("psu_output"))
+			at.call(5.0, func(): _hit("psu_test"))
+		"measure":
+			at.call(0.8, func(): if not backend.powered: toggle_power())
+			at.call(1.6, func(): backend.set_dial("V"); backend.set_probe("red", [14, 2]); changed.emit())
+			at.call(2.2, func(): backend.set_probe("black", [14, 8]); changed.emit())
+			at.call(4.0, func(): backend.build_ref(ticket_id); sync_board(); if not backend.powered: toggle_power())
+			at.call(4.6, func(): backend.set_dial("V"); backend.set_probe("red", [14, 2]); backend.set_probe("black", [14, 8]); changed.emit())
+			at.call(6.0, func(): run_test())
+		"burn":
+			at.call(1.0, func(): backend.delete_part("x1"); note = backend.last_note; changed.emit())
+			at.call(2.0, func():
+				for s in sort_box.slots: if str(s.item.partId).begins_with("led"): pick_part(s.item))
+			at.call(2.6, func(): _hover(cam.unproject_position(board.pad_world(8, 5)), true))
+			at.call(3.2, func(): backend.place(place_item, 8, 5, 0); set_tool("select"); changed.emit())
+			at.call(4.0, func(): toggle_power())
+

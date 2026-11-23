@@ -2,7 +2,7 @@ class_name Dmm3D
 extends Node3D
 ## Handheld multimeter, ~9 x 18 x 4 cm, dark grey body in a muted yellow rubber holster, leaning back on its kickstand.
 
-const TILT := -28.0   ## degrees from upright (top leans back)
+const TILT := -55.0   ## degrees from upright (top leans back): on its kickstand, low enough that the supply behind it stays in view (0.4.1)
 const MODES := {"OFF": -60.0, "V": -20.0, "mA": 20.0, "Ω": 60.0}
 const DIAL_Y := -0.03
 
@@ -13,7 +13,7 @@ var _unit := ""
 var _mode := "OFF"
 
 func _init() -> void:
-	_tilt = Node3D.new(); _tilt.position = Vector3(0, 0.097, 0); _tilt.rotation_degrees.x = TILT; add_child(_tilt)
+	_tilt = Node3D.new(); _tilt.position = Vector3(0, 0.066, 0); _tilt.rotation_degrees.x = TILT; add_child(_tilt)
 	var yellow := MeshKit.mat(Color(0.64, 0.5, 0.11), 0.78, 0.0, {"normal": 0.35})
 	var grey := MeshKit.mat(Color(0.17, 0.175, 0.185), 0.5, 0.0, {"normal": 0.12})
 	# holster: rubber back and corner lips wrapping round the body

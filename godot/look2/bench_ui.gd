@@ -514,7 +514,7 @@ func _tools() -> void:
 	if tip == "" and bench.backend.dial != "OFF": tip = "Meter  " + bench.meter_text()
 	var tv := _plate(Vector2.ZERO, "")
 	_tip_plate = tv.get_parent()
-	_tip_label = _eng(tv, tip, 15); _tip_label.add_theme_color_override("font_color", AMBER)
+	_tip_label = _eng(tv, tip, 13); _tip_label.add_theme_color_override("font_color", AMBER)   # 0.4.1: a small mirror; the meter's own face carries the reading
 	(_tip_plate as Control).visible = tip != ""
 	_place_tip()
 
