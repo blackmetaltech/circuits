@@ -86,3 +86,13 @@
   parsed mouse events are in window pixels, so the ring is mapped through the window's stretch; without it every pad click lands
   off target on a window not at the base size. Not done: pad navigation of the paper ticket's keys (they are reached with the
   ring), rumble, and a hand test with a real controller; no human has held a pad on this build.
+
+- **D-plain-splash (2026-11-23, Ingrid Solheim, Game Lead).** The boot splash is the word CIRCUITS over blackmetal.tech on the
+  bench's dark blue, shown for the engine's boot only. The coordinator asked for a short plain splash or none; plain is what
+  shipped. Strongest argument against (Sigrid, 0.4.1 re-score): a stock sans on navy looks like every loading screen and is not
+  ours. Answer: true, and a branded splash needs the studio's mark, which does not exist yet; the stock Godot logo for 8 s was the
+  defect, and that is gone. Written down for 0.5: a splash with the house mark when there is one.
+
+- **D-meter-upright (2026-11-23, Ingrid Solheim, Game Lead).** The meter's LCD digits are upright, not italic. The lean split the
+  tall digits into two offset rows, and in 2-1 the reading is the lesson. The supply keeps its lean: its digits are short and
+  read cleanly in every shot.

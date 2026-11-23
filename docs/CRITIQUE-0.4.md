@@ -83,3 +83,13 @@ Testers: Noor (playtester persona, 15) by hand on a GPU-backed window (Forward+ 
 - A trimmer that looks like a trimmer; a CIRCUITS boot splash.
 - 2-2 and the 2-4 exam on the bench, then chapter 3.
 - 5-1 under 10 ms a frame.
+
+## 0.4.1 patch: re-score
+| Tester | Scores |
+|---|---|
+| Sigrid (round 5, from 0.4.1 stills and GIF sheets) | UI 7: the gate passes. All three of her items pass. The meter reading is on its face and the HUD plate is a small chip; view 1 holds the scope, the supply's displays, the meter and the device at 1920x1080 and 1280x800; the box has printed tabs. Her top defect, split LCD digits, is fixed after her score (upright digits, bff23c3). Still open from her: the meter covers the supply's OUTPUT key and part of the VOLTAGE label; the price lines on the tabs (about 8 px at 1280x800) and the scope's text (about 6 px) are too small; the ticket wraps "(3.3 V, 2 / %)" at 1280x800; the splash is plain, not ours (D-plain-splash). Her "blank meter on mA" in the 1-1 still is the dial at OFF. |
+
+Measured: low tier, Ryzen 9900X iGPU, Compatibility, 1280x800, powered: 1-1 8.4 ms average, p95 9.7; 2-1 11.7 ms, p95 13.8. Its FXAA had been a no-op on Compatibility; it is now 2x MSAA. Full vitest: 956 passed, 4 todo, 0 failed.
+
+Still failing from the 0.5 gate: no human has played the new look; parts are not swapped in place; the default view does not show the sorting box's contents and the pads together; 2-2, the 2-4 exam and chapters 3 to 5 are classic only; 5-1 is over 10 ms.
+

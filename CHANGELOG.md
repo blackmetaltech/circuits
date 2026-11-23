@@ -2,6 +2,23 @@
 
 All notable changes to CIRCUITS (called NODE until v0.1.0). The release workflow publishes the section whose heading contains `[x.y.z]`.
 
+## [0.4.1] - 2026-11-23 · "In Frame"
+A patch: the default view shows every instrument, the meter's own face carries the reading, and the parts box has printed tabs. New GIFs from this build.
+
+### Changed
+- The default view (key 1) frames the device, the scope, the bench supply and the meter at 1920x1080 and at 1280x800. The meter leans back on its kickstand so the supply's displays stay in view.
+- The meter reading is on the meter's face, in upright digits; before, the italic lean split them into two rows (2.76 read as 776 over C.16). The plate above the tool rail is a small mirror of it. A meter that is on with nothing to read shows 0.00 or OL.
+- The sorting box has printed tabs on its compartments: the value large, the price small. It has only as many rows as the ticket needs.
+- A plain CIRCUITS splash replaces the engine's logo at start.
+- The low tier uses 2x MSAA. Its FXAA did nothing on the Compatibility renderer, so it had no anti-aliasing. Measured on a Ryzen 9900X iGPU at 1280x800, powered: 1-1 8.4 ms average (p95 9.7), 2-1 11.7 ms (p95 13.8).
+- README and site: new GIFs of the sorting box, the supply keys, a measure-then-fix and a burn with its rush bill; shorter text.
+
+### Added
+- `godot/tests/look2_frame_flow.gd` (30 checks, in CI): the default view keeps every instrument in frame at both sizes.
+
+### Tested
+- Full local vitest: 124 files, 956 passed, 4 todo, 0 failed (352 s). Godot flows: look2_ch1 119, pad 13, save 4, frame 30, ch1_engine 164, ch2_engine 97, all 0 failed.
+
 ## [0.4.0] - 2026-11-23 · "On the Bench"
 The bench controls live on the instruments, burnt parts hurt, and chapter 2's weather station and sealed box play on the bench. First passes at sound, gamepad and a Cute mode in the new look. Saves from 0.3.0 load unchanged.
 
