@@ -43,6 +43,13 @@ func _shell(n_rows: int) -> void:
 func fill(fams: Array, idx_of: Callable, held: Dictionary) -> void:
 	for c in _content.get_children(): c.queue_free()
 	_labels.clear(); _rims.clear(); slots.clear()
+	# 0.7 (Mina, 1-3): three boxes all read "47 Ω" while they held 1/4, 1/2 and 1 W parts. When the drawer holds a value in more
+	# than one rating, each resistor tab names its rating too.
+	var rated := {}
+	for f in fams:
+		var f0: Dictionary = (f.items as Array)[0]
+		if str(f0.partId).begins_with("res"): rated[str(f0.variant)] = true
+	_show_watts = rated.size() > 1
 	var per := COLS * ROWS
 	pages = maxi(1, int(ceil(float(fams.size()) / float(per))))
 	page = clampi(page, 0, pages - 1)
@@ -76,6 +83,7 @@ func fill(fams: Array, idx_of: Callable, held: Dictionary) -> void:
 		var big := Label3D.new(); big.text = _tab_value(fam, it); big.font = load(Instruments3D.FONT_UI)
 		big.font_size = 64; big.pixel_size = 0.00011; big.modulate = Color(0.08, 0.08, 0.09); big.outline_size = 0
 		big.position = Vector3(0, 0.0022, 0.0005); big.double_sided = false; tab.add_child(big); _labels.append(big)
+		if big.text.length() > 7: big.pixel_size = 0.00011 * 7.0 / float(big.text.length())   # a rating on the tab: shrink to fit its width
 		Instruments3D.hit(cell, "tray:%d" % s, Vector3(CW - WALL, H, CD - WALL), Vector3(0, H * 0.5, 0))
 	if pages > 1:
 		var tab := Node3D.new(); tab.position = Vector3(0, 0, d * 0.5 + 0.016); _content.add_child(tab)
@@ -99,8 +107,14 @@ func _short_name(fam: Dictionary, it: Dictionary) -> String:
 	return n if n.length() <= 16 else n.substr(0, 15) + "."
 
 ## The tab's big line: the value for valued parts ("220 Ω"), else the short name ("LED red", "2N2222").
+var _show_watts := false
 func _tab_value(fam: Dictionary, it: Dictionary) -> String:
-	if it.get("value", null) != null: return str(it.label).get_slice("  ", 0)
+	if it.get("value", null) != null:
+		var v := str(it.label).get_slice("  ", 0)
+		var vr := str(it.get("variant", ""))
+		if _show_watts and str(it.partId).begins_with("res") and vr.ends_with("W"):
+			v += "  " + str({"0.25W": "¼ W", "0.5W": "½ W", "0.167W": "⅙ W"}.get(vr, vr.trim_suffix("W") + " W"))
+		return v
 	return _short_name(fam, it)
 
 func _value_line(it: Dictionary, n: int) -> String:

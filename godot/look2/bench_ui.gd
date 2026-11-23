@@ -362,7 +362,7 @@ func _job_card() -> void:
 	_ink(v, str(t.get("title", "")), 28, INK, f_semi, false)
 	if _focus_view():
 		if not bench.last_failure.is_empty(): _ink(v, str(bench.last_failure.get("title", "")), 18, RED_INK, f_semi)
-		_ink(v, "Key 1 returns to the work view.", 15, Color(0.30, 0.28, 0.25), f_sans)
+		_ink(v, "Key 2 returns to the work view.", 15, Color(0.30, 0.28, 0.25), f_sans)
 		return
 	if bool(t.get("eb", false)) and not bench.case_closed():
 		# an exam is a textbook problem: the paper must say the network to predict (Noor could not tell what to build)
@@ -421,8 +421,14 @@ func _job_card() -> void:
 		var full := str(f.get("text", ""))
 		var cut := full.find(". ")
 		_ink(v, full.substr(0, cut + 1) if cut > 0 and cut < full.length() - 2 else full, 17, INK, f_sans)   # the cause in one sentence; the scope shows the rest
-		if cut > 0 and cut < full.length() - 2: _ink(v, "Why: " + full.substr(cut + 2).strip_edges(), 15, Color(0.30, 0.28, 0.25), f_sans)
-		if not short: _ink(v, "Right-click a burnt part to fit a fresh one. Its wires stay.", 15, Color(0.30, 0.28, 0.25), f_sans)
+		if cut > 0 and cut < full.length() - 2:
+			# 0.7 (Mina, 1-3): the reason ran longer than the paper and pushed it over the parts box. Two sentences, the rest behind a key.
+			var why := full.substr(cut + 2).strip_edges()
+			var why_head := _two_sentences(why)
+			_ink(v, "Why: " + (why if show_why or why_head.length() >= why.length() - 1 else why_head), 15, Color(0.30, 0.28, 0.25), f_sans)
+			if why_head.length() < why.length() - 1: _key(v, "Less" if show_why else "More", func(): show_why = not show_why; _rebuild(), "", false, show_why)
+		var burnt: bool = not bench.backend.smoked.is_empty() or not bench.backend.arrived_burnt.is_empty()
+		if burnt and not short: _ink(v, "Right-click a burnt part to fit a fresh one. Its wires stay.", 15, Color(0.30, 0.28, 0.25), f_sans)   # 0.7 (Mina): only when a part burnt
 	elif bench.note != "":
 		_ink(v, _two_sentences(bench.note), 17, Color(0.14, 0.20, 0.42), f_sans)
 
@@ -470,6 +476,7 @@ func _dial_row(v: VBoxContainer) -> void:
 ## An exam, marked on the ticket (it lived only in the classic stall): your numbers against the bench, the stars, and the
 ## worked answer behind one key, so the ticket stays short until asked.
 var show_working := false
+var show_why := false   ## 0.7: the failure's full reason, folded to two sentences by default
 func _marked(v: Control) -> void:
 	var d = bench.backend.last_result.get("debrief", null)
 	if not (d is Dictionary) or not bool(bench.backend.ticket.get("eb", false)): return
@@ -737,6 +744,11 @@ func _refresh_live() -> void:
 		val.text = txt if txt != "" else "—"
 		if specs.has(id):
 			var ok: bool = bool(specs[id].get("pass", false))
+			# 0.7 (Mina, 1-3): a row whose words include "rating" also stands for the unnamed ratings check; it showed a green tick on a test that failed on a part's power
+			var row_name: String = ""
+			for s2 in bench.backend.ticket.get("specs", []): if str(s2.id) == id: row_name = str(s2.get("name", "")).to_lower()
+			if row_name.contains("rating"):
+				for sid in specs: if (str(specs[sid].get("kind", "")) == "rating" or str(sid) == "ratings") and not bool(specs[sid].get("pass", true)): ok = false
 			mark.text = "[✓]" if ok else "[✗]"; mark.add_theme_color_override("font_color", Color(0.12, 0.45, 0.20) if ok else RED_INK)
 		else:
 			mark.text = "[ ]"; mark.add_theme_color_override("font_color", INK)
