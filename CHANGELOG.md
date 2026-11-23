@@ -15,6 +15,10 @@ All five chapters play on the 3D bench. The wallet buys something. The testbed h
 - A pad legend shows while the pad's ring is on screen.
 - Tests: look2_ch45_flow (247 checks), look2_async_flow (7), testbed06.test (6), tip.test (10); look2_testbed_flow 36, look2_ch1_flow 129, look2_frame_flow 72. CI now also runs the classic stall flows.
 
+- A macOS build: one universal app (Apple silicon and Intel), checked on a Mac runner. It is signed ad hoc, not notarised: the first launch needs right-click, Open.
+- A new site at circuits.blackmetal.tech: a whole job in a clip, how a job goes, the six devices, the chapters, the free bench and the downloads.
+- The wiki has a picture of each job and each testbed device. It says what is in the game now and what is planned and not built (chapters 6 to 8).
+
 ### Changed
 - The title is a strip at the left with the bench behind it: Jobs, Testbed, Free bench. The showcase, the classic look, graphics, Cute and Sound are under Settings.
 - Jobs and the testbed open into a closer work view: the case fills the lower half, the scope and supply screens the top. Key 1 still shows the whole bench.
