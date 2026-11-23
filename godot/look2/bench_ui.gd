@@ -175,8 +175,20 @@ func _paper(pos: Vector2, w: float) -> VBoxContainer:
 	sb.content_margin_left = 22; sb.content_margin_right = 22; sb.content_margin_top = 14; sb.content_margin_bottom = 18
 	p.add_theme_stylebox_override("panel", sb)
 	_root.add_child(p)
-	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 6); p.add_child(v)
+	# 0.5 (Noor, 1-2 at a short window): a long failure or pay line ran off the bottom. The paper scrolls when it would pass the
+	# tool rail; otherwise it sizes to its text as before.
+	var sc := ScrollContainer.new(); sc.name = "PaperScroll"; sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	p.add_child(sc)
+	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 6); v.size_flags_horizontal = Control.SIZE_EXPAND_FILL; sc.add_child(v)
+	_cap_paper.call_deferred(sc, v, pos.y, w)
 	return v
+
+func _cap_paper(sc: ScrollContainer, v: VBoxContainer, top: float, w: float) -> void:
+	if not is_instance_valid(sc): return
+	var room := _canvas_h() - top - 132.0   # the tool rail and the paper's own margins
+	if v.get_combined_minimum_size().y > room:
+		sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+		sc.custom_minimum_size = Vector2(w - 44.0, room)
 
 func _ink(parent: Node, text: String, size := 19, col := INK, font: Font = null, wrap := true) -> Label:
 	return _lab(parent, nb_units(text), size, col, font if font else f_type, wrap)

@@ -108,6 +108,7 @@ func _ready() -> void:
 			if mt.size() == 4: backend.set_dial("V"); backend.set_probe("red", [int(mt[0]), int(mt[1])]); backend.set_probe("black", [int(mt[2]), int(mt[3])])
 		if OS.get_environment("CB_POWER") == "1": backend.set_power(true)
 		if OS.get_environment("CB_VIEW") != "": set_view(int(OS.get_environment("CB_VIEW")), true)
+		if OS.get_environment("CB_DEMO") != "": _demo(OS.get_environment("CB_DEMO"))
 	else: mode = "title"; changed.emit()
 	if OS.get_environment("CB_MAXFPS") != "": Engine.max_fps = int(OS.get_environment("CB_MAXFPS"))   # software-rendered harness runs: cap the CPU
 	if OS.get_environment("CB_FRAMETIME") != "":
@@ -700,6 +701,7 @@ func sync_board() -> void:
 			n.build(w.path, Wire3D.palette(i + 2), bool(w.get("fixed", false)), board, 0.0004 * (i % 3))
 			wires3d[w.wid] = n; i += 1
 	_probes(); _meter_leads()
+	_refresh_targets()   # 0.5: the target rings follow the board
 
 func _probes() -> void:
 	var pad = backend.probes.get("ch1", null)
@@ -1049,6 +1051,38 @@ func _plane_at(h: float) -> Plane:
 	var n: Vector3 = board.global_transform.basis.y.normalized()
 	return Plane(n, board.global_position + n * h)
 
+var _pad_tip_shown := false
+const ROLE_TEXT := {"source": "where the supply's plus comes in", "supply": "where the supply's plus comes in", "ground": "ground, the supply's minus", "load": "a terminal of the device"}
+
+## What is at a pad, in a few words: a connector and its role, a part's leg, or a wire end. "" for an empty hole.
+func pad_tip(pad: Vector2i) -> String:
+	var q: Dictionary = backend.bench_q
+	for c in q.get("connectors", []):
+		var cp: Array = c.get("pad", [])
+		if cp.size() == 2 and int(cp[0]) == pad.x and int(cp[1]) == pad.y: return "%s: %s" % [str(c.get("id", "")), str(ROLE_TEXT.get(str(c.get("role", "")), "a terminal of the board"))]
+	for p in q.get("parts", []):
+		for pin in p.get("pins", []):
+			var pp: Array = pin.get("pad", [])
+			if pp.size() == 2 and int(pp[0]) == pad.x and int(pp[1]) == pad.y:
+				var lab := str(pin.get("label", "")); if lab == "": lab = str(pin.get("name", ""))
+				return "%s, %s leg" % [str(p.get("name", "part")), lab] if lab != "" else "%s leg" % str(p.get("name", "part"))
+	if _pad_used(pad): return "A wire end"
+	return ""
+
+## The pads an end can go to: every leg, connector and wire end on the board.
+func connect_targets() -> Array:
+	var out: Array = []; var seen := {}
+	var q: Dictionary = backend.bench_q
+	for c in q.get("connectors", []):
+		var cp: Array = c.get("pad", []); if cp.size() == 2 and not seen.has(str(cp)): seen[str(cp)] = true; out.append(cp)
+	for p in q.get("parts", []):
+		for pin in p.get("pins", []):
+			var pp: Array = pin.get("pad", []); if pp.size() == 2 and not seen.has(str(pp)): seen[str(pp)] = true; out.append(pp)
+	return out
+
+func _refresh_targets() -> void:
+	if board: board.set_targets(connect_targets() if tool in ["wire", "red", "black", "probe"] else [])
+
 func _pad_used(pad: Vector2i) -> bool:
 	if pad.x < 0: return false
 	for p in backend._all_parts:
@@ -1072,6 +1106,7 @@ func set_tool(t: String) -> void:
 	tool = t
 	if t != "place": _clear_ghost()
 	wire_from = Vector2i(-1, -1); _wire_click = false; _clear_wire_preview()   # any tool change (W again, Esc) drops a half-drawn wire
+	_refresh_targets()
 	changed.emit()
 
 func pick_part(item: Dictionary) -> void:
@@ -1184,9 +1219,10 @@ func _hover(mp: Vector2, qa := false) -> void:
 	# a wire end or a meter lead on a pad with no leg connects nothing: the marker turns red before the click, not after (Noor)
 	var dead := tool in ["wire", "red", "black"] and ok and not _pad_used(pad)
 	board.set_hover(pad.x, pad.y, ok and tool in ["wire", "probe", "red", "black", "place"], Color(0.9, 0.18, 0.12) if dead else (Color(0.91, 0.64, 0.24) if tool != "probe" else Color(0.95, 0.85, 0.2)))
-	if tool in ["wire", "red", "black"] and ok:
-		var t4 := "No leg here: this end would connect nothing" if dead else ""
-		if t4 != hover_tip and (dead or hover_tip.begins_with("No leg")): hover_tip = t4; changed.emit()
+	if tool in ["wire", "red", "black", "probe"] and ok:
+		# 0.5 (Noor): every pad says what is there, a connector, a leg or a wire end, before the click
+		var t4 := "No leg here: this end would connect nothing" if dead else pad_tip(pad)
+		if t4 != hover_tip and (t4 != "" or _pad_tip_shown): hover_tip = t4; _pad_tip_shown = t4 != ""; changed.emit()
 	if tool == "place" and ghost:
 		ghost.visible = ok
 		if ok:
@@ -1630,6 +1666,23 @@ func _demo(name: String) -> void:
 			at.call(4.0, func(): backend.build_ref(ticket_id); sync_board(); if not backend.powered: toggle_power())
 			at.call(4.6, func(): backend.set_dial("V"); backend.set_probe("red", [14, 2]); backend.set_probe("black", [14, 8]); changed.emit())
 			at.call(6.0, func(): run_test())
+		"swap31":   # 0.5: 3-1 arrives with a 22 uF capacitor; the wheel steps it to 100 uF in place; power, test, pass
+			at.call(0.4, func(): open_case(); set_view(5))
+			at.call(1.6, func(): if not backend.powered: toggle_power())
+			at.call(3.0, func(): toggle_power())
+			for i in 4: at.call(3.6 + i * 0.45, func():
+				for p in backend.parts: if str(p.partId) == "cap-el" and not bool(p.get("fixed", false)):
+					var n3: Node3D = parts3d.get(str(p.uid), null)
+					if n3: _wheel_value(cam.unproject_position(n3.global_position), 1))
+			at.call(6.0, func(): if not backend.powered: toggle_power())
+			at.call(7.6, func(): run_test())
+		"jockey22":   # 0.5: 2-2 cable fault: the jockey slides along the wire and the galvanometer needle swings through zero
+			at.call(0.4, func(): open_case(); set_view(5))
+			at.call(1.0, func(): if not backend.powered: toggle_power())
+			for i in 24: at.call(1.6 + i * 0.22, func(): jockey_to_mm(150.0 + i * 12.0))
+		"testbed":   # 0.5: the fan driver switching at 100 Hz; the flyback diode comes out; the coil's kick burns the transistor
+			at.call(0.6, func(): backend.set_selector("pin", 2); if not backend.powered: toggle_power())
+			at.call(3.2, func(): Testbed.apply_break(self, "no_diode"))
 		"burn":   # the arrived-burnt LED is named as the customer's; Ctrl+Z fits a fresh one; still straight on 9 V, it burns and is billed
 			at.call(0.5, func(): set_view(5))
 			at.call(1.2, func(): toggle_power())

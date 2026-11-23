@@ -34,6 +34,17 @@ func _initialize() -> void:
 			var hull := FrameCheck.box_hull(wb.cam, wb.dmm.get("_tilt"), Vector3(0.096, 0.21, 0.04), Vector3(0, 0, -0.005), asp)
 			for id in ["psu_output", "psu_test", "psu_volt"]:
 				ok(not FrameCheck.hit_covered(wb.cam, wb.psu, id, hull, asp), "%s %.2f: the meter leaves %s in view" % [t, asp, id])
+	# 0.5 (Noor): with the wire tool, every connectable pad shows a ring, and the ground connector's tip says what it is
+	wb.start_job("1-1"); for i in 5: await process_frame
+	wb.open_case(); for i in 5: await process_frame
+	wb.set_tool("wire"); for i in 2: await process_frame
+	var nt: int = (wb.board.get("_targets") as Array).size()
+	ok(nt >= 4, "the wire tool shows a ring on every pad an end can go to (%d)" % nt)
+	var gtip := ""
+	for c in wb.backend.bench_q.get("connectors", []): if str(c.get("role", "")) == "ground": gtip = wb.pad_tip(Vector2i(int(c.pad[0]), int(c.pad[1])))
+	ok(gtip.contains("ground"), "the ground connector's tip says so (%s)" % gtip)
+	wb.set_tool("select"); for i in 2: await process_frame
+	ok((wb.board.get("_targets") as Array).is_empty(), "the rings go with the tool")
 	var nb := BenchUI.nb_units("between 3.23 V and 3.37 V (3.3 V, 2 %), 10 kΩ, E1 and E2")
 	ok(not nb.contains("2 %") and not nb.contains("3.3 V") and nb.contains("2\u00a0%") and nb.contains("10\u00a0kΩ") and nb.contains("E1 and"), "ticket numbers keep their units on one line: %s" % nb)
 	print("\n%d checks, %d failed" % [checks, fails])

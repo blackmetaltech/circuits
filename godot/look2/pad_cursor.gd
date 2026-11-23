@@ -23,6 +23,14 @@ var active := false           ## true after the first pad input on the bench: th
 var axes := {}                ## JoyAxis -> value, from the events
 
 func _ready() -> void:
+	# 0.5 (Noor, pad pass): menus must answer the pad. The D-pad moved focus on the title but A pressed nothing: this project's
+	# ui_accept had no joypad button. A accepts and B cancels in every menu.
+	for pair: Array in [["ui_accept", JOY_BUTTON_A], ["ui_cancel", JOY_BUTTON_B]]:
+		var has := false
+		for ev in InputMap.action_get_events(str(pair[0])): if ev is InputEventJoypadButton and (ev as InputEventJoypadButton).button_index == int(pair[1]): has = true
+		if not has:
+			var jb := InputEventJoypadButton.new(); jb.button_index = int(pair[1]); jb.device = -1
+			InputMap.action_add_event(str(pair[0]), jb)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	z_index = 100
