@@ -25,7 +25,9 @@ func _init() -> void:
 	# LCD window
 	MeshKit.add(_tilt, MeshKit.rounded_box(Vector3(0.07, 0.036, 0.003), 0.003, 2), MeshKit.m("black_epoxy"), Vector3(0, 0.05, z0))
 	var lcd := Instruments3D.SegPanel.new(); _lcd = lcd
-	lcd.digit_area = Rect2(52, 28, 292, 150); lcd.ndig = 4; lcd.ghost_col = Color(0.05, 0.07, 0.05, 0.07)
+	lcd.digit_area = Rect2(48, 44, 300, 124); lcd.ndig = 4; lcd.ghost_col = Color(0.05, 0.07, 0.05, 0.07)
+	# upright digits on a flat field (0.4.1, Sigrid): the italic lean and the two-tone band split these tall digits into two offset rows
+	lcd.shear = 0.0; lcd.bg_col2 = lcd.bg_col
 	Instruments3D.screen_quad(_tilt, lcd, Vector2i(480, 220), Vector2(0.062, 0.0284), Vector3(0, 0.05, z0 + 0.0017), 0.0, true)
 	# function buttons
 	var bm := MeshKit.mat(Color(0.07, 0.07, 0.075), 0.55, 0.0, {"normal": 0.0})
@@ -61,6 +63,8 @@ func _init() -> void:
 func set_reading(text: String, unit: String, mode: String) -> void:
 	_unit = unit; _mode = mode
 	_lcd.lit = mode != "OFF"
+	# on, with nothing to read (no leads placed): a real meter shows 0.00 on V and mA and OL on ohms, not a blank face
+	if mode != "OFF" and text.strip_edges() == "": text = "0.00" if (mode.contains("V") or mode.contains("A")) else "OL"
 	_lcd.text = text
 	_lcd.extras = []
 	if mode != "OFF":
