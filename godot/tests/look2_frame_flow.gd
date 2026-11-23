@@ -29,5 +29,10 @@ func _initialize() -> void:
 				var inside: bool = r.position.x >= -SLACK and r.position.y >= -SLACK and r.end.x <= 1920.0 + SLACK and r.end.y <= h - 100.0
 				var clear: bool = not r.intersects(TICKET) or nm == "scope" and r.position.x > TICKET.end.x
 				ok(inside and clear, "%s %.2f: %s at x %d-%d, y %d-%d (canvas %dx%d)" % [t, asp, nm, r.position.x, r.end.x, r.position.y, r.end.y, 1920, h])
+			ok(Geometry2D.intersect_polygons(FrameCheck.footprint(wb.scope), FrameCheck.footprint(wb.psu)).is_empty(), "%s %.2f: the scope and the supply stand apart on the bench" % [t, asp])
+			# 0.5 (Sigrid): the meter, leaning on its kickstand, covers none of the supply's controls
+			var hull := FrameCheck.box_hull(wb.cam, wb.dmm.get("_tilt"), Vector3(0.096, 0.21, 0.04), Vector3(0, 0, -0.005), asp)
+			for id in ["psu_output", "psu_test", "psu_volt"]:
+				ok(not FrameCheck.hit_covered(wb.cam, wb.psu, id, hull, asp), "%s %.2f: the meter leaves %s in view" % [t, asp, id])
 	print("\n%d checks, %d failed" % [checks, fails])
 	quit(1 if fails > 0 else 0)

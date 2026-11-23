@@ -96,3 +96,12 @@
 - **D-meter-upright (2026-11-23, Ingrid Solheim, Game Lead).** The meter's LCD digits are upright, not italic. The lean split the
   tall digits into two offset rows, and in 2-1 the reading is the lesson. The supply keeps its lean: its digits are short and
   read cleanly in every shot.
+
+- **D-supply-stays (2026-11-23, Ingrid Solheim, Game Lead).** 0.5 brief: "the meter covering the supply's OUTPUT key (move the
+  supply)". In the 0.4.1 build the meter covers neither OUTPUT, TEST nor VOLTAGE at 1280x800 or 1920x1080 (GPU crop of view 1,
+  2-1; the red lead passes below OUTPUT). It hides the black post and the current knob, which the player never touches on this
+  bench (the supply's only hits are VOLTAGE, OUTPUT and TEST). Moving the supply clear of the meter put it into the scope's
+  cabinet or the scope's edge under the ticket in every placement tried. So the supply stays, and look2_frame_flow now guards
+  what matters: the meter's tilted outline covers none of the three controls or their labels, and the scope and supply cabinets
+  do not overlap on the bench. Strongest argument against (Sigrid): a hidden post reads as clutter. Answer: true; the fix is a
+  smaller meter or a second view, not a layout that breaks two other checks.
