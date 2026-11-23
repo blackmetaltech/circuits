@@ -180,7 +180,7 @@ func _run() -> void:
 	wb.backend.unlock_through("2-2")
 	wb.start_job("2-2"); await _frames(10)
 	var order := ["2-2", "2-4", "3-1", "3-2", "3-3", "3-4"]
-	ok(Workbench.BENCH_JOBS.slice(5) == ["2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4"], "the bench campaign runs chapters 2 and 3 in the engine's order")
+	ok(Workbench.BENCH_JOBS.slice(5, 13) == ["2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4"], "the bench campaign runs chapters 2 and 3 in the engine's order")
 
 	# ---------------------------------------------------------------- 2-2 Cable Fault: arrives as the shorted cable, a null to find
 	await _arrive("2-2", "CABLECREW")
@@ -335,7 +335,7 @@ func _run() -> void:
 	await _pass_and_hand_back("3-4", true)
 	ok(wb.backend.wallet_minor > wallet0, "the wallet grew over the six jobs (%d -> %d)" % [wallet0, wb.backend.wallet_minor])
 	wb.next_job(); await _frames(10)
-	ok(wb.mode == "title", "after 3-4, the last bench job, the bench goes back to the title")
+	ok(wb.mode == "job" and wb.ticket_id == "4-1", "after 3-4, 'Next job' opens 4-1: chapter 4 is on the bench (look2_ch45_flow plays it) (%s)" % wb.ticket_id)
 	ok(trap.count == 0, "zero script errors in the whole session (%d: %s)" % [trap.count, str(trap.lines.slice(0, 3))])
 	print("\n%d checks, %d failed" % [checks, fails])
 	quit(1 if fails > 0 else 0)

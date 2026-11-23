@@ -29,7 +29,16 @@ const DEVICES := {
 	"3-2": ["ARCADIA", "ARCADE BUTTON BOX  5 V", Color(0.50, 0.10, 0.45), Color(0.98, 0.82, 0.12)],
 	"3-3": ["GREENLINE", "IRRIGATION CONTROLLER  24 V", Color(0.16, 0.36, 0.20), Color(0.92, 0.92, 0.88)],
 	"3-4": ["EXAM", "CAPACITOR BANK TEST RIG", Color(0.50, 0.52, 0.54), Color(0.12, 0.30, 0.62)],
+	"4-1": ["VOLTEX", "AC ADAPTER  230 V IN  12 V DC", Color(0.07, 0.07, 0.075), Color(0.85, 0.12, 0.08)],
+	"4-2": ["HALCYON", "TABLE RADIO  5.1 V RAIL", Color(0.42, 0.26, 0.14), Color(0.86, 0.76, 0.52)],
+	"4-3": ["LAYERLINE", "PRINTER CONTROLLER  15 V  5 V", Color(0.14, 0.15, 0.17), Color(0.95, 0.48, 0.10)],
+	"4-4": ["BENCH", "OWN 3.3 V RAIL  LM317", Color(0.24, 0.30, 0.36), Color(0.88, 0.88, 0.84)],
+	"4-5": ["EXAM", "ZENER REGULATOR TEST RIG", Color(0.50, 0.52, 0.54), Color(0.12, 0.30, 0.62)],
 	"5-1": ["BREEZE", "DESK FAN  12 V  0.2 A", Color(0.60, 0.60, 0.57), Color(0.10, 0.52, 0.56)],
+	"5-2": ["GLOWRAIL", "LED STRIP DRIVER  3.3 V LOGIC", Color(0.90, 0.90, 0.88), Color(0.55, 0.20, 0.75)],
+	"5-3": ["ROBOCLUB", "LOGIC BOARD  5 V", Color(0.10, 0.30, 0.55), Color(0.95, 0.80, 0.15)],
+	"5-4": ["JUNO MUSIC", "SYNTH PREAMP  9 V", Color(0.12, 0.12, 0.13), Color(0.90, 0.35, 0.45)],
+	"5-5": ["EXAM", "AMPLIFIER TEST RIG", Color(0.50, 0.52, 0.54), Color(0.12, 0.30, 0.62)],
 }
 static func device_of(ticket_id: String) -> Array:
 	return DEVICES.get(ticket_id, ["SERVICE", "DEVICE UNDER REPAIR", Color(0.18, 0.19, 0.20), Color(0.91, 0.64, 0.24)])

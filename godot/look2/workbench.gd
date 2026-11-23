@@ -9,8 +9,9 @@ signal changed
 
 const P := MeshKit.PITCH
 const TICKET := "5-1"   ## the chapter-5 showcase slice
-## The bench campaign: chapters 1, 2 and 3 in the engine's order (D-bench-ch23). Chapters 4 and 5 stay in the classic stall.
-const BENCH_JOBS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4"]
+## The bench campaign: all five chapters in the engine's order (D-bench-ch23, D-bench-ch45). The classic stall is an option.
+const BENCH_JOBS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4",
+	"4-1", "4-2", "4-3", "4-4", "4-5", "5-1", "5-2", "5-3", "5-4", "5-5"]
 const CH1 := BENCH_JOBS   # old name, kept for the flows
 var ticket_id := "1-1"
 
@@ -58,6 +59,9 @@ var wire_preview: MeshInstance3D
 var hover_pad := Vector2i(-1, -1)
 var testbed_device := ""   ## 0.5: the free bench's loaded device (Testbed.DEVICES id), "" for an open board
 var testbed_paused := false
+var thermal := false                 ## chapter 4's thermal camera is on (T): parts in false colour from the engine's temperatures
+var _showcase := false               ## 5-1 opened from the title as the showcase (it unlocks tickets the player has not reached)
+var iso_box: Node3D                  ## 4-1's isolation transformer on the bench (mains tickets only)
 var note := ""
 var paused := false
 var _ft: Array = []
@@ -481,7 +485,9 @@ func start_job(id := "") -> void:
 		_campaign = true
 	if id == "": id = OS.get_environment("CB_L2_TICKET") if OS.get_environment("CB_L2_TICKET") != "" else first_open_ticket()
 	mode = "job"; ticket_id = id; _paid_text = ""
-	if id == TICKET or OS.get_environment("CB_L2_TICKET") != "": backend.unlock_through(id)
+	# 5-1 from the title is the showcase: it unlocks the tickets before it, so it never saves. From the campaign it is a job.
+	_showcase = id == TICKET and OS.get_environment("CB_L2_TICKET") == "" and not _ticket_open(id)
+	if _showcase or OS.get_environment("CB_L2_TICKET") != "": backend.unlock_through(id)
 	backend.open_ticket(id)
 	_after_open()
 	if OS.get_environment("CB_L2_REF") == "1" or OS.get_environment("CB_L2_NODIODE") == "1":
@@ -525,7 +531,7 @@ func open_case() -> void:
 func hand_back() -> void:
 	if case_node == null: return
 	# save after a campaign job (not after the 5-1 showcase, which unlocks tickets the player has not reached)
-	if not _nosave() and CH1.has(ticket_id) and backend.passed: backend.save_game()
+	if not _nosave() and not _showcase and CH1.has(ticket_id) and backend.passed: backend.save_game()
 	set_tool("select")
 	if probe_node: probe_node.visible = false
 	if probe_cable: probe_cable.visible = false
@@ -564,6 +570,7 @@ func start_free() -> void:
 
 func back_to_title() -> void:
 	backend.set_power(false); backend.close_ticket()
+	if _showcase: _campaign = false; _showcase = false   # the showcase's unlocks are not the player's: the next Jobs reloads the save
 	mode = "title"; tool = "select"; _clear_ghost()
 	for c in board_root.get_children(): c.queue_free()
 	board = null; parts3d.clear(); wires3d.clear(); _sig_parts = ""; _sig_wires = ""
@@ -580,6 +587,8 @@ func _after_open() -> void:
 	board.build(int(backend.ticket.board.w), int(backend.ticket.board.h), backend.ticket.board.connectors)
 	var c := Vector3((board.w - 1) * P * 0.5, 0, (board.h - 1) * P * 0.5)
 	board.position = Vector3(-0.02, 0.003 + 0.012 + MeshKit.BOARD_T, 0.07) - c
+	board.set_keepout(backend.bench_q.get("keepOut", []), str(backend.mains.get("keepOut", "")))   # 4-1: the mains side of the board
+	thermal = false; backend.camera = false
 	_contacts()
 	if case_node: case_node.queue_free(); case_node = null
 	handed = false
@@ -613,7 +622,11 @@ func _layout_for_ticket() -> void:
 	if fan: fan.visible = fan_job
 	if mcu: mcu.visible = fan_job
 	if scope: scope.position = Vector3(-0.10, 0, -0.30) if fan_job else Vector3(0.0, 0, -0.29); scope.rotation_degrees.y = 6.0 if fan_job else 0.0
-	if fan: fan.position = Vector3(0.17, 0.0, -0.12)
+	if fan: fan.position = Vector3(0.085, 0.0, -0.15)   # D-bench-ch45: at 0.17 it stood in front of the bench supply's display
+	if iso_box == null and not backend.mains.is_empty(): iso_box = IsoBox.new(); add_child(iso_box)
+	if iso_box:
+		iso_box.visible = not backend.mains.is_empty() and mode != "free"
+		iso_box.position = Vector3(0.36, 0.0, -0.06); iso_box.rotation_degrees.y = -38.0   # right of the supply, clear of its display
 	if mcu: mcu.position = Vector3(-0.07, 0.003, 0.215); mcu.rotation_degrees.y = 0.0   # in front of the case; the sorting box stands at its left
 
 ## Drawer rows: the ticket's shoebox (job) or the whole catalogue (free bench), grouped by kind.
@@ -798,6 +811,11 @@ func _cables() -> void:
 	if plus != "":
 		add.call(pr, post.call(plus), red, 0.06)
 		add.call(pb, post.call(minus), blk, 0.05)
+	if iso_box and iso_box.visible:   # 4-1: the isolated mains leads (brown live, blue neutral) from the transformer's outlet to L and N
+		for sd in backend.card.get("supplies", []):
+			if str(sd.get("kind", "")) != "mains": continue
+			add.call(iso_box.outlet_world(0), post.call(str(sd.plus)), MeshKit.mat(Color(0.36, 0.20, 0.10), 0.5), 0.05)
+			add.call(iso_box.outlet_world(1), post.call(str(sd.minus)), MeshKit.mat(Color(0.10, 0.26, 0.62), 0.5), 0.05)
 	if mcu and mcu.visible:
 		var mp: Vector3 = _call(mcu, "pin_world") if mcu.has_method("pin_world") else Vector3(-0.17, 0.02, 0.1)
 		add.call(mp, post.call("PIN"), MeshKit.mat(Color(0.85, 0.66, 0.08), 0.45), 0.02)
@@ -832,7 +850,9 @@ func _live(dt: float) -> void:
 	for p in f.get("parts", []):
 		var n: Part3D = parts3d.get(str(p.uid), null)
 		if n == null: continue
-		n.set_heat(backend._heat(p))
+		if thermal: n.set_thermal(float(p.get("temp", 25.0)))
+		else: n.set_thermal(-1.0); n.set_heat(backend._heat(p))
+		if n.anim.has("strip"): n.set_strip(absf(float(p.get("i", backend.part_current(str(p.uid))))) / 0.3)   # 5-2: the strip's 0.3 A is full brightness
 		n.set_smoked(bool(p.get("smoked", false)) or backend.smoked.has(str(p.uid)) or burnt.has(str(p.uid)))
 		if p.has("led"): n.set_led(float(p.led.get("mA", 0.0)), float(p.led.get("bloom", 0.0)))
 		if p.has("galvo"): n.set_needle(float(p.galvo.get("needle", 0.0)), float(p.galvo.get("uA", 0.0)))
@@ -1214,6 +1234,7 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_K: if mode == "free": Testbed.set_running(self, testbed_paused)   # 0.5 testbed: pause / run the simulation
 			KEY_L: if mode == "free" and testbed_paused: Testbed.step_once(self)   # one frame forward while paused
 			KEY_C: set_cute(not cute)
+			KEY_T: toggle_thermal()
 			KEY_H: if backend.passed and not handed: hand_back()
 			KEY_BRACKETLEFT, KEY_BRACKETRIGHT:
 				if tool == "place":
@@ -1350,6 +1371,7 @@ func _pick_item(mp: Vector2) -> Dictionary:
 
 var _pick_hl := {}
 var _pick_hl_ms := 0
+var pot_alpha := {}   ## 0.6: the wiper position the wheel set on each panel pot (uid -> 0..1 from end A)
 func _set_pick_hl(it: Dictionary) -> void:
 	if str(it.get("id", "")) == str(_pick_hl.get("id", "")): return
 	if str(it.get("id", "")) != "": _pick_hl_ms = Time.get_ticks_msec()
@@ -1421,6 +1443,7 @@ func _hit(id: String) -> void:
 	changed.emit()
 
 func toggle_power() -> void:
+	if not backend.powered and _safety_first(): return
 	if not backend.smoked.is_empty() and not backend.powered: pass
 	backend.set_power(not backend.powered)
 	if not backend.powered: capture_until = 0.0; _call(scope, "clear_capture")
@@ -1434,7 +1457,38 @@ func cycle_pin() -> void:
 func set_pin(i: int) -> void:
 	backend.set_selector("pin", i); changed.emit()
 
+## 4-1 (mains): the engine keeps power and the bench off until the safety card is read; the ticket says so instead of nothing.
+func _safety_first() -> bool:
+	if mode != "job" or not backend.safety_pending(): return false
+	note = "Read the safety card on the ticket first. The bench stays off until you have."
+	changed.emit()
+	return true
+
+func read_safety() -> void:
+	backend.read_safety()
+	note = "Card read. The isolation transformer feeds L and N. Build only on the 12 V side, outside the red square."
+	if sfx: sfx.play("page", 0.7)
+	changed.emit()
+
+## Chapter 4's thermal camera (the ticket offers it): T or the rail key. The parts show the engine's temperatures in false colour.
+func toggle_thermal() -> void:
+	if not backend.camera_ok or mode != "job": return
+	thermal = not thermal; backend.camera = thermal
+	note = "Thermal camera on. Dark blue is room temperature, white is 150 C." if thermal else "Thermal camera off."
+	changed.emit()
+
+## The camera's reading: the hottest part and its temperature (the engine's number), for the tip plate.
+func thermal_text() -> String:
+	if not backend.powered: return "Thermal camera: power is off, everything is at room temperature"
+	var best := {}; var bt := -1e9
+	for p in backend.frame.get("parts", []):
+		if float(p.get("temp", -1e9)) > bt: bt = float(p.get("temp", -1e9)); best = p
+	if best.is_empty(): return "Thermal camera"
+	var nm := str(backend.part_by(str(best.uid)).get("label", best.get("partId", "")))
+	return "Thermal camera: hottest is %s at %.0f C" % [nm if nm != "" else str(best.uid), bt]
+
 func run_test() -> void:
+	if _safety_first(): return
 	if backend.passed and mode == "job":
 		note = "Already passed and paid. Close up and hand it back."; changed.emit(); return
 	if bool(backend.ticket.get("eb", false)) and not backend.predictions_done():
@@ -1467,7 +1521,16 @@ const OPEN_LINE := {
 	"3-2": "Case open. The button and the pull-up are soldered on, with no filter between SW and OUT. Look at OUT on the scope first.",
 	"3-3": "Case open. The relay coil is on the 24 V rail behind 560 ohm. Look at the coil current on the scope before you change anything.",
 	"3-4": "Exam rig open. Predict first, then build both cards and let the bench measure them.",
+	"4-1": "Case open. The transformer is soldered in; its mains side sits in the red square. Build the bridge and the capacitor on the 12 V side.",
+	"4-2": "Case open. IN to OUT is empty. A resistor from IN to OUT and a Zener from OUT to GND, banded end on OUT.",
+	"4-3": "Case open. The regulator goes between IN and OUT. Switch on the thermal camera (T) and watch it heat before you choose a heatsink.",
+	"4-4": "Your own board. An LM317, two resistors, and 3.30 V on OUT at every load.",
+	"4-5": "Exam rig open. Predict first, then build and probe.",
 	"5-1": "Case open. Q1 is burnt, and nothing across the fan catches its turn-off kick.",
+	"5-2": "Case open. The strip is soldered on. GATE comes from a 3.3 V pin: the FET has to switch fully on from that.",
+	"5-3": "Empty board. Diodes, a transistor and resistors: make Y low only when A and B are both high.",
+	"5-4": "Case open. IN from the synth, OUT to the amplifier. One transistor, gain about ten.",
+	"5-5": "Exam rig open. Predict first, then build and probe.",
 }
 const ARRIVE_LINE := {
 	"1-1": "Lio put the torch on the counter. It does not light.",
@@ -1483,7 +1546,16 @@ const ARRIVE_LINE := {
 	"3-2": "{c}'s arcade button counts one press as several. The game sees a burst of presses.",
 	"3-3": "{c}'s irrigation controller does not click. The relay never pulls in, so the valves stay shut.",
 	"3-4": "The exam rig is on the bench: two capacitor cards. No customer: this one is graded.",
+	"4-1": "{c}'s wall adapter hums and the radio on it crackles. It plugs into the mains: read the safety card first.",
+	"4-2": "{c}'s radio wants a steady 5.1 V. Its supply wanders between 13 and 17 V.",
+	"4-3": "{c}'s 3D-printer controller keeps cutting out. Its 5 V regulator gets too hot and shuts down.",
+	"4-4": "Your bench needs a 3.3 V rail for the next jobs. You build this one for yourself.",
+	"4-5": "The exam rig is on the bench: a Zener regulator. No customer: this one is graded.",
 	"5-1": "The fan came in with its driver board. Open the case to work on it.",
+	"5-2": "{c}'s LED strip needs 12 V, and the board that switches it only speaks 3.3 V.",
+	"5-3": "{c}'s robotics club has run out of logic chips. They need a NAND gate built from parts.",
+	"5-4": "{c}'s synth is too quiet for the amplifier. It needs a preamp with a gain of about ten.",
+	"5-5": "The exam rig is on the bench: a common-emitter amplifier. No customer: this one is graded.",
 }
 ## The slide wire's jockey (2-2, 2-4): a press or drag on the wire puts it under the pointer, the wheel, the arrow keys (and LB / RB
 ## on the pad, over the wire) step it by the engine's step (10, 1 or 0.1 mm; J or the right stick key changes it).
@@ -1533,12 +1605,19 @@ func arrival_line() -> String: return str(ARRIVE_LINE.get(ticket_id, "The device
 func first_open_ticket() -> String:
 	if not _campaign: return CH1[0]
 	var done := {}
-	for ch in [1, 2, 3]:
+	for ch in [1, 2, 3, 4, 5]:
 		for row in backend.progress(ch).get("tickets", []): if bool(row.get("done", false)): done[str(row.id)] = true
 	for id in CH1: if not done.has(id): return id
 	return CH1[0]
 
+## The ticket is open (unlocked) in the engine's chapter map.
+func _ticket_open(id: String) -> bool:
+	if not _campaign: return false
+	for row in backend.progress(int(id.get_slice("-", 0))).get("tickets", []): if str(row.id) == id: return bool(row.get("open", false))
+	return false
+
 func next_job() -> void:
+	if _showcase: back_to_title(); return   # the showcase stands alone
 	var i := CH1.find(ticket_id)
 	var nx: String = CH1[i + 1] if i >= 0 and i + 1 < CH1.size() else ""
 	backend.set_power(false); backend.close_ticket()
@@ -1762,6 +1841,13 @@ func _wheel_value(mp: Vector2, dir: int) -> bool:
 	if str(it.id) != str(_pick_hl.get("id", "")) or Time.get_ticks_msec() - _pick_hl_ms < 350: return false
 	var part := {}
 	for p in backend.parts: if str(p.uid) == str(it.id): part = p
+	if str(part.get("kind", "")) == "POT" and not bool(part.get("fixed", false)):
+		# 0.6 testbed dimmer: the wheel over a panel pot turns its knob (5 % a step); the engine moves the wiper
+		var a := clampf(float(pot_alpha.get(str(it.id), 0.5)) - 0.05 * dir, 0.0, 1.0)
+		pot_alpha[str(it.id)] = a
+		var rp: Dictionary = backend._act("setPot", [str(it.id), a])
+		note = "Knob at %d %%." % int(round((1.0 - a) * 100.0)) if rp.get("ok", false) else str(rp.get("message", ""))
+		changed.emit(); return true
 	if part.is_empty() or part.get("value", null) == null or bool(part.get("fixed", false)): return false
 	var vals: Array = []
 	for d in drawer():

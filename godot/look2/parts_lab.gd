@@ -217,3 +217,104 @@ static func cable_reel(n: Part3D) -> void:
 		var s := 1.0 if i == 0 else -1.0
 		var x := float(i) * 6.0 * P
 		MeshKit.add(n, MeshKit.tube(MeshKit.round_corners(PackedVector3Array([Vector3(x, -T, 0), Vector3(x, 0.0030, 0), Vector3(x + s * 0.0035, 0.0040, 0), Vector3(x + s * 0.0100, 0.0040, 0)]), 0.0020, 4), 0.0009, 6), MeshKit.m("rubber"))
+
+## ------------------------------------------------------------------------------------------------ chapters 4 and 5 (D-bench-ch45)
+
+## 4-1's mains transformer (xfmr4: primary P1 P2 on the left column, secondary S1 S2 on the right): a laminated EI core round a
+## bobbin wound in yellow tape, a steel clamp frame with its feet on the board, the four pins under it. The primary side sits in
+## the keep-out square on the board.
+static func transformer(n: Part3D) -> void:
+	var c := Vector3(2.0 * P, 0.0, 2.0 * P)
+	var lam := MeshKit.mat(Color(0.30, 0.31, 0.33), 0.45, 0.9, {"normal": 0.5})
+	var core := Vector3(0.0270, 0.0190, 0.0200)
+	n._body(MeshKit.rounded_box(core, 0.0003), lam, c + Vector3(0, 0.0030 + core.y * 0.5, 0))
+	for k in 9:   # the lamination edges on the two faces the camera sees
+		var zz := -core.z * 0.5 + 0.0012 + float(k) * (core.z - 0.0024) / 8.0
+		_box(n, Vector3(core.x + 0.0002, core.y - 0.0010, 0.00025), MeshKit.mat(Color(0.20, 0.21, 0.22), 0.5, 0.9), c + Vector3(0, 0.0030 + core.y * 0.5, zz), 0.00005)
+	# the winding window: yellow tape over the coil, a paper label with the ratio
+	var tape := MeshKit.mat(Color(0.93, 0.78, 0.18), 0.55, 0.0, {"clearcoat": 0.2})
+	n._body(MeshKit.rounded_box(Vector3(0.0130, core.y + 0.0016, core.z + 0.0030), 0.0012), tape, c + Vector3(0, 0.0030 + core.y * 0.5, 0))
+	_box(n, Vector3(0.0110, 0.0004, 0.0150), MeshKit.mat(Color(0.95, 0.94, 0.90), 0.8), c + Vector3(0, 0.0030 + core.y + 0.0010, 0), 0.0002)
+	n._labels.append(MeshKit.label(n, "230 V", 0.000040, c + Vector3(0, 0.0030 + core.y + 0.0013, -0.0035), Color(0.08, 0.08, 0.08), true))
+	n._labels.append(MeshKit.label(n, "12 V", 0.000040, c + Vector3(0, 0.0030 + core.y + 0.0013, 0.0035), Color(0.08, 0.08, 0.08), true))
+	# the clamp frame and its feet
+	var steel := MeshKit.m("steel")
+	for sx in [-1, 1]:
+		_box(n, Vector3(0.0008, core.y + 0.0020, core.z + 0.0040), steel, c + Vector3(sx * (core.x * 0.5 + 0.0004), 0.0030 + core.y * 0.5, 0), 0.0002)
+		for sz in [-1, 1]: _box(n, Vector3(0.0040, 0.0006, 0.0030), steel, c + Vector3(sx * (core.x * 0.5 + 0.0018), 0.0003, sz * (core.z * 0.5 - 0.0010)), 0.0002)
+	# the pins: tinned leads from the bobbin down into the four pads, red marks on the primary side
+	for o in NodeApi.FOOTPRINTS["xfmr4"]:
+		var x := float(o[0]) * P; var z := float(o[1]) * P
+		n._lead([Vector3(x, -T, z), Vector3(x, 0.0030, z), Vector3(c.x + (x - c.x) * 0.45, 0.0040, z)], 0.0005)
+		if o[0] == 0: _cyl(n, 0.0011, 0.0004, MeshKit.mat(Color(0.75, 0.12, 0.08), 0.5), Vector3(x, 0.0004, z), Vector3.ZERO, 12)
+
+## The bench's electronic load (4-1 to 4-4: "Load, constant current"): a small module on a finned black heatsink, two screw
+## terminals on its pins, a set-current trimmer and the words CC LOAD. It draws what the ticket's LOAD key says.
+static func cc_load(n: Part3D) -> void:
+	var L := 6.0 * P
+	var sink := MeshKit.m("anodised")
+	n._body(MeshKit.rounded_box(Vector3(L - 0.004, 0.0040, 0.0150), 0.0006), sink, Vector3(L * 0.5, 0.0030, -0.0010))
+	for k in 7:   # fins
+		var x := 0.0040 + float(k) * (L - 0.0080) / 6.0
+		_box(n, Vector3(0.0010, 0.0080, 0.0150), sink, Vector3(x, 0.0090, -0.0010), 0.0002)
+	_box(n, Vector3(L - 0.008, 0.0012, 0.0080), MeshKit.m("fr4"), Vector3(L * 0.5, 0.0056, 0.0080), 0.0003)   # the control board in front
+	_cyl(n, 0.0018, 0.0020, MeshKit.mat(Color(0.12, 0.30, 0.70), 0.5), Vector3(L * 0.5, 0.0072, 0.0080), Vector3.ZERO, 16)   # set-current trimmer
+	_box(n, Vector3(0.0022, 0.0003, 0.0004), MeshKit.mat(Color(0.9, 0.9, 0.9), 0.5), Vector3(L * 0.5, 0.0083, 0.0080), 0.0001)
+	n._labels.append(MeshKit.label(n, "CC LOAD", 0.000040, Vector3(L * 0.5, 0.0064, 0.0112), Color(0.92, 0.92, 0.88), true))
+	var tm := MeshKit.mat(Color(0.10, 0.36, 0.62), 0.5, 0.0)
+	for i in 2:
+		var x := float(i) * L
+		_box(n, Vector3(0.0070, 0.0080, 0.0070), tm, Vector3(x, 0.0040, 0.0), 0.0006)
+		_cyl(n, 0.0016, 0.0008, MeshKit.m("steel"), Vector3(x, 0.0084, 0.0), Vector3.ZERO, 14)
+		_box(n, Vector3(0.0026, 0.0004, 0.0005), MeshKit.mat(Color(0.1, 0.1, 0.1), 0.6), Vector3(x, 0.0090, 0.0), 0.0001)
+		n._lead([Vector3(x, -T, 0), Vector3(x, 0.0020, 0)])
+	n._labels.append(MeshKit.label(n, "+", 0.00008, Vector3(0.0, 0.0004, -0.0060), Color(0.95, 0.35, 0.25), true))
+
+## 5-1's fan connection: the fan's red and black leads come in over the board edge and are soldered into + and -, with a
+## cable tie where they meet. The fan itself stands on the bench.
+static func fan_leads(n: Part3D) -> void:
+	var L := 6.0 * P
+	var cols := [Color(0.75, 0.10, 0.08), Color(0.05, 0.05, 0.055)]
+	for i in 2:
+		var x := float(i) * L
+		var m := MeshKit.mat(cols[i], 0.55, 0.0, {"clearcoat": 0.2})
+		var pts := PackedVector3Array([Vector3(x, -T, 0), Vector3(x, 0.0025, 0), Vector3(x, 0.0035, -0.0040), Vector3(L * 0.5 + (float(i) - 0.5) * 0.0024, 0.0035, -0.0100), Vector3(L * 0.5 + (float(i) - 0.5) * 0.0024, 0.0035, -0.0220)])
+		MeshKit.add(n, MeshKit.tube(MeshKit.round_corners(pts, 0.0030, 4), 0.0009, 8), m)
+		n._body(MeshKit.rounded_box(Vector3(0.0034, 0.0022, 0.0034), 0.0008), MeshKit.m("solder"), Vector3(x, 0.0011, 0))
+	_box(n, Vector3(0.0070, 0.0026, 0.0018), MeshKit.mat(Color(0.88, 0.88, 0.84), 0.6), Vector3(L * 0.5, 0.0035, -0.0130), 0.0004)   # cable tie
+	n._labels.append(MeshKit.label(n, "FAN +", 0.000045, Vector3(0.0, 0.0003, 0.0060), Color(0.92, 0.92, 0.88), true))
+	n._labels.append(MeshKit.label(n, "FAN -", 0.000045, Vector3(L, 0.0003, 0.0060), Color(0.92, 0.92, 0.88), true))
+
+## 5-2's 12 V LED strip: a length of white flex strip between its two solder pads, three 5050 LEDs and their resistor on it. The
+## LEDs light with the strip current the engine reports (Part3D.set_strip).
+static func led_strip(n: Part3D) -> void:
+	var L := 6.0 * P
+	n._body(MeshKit.rounded_box(Vector3(L + 0.0040, 0.0006, 0.0100), 0.0002), MeshKit.mat(Color(0.95, 0.95, 0.93), 0.5, 0.0, {"clearcoat": 0.3}), Vector3(L * 0.5, 0.0030, 0))
+	_box(n, Vector3(L - 0.0020, 0.0002, 0.0010), MeshKit.m("copper"), Vector3(L * 0.5, 0.0034, -0.0036), 0.00005)
+	_box(n, Vector3(L - 0.0020, 0.0002, 0.0010), MeshKit.m("copper"), Vector3(L * 0.5, 0.0034, 0.0036), 0.00005)
+	var leds: Array = []
+	for k in 3:
+		var x := L * (0.2 + 0.25 * float(k))
+		_box(n, Vector3(0.0050, 0.0014, 0.0050), MeshKit.mat(Color(0.96, 0.96, 0.94), 0.4), Vector3(x, 0.0040, 0), 0.0003)
+		var lens := MeshKit.mat(Color(0.98, 0.95, 0.80), 0.15, 0.0, {"emission": Color(1.0, 0.92, 0.75), "emission_energy": 0.0, "normal": 0.0})
+		leds.append(_cyl(n, 0.0019, 0.0004, lens, Vector3(x, 0.0048, 0), Vector3.ZERO, 16))
+	_box(n, Vector3(0.0030, 0.0008, 0.0016), MeshKit.m("black_epoxy"), Vector3(L * 0.92, 0.0037, 0), 0.0002)   # the strip's own resistor
+	n.anim["strip"] = leds
+	for i in 2:
+		var x := float(i) * L
+		n._lead([Vector3(x, -T, 0), Vector3(x, 0.0032, 0)], 0.0005)
+		_box(n, Vector3(0.0030, 0.0008, 0.0040), MeshKit.m("solder"), Vector3(x, 0.0036, 0), 0.0003)
+	n._labels.append(MeshKit.label(n, "12V", 0.000040, Vector3(L * 0.55, 0.0035, 0.0040), Color(0.15, 0.15, 0.15), true))
+
+## 5-4's load: the synth's amplifier input, a 6.35 mm jack socket on a small panel (47 k in, written on the panel).
+static func amp_input(n: Part3D) -> void:
+	var L := 6.0 * P
+	n._body(MeshKit.rounded_box(Vector3(L + 0.0040, 0.0016, 0.0130), 0.0005), MeshKit.m("brushed_alu"), Vector3(L * 0.5, 0.0060, 0))
+	_cyl(n, 0.0060, 0.0050, MeshKit.m("black_plastic"), Vector3(L * 0.5, 0.0030, 0), Vector3.ZERO, 24)   # the jack body under the panel
+	_cyl(n, 0.0048, 0.0020, MeshKit.m("steel"), Vector3(L * 0.5, 0.0077, 0), Vector3.ZERO, 6)            # the nut
+	_cyl(n, 0.0036, 0.0030, MeshKit.mat(Color(0.82, 0.83, 0.85), 0.2, 1.0), Vector3(L * 0.5, 0.0083, 0), Vector3.ZERO, 24)
+	_cyl(n, 0.0021, 0.0034, MeshKit.mat(Color(0.01, 0.01, 0.01), 0.9), Vector3(L * 0.5, 0.0085, 0), Vector3.ZERO, 20)   # the socket hole
+	n._labels.append(MeshKit.label(n, "AMP IN  47 k", 0.000040, Vector3(L * 0.5, 0.0069, 0.0052), Color(0.08, 0.08, 0.08), true))
+	for i in 2:
+		var x := float(i) * L
+		n._lead([Vector3(x, -T, 0), Vector3(x, 0.0050, 0), Vector3(L * 0.5 + (x - L * 0.5) * 0.3, 0.0050, 0)], 0.0005)

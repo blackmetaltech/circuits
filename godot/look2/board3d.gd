@@ -117,3 +117,30 @@ func set_marks(pads: Array, col := Color(0.4, 0.8, 1.0)) -> void:
 
 ## Board top surface plane in world space (for mouse picking).
 func plane_world() -> Plane: return Plane(global_transform.basis.y.normalized(), global_position)
+
+## 4-1 (D-bench-ch45): the engine's keep-out rectangles ({x, y, w, h} in pads) as a red hatched square on the board with the
+## engine's words (ticketCard().mains.keepOut). The engine refuses any part or wire of the player's inside it.
+var _keepout: Array = []
+func set_keepout(rects: Array, text: String) -> void:
+	for n in _keepout: if is_instance_valid(n): n.queue_free()
+	_keepout.clear()
+	var red := MeshKit.mat(Color(0.80, 0.10, 0.06), 0.6, 0.0, {"alpha": 0.30, "normal": 0.0, "rough_tex": false})
+	var line := MeshKit.mat(Color(0.85, 0.12, 0.08), 0.6, 0.0, {"normal": 0.0, "rough_tex": false})
+	for r in rects:
+		var x0 := (float(r.x) - 0.5) * P; var z0 := (float(r.y) - 0.5) * P
+		var sx := float(r.w) * P; var sz := float(r.h) * P
+		var root := Node3D.new(); add_child(root); _keepout.append(root)
+		MeshKit.add(root, MeshKit.rounded_box(Vector3(sx, 0.0002, sz), 0.0001), red, Vector3(x0 + sx * 0.5, 0.00035, z0 + sz * 0.5))
+		for e in [[Vector3(sx, 0.0003, 0.0006), Vector3(x0 + sx * 0.5, 0.0004, z0)], [Vector3(sx, 0.0003, 0.0006), Vector3(x0 + sx * 0.5, 0.0004, z0 + sz)],
+				[Vector3(0.0006, 0.0003, sz), Vector3(x0, 0.0004, z0 + sz * 0.5)], [Vector3(0.0006, 0.0003, sz), Vector3(x0 + sx, 0.0004, z0 + sz * 0.5)]]:
+			MeshKit.add(root, MeshKit.rounded_box(e[0], 0.0001), line, e[1])
+		# diagonal hatching, clipped to the square
+		var step := 0.006
+		var k := -sz
+		while k < sx:
+			var a := Vector2(maxf(k, 0.0), maxf(-k, 0.0)); var b := Vector2(minf(k + sz, sx), minf(sx - k, sz))
+			if (b - a).length() > 0.002:
+				var mid := (a + b) * 0.5; var len := (b - a).length()
+				MeshKit.add(root, MeshKit.rounded_box(Vector3(len, 0.0002, 0.0004), 0.00005), line, Vector3(x0 + mid.x, 0.00045, z0 + mid.y), Vector3(0, -atan2(b.y - a.y, b.x - a.x), 0))
+			k += step
+		if text != "": MeshKit.label(root, text, 0.00005, Vector3(x0 + sx * 0.5, 0.0006, z0 + sz - 0.0030), Color(1.0, 0.92, 0.88), true)

@@ -70,6 +70,7 @@ func _build() -> void:
 		"pot3": _module(str(part.get("label", pid)), 4)
 		"slide3": PartsLab.slidewire(self)
 		"relay5": PartsLab.relay(self)
+		"xfmr4": PartsLab.transformer(self)
 		_:
 			if pid.begins_with("bat-pp3"): _pp3(pid)
 			elif pid == "heater": _heater()
@@ -82,6 +83,10 @@ func _build() -> void:
 			elif pid == "pullup-10k": PartsLab.pullup(self)
 			elif pid == "logic-in": PartsLab.logic_in(self)
 			elif pid == "cable-loop": PartsLab.cable_reel(self)
+			elif pid == "load-cc": PartsLab.cc_load(self)
+			elif pid.begins_with("fan-"): PartsLab.fan_leads(self)
+			elif pid == "led-strip": PartsLab.led_strip(self)
+			elif pid == "amp-load": PartsLab.amp_input(self)
 			elif footprint == "block2": _terminals()
 			else: _module(str(part.get("label", pid)), 2)
 
@@ -383,6 +388,34 @@ func set_heat(k: float) -> void:
 		m.emission_enabled = true; m.emission = Color(1.0, 0.32, 0.05); m.emission_energy_multiplier = k * k * 4.0
 		m.albedo_color = m.albedo_color.lerp(Color(0.12, 0.06, 0.03), k * 0.5)
 		mi.material_override = m
+
+## 5-2's LED strip: its three LEDs light with the strip current the engine reports (k: 0 dark .. 1 full).
+func set_strip(k: float) -> void:
+	for mi in anim.get("strip", []):
+		var m := (mi as MeshInstance3D).get_active_material(0) as StandardMaterial3D
+		if m: m.emission_energy_multiplier = clampf(k, 0.0, 1.0) * 6.0
+
+## Chapter 4's thermal camera: the part's body in false colour from the engine's temperature (tc in degrees C; below 0 is off,
+## and the next set_heat puts the normal look back).
+var _thermal := -1.0
+func set_thermal(tc: float) -> void:
+	if _smoked or absf(tc - _thermal) < 0.5: return
+	_thermal = tc
+	if tc < 0.0:
+		_heat = -1.0
+		for i in body_meshes.size(): (body_meshes[i] as MeshInstance3D).material_override = _body_mats[i]
+		return
+	var col := thermal_colour(tc)
+	var m := MeshKit.mat(col, 0.9, 0.0, {"emission": col, "emission_energy": 0.9, "normal": 0.0, "rough_tex": false})
+	for mi in body_meshes: (mi as MeshInstance3D).material_override = m
+
+## The camera's iron palette: dark blue at room temperature, purple, red, orange, yellow, white at 150 degrees C and over.
+static func thermal_colour(tc: float) -> Color:
+	var stops := [[20.0, Color(0.05, 0.05, 0.30)], [45.0, Color(0.45, 0.05, 0.55)], [70.0, Color(0.85, 0.10, 0.20)], [100.0, Color(1.0, 0.50, 0.05)], [130.0, Color(1.0, 0.90, 0.20)], [150.0, Color(1.0, 1.0, 0.95)]]
+	if tc <= 20.0: return stops[0][1]
+	for i in stops.size() - 1:
+		if tc <= float(stops[i + 1][0]): return (stops[i][1] as Color).lerp(stops[i + 1][1], (tc - float(stops[i][0])) / (float(stops[i + 1][0]) - float(stops[i][0])))
+	return stops[-1][1]
 
 ## Tinned leads stay metal when a part burns.
 func _is_lead(mi: MeshInstance3D) -> bool:

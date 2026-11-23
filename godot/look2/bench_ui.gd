@@ -253,16 +253,15 @@ func _title() -> void:
 	_lab(v, "CIRCUITS", 44, TXT, f_engr)
 	_lab(v, "A repair bench. Customers bring broken devices; you probe, fix, and hand them back.", 22, Color(0.80, 0.82, 0.84), f_sans, true)
 	var gap := Control.new(); gap.custom_minimum_size = Vector2(0, 8); v.add_child(gap)
-	var b1 := _key(v, "Jobs: chapters 1 to 3", func(): bench.start_job(), "", true)
-	_lab(v, "From a torch and a weather station to a metre bridge, a camera flash, an arcade button and a relay. Three exams.", 18, Color(0.72, 0.75, 0.78))
+	var b1 := _key(v, "Jobs: chapters 1 to 5", func(): bench.start_job(), "", true)
+	_lab(v, "From a torch and a weather station to a wall adapter on the mains, a hot regulator, a NAND gate from parts and a synth preamp. Five exams.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
 	_key(v, "Testbed: how devices work", func(): Testbed.load_device(bench, "torch"))
 	_lab(v, "Load a torch, a weather station or a fan driver. Probe it live, break it on purpose, pause and step time.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
 	_key(v, "Free bench", func(): bench.start_free())
 	_lab(v, "Any part, the supply, scope and meter. Save a build and load it later.", 18, Color(0.72, 0.75, 0.78))
 	_key(v, "Showcase: 5-1 Fan Driver", func(): bench.start_job("5-1"))
 	_lab(v, "The chapter 5 fan repair in the new look.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
-	_key(v, "Classic look: all five chapters", func(): bench.get_parent().call("set_look", "classic") if bench.get_parent().has_method("set_look") else null)
-	_lab(v, "Chapters 4 and 5 are in the classic 2D stall for now.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
+	_key(v, "Classic 2D look", func(): bench.get_parent().call("set_look", "classic") if bench.get_parent().has_method("set_look") else null)
 	b1.call_deferred("grab_focus")
 	var qrow := HBoxContainer.new(); qrow.add_theme_constant_override("separation", 8); v.add_child(qrow)
 	_lab(qrow, "Graphics", 18, Color(0.72, 0.75, 0.78), f_sans)
@@ -347,6 +346,8 @@ func _job_card() -> void:
 		var st := Stamp.new(); st.font = f_engr; st.custom_minimum_size = Vector2(0, 90); st.mouse_filter = Control.MOUSE_FILTER_IGNORE; v.add_child(st)
 		_key(v, "Next job", func(): bench.next_job(), "", true)
 		return
+	if bench.backend.safety_pending():
+		_safety_card(v); return
 	var short := _canvas_h() < 1000.0   # 1280x800 and smaller: the ticket must stop above the bench panels
 	if bench.backend.passed:
 		# the way out first, where it can never sit under the bench panels (Noor: hidden behind Bench Control at 1280x800)
@@ -390,6 +391,18 @@ func _job_card() -> void:
 		if not short: _ink(v, "Ctrl+Z puts in a fresh part with the power off.", 15, Color(0.30, 0.28, 0.25), f_sans)
 	elif bench.note != "":
 		_ink(v, _two_sentences(bench.note), 17, Color(0.14, 0.20, 0.42), f_sans)
+
+## 4-1 (D-bench-ch45): the engine's safety card on the paper ticket. Power and the bench stay off until its key is pressed
+## (the engine's readSafety); the words are the engine's (ticketCard().mains).
+func _safety_card(v: VBoxContainer) -> void:
+	var m: Dictionary = bench.backend.mains
+	var sep := ColorRect.new(); sep.color = RED_INK; sep.custom_minimum_size = Vector2(0, 2); v.add_child(sep)
+	_ink(v, str(m.get("ribbon", "")).to_upper(), 14, RED_INK, f_type)
+	_ink(v, str(m.get("title", "")), 21, RED_INK, f_semi)
+	for ln in m.get("lines", []): _ink(v, str(ln), 15, INK, f_sans)
+	var k := _key(v, str(m.get("button", "I have read it")), func(): bench.read_safety(), "", true)
+	k.call_deferred("grab_focus")
+	if bench.note != "" and bench.note.begins_with("Read the safety card"): _ink(v, bench.note, 16, RED_INK, f_sans)
 
 ## 0.6 condition dial: on a ticket the bench tests in more than one condition, the paper offers the dial (bought once with the
 ## wallet) and, once owned, one key per condition for the live bench. The formal TEST still runs every condition.
@@ -585,10 +598,12 @@ func _tools() -> void:
 	if bench.mode == "job": _key(h, "Test", func(): bench.run_test(), "Enter", false)
 	for sl in bench.backend.selectors:
 		if str(sl.id) == "pin": continue   # the pin switch is on the microcontroller board (click it); not a rail key
+		var sll := _eng(h, str(sl.get("label", "")), 13); sll.size_flags_vertical = Control.SIZE_SHRINK_CENTER   # 4-1 has two: which keys are MAINS and which LOAD
 		var opts: Array = sl.options
 		for i in opts.size():
 			var idx := i; var sid := str(sl.id)
 			_key(h, str(opts[i]), func(): bench.set_selector(sid, idx), "", false, int(sl.get("index", 0)) == i)
+	if bench.mode == "job" and bench.backend.camera_ok: _key(h, "Thermal", func(): bench.toggle_thermal(), "T", false, bench.thermal)
 	_key(h, "Select", func(): bench.set_tool("select"), "Esc", false, bench.tool == "select")
 	_key(h, "Wire", func(): bench.set_tool("wire"), "W", false, bench.tool == "wire")
 	_key(h, "Scope probe", func(): bench.set_tool("probe"), "P", false, bench.tool == "probe")
@@ -607,6 +622,7 @@ func _tools() -> void:
 	# window and push Power and Test off the left edge at 1280 x 800 (phase C GPU shot of 2-3)
 	var tip: String = bench.hover_tip
 	if tip == "" and bench.backend.dial != "OFF": tip = "Meter  " + bench.meter_text()
+	if tip == "" and bench.thermal: tip = bench.thermal_text()
 	var tv := _plate(Vector2.ZERO, "")
 	_tip_plate = tv.get_parent()
 	_tip_label = _eng(tv, tip, 13); _tip_label.add_theme_color_override("font_color", AMBER)   # 0.4.1: a small mirror; the meter's own face carries the reading
@@ -632,6 +648,8 @@ func _refresh_live() -> void:
 	var b = bench.backend
 	if _tip_label and is_instance_valid(_tip_label) and bench.hover_tip == "" and b.dial != "OFF":
 		_tip_label.text = ("Meter  " + bench.meter_text()).to_upper(); _tip_plate.visible = true; _place_tip()
+	elif _tip_label and is_instance_valid(_tip_label) and bench.hover_tip == "" and bench.thermal:
+		_tip_label.text = bench.thermal_text().to_upper(); _tip_plate.visible = true; _place_tip()
 	if _status and is_instance_valid(_status): _status.text = "POWER %s" % ("ON" if b.powered else "OFF")
 	if _readout and is_instance_valid(_readout): _readout.text = bench.readout_text()
 	if _meter and is_instance_valid(_meter): _meter.text = "METER  " + bench.meter_text()
