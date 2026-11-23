@@ -4,7 +4,7 @@
 
 Customers bring broken devices to your bench. Open them, measure them, swap the faulty parts, and hand them back.
 
-> **v0.6.0, pre-alpha.** All five chapters play on the 3D bench. A testbed of six devices lets you break them on purpose. The wallet buys a condition dial. Linux and Windows builds on the [releases page](https://github.com/blackmetaltech/circuits/releases/latest).
+> **v0.6.0, pre-alpha.** All five chapters play on the 3D bench. A testbed of six devices lets you break them on purpose. The wallet buys a condition dial. Linux, Windows and macOS (untested) builds on the [releases page](https://github.com/blackmetaltech/circuits/releases/latest).
 
 ![A burnt LED is replaced and burns again on 9 V: the ticket bills the part plus a $1.50 courier](docs/readme/wb-burn-1-1.gif)
 
