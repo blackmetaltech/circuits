@@ -114,7 +114,7 @@ func _ready() -> void:
 		if OS.get_environment("CB_METER") != "":
 			var mt := OS.get_environment("CB_METER").split(",")
 			if mt.size() == 4: backend.set_dial("V"); backend.set_probe("red", [int(mt[0]), int(mt[1])]); backend.set_probe("black", [int(mt[2]), int(mt[3])])
-		if OS.get_environment("CB_POWER") == "1": backend.set_power(true)
+		if OS.get_environment("CB_POWER") == "1": toggle_power()   # 0.7: the key's own path (its note changes too)
 		if OS.get_environment("CB_VIEW") != "": set_view(int(OS.get_environment("CB_VIEW")), true)
 		if OS.get_environment("CB_DEMO") != "": _demo(OS.get_environment("CB_DEMO"))
 	else: mode = "title"; changed.emit()
@@ -1411,6 +1411,8 @@ func _right_click(mp: Vector2) -> void:
 	# 0.7 (Leo): right-click took whatever was under the pointer. It removes only what is lit (the tip names it first).
 	if it.is_empty() or str(it.get("id", "")) != str(_pick_hl.get("id", "")): return
 	if it.kind == "part" and backend.replace_burnt(str(it.id)):
+		# 0.7 (Leo): the burn explanation stayed on the ticket after the fresh part was in; it is about a part that is gone
+		last_failure = {}; capture_until = 0.0
 		note = str(backend.last_note); _set_pick_hl({}); changed.emit(); return
 	if it.kind == "part":
 		var nm := str(it.label)
@@ -1556,6 +1558,8 @@ func toggle_power() -> void:
 	if not backend.smoked.is_empty() and not backend.powered: pass
 	backend.set_power(not backend.powered)
 	if not backend.powered: capture_until = 0.0; _call(scope, "clear_capture")
+	# 0.7 (CRITIQUE-0.6): the testbed's load note said "Space powers it." after it was powered
+	if mode == "free" and testbed_device != "": note = "Powered. Space switches it off." if backend.powered else "Off. Space powers it."
 	changed.emit()
 
 func cycle_pin() -> void:

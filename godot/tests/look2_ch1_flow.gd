@@ -132,6 +132,22 @@ func _run() -> void:
 			wb._hit("psu_test"); await _frames(3)
 			ok(not wb.backend.passed, "the bench fails the device as it came in")
 			if wb.backend.powered: wb.toggle_power()
+			if id == "1-1":
+				# 0.7 (Leo): right-click on the burnt LED fits a fresh one; the burn explanation goes with the burnt part
+				wb._hit("psu_output"); await _frames(3)
+				var bu := ""
+				for k in wb.backend.arrived_burnt.keys(): bu = str(k)
+				var ln: Part3D = wb.parts3d.get(bu, null)
+				if ln != null:
+					wb.set_view(5, true); wb.set_tool("select"); await _frames(3)
+					var lm := ln.body_meshes[0] as MeshInstance3D
+					var lb: AABB = lm.global_transform * lm.get_aabb()
+					var lp := wb.cam.unproject_position(lb.get_center() + Vector3(0, lb.size.y * 0.5, 0))
+					ok(not wb.last_failure.is_empty(), "1-1: the burn is explained before the swap")
+					wb._set_pick_hl(wb._pick_item(lp)); wb._right_click(lp); await _frames(3)
+					ok(wb.backend.arrived_burnt.is_empty() and wb.last_failure.is_empty(), "1-1: a fresh LED in the same holes, and the old burn text is gone (%s / %s)" % [wb.note, str(wb.last_failure.get("title", ""))])
+					wb.undo(); await _frames(2)
+				if wb.backend.powered: wb.toggle_power()
 		if id == "1-5":
 			# the exam: the paper ticket carries one box per prediction; the bench refuses until they are locked in
 			wb.changed.emit(); await _frames(3)
