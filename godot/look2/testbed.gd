@@ -28,6 +28,28 @@ const DEVICES := [
 			{"id": "no_rb", "name": "Drive the base with no resistor", "what": "The pin pushes straight into the base junction.",
 				"do": [["delete", "res-cf"], ["wire", [4, 7], [8, 7]]]},
 		]},
+	# 0.6 (D-testbed-06): the phone charger stage that 0.5 cut, and two everyday devices loaded on a host ticket's bench
+	{"id": "charger", "ticket": "4-1", "safety": true, "name": "Phone charger stage", "what": "Mains through a transformer, a bridge of four diodes and a 1000 uF capacitor: smooth DC for the phone.",
+		"breaks": [
+			{"id": "no_cap", "name": "Remove the smoothing capacitor", "what": "The bridge alone gives bumps at 100 Hz, not DC. Watch the scope.",
+				"do": [["delete", "cap-el"]]},
+			{"id": "one_diode", "name": "Lose one diode", "what": "Half the bridge is gone: one bump every 20 ms instead of 10.",
+				"do": [["delete", "1n4007"]]},
+		]},
+	{"id": "dimmer", "ticket": "5-2", "board": "dimmer", "name": "Lamp dimmer", "what": "The knob sets a voltage; a transistor and a 10 ohm resistor turn it into current for the LED strip. Wheel over the knob.",
+		"breaks": [
+			{"id": "short_re", "name": "Short the emitter resistor", "what": "Nothing sets the current now but the transistor's gain: the strip jumps to full.",
+				"do": [["wire", [18, 12], [22, 12]]]},
+			{"id": "wiper_off", "name": "Wiper wire off", "what": "The base floats: the strip goes dark whatever the knob says.",
+				"do": [["unwire_at", [10, 8]]]},
+		]},
+	{"id": "relay_timer", "ticket": "1-3", "board": "relay_timer", "name": "Relay timer", "what": "4.7 k charges 220 uF; a transistor follows it; at 40 mA, about 2 s after power-on, the relay clicks and switches the heater on.",
+		"breaks": [
+			{"id": "no_cap", "name": "Remove the capacitor", "what": "Nothing to charge: the relay clicks at once.",
+				"do": [["delete", "cap-el"]]},
+			{"id": "big_r", "name": "Swap 4.7 k for 47 k", "what": "Ten times the charging time, and ten times less base current to spare.",
+				"do": [["value_at", 2, 4, 47000]]},
+		]},
 ]
 
 static func device(id: String) -> Dictionary:
@@ -42,7 +64,18 @@ static func load_device(wb, id: String) -> bool:
 	var b = wb.backend
 	b.set_power(false)
 	if not b.open_ticket(str(d.ticket)): return false
-	var ok: bool = b.build_ref(str(d.ticket))
+	var ok := true
+	if d.has("board"):
+		# a board that is not the ticket's own repair (src/data/testbed.ts through the testbedBoard query), on the host ticket's bench
+		var tb = b._q("testbedBoard", [str(d.board)])
+		b.clear_fault()
+		ok = tb is Dictionary and bool(b._act("loadBoard", [{"parts": tb.parts, "wires": tb.wires}]).get("ok", false))
+		if ok:
+			b._after_edit()
+			for pt in tb.get("pots", []):
+				for p in b.parts: if str(p.partId) == str(pt.partId): b._act("setPot", [str(p.uid), float(pt.alpha)]); wb.pot_alpha[str(p.uid)] = float(pt.alpha)
+	else: ok = b.build_ref(str(d.ticket))
+	if bool(d.get("safety", false)): b.read_safety()   # mains: the testbed is the isolated bench; the card was read on the job
 	b._act("setRunning", [true])
 	wb.testbed_device = id; wb.testbed_paused = false
 	wb._layout_for_ticket()   # the fan and the microcontroller stand on the bench only for the fan driver
@@ -69,6 +102,10 @@ static func apply_break(wb, brk: String) -> bool:
 					if uid == "": ok = false
 					else: b.delete_part(uid)
 				"place": ok = bool(b.place({"partId": step[1], "value": step[2], "variant": step[3], "kind": "R"}, int(step[4]), int(step[5]), int(step[6])).get("ok", false)) and ok
+				"unwire_at":   # the wire with an end on pad (x, y) comes off
+					var wid := ""
+					for w in b.wires: if (w.a[0] == step[1][0] and w.a[1] == step[1][1]) or (w.b[0] == step[1][0] and w.b[1] == step[1][1]): wid = str(w.wid)
+					ok = wid != "" and bool(b.delete_wire(wid).get("ok", false)) and ok
 				"value_at":   # the part whose origin pad is (x, y) takes a new value in place; its wires stay
 					var uid2 := ""
 					for p in b.parts: if int(p.get("x", -1)) == int(step[1]) and int(p.get("y", -1)) == int(step[2]): uid2 = str(p.uid)

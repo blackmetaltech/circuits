@@ -256,7 +256,7 @@ func _title() -> void:
 	var b1 := _key(v, "Jobs: chapters 1 to 5", func(): bench.start_job(), "", true)
 	_lab(v, "From a torch and a weather station to a wall adapter on the mains, a hot regulator, a NAND gate from parts and a synth preamp. Five exams.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
 	_key(v, "Testbed: how devices work", func(): Testbed.load_device(bench, "torch"))
-	_lab(v, "Load a torch, a weather station or a fan driver. Probe it live, break it on purpose, pause and step time.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
+	_lab(v, "Six devices: a torch, a phone charger, a lamp dimmer, a relay timer and more. Probe live, break on purpose, step time.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
 	_key(v, "Free bench", func(): bench.start_free())
 	_lab(v, "Any part, the supply, scope and meter. Save a build and load it later.", 18, Color(0.72, 0.75, 0.78))
 	_key(v, "Showcase: 5-1 Fan Driver", func(): bench.start_job("5-1"))
@@ -283,7 +283,7 @@ func _testbed_card() -> void:
 	_ink(fv, "TESTBED", 17, RED_INK, f_type, false)
 	_ink(fv, str(d.get("name", "")), 28, INK, f_semi, false)
 	_ink(fv, str(d.get("what", "")), 17, INK, f_sans)
-	var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 8); fv.add_child(row)
+	var row := HFlowContainer.new(); row.add_theme_constant_override("h_separation", 8); row.add_theme_constant_override("v_separation", 6); fv.add_child(row)   # 0.6: six devices wrap on the paper
 	for dv: Dictionary in Testbed.DEVICES:
 		var id: String = dv.id
 		_key(row, str(dv.name).get_slice(" ", 0) if str(dv.name).length() > 12 else str(dv.name), func(): Testbed.load_device(bench, id), "", false, id == str(bench.testbed_device))

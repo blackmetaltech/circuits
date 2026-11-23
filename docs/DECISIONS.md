@@ -160,3 +160,14 @@
   bench, not in a menu; 0.6 puts a key on the paper ticket); the scope's second channel, MIN/MAX hold and a part organiser as
   purchases; two more tickets whose pass the live gauge cannot judge (1-3 at 13.8 V, 2-1 at the top of the battery's range) wait
   for Ravi to confirm the numbers, because they move goldens and the stars' par.
+
+- **D-testbed-06 (2026-11-23, Ingrid Solheim, Game Lead).** The testbed grows from three devices to six: the phone charger stage that
+  0.5 cut (4-1's board: transformer, bridge, 1000 uF; the safety card counts as read on the testbed's isolated bench), a lamp dimmer
+  (a panel pot, a TIP120 and a 10 ohm emitter resistor driving 5-2's LED strip; the wheel over the knob turns it) and a relay timer
+  (4.7 k into 220 uF, a TIP120 follower, the relay pulls in at about 2 s and switches 1-3's heater). A device that is not a ticket's
+  own repair is a board on a host ticket's bench, kept in the engine (src/data/testbed.ts, the testbedBoard query) so the game and the
+  engine test load the same parts. Building the relay timer found an engine bug: the sample taken at pull-in mixed the new armature
+  with the old voltages and billed the relay kilowatts, so any load on its contacts burned it; fixed in relay.ts with a test. A break
+  now lands paused, so Step shows the frame in which a part burns. Strongest argument against (a 5-2 player): the dimmer's strip
+  already belongs to a ticket. Answer: the testbed is for how devices work; reusing a ticket's fixed parts keeps one model per part.
+  Cut, written down: a dimmer for mains lamps (a triac; no triac model), a 555 timer device, free choice of fault on any part.
