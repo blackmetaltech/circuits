@@ -246,33 +246,47 @@ func _rebuild() -> void:
 ## Views 3 (scope) and 4 (device) are for looking: the tray goes away and the ticket folds to its heading, so nothing covers them.
 func _focus_view() -> bool: return bench.view in [3, 4] and bench.mode == "job"
 
+## 0.6 (Sigrid: "a web-app modal over 65 % of the screen"): a narrow strip at the left, the bench behind it. Three ways in, one
+## short line each; the rest (the showcase, the classic look, graphics, cute, sound) sits under Settings in the same strip.
+var title_settings := false
 func _title() -> void:
 	_fonts2()
-	var v := _plate(Vector2(90, 380), "")   # a faceplate behind the menu so its text never sits on the lit mat
-	v.add_theme_constant_override("separation", 12); v.custom_minimum_size = Vector2(620, 0)
+	var vs := get_viewport().get_visible_rect().size
+	var v := _plate(Vector2.ZERO, "")
+	var strip: PanelContainer = v.get_parent()
+	strip.custom_minimum_size = Vector2(maxf(vs.x * 0.30, 460.0), vs.y); strip.size = strip.custom_minimum_size
+	v.add_theme_constant_override("separation", 10)
+	var top := Control.new(); top.custom_minimum_size = Vector2(0, vs.y * 0.06); v.add_child(top)
 	_lab(v, "CIRCUITS", 44, TXT, f_engr)
-	_lab(v, "A repair bench. Customers bring broken devices; you probe, fix, and hand them back.", 22, Color(0.80, 0.82, 0.84), f_sans, true)
-	var gap := Control.new(); gap.custom_minimum_size = Vector2(0, 8); v.add_child(gap)
-	var b1 := _key(v, "Jobs: chapters 1 to 5", func(): bench.start_job(), "", true)
-	_lab(v, "From a torch and a weather station to a wall adapter on the mains, a hot regulator, a NAND gate from parts and a synth preamp. Five exams.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
-	_key(v, "Testbed: how devices work", func(): Testbed.load_device(bench, "torch"))
-	_lab(v, "Six devices: a torch, a phone charger, a lamp dimmer, a relay timer and more. Probe live, break on purpose, step time.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
-	_key(v, "Free bench", func(): bench.start_free())
-	_lab(v, "Any part, the supply, scope and meter. Save a build and load it later.", 18, Color(0.72, 0.75, 0.78))
-	_key(v, "Showcase: 5-1 Fan Driver", func(): bench.start_job("5-1"))
-	_lab(v, "The chapter 5 fan repair in the new look.", 18, Color(0.72, 0.75, 0.78), f_sans, true)
-	_key(v, "Classic 2D look", func(): bench.get_parent().call("set_look", "classic") if bench.get_parent().has_method("set_look") else null)
-	b1.call_deferred("grab_focus")
-	var qrow := HBoxContainer.new(); qrow.add_theme_constant_override("separation", 8); v.add_child(qrow)
-	_lab(qrow, "Graphics", 18, Color(0.72, 0.75, 0.78), f_sans)
-	for q in ["high", "medium", "low"]:
-		var qq: String = q
-		_key(qrow, qq.capitalize(), func(): bench.set_quality_saved(qq), "", false, bench.quality == qq)
-	_key(qrow, "Cute on" if bench.cute else "Cute off", func(): bench.set_cute(not bench.cute), "", false, bench.cute)
-	_key(qrow, "Sound on" if bench.sfx.enabled else "Sound off", func(): bench.set_sound(not bench.sfx.enabled), "", false, bench.sfx.enabled)
-	var spacer := Control.new(); spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL; qrow.add_child(spacer)
-	_key(qrow, "Quit", func(): bench.get_tree().quit(), "", false, false)
-	_lab(v, "Right drag orbits   Middle drag pans   Wheel zooms   Keys 1-5 views   Tab schematic", 17, Color(0.72, 0.75, 0.78), f_mono)
+	_lab(v, "A repair bench for electronics.", 19, Color(0.80, 0.82, 0.84), f_sans, true)
+	var gap := Control.new(); gap.custom_minimum_size = Vector2(0, 14); v.add_child(gap)
+	var dim := Color(0.70, 0.73, 0.76)
+	var first: Button
+	if not title_settings:
+		first = _key(v, "Jobs", func(): bench.start_job(), "", true)
+		_lab(v, "Repairs in five chapters, an exam at the end of each.", 17, dim, f_sans, true)
+		_key(v, "Testbed", func(): Testbed.load_device(bench, "torch"))
+		_lab(v, "Six devices to probe, break and step through.", 17, dim, f_sans, true)
+		_key(v, "Free bench", func(): bench.start_free())
+		_lab(v, "Any part, the supply, the scope and the meter.", 17, dim, f_sans, true)
+		var fill := Control.new(); fill.size_flags_vertical = Control.SIZE_EXPAND_FILL; v.add_child(fill)
+		_key(v, "Settings", func(): title_settings = true; _rebuild())
+		_key(v, "Quit", func(): bench.get_tree().quit())
+	else:
+		_eng(v, "Settings", 17)
+		first = _key(v, "Showcase: 5-1 Fan Driver", func(): bench.start_job("5-1"))
+		_key(v, "Classic 2D look", func(): bench.get_parent().call("set_look", "classic") if bench.get_parent().has_method("set_look") else null)
+		_lab(v, "Graphics", 17, dim, f_sans)
+		var qrow := HFlowContainer.new(); qrow.add_theme_constant_override("h_separation", 8); qrow.add_theme_constant_override("v_separation", 6); v.add_child(qrow)
+		for q in ["high", "medium", "low"]:
+			var qq: String = q
+			_key(qrow, qq.capitalize(), func(): bench.set_quality_saved(qq), "", false, bench.quality == qq)
+		var row2 := HFlowContainer.new(); row2.add_theme_constant_override("h_separation", 8); row2.add_theme_constant_override("v_separation", 6); v.add_child(row2)
+		_key(row2, "Cute on" if bench.cute else "Cute off", func(): bench.set_cute(not bench.cute), "", false, bench.cute)
+		_key(row2, "Sound on" if bench.sfx.enabled else "Sound off", func(): bench.set_sound(not bench.sfx.enabled), "", false, bench.sfx.enabled)
+		var fill2 := Control.new(); fill2.size_flags_vertical = Control.SIZE_EXPAND_FILL; v.add_child(fill2)
+		_key(v, "Back", func(): title_settings = false; _rebuild())
+	first.call_deferred("grab_focus")
 	_lab(v, "v%s" % str(ProjectSettings.get_setting("application/config/version", "")), 15, Color(0.56, 0.60, 0.65), f_mono)
 
 ## 0.5 testbed: the loaded device, its breaks, time controls. Every button is an edit or an engine call the player could make by

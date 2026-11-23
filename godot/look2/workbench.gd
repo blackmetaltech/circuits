@@ -574,6 +574,7 @@ func back_to_title() -> void:
 	backend.set_power(false); backend.close_ticket()
 	if _showcase: _campaign = false; _showcase = false   # the showcase's unlocks are not the player's: the next Jobs reloads the save
 	mode = "title"; tool = "select"; _clear_ghost()
+	if ui: ui.title_settings = false   # the title opens on its main keys
 	for c in board_root.get_children(): c.queue_free()
 	board = null; parts3d.clear(); wires3d.clear(); _sig_parts = ""; _sig_wires = ""
 	set_view(2); changed.emit()

@@ -227,10 +227,15 @@ func _run() -> void:
 		if i + 1 < ORDER.size(): ok(wb.mode == "job" and wb.ticket_id == ORDER[i + 1], "Next job after %s opens %s (%s)" % [id, ORDER[i + 1], wb.ticket_id])
 	ok(wb.mode == "title", "after 5-5, the last job, the bench goes back to the title")
 	wb.changed.emit(); await _frames(3)
-	ok(_button("Jobs: chapters 1 to 5") != null and _button("Classic 2D look") != null, "the title offers jobs 1 to 5 and the classic look as an option")
 	var stale := false
 	for lb in wb.find_children("*", "Label", true, false): if (lb as Label).text.contains("classic 2D stall"): stale = true
 	ok(not stale, "the title no longer sends chapters 4 and 5 to the classic stall")
+	# 0.6 (Sigrid): Jobs is on the title strip; the classic look is an option under Settings
+	var jobs := _button("Jobs"); var st := _button("Settings")
+	ok(jobs != null and jobs.text == "Jobs" and st != null, "the title strip offers Jobs and Settings")
+	if st: st.pressed.emit()
+	await _frames(3)
+	ok(_button("Classic 2D look") != null, "the classic look is an option under Settings")
 	# the 5-1 showcase from the title stands alone: it does not run on into 5-2 and does not keep its unlocks
 	wb._campaign = false
 	wb.start_job("5-1"); await _frames(10)

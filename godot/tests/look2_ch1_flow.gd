@@ -32,7 +32,18 @@ func _run() -> void:
 	ok(wb.mode == "title", "the title is up")
 	var names := []
 	for b in wb.find_children("*", "Button", true, false): names.append((b as Button).text)
-	ok(names.has("Quit") and names.has("High") and names.has("Low"), "the title has Quit and the graphics tiers (%s)" % str(names))
+	ok(names.has("Quit") and names.has("Jobs") and names.has("Settings"), "the title has Jobs, Settings and Quit (%s)" % str(names))
+	# 0.6 (Sigrid): the graphics tiers moved under Settings, in the same strip; Back returns to the main keys
+	for b in wb.find_children("*", "Button", true, false): if (b as Button).text == "Settings": (b as Button).pressed.emit()
+	await _frames(3)
+	names = []
+	for b in wb.find_children("*", "Button", true, false): if (b as Button).is_visible_in_tree(): names.append((b as Button).text)
+	ok(names.has("High") and names.has("Low") and names.has("Back"), "Settings has the graphics tiers and Back (%s)" % str(names))
+	for b in wb.find_children("*", "Button", true, false): if (b as Button).text == "Back" and (b as Button).is_visible_in_tree(): (b as Button).pressed.emit()
+	await _frames(3)
+	names = []
+	for b in wb.find_children("*", "Button", true, false): if (b as Button).is_visible_in_tree(): names.append((b as Button).text)
+	ok(names.has("Jobs") and not names.has("High"), "Back returns to the main keys (%s)" % str(names))
 	var wallet0 := -1
 	wb.start_job(); await _frames(10)
 	for id in ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-3"]:
