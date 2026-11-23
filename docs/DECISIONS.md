@@ -247,3 +247,7 @@
   against (Mateo, D-money-06): tools should be objects bought at the bench, not keys on a ticket. Answer: agreed as the
   direction; the shelf objects need models and a place on the bench, and chapter 6 comes first. Cut, written down: Dagny's
   current clamp, part tester and organiser; tool boxes on a shelf; a price check by Mateo of $30 and $45 against the fees.
+
+- **Note on D-conditions-06 (2026-11-25, Ingrid).** "About 700 at 0.5 A" is history: Ravi's 54486ba makes the TIP120's composite
+  gain 1000 at 0.5 A and 1530 at 3 A (onsemi TIP120/D, hFE min 1000 at 0.5 A and 3 A); 1f0fb7c moved the testbed numbers
+  (relay timer pull-in 1.86 s, 3.98 s with 470 uF; dimmer 0.101 A). No ticket changed pass or fail.

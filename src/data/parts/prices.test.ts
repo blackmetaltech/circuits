@@ -1,3 +1,4 @@
+import { TOOLS } from '../../engine/money';
 import { describe, expect, it } from 'vitest';
 import { PARTS, partById } from './index';
 import { PRICES_GLOBAL_CENTS, PRICE_SOURCE_GLOBAL, priceCents } from '../../regions/global/prices';
@@ -34,8 +35,9 @@ describe('global prices (game estimates, integer US cents at qty 100)', () => {
     for (const k of Object.keys(PRICES_GLOBAL_CENTS)) if (!k.startsWith('service:') && !k.startsWith('upgrade:')) expect(known.has(k), k).toBe(true);
   });
 
-  it('prices exactly the services the engine charges (the courier for a burnt part, the waiting customer\'s tip share and its step) and the one bench upgrade (0.6)', () => {
-    expect(Object.keys(PRICES_GLOBAL_CENTS).filter((k) => k.startsWith('service:') || k.startsWith('upgrade:'))).toEqual(['service:rush', 'service:tipShare', 'service:tipStepShare', 'upgrade:condition-dial']);
+  it('prices exactly the services the engine charges (the courier for a burnt part, the waiting customer\'s tip share and its step) and exactly the bench tools the engine sells (0.6 dial; 0.7 D-tools-07 camera and CH2)', () => {
+    expect(Object.keys(PRICES_GLOBAL_CENTS).filter((k) => k.startsWith('service:') || k.startsWith('upgrade:'))).toEqual(['service:rush', 'service:tipShare', 'service:tipStepShare', 'upgrade:condition-dial', 'upgrade:thermal-camera', 'upgrade:scope-ch2']);
+    expect(TOOLS.map((x) => `upgrade:${x.id}`)).toEqual(Object.keys(PRICES_GLOBAL_CENTS).filter((k) => k.startsWith('upgrade:')));
   });
 
   it('orders resistors by power: 1/6 W < 1/4 W < 1/2 W < 1 W < 2 W < 5 W wirewound', () => {
