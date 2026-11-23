@@ -70,6 +70,13 @@ func _run() -> void:
 	ok(absf(wb.g_yaw - yaw0) > 0.01, "the right stick orbits the view")
 	await _btn(JOY_BUTTON_X); await _frames(3)
 	ok(wb.backend.powered, "X powers the bench")
+	ok(wb.pad.last_rumble == "power", "power gives a short rumble (%s)" % wb.pad.last_rumble)
+	# 0.5: over something it can act on, the ring slows down (aim), so a leg is hit first time
+	wb.hover_tip = ""; wb.hover_pad = Vector2i(-1, -1)
+	var pa0: Vector2 = wb.pad.pos; wb.pad.axes[JOY_AXIS_LEFT_X] = 1.0; wb.pad._process(0.05); var free_step: float = wb.pad.pos.x - pa0.x
+	wb.pad.pos = pa0; wb.hover_tip = "a part"; wb.pad._process(0.05); var aim_step: float = wb.pad.pos.x - pa0.x
+	wb.pad.axes[JOY_AXIS_LEFT_X] = 0.0; wb.hover_tip = ""
+	ok(free_step > 0.0 and aim_step < free_step * 0.6, "the ring slows over a target (%.1f px vs %.1f px per step)" % [aim_step, free_step])
 	await _btn(JOY_BUTTON_Y); await _frames(5)
 	ok(not wb.backend.passed and not wb.last_failure.is_empty(), "Y runs the bench test (it fails the torch as it came in: %s)" % str(wb.last_failure.get("text", "")).left(60))
 	wb.back_to_title(); await _frames(5)

@@ -12,6 +12,10 @@ extends Control
 
 const SPEED := 900.0         ## px/s at full stick
 const DEAD := 0.18
+const AIM := 0.45            ## 0.5: the ring slows to this over anything it can act on (a pad, a part, a key), so legs are hit first time
+## Rumble (0.5), read from the bench's own state so it never drifts from what the screen shows: power, a pass, a burn.
+const RUMBLE := {"power": [0.15, 0.0, 0.08], "pass": [0.3, 0.2, 0.25], "burn": [0.9, 0.6, 0.35]}   # weak, strong, seconds
+var _was := {"powered": false, "passed": false, "smoked": 0}
 var bench: Node               ## Workbench
 var pos := Vector2(640, 400)
 var active := false           ## true after the first pad input on the bench: the ring shows
@@ -56,7 +60,8 @@ func _process(dt: float) -> void:
 	if l != Vector2.ZERO:
 		active = true
 		var vs := get_viewport().get_visible_rect().size
-		pos = (pos + l * l.length() * SPEED * dt).clamp(Vector2.ZERO, vs - Vector2.ONE)
+		var aim := AIM if (str(bench.hover_tip) != "" or (bench.hover_pad as Vector2i).x >= 0) else 1.0
+		pos = (pos + l * l.length() * SPEED * aim * dt).clamp(Vector2.ZERO, vs - Vector2.ONE)
 		var mm := InputEventMouseMotion.new(); mm.position = _win(pos); mm.global_position = mm.position; mm.relative = l * SPEED * dt
 		Input.parse_input_event(mm)
 		queue_redraw()
@@ -64,6 +69,27 @@ func _process(dt: float) -> void:
 	if r != Vector2.ZERO:
 		bench.g_yaw -= r.x * 1.8 * dt
 		bench.g_pitch = clampf(bench.g_pitch - r.y * 1.4 * dt, deg_to_rad(-88), deg_to_rad(-5))
+
+	_rumble_watch()
+
+func _rumble_watch() -> void:
+	var b = bench.backend
+	if b == null: return
+	var fresh := 0   # parts the player burned: a repair's arrived-burnt parts do not rumble (the same rule as their sound)
+	var ab = b.get("arrived_burnt")   # FixtureBench (the test double) has none
+	for uid in (b.smoked as Dictionary): if not (ab is Dictionary and (ab as Dictionary).has(uid)): fresh += 1
+	var now := {"powered": bool(b.powered), "passed": bool(b.passed), "smoked": fresh}
+	if active:
+		if now.powered != _was.powered: _rumble("power")
+		if now.passed and not _was.passed: _rumble("pass")
+		if int(now.smoked) > int(_was.smoked) and now.powered: _rumble("burn")
+	_was = now
+
+var last_rumble := ""   ## QA: the last rumble cue (CI has no joypad)
+func _rumble(kind: String) -> void:
+	last_rumble = kind
+	var r: Array = RUMBLE[kind]
+	for d in Input.get_connected_joypads(): Input.start_joy_vibration(d, float(r[0]), float(r[1]), float(r[2]))
 
 func _stick(ax: int, ay: int) -> Vector2:
 	var v := Vector2(float(axes.get(ax, 0.0)), float(axes.get(ay, 0.0)))
