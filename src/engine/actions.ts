@@ -20,7 +20,7 @@ import {
 } from './board';
 import { q, snap125 } from './quant';
 import { MAX_WIRES, newScope, newTicketProgress, pushFailure, pushUndo, type BoardSnapshot, type NodeState, type TicketState } from './state';
-import { levelDefOf, openTicketIn, refBoard, unmetAfter } from './tickets';
+import { faultSmoked, levelDefOf, openTicketIn, refBoard, unmetAfter } from './tickets';
 import { benchTicket, evalHint, liveCfg, liveRig, probeOn, sweepKey } from './ticket-run';
 import { refuse, refuseKey, say } from './text';
 import { danglingEnds, padWhat, wireContacts } from './touch';
@@ -130,9 +130,17 @@ function describeEdit(tk: TicketState, e: BoardSnapshot): string {
   }
 }
 /** Undo / redo while a part is burnt: the burnt part comes back fresh and the power is OFF, so nothing re-burns until the player switches it on again. */
-function freshenAfterBurn(tk: TicketState): boolean {
-  if (tk.live.smoked.length === 0) return false;
-  tk.live.smoked = []; tk.live.temps = {}; delete tk.live.notes;
+/** Undo and redo heal the player's burns (a fresh part, power off). A part that arrived burnt (decision 10b) is the customer's damage
+ * and stays burnt on the board: before 0.6 an undo turned it into a free fresh part, the faulty circuit burned it again on the next
+ * power-on, and the player was billed US$1.53 for a part they never placed (Noor, 0.5). */
+function freshenAfterBurn(tk: TicketState, def: LevelDef): boolean {
+  const onBoard = new Set(tk.board.parts.map((p) => p.uid));
+  const arrived = faultSmoked(def).filter((u) => onBoard.has(u));
+  const healed = tk.live.smoked.filter((u) => !arrived.includes(u));
+  tk.live.smoked = tk.live.smoked.filter((u) => arrived.includes(u));
+  for (const u of arrived) if (!tk.live.smoked.includes(u)) tk.live.smoked.push(u);
+  if (healed.length === 0) return false;
+  tk.live.temps = {}; if (tk.live.notes) for (const u of Object.keys(tk.live.notes)) if (!arrived.includes(u)) delete tk.live.notes[u];
   tk.live.powered = false; tk.instruments.supply.on = false; tk.instruments.gen.on = false; delete tk.live.paused; resetLive(tk.live);
   return true;
 }
@@ -596,17 +604,17 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
 
     // ---- history
     undo: (s) => {
-      const { tk } = open(s, defs);
+      const { tk, def } = open(s, defs);
       const e = tk.undo.pop(); if (!e) refuseKey('err.undo.none');
       const what = describeEdit(tk, e!), inv = applyEntry(tk, e!); pushUndo(tk.redo, inv);
-      const fresh = freshenAfterBurn(tk);
+      const fresh = freshenAfterBurn(tk, def);
       return ok(say('undo.done', { what }) + (fresh ? ' ' + say('undo.fresh') : ''), { fresh });
     },
     redo: (s) => {
-      const { tk } = open(s, defs);
+      const { tk, def } = open(s, defs);
       const e = tk.redo.pop(); if (!e) refuseKey('err.redo.none');
       const what = describeEdit(tk, e!), inv = applyEntry(tk, e!); pushUndo(tk.undo, inv);
-      const fresh = freshenAfterBurn(tk);
+      const fresh = freshenAfterBurn(tk, def);
       return ok(say('redo.done', { what }) + (fresh ? ' ' + say('undo.fresh') : ''), { fresh });
     },
 

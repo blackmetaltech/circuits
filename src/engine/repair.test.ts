@@ -38,6 +38,19 @@ describe('repair tickets arrive faulty', () => {
     for (const a of refActions(d)) ok(f, a.name, ...(a.args ?? []));
     expect((f.q('benchResult') as any).pass).toBe(true);
   });
+  it('1-1: Ctrl+Z through the removal of the arrived-burnt LED brings it back burnt, and powering the faulty board bills nothing (the unexplained US$1.53, 0.5)', () => {
+    const e = open('1-1');
+    expect(tk(e).live.smoked).toEqual(['x1']);
+    ok(e, 'deletePart', 'x1');
+    ok(e, 'undo');
+    expect(tk(e).board.parts.some((p) => p.uid === 'x1')).toBe(true);
+    expect(tk(e).live.smoked).toEqual(['x1']);                              // still the customer's burnt LED, not a free fresh one
+    ok(e, 'power', true); ok(e, 'advance', 8);
+    expect(tk(e).burnCost ?? 0).toBe(0);
+    // an unrelated edit and its undo do not heal it either
+    ok(e, 'power', false); ok(e, 'addWire', [[12, 10], [14, 10]]); ok(e, 'undo');
+    expect(tk(e).live.smoked).toEqual(['x1']);
+  });
   it('3-1: the flash timer arrives with a 22 uF timing capacitor: the ready-light comes on after about 0.22 s, not 1 s, and the bench says so', () => {
     const e = open('3-1'); ok(e, 'power', true); ok(e, 'advance', 4);
     const r = ok(e, 'runBench'); expect(r.pass).toBe(false);
