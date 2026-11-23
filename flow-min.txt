@@ -1,9 +1,22 @@
 # minimum check count per flow (core/qa/run-flow.sh fails a flow that prints fewer). Raise only: RAISE=1 scripts/flows.sh after a green run.
-look2_ch1_flow 121
+boot_flow 13
+ch1_engine_flow 164
+ch2_engine_flow 97
+ch3_engine_flow 62
+ch4_engine_flow 67
+ch5_engine_flow 46
+drag_flow 6
+layout_flow 8710
+look2_async_flow 7
+look2_ch1_flow 130
 look2_ch23_flow 123
-look2_frame_flow 58
-look2_pad_flow 16
+look2_ch45_flow 247
+look2_frame_flow 72
+look2_pad_flow 18
 look2_save_flow 4
-look2_swap_flow 13
-look2_testbed_flow 21
+look2_swap_flow 17
+look2_testbed_flow 40
+n5_flow 96
+save_migrate_flow 13
 sfx_flow 42
+stall_flow 54
