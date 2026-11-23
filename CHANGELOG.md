@@ -2,6 +2,42 @@
 
 All notable changes to CIRCUITS (called NODE until v0.1.0). The release workflow publishes the section whose heading contains `[x.y.z]`.
 
+## [0.4.0] - 2026-11-23 · "On the Bench"
+The bench controls live on the instruments, burnt parts hurt, and chapter 2's weather station and sealed box play on the bench. First passes at sound, gamepad and a Cute mode in the new look. Saves from 0.3.0 load unchanged.
+
+### Added
+- Chapter 2 on the bench: after the 1-5 exam come 2-1 (Kaya's weather station, which arrives reading low because its divider was sized without the ADC on it) and 2-3 (Tomo's sealed sensor module: measure it, then build its twin). Both have their own case, models and arrival lines. 2-2 and the 2-4 exam stay in the classic stall for now; the title says so.
+- 2-1 and 2-3 refuse the bench until you have metered the device: measure first, then change things.
+- A VOLTAGE knob on the bench supply: the mouse wheel over it sets the volts (0.1 V, Shift 0.01 V, Ctrl 1 V).
+- A sorting box on the bench holds the ticket's parts, one compartment each, with a paper label (name, value, price); click to pick, wheel to change the value. Power and Test are keys on the bench supply (OUTPUT and TEST). The paper ticket is the only paper.
+- The exam is marked on the ticket after a pass: what you said, what the bench measured, how far off; "Show the working" reveals the worked answer.
+- Sound in the new look: procedural cues for the power switch, placing, wiring, removing, burns, a failed test, a pass and the pay. Sound on/off on the title. No human has listened to them yet.
+- Gamepad (first pass): the left stick drives a cursor ring, A and B click, the bumpers turn the wheel, X powers, Y tests, the D-pad picks tools and views. Not yet tried with a real controller.
+- Cute mode in the new look, on by default: amber beads ride every wire that carries current, at the engine's speed and in the direction of the current. C or the title toggles it.
+- `scripts/gpu-desk.sh`: hand play on a GPU-backed window at real speed, one window at a time.
+- Tests: `godot/tests/look2_pad_flow.gd` (13 checks); `look2_ch1_flow.gd` now runs through 2-3 (115 checks); `src/sim/bench/ticket-cost.test.ts`.
+
+### Changed
+- A part you burn on a customer's job is a rush replacement: its price plus a US$1.50 courier, out of the pay. The ticket says so the moment it burns.
+- Removing a part says which wires went with it, and Ctrl+Z puts them back. A wire end or meter lead aimed at a pad with no leg shows red before the click.
+- The bench's flop limit covers the whole bench, not each test condition (systems review of the linear cost constants).
+- The hover tip and meter reading sit on their own plate above the tool rail.
+- The release adds the Windows and macOS builds from CI to the locally smoke-tested release.
+
+### Fixed
+- A part that arrived burnt (the torch's LED) was announced as a fresh burn, "LED burnt: too much current", when you powered a circuit you had wired right. The ticket now says the customer burnt it and how to swap it. Both looks.
+- Clicking one pad and then another now draws a wire; only dragging worked.
+- The 2-1 ticket showed the measured voltage as "3.27 W". Units now come from the engine.
+- A long hover tip widened the tool rail past the window and pushed Power and Test off the left edge at 1280x800.
+- The sorting box label read "Resistortrimmer" for the trimmer.
+
+### Known gaps
+- No human has played the new look, heard its sounds or held a gamepad on it. The hand play was an agent persona on a GPU window at real speed.
+- 2-2 and the 2-4 exam, and chapters 3 to 5, are still in the classic look.
+- At 1280x800 the left sorting-box labels clip at the window edge, and the bench supply's VOLTAGE knob is out of frame in the default view (key 4 shows it).
+- Wire ends on legs hidden under tall parts are still hard to hit; replacing a part means re-wiring it.
+- The schematic (Tab) shows node voltages, which gives the 2-1 reading away before the meter does.
+
 ## [0.3.0] - 2026-11-23 · "Workbench"
 A new look: a 3D repair bench. Chapter 1 and the 5-1 fan repair play in it; chapters 2 to 5 stay in the classic 2D stall behind a labelled switch on both title screens. Saves from 0.2.0 load unchanged.
 

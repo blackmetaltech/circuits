@@ -4,16 +4,16 @@
 
 Customers bring broken devices to your bench. Open them, probe them, fix them with real parts, and hand them back.
 
-> **v0.3.0, pre-alpha.** Chapter 1 plays on the 3D bench; chapters 2 to 5 play in the classic 2D look. Linux build on the [releases page](https://github.com/blackmetaltech/circuits/releases/latest).
+> **v0.4.0, pre-alpha.** Chapter 1, 2-1 and 2-3 play on the 3D bench; the rest plays in the classic 2D look. Linux and Windows builds on the [releases page](https://github.com/blackmetaltech/circuits/releases/latest).
 
 ![The fan's driver without a flyback diode: the transistor burns and the scope catches the 2000 V kick](docs/readme/wb-failure.gif)
 
 | | |
 |---|---|
 | ![](docs/readme/wb-case-open.gif)<br>**A repair arrives.** The case opens on the customer's own faulty board. | ![](docs/readme/wb-scope.gif)<br>**The scope runs live.** The fan driver switching at 100 Hz. |
-| ![](docs/readme/wb-faulty-board-1-1.png)<br>**1-1 Torch.** An LED straight on 9 V. Dead. | ![](docs/readme/wb-fixed-1-1.png)<br>**Fixed.** 470 ohm, 15.0 mA, stamped PASSED. |
-| ![](docs/readme/wb-heater-1-3.png)<br>**1-3 Heater.** 22 ohm drops 12 V to 8.33 V. | ![](docs/readme/wb-free-bench.png)<br>**Free bench.** Any part, three save slots. |
-| ![](docs/readme/wb-1280x800-1-2.png)<br>**Steam Deck size** (1280x800). | ![](docs/readme/wb-igpu-low-1-1.png)<br>**Low tier** on an integrated GPU. |
+| ![](docs/readme/wb-sortbox-1-1.jpg)<br>**The bench.** Parts in a sorting box. Power and test on the supply. | ![](docs/readme/wb-weather-2-1.jpg)<br>**2-1 Weather station.** It reads low. The meter says 2.76 V. |
+| ![](docs/readme/wb-sealed-2-3.jpg)<br>**2-3 Sealed box.** Meter it, then build its twin. | ![](docs/readme/wb-cute-2-1.jpg)<br>**Cute mode.** Beads ride the wires that carry current. |
+| ![](docs/readme/wb-1280x800-2-1.jpg)<br>**Steam Deck size** (1280x800). | ![](docs/readme/wb-igpu-low-1-1.png)<br>**Low tier** on an integrated GPU (0.3 shot). |
 
 ## What you do
 
@@ -21,8 +21,8 @@ Customers bring broken devices to your bench. Open them, probe them, fix them wi
 |---|---|
 | **Take the job** | The ticket says what is broken and what the fix must meet. |
 | **Open the case** | A repair comes with the customer's faulty board. Probe it first. |
-| **Fix it** | Place parts from the tray and wire them pad to pad. |
-| **Power and test** | The bench test checks every spec with the power on. A burnt part comes out of your pay. |
+| **Fix it** | Pick parts from the sorting box and wire them pad to pad. |
+| **Power and test** | The bench test checks every spec with the power on. A burnt part is a rush order, out of your pay. |
 | **Read why** | A failure names the cause with your circuit's own numbers. |
 | **Sit exams** | Predict first, then build. Your numbers are marked against the bench. |
 
@@ -39,7 +39,7 @@ Five chapters are built (23 tickets). Three more are designed.
 | **5 Switches & Gain** | The transistor as a switch (forced gain, flyback diodes), MOSFET thresholds and heat, diode-transistor logic, the common-emitter amplifier and its bias | Fan Driver · 3.3 V Gate · Gate Builder · Synth Preamp · Exam: CE Amplifier |
 | 6 Op-Amp Alley · 7 Tone & Resonance · 8 Oscillate *(designed)* | Op-amps, filters, resonance, oscillators | |
 
-Cute mode (classic look) gives LEDs faces and turns current into critters. Each one shows a real quantity.
+Cute mode puts beads on every wire that carries current. In the classic look it gives LEDs faces. Each one shows a real quantity.
 
 ## Honest by design
 
@@ -50,7 +50,7 @@ Cute mode (classic look) gives LEDs faces and turns current into critters. Each 
 
 The front end is Godot 4.7. The engine is a deterministic TypeScript circuit solver, run through a Node sidecar.
 
-## The classic look (chapters 2 to 5)
+## The classic look (2-2, 2-4, chapters 3 to 5)
 
 | | |
 |---|---|
@@ -92,6 +92,5 @@ core/               cobanana-core submodule: bridge, saves, settings, layout, QA
 | screenshots and testers | `core/qa/README.md` |
 
 ## Status and known gaps
-- No human has played the 3D bench yet. No sound or gamepad there yet.
-- Only a Linux build is published.
-- Details: [docs/CRITIQUE-0.3.md](docs/CRITIQUE-0.3.md).
+- No human has played the 3D bench yet. No human has heard its sounds or held a pad on it.
+- Details: [docs/CRITIQUE-0.4.md](docs/CRITIQUE-0.4.md).
