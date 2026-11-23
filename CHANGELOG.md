@@ -2,6 +2,17 @@
 
 All notable changes to CIRCUITS (called NODE until v0.1.0). The release workflow publishes the section whose heading contains `[x.y.z]`.
 
+## [0.4.2] - 2026-11-23 · "Plain Words"
+A text patch. The game, the site, the wiki and the release notes drop the selling phrases the owner banned (bible 09). They say what you do, and each sentence keeps its fact.
+
+### Changed
+- The tagline is "Fix broken electronics on your own bench."
+- The parts' notes name the part instead: "A 1N4733A (7 ohm) moves a little", "An X7R ceramic capacitor loses capacitance as the voltage rises".
+- The 4-5 and 5-5 debriefs open with "Beyond the textbook:" and name the 1N4733A and the silicon junction.
+
+### Added
+- `src/copy-plain-words.test.ts`: fails on the banned selling word and its forms in the locale strings, the in-game Godot strings, the README, this changelog, the site and the wiki.
+
 ## [0.4.1] - 2026-11-23 · "In Frame"
 A patch: the default view shows every instrument, the meter's own face carries the reading, and the parts box has printed tabs. New GIFs from this build.
 
@@ -29,9 +40,9 @@ The bench controls live on the instruments, burnt parts hurt, and chapter 2's we
 - A sorting box on the bench holds the ticket's parts, one compartment each, with a paper label (name, value, price); click to pick, wheel to change the value. Power and Test are keys on the bench supply (OUTPUT and TEST). The paper ticket is the only paper.
 - The exam is marked on the ticket after a pass: what you said, what the bench measured, how far off; "Show the working" reveals the worked answer.
 - Sound in the new look: procedural cues for the power switch, placing, wiring, removing, burns, a failed test, a pass and the pay. Sound on/off on the title. No human has listened to them yet.
-- Gamepad (first pass): the left stick drives a cursor ring, A and B click, the bumpers turn the wheel, X powers, Y tests, the D-pad picks tools and views. Not yet tried with a real controller.
+- Gamepad (first pass): the left stick drives a cursor ring, A and B click, the bumpers turn the wheel, X powers, Y tests, the D-pad picks tools and views. Not yet tried with a physical controller.
 - Cute mode in the new look, on by default: amber beads ride every wire that carries current, at the engine's speed and in the direction of the current. C or the title toggles it.
-- `scripts/gpu-desk.sh`: hand play on a GPU-backed window at real speed, one window at a time.
+- `scripts/gpu-desk.sh`: hand play on a GPU-backed window at full frame rate, one window at a time.
 - Tests: `godot/tests/look2_pad_flow.gd` (13 checks); `look2_ch1_flow.gd` now runs through 2-3 (115 checks); `src/sim/bench/ticket-cost.test.ts`.
 
 ### Changed
@@ -39,7 +50,7 @@ The bench controls live on the instruments, burnt parts hurt, and chapter 2's we
 - Removing a part says which wires went with it, and Ctrl+Z puts them back. A wire end or meter lead aimed at a pad with no leg shows red before the click.
 - The bench's flop limit covers the whole bench, not each test condition (systems review of the linear cost constants).
 - The hover tip and meter reading sit on their own plate above the tool rail.
-- A Windows (x64) build is published with the release, built from the tag and smoke-run under wine (not yet on real Windows). No macOS build this release: the CI export lacked the macOS template binary, and that failure also stopped CI's Windows build; the release workflow now treats macOS as best-effort.
+- A Windows (x64) build is published with the release, built from the tag and smoke-run under wine (not yet on a Windows machine). No macOS build this release: the CI export lacked the macOS template binary, and that failure also stopped CI's Windows build; the release workflow now treats macOS as best-effort.
 
 ### Fixed
 - A part that arrived burnt (the torch's LED) was announced as a fresh burn, "LED burnt: too much current", when you powered a circuit you had wired right. The ticket now says the customer burnt it and how to swap it. Both looks.
@@ -49,7 +60,7 @@ The bench controls live on the instruments, burnt parts hurt, and chapter 2's we
 - The sorting box label read "Resistortrimmer" for the trimmer.
 
 ### Known gaps
-- No human has played the new look, heard its sounds or held a gamepad on it. The hand play was an agent persona on a GPU window at real speed.
+- No human has played the new look, heard its sounds or held a gamepad on it. The hand play was an agent persona on a GPU window at full frame rate.
 - 2-2 and the 2-4 exam, and chapters 3 to 5, are still in the classic look.
 - At 1280x800 the left sorting-box labels clip at the window edge, and the bench supply's VOLTAGE knob is out of frame in the default view (key 4 shows it).
 - Wire ends on legs hidden under tall parts are still hard to hit; replacing a part means re-wiring it.
@@ -59,7 +70,7 @@ The bench controls live on the instruments, burnt parts hurt, and chapter 2's we
 A new look: a 3D repair bench. Chapter 1 and the 5-1 fan repair play in it; chapters 2 to 5 stay in the classic 2D stall behind a labelled switch on both title screens. Saves from 0.2.0 load unchanged.
 
 ### Added
-- The workbench: a lamp-lit desk with an oscilloscope, bench supply, multimeter and parts drawers, real 3D parts (resistors with colour bands, LEDs that light, a PP3 battery, an aquarium heater, transistors, diodes), wires with stripped ends, a scope trace that runs live, smoke and scorch when a part burns. Camera views on keys 1 to 5; right drag orbits, wheel zooms.
+- The workbench: a lamp-lit desk with an oscilloscope, bench supply, multimeter and parts drawers, 3D parts (resistors with colour bands, LEDs that light, a PP3 battery, an aquarium heater, transistors, diodes), wires with stripped ends, a scope trace that runs live, smoke and scorch when a part burns. Camera views on keys 1 to 5; right drag orbits, wheel zooms.
 - Repair tickets: 1-1 torch, 1-2 bike light, 1-3 heater, 1-4 toy car and 5-1 fan arrive as the customer's faulty device in a case. Open it, probe the old work, fix it, close it and hand it back. The customer's words and thanks are on the paper ticket.
 - Burnt parts cost money: a part you burn is billed at its price and comes out of the job's pay (the ticket shows the bill). Parts that arrived burnt are free.
 - Free bench: any part from the catalogue on an open board, the supply, scope and meter; save and load builds in three slots.
@@ -83,7 +94,7 @@ A new look: a 3D repair bench. Chapter 1 and the 5-1 fan repair play in it; chap
 ### Known gaps
 - Chapters 2 to 5 are not yet in the new look (classic only; 5-1 is the one showcase).
 - No sound in the new look. No gamepad in the new look.
-- The meter shows the instant value on a switching node (a real meter averages).
+- The meter shows the instant value on a switching node (a bench meter averages).
 - Four hand plays by an agent persona (1-1 to 1-4 won in one session, the 1-5 exam with 3 stars in the next); no human has played the new look.
 - Wires onto legs under tall bodies (the exam's sources) can take several tries; removing a part removes its wires without saying so; the exam's marked working is shown only in the classic stall.
 - The bench control plate, parts tray and tool rail still sit as a band of panels across the bottom of the screen (the art review's top finding); they should become objects on the bench.
@@ -94,7 +105,7 @@ A new look: a 3D repair bench. Chapter 1 and the 5-1 fan repair play in it; chap
 Chapter 5 (five tickets) and the fixes from the 0.1 play-test and screenshot review. Saves from 0.1.0 load unchanged (chapter 5 is simply unlocked by chapter 4).
 
 ### Added
-- Chapter 5 "Switches & Gain", 23 tickets in all: 5-1 Fan Driver (a 5 V pin drives a 12 V fan through a transistor: forced gain, base resistor, the turn-off kick and the flyback diode), 5-2 3.3 V Gate (a MOSFET lighting a 12 V strip; the bench runs the threshold at its minimum, typical and maximum, then a reset with the pin floating), 5-3 Gate Builder (a NAND from diodes and one transistor, with real 0.4 V logic lows, fan-out and a 1 mA sink), 5-4 Synth Preamp (a common-emitter stage, gain 8.5 to 11 at transistor gains of 100, 200 and 300), 5-5 EB: CE Amplifier (predict IB, IC, VCE and the gain, then build it; the slip works the card out, checks the real junction with the engine's own Ebers-Moll law and swaps beta for 300).
+- Chapter 5 "Switches & Gain", 23 tickets in all: 5-1 Fan Driver (a 5 V pin drives a 12 V fan through a transistor: forced gain, base resistor, the turn-off kick and the flyback diode), 5-2 3.3 V Gate (a MOSFET lighting a 12 V strip; the bench runs the threshold at its minimum, typical and maximum, then a reset with the pin floating), 5-3 Gate Builder (a NAND from diodes and one transistor, with 0.4 V logic lows, fan-out and a 1 mA sink), 5-4 Synth Preamp (a common-emitter stage, gain 8.5 to 11 at transistor gains of 100, 200 and 300), 5-5 EB: CE Amplifier (predict IB, IC, VCE and the gain, then build it; the slip works the card out, checks the silicon junction with the engine's own Ebers-Moll law and swaps beta for 300).
 - Engine: a driven pin source (`SupplyDef` kind `pin`: level, output resistance, 100 Hz switching, a sine), tolerance conditions (`*tol`: Vt, beta at their datasheet minimum, typical and maximum), per-condition specs (`BenchPlan.only`) with the live switches knowing which condition they stand for, a winding resistance on the inductor (the fan), the textbook NPN, the LED strip and amplifier-input fixtures. A voltage kick on a transistor that was conducting a sample before is a failure that burns it.
 - Plain-words explainers with the engine's own arithmetic for every designed failure of chapter 5 (first miss the cause, repeat the working); eight Codex pages (a transistor as a switch first); a 40-page notebook with a sliding index window.
 - Front end: the fan (blades turn with the winding current), the LED strip, TO-220 transistors and FETs, C / B / E legs written under every transistor, customers' gadgets for chapters 4 and 5, the CE exam figure, a larger hand-drawn sketch and the star total on the chapter page.
@@ -139,14 +150,14 @@ The first release: the stall, the circuit engine and chapters 1 to 4 (18 tickets
 ### Fixed (play-test rounds before the release)
 ### Play-test round C3-1 (diploma student, chapters 2 and 3)
 - Wires (rule unchanged and now shown): a wire joins ONLY at its two ends. A wire passing over or alongside another never joins it. `bench()` carries `crossings` (hop-overs, drawn as an arch over a gap) and `joins` (two or more ends on one hole: a silver solder dot); `addWire` / `wire` say "passes over another one: they do NOT touch", "runs alongside", "two wires end on the same hole: joined". Tests: `src/engine/c31.test.ts`.
-- 2-2 / 2-4 null detectors (`LevelDef.nullCheck`, `src/engine/nullcheck.ts`): the jockey is swept on a copy of the board; a bench pass needs a REAL sign change of the galvanometer current. A dead bridge (zero everywhere, or one sign everywhere) fails with "The bridge has no balance ..." plus the likely miswiring (cell not across A-B, galvanometer not on the jockey / C); `scope().gauge` gets `slide: 'dead'`, `deadText`, and LOCK stays off; the coach says the same. "Balances at l" is only printed when a null exists. The slip's formula (`ticketCard().answers[].formula`) and the failure working follow the side R is wired on (`X = R (100 - l) / l` or `X = R l / (100 - l)`).
+- 2-2 / 2-4 null detectors (`LevelDef.nullCheck`, `src/engine/nullcheck.ts`): the jockey is swept on a copy of the board; a bench pass needs a true sign change of the galvanometer current. A dead bridge (zero everywhere, or one sign everywhere) fails with "The bridge has no balance ..." plus the likely miswiring (cell not across A-B, galvanometer not on the jockey / C); `scope().gauge` gets `slide: 'dead'`, `deadText`, and LOCK stays off; the coach says the same. "Balances at l" is only printed when a null exists. The slip's formula (`ticketCard().answers[].formula`) and the failure working follow the side R is wired on (`X = R (100 - l) / l` or `X = R l / (100 - l)`).
 - 3-2: the "never crossed 2.5 V" text is computed from the scope's own sweep (the level OUT fell to, where it stood at the release) and explains the release path: the capacitor recharges through R plus the 10 k pull-up.
 - 3-3: tau = L / R teaching (a bigger R rises faster but needs more volts) in the slow explainers and the pass note.
 - Scope: RC / LR tickets (`TraceDef.mark63`) draw a dashed 63 % level and a time cursor with its readout (`trace.mark63 {level, final, t}`); the CH1 clip and DMM leads land with a magnet (1.7 pads, 2.3 on a handheld).
 - Stall: chit moved clear of the scope readout, the customer bubble grows to fit its sentence, FIXED stamp stays on the chit, tray "more parts below" on an opaque strip, legible scope knob labels on a handheld, exam fields keep every key (echo-flagged or unicode-less), polar capacitor note fixed (the stripe leg is MINUS and goes to the LOWER voltage).
 ### Chapter 3 "Charge" (tickets 3-1 .. 3-4)
 - Four tickets: 3-1 Flash Timer (an RC timer to 6.32 V at 1 s, with the scope probe's 10 Mohm as the hidden lesson), 3-2 Debounce (an RC filter for a bouncing arcade button, four bounce patterns, one crossing per press and per release), 3-3 Relay Pull-in (L/R with a 12 V and a 24 V rail: speed costs watts), 3-4 EB Capacitor Bank (series / parallel, Q = CV, U = 1/2 CV squared, charge sharing and the 12 mJ that heats the switch, with an energy ledger).
-- The scope shows the real transient: one sweep from power-on that forms over about three seconds of play and holds, against an amber TUBE (an exp ribbon or allowed windows) that turns green on LOCK; failing samples go red; a working TIME knob (click, wheel, `,` `.`) restarts the sweep on the new scale; a fading ghost of the last sweep; engine-side `scope().trace`, `src/engine/trace.ts`.
+- The scope shows the transient as it happens: one sweep from power-on that forms over about three seconds of play and holds, against an amber TUBE (an exp ribbon or allowed windows) that turns green on LOCK; failing samples go red; a working TIME knob (click, wheel, `,` `.`) restarts the sweep on the new scale; a fading ghost of the last sweep; engine-side `scope().trace`, `src/engine/trace.ts`.
 - Engine: capacitors / coils expand into the netlist, a time-controlled switch device (the bouncing contact, the charge-sharing switch), contact bounce patterns as bench conditions, fixed rails, an `energy` metric, capacitor vent rules that accumulate across live frames, plain-words explainers for the RC probe loading, the debounce filter, the coil and the capacitor exam, a relay armature and capacitor voltage in the live frame. Details and every deviation from DESIGN §2.8 are in `docs/API-CH3.md` and the level file headers.
 - Stall: code-drawn electrolytic (stripe, a vent top that domes with the voltage and pops), relay with a clicking armature, charged can with a level gauge, exact capacitor, pull-up, logic chip, arcade button and knife switch on the board; nine new codex pages; chapter tab 3; the customer's line follows the passed state (the carry-over from chapter 2).
 - Tests: `src/engine/ch3.test.ts`, `godot/tests/ch3_engine_flow.gd`, screens in `docs/screens/ch3/`.
