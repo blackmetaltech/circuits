@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Repo / slug | `node-circuits` · title **CIRCUITS** · Android id `in.ixaxaar.cobanana.circuits` · engine port 47904 · Xvfb :260-:279 |
+| Repo / slug | `node-circuits` · title **CIRCUITS** · Android id `tech.blackmetal.circuits` · engine port 47904 · Xvfb :260-:279 |
 | Teaches | Current electricity, capacitors, inductors, AC and resonance, semiconductors and logic (Class 11-12 / pre-university physics: NCERT XII, JEE, A-level, AP Physics C, IB HL). ECE circuit analysis, op-amps, filters, oscillators, power basics, ratings and thermals |
 | Stack | Deterministic TS engine (`src/`, MNA solver on `cobanana-core` numerics) behind the JSON-lines protocol, with a Godot 4.7 GDScript front-end, as in GIGAWATT |
 | Author | Level-1 design director (Opus), 2026-11-09. Research workers: Sonnet ×4, Haiku ×1. Provenance is marked in §4 and §9 |
@@ -17,7 +17,7 @@ Conventions: SI units everywhere in the engine. "Spec" means the customer's pass
 ## 1. Pitch, fantasy, framing
 
 ### 1.1 One line
-**Fix the city's gadgets with real components. Make the green trace sit inside the band, and don't let anything smoke.**
+**Fix the city's gadgets with catalogue parts. Make the green trace sit inside the band, and don't let anything smoke.**
 
 ### 1.2 The fantasy and the frame
 *(This is the `global` region pack's framing. The original India-first framing, Signal Gully and Meera Aunty, is preserved verbatim as the
@@ -32,7 +32,7 @@ spec card plus a **target band** drawn on your scope. You build on a perfboard, 
 
 Why this frame:
 - It is a *game* and not a lab. You are someone who can fix anything, and every success has a face: the customer, their gadget and their reaction.
-- Every spec is realistic: real gadgets with real loads, mains tolerance (the pack's mains: `global` = 230 V ±10 % 50 Hz, the IEC 60038 nominal used by most of the world), battery sag and heat inside a box.
+- Every spec is a household gadget with a stated load, mains tolerance (the pack's mains: `global` = 230 V ±10 % 50 Hz, the IEC 60038 nominal used by most of the world), battery sag and heat inside a box.
 - The repair stall is universal: every city has a lane of phone-and-radio fixers, and nobody needs a passport to read it. It is warm without being a postcard.
 - It supports an upgrade loop that is also the syllabus: new instruments (2-channel scope, function generator, thermal camera,
   Bode plotter) arrive as the concepts that need them arrive.
@@ -42,8 +42,8 @@ Tone: warm, funny, slightly melancholic notebook voice ("Wren: *Every resistor i
 voices (as GIGAWATT's named customers did). There is no combat, no timer pressure in Learner mode, and no loot.
 
 **Mains safety framing (user decision 4: mains tickets stay).** Every ticket that touches mains (4-1, 4-3's transformer, 7-1) opens with a
-mandatory, non-skippable-on-first-view **safety card** in Wren's hand: "On a real bench, mains work needs training, an isolation transformer
-and a second person. Here the bench is simulated, so you can learn what real engineers fear, without the risk." The isolation transformer is a
+mandatory, non-skippable-on-first-view **safety card** in Wren's hand: "On a physical bench, mains work needs training, an isolation transformer
+and a second person. Here the bench is simulated, so you can learn what engineers fear, without the risk." The isolation transformer is a
 visible object on the bench for those tickets, the mains section of the board is drawn behind a red hatched keep-out with a "HIGH VOLTAGE" silkscreen,
 and the Codex page "Mains safety and isolation" is unlocked before the first such ticket. No mains ticket ever instructs the player to build
 anything at home; the Bench Card for a mains ticket carries a small "simulated mains: do not try this at home" ribbon.
@@ -52,7 +52,7 @@ anything at home; the Bench Card for a mains ticket carries a small "simulated m
 1. A kid at the counter: "My torch died." On the bench: a 9 V battery, a red LED and three resistors.
 2. You drag the LED straight onto the battery, which almost everyone does. **Pop.** A puff of magic smoke rises, the LED goes black
    and the notebook opens: "*It drew 0.60 A. A red LED is rated for 0.03 A. Something has to limit the current: a resistor.*"
-   The number is the real one from the Shockley model.
+   The number comes from the Shockley model.
 3. You add a 470 Ω resistor. Current dots start to flow along the traces, the LED glows, and the scope shows a flat line that settles inside
    the band. The register goes *ka-ching*.
 4. The histogram slides in: your cost, part count and power against everyone's. "Could you do it cheaper?"
@@ -61,7 +61,7 @@ anything at home; the Bench Card for a mains ticket carries a small "simulated m
 (Habgood and Ainsworth); attempt first, explain after (productive failure, Sinha and Kapur 2021).
 
 ### 1.4 Why it is shareable
-- **Histograms** after every ticket (cost US$, part count, power mW, board area), Zachtronics-style, from **real players' verified solutions** via the shared `cobanana-scores` service (§11). Offline or empty, the game shows a clearly labelled fallback (§11.5).
+- **Histograms** after every ticket (cost US$, part count, power mW, board area), Zachtronics-style, from **players' verified solutions** via the shared `cobanana-scores` service (§11). Offline or empty, the game shows a clearly labelled fallback (§11.5).
 - **Bench Card**: a one-tap PNG of your board render, the scope trace locked in its band, and your stars and histogram markers. A 6-second
   WebM/GIF of the power-on (dots start to flow, the trace sweeps into the band) suits short-video platforms.
 - **Hall of Smoke**: an auto-clip of your most spectacular failure, such as an electrolytic venting or a 7805 thermal-cycling, with the number that
@@ -101,7 +101,7 @@ CIRCUITS's mentor is **Wren** and its customers are Lio, Ash, Mr. Brook, Bo, Kay
 
 ### 1.7 Juice and retention checklist (added by the review; each item is an M4 task with a screenshot or clip as evidence)
 - **Minute 1** (1-1): the smoke must land within 40 s of opening the ticket; first power-on has a CRT warm-up (trace blooms from the centre, 0.4 s), dots
-  accelerate in, LED bloom; smoke = pop + puff + char decal + a 120 ms camera shake (off with reduced motion); the notebook slides in with the real number.
+  accelerate in, LED bloom; smoke = pop + puff + char decal + a 120 ms camera shake (off with reduced motion); the notebook slides in with the engine's number.
 - **Band lock** is the core reward: trace eases into the amber ribbon, ribbon turns green, VFD "LOCK" with a chime, a 1-frame phosphor flash. Every pass, not just the first.
 - **Pass**: customer reaction stinger + ka-ching + coins counter-roll; stars stamp onto the paper ticket one by one (each with its own pitch); the histogram strip slides
   in with the player marker dropping onto it.
@@ -130,10 +130,10 @@ CIRCUITS's mentor is **Wren** and its customers are Lio, Ash, Mr. Brook, Bo, Kay
 
 ### 2.2 Secondary loops
 - **Optimise**: re-enter a passed ticket to beat cost, part count, power or area. Each metric has its own histogram and its own best record.
-  Optimising teaches real engineering trade-offs (series LEDs vs parallel, 1/8 W vs 1/4 W, dual op-amp package vs faster single, buck vs linear).
+  Optimising teaches engineering trade-offs (series LEDs vs parallel, 1/8 W vs 1/4 W, dual op-amp package vs faster single, buck vs linear).
 - **Robustness (tolerance star)**: a seeded Monte Carlo run with resistors ±5 % (±1 % if metal film is chosen), capacitors ±10 % (electrolytic −20/+20 %),
   BJT β across the datasheet min-max range, MOSFET Vth min-max and battery internal resistance fresh-to-tired. Pass all samples to earn the star. This
-  is the "real engineer" layer that Learner hides and Engineer shows.
+  is the engineer layer that Learner hides and Engineer shows.
 - **Exam bridge**: predict first, then build and probe (§2.5).
 - **Encore tickets** (post-chapter): the same customer returns with a variant whose hidden parameters are seeded per save, such as a different battery
   internal resistance, a different black-box Thevenin network or a different load. Answers can't be looked up, which gives replayability.
@@ -151,7 +151,7 @@ CIRCUITS's mentor is **Wren** and its customers are Lio, Ash, Mr. Brook, Bo, Kay
 | Bench supply (CV/CC) | ch2 | 0-15 V adjustable with a current limit, the safe way to short things |
 | Oscilloscope CH2 + cursors | ch3 | Second channel, Δt/ΔV cursors and measurements (freq, Vpp, mean, rise) |
 | Function generator | ch3 | Sine/square/triangle/pulse, 0.1 Hz-1 MHz, 0-10 Vpp, 50 Ω output |
-| Isolation transformer | ch4 | Lets you probe mains-derived circuits ("never without one on a real bench") |
+| Isolation transformer | ch4 | Lets you probe mains-derived circuits ("never without one on a physical bench") |
 | Thermal camera | ch4 | Overlay of part temperatures (always on in Learner) |
 | Bode plotter | ch7 | Gain/phase sweep (AC analysis) with the spec mask |
 | Frequency counter + speaker monitor | ch8 | 6-digit frequency readout. Hear any node |
@@ -163,7 +163,7 @@ CIRCUITS's mentor is **Wren** and its customers are Lio, Ash, Mr. Brook, Bo, Kay
 | | **Learner** | **Engineer** | **Sandbox** |
 |---|---|---|---|
 | Physics and spec tolerances | identical | identical | identical (no spec) |
-| Coach | yes, steps from real state (§7.1) | off (toggle) | off |
+| Coach | yes, steps from the bench state (§7.1) | off (toggle) | off |
 | Readouts | hover any node or part for V, I, P and temperature; ratings bars on parts | only what your probes and meters measure; hover shows part name and value only | full |
 | Smoke | Rewind 5 s free (time-scrub) | part destroyed; replacing costs money | free |
 | Hints | 3-rung ladder: nudge → equation with your numbers → partial build | available; the result is marked "assisted" (no histogram entry) | n/a |
@@ -174,13 +174,13 @@ CIRCUITS's mentor is **Wren** and its customers are Lio, Ash, Mr. Brook, Bo, Kay
 Learner never lowers the bar on physics. It adds scaffolding (in-game support d = 0.34; enhanced scaffolding +0.41, per RESEARCH.md).
 
 ### 2.5 Exam bridge (EB) mechanic: "predict, then probe"
-One EB closes every chapter (8 in v0.1). The ticket is styled as a printed exam problem (serif type, figure, exam-style numbers). Which exam set is used is **region-pack data** (§12): `global` ships neutral pre-university exam-style cards (our own numbers, sources cited in the Codex); the draft `in` pack carries NCERT/JEE cards, where real NCERT/JEE quotes are allowed with sources (user decision 1).
+One EB closes every chapter (8 in v0.1). The ticket is styled as a printed exam problem (serif type, figure, exam-style numbers). Which exam set is used is **region-pack data** (§12): `global` ships neutral pre-university exam-style cards (our own numbers, sources cited in the Codex); the draft `in` pack carries NCERT/JEE cards, where NCERT/JEE quotes are allowed with sources (user decision 1).
 1. **Predict**: enter 1-3 numbers (numeric keypad, units shown) before touching the board. Each prediction is scored: within 1 % earns ★, within 5 % is accepted, anything else is shown with the gap.
 2. **Build**: wire the textbook circuit from a fixed **Textbook bin** of *ideal-model* parts that match the textbook's idealisation (ideal sources, constant-0.7 V
    diode, ideal Zener, ideal op-amp). The bench verifies the circuit's topology by measuring the asked quantities.
-3. **Probe**: the scope or DMM shows the real answer. Your prediction is overlaid.
-4. **Reality check** (one tap): swap to real-part models (1N4007 Shockley, 2N3904 Ebers-Moll, TL072 macro) and see how far the textbook idealisation is off.
-   For example, SC-04: 0.7 V assumed vs 0.673 V real. This is explicit transfer between the exam answer and the real bench.
+3. **Probe**: the scope or DMM shows the engine's answer. Your prediction is overlaid.
+4. **Beyond the textbook** (one tap): swap to catalogue-part models (1N4007 Shockley, 2N3904 Ebers-Moll, TL072 macro) and see how far the textbook idealisation is off.
+   For example, SC-04: 0.7 V assumed vs 0.673 V with the Shockley model. This links the exam answer to the bench.
 EB stars: ★ every prediction within 5 %, ★ every prediction within 1 %, ★ built correctly on the first bench run.
 
 ### 2.6 Stars, metrics, histograms
@@ -191,7 +191,7 @@ EB stars: ★ every prediction within 5 %, ★ every prediction within 1 %, ★ 
   - **Power mW**: mean power drawn from all of the ticket's supplies, averaged over every bench condition. Lower is better. For power-delivery tickets, the
     headline metric is **efficiency %** instead.
   - **Area**: bounding box of all placed parts and wires in pads (w × h), like PCB size.
-- **Histograms v0.1**: real, **online** per-ticket, per-metric histograms of verified solutions from the shared `cobanana-scores` service (user decision 2; full spec in §11). The player's marker is drawn on it. Offline, the last cached histogram is shown with its date; with no data at all, the labelled empty-state fallback of §11.5 is shown.
+- **Histograms v0.1**: **online** per-ticket, per-metric histograms of verified solutions from the shared `cobanana-scores` service (user decision 2; full spec in §11). The player's marker is drawn on it. Offline, the last cached histogram is shown with its date; with no data at all, the labelled empty-state fallback of §11.5 is shown.
 - **Par** per metric is fixed in the level file and does **not** move with the live population (stars must be stable and verifiable offline): par = the 35th percentile of the solver-bot population computed at build time by `scripts/calibrate-levels.ts` (§9.5), committed in the level file. Reference solutions must meet par. The live histogram is for bragging, the par is for stars.
 
 ### 2.7 Campaign: 8 chapters, 40 tickets designed (32 build + 8 EB); **35 must-ship** in v0.1
@@ -222,7 +222,7 @@ Field legend. **Spec** is what the bench asserts on the level's *fixed connector
 clips onto, so the player cannot move the probe point). **Cond** lists the bench conditions; every spec must hold in every condition. **Bin** is the parts available
 (E12 means a 10 Ω-1 MΩ E12 resistor family at ¼ W unless noted). **Fail** lists the designed failure modes. **Ref** is the reference solution the expert persona replays
 (numbers checked by the director in Python or by the oracle workers). **Head** is the headline metric for ★2. Default bench ambient Ta = 25 °C. Scope probes
-are modelled as 10 MΩ (as a real ×10 probe is) in every mode. Bands marked ~ are design targets that `calibrate-levels` must confirm solvable and
+are modelled as 10 MΩ (as a ×10 probe is) in every mode. Bands marked ~ are design targets that `calibrate-levels` must confirm solvable and
 non-trivial (§9.5). A change of more than 10 % needs director sign-off.
 
 #### Chapter 1: First Light
@@ -265,7 +265,7 @@ non-trivial (§9.5). A change of more than 10 % needs director sign-off.
 through E2. Is E2 charging or discharging?"
 - Predict: V(A) = 6.667 V. I(E2) = 0.5556 A *into* E2 (charging).
 - Build: Textbook bin (ideal sources, exact resistors). Bench checks V(A) ±0.1 % and I(R3) = 1.111 A.
-- Reality check: replace E2 with a NiMH cell model (r = 0.1 Ω) and the currents shift.
+- Beyond the textbook: replace E2 with a NiMH cell model (r = 0.1 Ω) and the currents shift.
 
 #### Chapter 2: Divide & Measure
 **2-1 Sensor Reference** (Kaya's weather-station ADC). *Teaches:* voltage divider, loading, Thevenin intuition, power vs accuracy.
@@ -297,7 +297,7 @@ through E2. Is E2 charging or discharging?"
 when shunted by 4.5 Ω. Find its internal resistance."
 - Predict: wire gradient 0.02 V/cm, EMF 1.500 V, r = 0.500 Ω.
 - Build: Textbook bin. The bench checks balance lengths ±0.1 cm.
-- Reality check: an actual driver cell with r = 0.3 Ω. The gradient changes, but the ratio method still gives r (why the null method is robust).
+- Beyond the textbook: an actual driver cell with r = 0.3 Ω. The gradient changes, but the ratio method still gives r (why the null method is robust).
 
 #### Chapter 3: Charge
 **3-1 Flash Timer** (camera shop: "the flash ready-light must come on after 1 s"). *Teaches:* RC charging, τ = RC, 63.2 % at t = τ.
@@ -325,7 +325,7 @@ when shunted by 4.5 Ω. Find its internal resistance."
 an uncharged 6 µF. Find the final voltage and the energy lost."
 - Predict: Q = 180 µC, U = 9.90 mJ; V = 40.0 V, loss = 12.0 mJ.
 - Build: Textbook bin (1 GΩ bleed resistors are built into the ideal capacitors for the DC operating point, see §3.4). The bench measures steady state and the energy ledger.
-- Reality check: the energy ledger shows the loss turning up as heat in the switch resistance whatever R is (vary R to see it).
+- Beyond the textbook: the energy ledger shows the loss turning up as heat in the switch resistance whatever R is (vary R to see it).
 
 #### Chapter 4: Mains & Rectifiers
 **4-1 Wall Wart** (Mrs. Dale's hum-y 12 V adapter). *Teaches:* transformer ratio, RMS vs peak, diodes, bridge rectifier, ripple ≈ I/(2fC), capacitor voltage ratings, mains tolerance.
@@ -361,7 +361,7 @@ an uncharged 6 µF. Find the final voltage and the energy lost."
 **4-5 EB: Zener Regulator** (SC-02). Card: "12 V supply, Rs = 300 Ω, 6 V Zener with Iz,min = 2 mA. Find Iz at RL = 1 kΩ and the minimum RL."
 - Predict: Iz = 14.0 mA, RL,min = 333 Ω (and Pz at no load = 120 mW).
 - Build: Textbook bin (ideal Zener). The bench checks I(Rs) = 20 mA ±1 %.
-- Reality check: 1N4733A-style Zzt = 7 Ω, so OUT now moves about 0.1 V across the load range.
+- Beyond the textbook: 1N4733A-style Zzt = 7 Ω, so OUT now moves about 0.1 V across the load range.
 
 #### Chapter 5: Switches & Gain
 **5-1 Fan Driver** (maker space: a 5 V microcontroller pin must run a 12 V fan). *Teaches:* BJT as a saturated switch, forced β, base resistor, inductive kick, flyback diode.
@@ -370,7 +370,7 @@ an uncharged 6 µF. Find the final voltage and the energy lost."
 - Bin: 2N2222A (Ic 600 mA), BC547B (Ic 100 mA), TIP120, 1N4007, 1N4148, E12.
 - Fail: BC547B exceeds Ic 100 mA. Without a flyback diode the turn-off spike passes Vceo 40 V, so the transistor fails short (instant). Rb too large (**≥ 5.6 kΩ**; review ngspice: 2.2 kΩ still saturates the 2N2222A at forced β ≈ 105) leaves the transistor in its active region: at 5.6 kΩ Vce ≈ 3 V, P ≈ 0.43 W, fan ≈ 9 V ✗; at 8.2-10 kΩ P ≈ 0.6 W, over the 625 mW TO-92 rating,
   so it overheats. Rb too small exceeds the pin's 20 mA.
-- Ref: 2N2222A, Rb = 220 Ω (pin current 17.2 mA, fan 11.96 V, Vce(sat) 44 mV, flyback-clamped peak 12.8 V; review ngspice), 1N4007 flyback across the fan. Alternative: TIP120 with Rb = 2.2 kΩ: Vce(sat) 0.83 V in the macro, fan 11.17 V, marginal by 0.17 V on the 11 V spec (the datasheet's 2.0 V is a max at 3 A, so a real part may fail: the Codex says so). Head: cost.
+- Ref: 2N2222A, Rb = 220 Ω (pin current 17.2 mA, fan 11.96 V, Vce(sat) 44 mV, flyback-clamped peak 12.8 V; review ngspice), 1N4007 flyback across the fan. Alternative: TIP120 with Rb = 2.2 kΩ: Vce(sat) 0.83 V in the macro, fan 11.17 V, marginal by 0.17 V on the 11 V spec (the datasheet's 2.0 V is a max at 3 A, so a catalogue part may fail: the Codex says so). Head: cost.
 
 **5-2 3.3 V Gate** (LED strip from a 3.3 V board). *Teaches:* MOSFET threshold, Rds(on) vs Vgs, logic-level FETs, conduction loss I²·Rds.
 - Spec: strip current ≥ 0.28 A (strip = 40 Ω at 12 V, so 0.3 A nominal). FET Tj ≤ 125 °C at Ta 40 °C. Gate-drive pin 3.3 V.
@@ -383,7 +383,7 @@ an uncharged 6 µF. Find the final voltage and the energy lost."
 
 **5-3 Gate Builder** (school robotics club). *Teaches:* diode logic (OR, AND), transistor NOT, NAND as a universal gate, logic levels and fan-out (NCERT XII ch14; JEE syllabus).
 - Spec: build Y = NOT(A AND B). For all four input vectors: VOH ≥ 4.0 V with 10 kΩ to GND (fan-out load) and VOL ≤ 0.4 V while sinking 1 mA.
-- Cond: A, B ∈ {**0.4 V**, 5 V} driven by the bench (a real logic "0" is not 0 V; review: with ideal 0 V inputs the missing-diode failure never shows); Vcc 5 V.
+- Cond: A, B ∈ {**0.4 V**, 5 V} driven by the bench (a logic "0" from a gate is not 0 V; review: with ideal 0 V inputs the missing-diode failure never shows); Vcc 5 V.
 - Bin: 1N4148 ×4, 2N3904, E12.
 - Fail: missing level-shift diodes let a 0.4 V input low turn the transistor on (review ngspice: with 0 diodes OUT collapses already at a 0.2 V input; with 2 diodes VOH holds up to a 0.8 V input low). Pull-up too weak fails VOH under the 10 kΩ load. Base pull-down missing gives slow or weak turn-off.
 - Ref (DTL): two input diodes to node P, 4.7 kΩ pull-up to P, two series 1N4148 to the base, 10 kΩ base to GND, 2N3904 with 2.2 kΩ collector pull-up. VOH = 5·10/12.2 = 4.10 V. Head: parts.
@@ -398,7 +398,7 @@ an uncharged 6 µF. Find the final voltage and the energy lost."
 **5-5 EB: CE Amplifier** (SC-04). Card: "VCC = 12 V, RB = 565 kΩ, RC = 3 kΩ, β = 100, VBE = 0.7 V. Find IB, IC, VCE and the voltage gain."
 - Predict: IB = 20.0 µA, IC = 2.00 mA, VCE = 6.00 V, Av = −gm·RC = −232.
 - Build: Textbook bin (fixed-0.7 V BJT model). Checks ±0.5 %.
-- Reality check: Ebers-Moll gives VBE = 0.6727 V, IC = 2.005 mA, VCE = 5.986 V, gain −232.7 (oracle and checker agree). Also: "now swap β = 300": IC triples and the transistor saturates (why fixed bias is fragile).
+- Beyond the textbook: Ebers-Moll gives VBE = 0.6727 V, IC = 2.005 mA, VCE = 5.986 V, gain −232.7 (oracle and checker agree). Also: "now swap β = 300": IC triples and the transistor saturates (why fixed bias is fragile).
 
 #### Chapter 6: Op-Amp Alley
 **6-1 Mic Preamp** (busker's mic). *Teaches:* inverting amplifier, virtual ground, Av = −Rf/Rin.
@@ -443,8 +443,8 @@ an uncharged 6 µF. Find the final voltage and the energy lost."
   near-triangle of exponential segments: Vpp = 2·Vin·(Rf/Rin)·tanh(T/(4RfC)) = 2.04 V ✓ (director-checked). Without Rf the offset drifts into the rail ✗. With Rf ≤ 22 kΩ the shape rounds and fails the band. Head: parts.
 
 **6-7 EB: Summing Amp** (OA-03 + saturation). Card: "Inputs 1.0 V/10 kΩ, 2.0 V/5 kΩ, −0.5 V/20 kΩ; Rf = 10 kΩ; ±15 V supply. Find Vout. What if every input doubles? Triples?"
-- Predict: −4.750 V; −9.50 V; −14.25 V. The ideal model says −14.25 V; with ±15 V rails and TL072 swing the real answer clips at about −13.5 V.
-- Build: Textbook (ideal op-amp with ±15 V rails). Reality check: the TL072 macro clips about 1.5 V from each rail.
+- Predict: −4.750 V; −9.50 V; −14.25 V. The ideal model says −14.25 V; with ±15 V rails and TL072 swing the TL072 answer clips at about −13.5 V.
+- Build: Textbook (ideal op-amp with ±15 V rails). Beyond the textbook: the TL072 macro clips about 1.5 V from each rail.
 
 #### Chapter 7: Tone & Resonance
 **7-1 Nightlight** (capacitive-dropper LED nightlight, the two-dollar market-stall classic). *Teaches:* capacitive reactance Xc = 1/(2πfC), RMS current, mains safety rules.
@@ -477,7 +477,7 @@ an uncharged 6 µF. Find the final voltage and the energy lost."
 **7-5 EB: Series LCR** (AC-04). Card: "100 V rms, 50 Hz; R = 30 Ω, XL = 40 Ω, XC = 80 Ω. Find |Z|, I, the phase, VL and VC, and the average power."
 - Predict: 50 Ω, 2.00 A, current leads by 53.13°, VL = 80 V, **VC = 160 V (more than the supply!)**, P = 120 W (checker-verified).
 - Build: Textbook bin. Probe VC on the scope and watch it exceed the source amplitude.
-- Reality check: a real capacitor rated 100 VAC would fail here. Ratings matter even in theory problems.
+- Beyond the textbook: a capacitor rated 100 VAC would fail here. Ratings matter even in theory problems.
 
 #### Chapter 8: Oscillate
 **8-1 Blinker** (cargo-trike turn indicator). *Teaches:* 555 astable, t_high = 0.693(R1+R2)C, t_low = 0.693·R2·C, duty cycle.
@@ -488,7 +488,7 @@ an uncharged 6 µF. Find the final voltage and the energy lost."
 
 **8-2 Phase Shift** (sine source for a tuning fork demo). *Teaches:* Barkhausen criterion, RC ladder phase, f = 1/(2π√6·RC), gain 29.
 - Spec: sustained oscillation at 1.00 kHz ±5 %, ≥ 2 Vpp, THD ≤ 10 %, steady within 200 ms of power-on.
-- Cond: TL072 ±12 V. Start-up: the engine injects a deterministic 1 mV impulse at t = 0+ on the op-amp's input node (documented in the Codex: "real oscillators start from noise").
+- Cond: TL072 ±12 V. Start-up: the engine injects a deterministic 1 mV impulse at t = 0+ on the op-amp's input node (documented in the Codex: "oscillators start from noise").
 - Fail: Rf < 29R decays to nothing ✗. Rf ≫ 29R gives a square-ish waveform and THD fails ✗.
 - Ref: R = 10 kΩ, C = 6.8 nF (f = 955.5 Hz, −4.4 %), Rf = 330 kΩ (gain 33) with soft clipping by anti-parallel 1N4148s across part of Rf. calibrate-levels checks THD. Head: parts.
 
@@ -501,7 +501,7 @@ an uncharged 6 µF. Find the final voltage and the energy lost."
 
 **8-4 EB: 555 Timer** (OS-01). Card: "555 astable, R1 = 1 kΩ, R2 = 10 kΩ, C = 10 nF. Find f and the duty cycle."
 - Predict: f = 6.87 kHz (6857 Hz with the 1.44 formula; both are accepted within 1 %), duty 52.4 %.
-- Build: Textbook bin (ideal 555). Reality check: the NE555's discharge saturation and output stage shift f by < 1 %.
+- Build: Textbook bin (ideal 555). Beyond the textbook: the NE555's discharge saturation and output stage shift f by < 1 %.
 
 **8-5 FINALE: Synth Voice** (Juno, the street musician whose synth died the week before the Lantern Night street fair). *Teaches:* integration of the whole campaign: oscillator → filter → buffer. Plus tuning by ear.
 - Spec: f = 440.0 Hz ±0.5 % (A4). 3rd harmonic ≤ −15 dB relative to the fundamental (a softened square). OUT 1-2 Vpp into a 10 kΩ line input. Supply 9 V single. No part outside its supply rating.
@@ -556,7 +556,7 @@ pixel of glow, every dot speed and every pass or fail comes from this solver.
    The netlist is recompiled only when the board changes (`dirty` flag). A value edit only restamps.
 
 ### 3.2 Modified Nodal Analysis
-Unknown vector x = [v₁…vₙ, i₁…iₘ]. The system is G·x = b (real, DC/transient) or Y(jω)·x = b (complex, AC). Stamps (standard; Ho, Ruehli & Brennan 1975; Vlach & Singhal):
+Unknown vector x = [v₁…vₙ, i₁…iₘ]. The system is G·x = b (plain numbers, DC/transient) or Y(jω)·x = b (complex, AC). Stamps (standard; Ho, Ruehli & Brennan 1975; Vlach & Singhal):
 | Element | Stamp |
 |---|---|
 | Resistor/conductance g between a, b | G[a,a] += g, G[b,b] += g, G[a,b] −= g, G[b,a] −= g |
@@ -610,8 +610,8 @@ repeat k = 1..maxIter (DC 150, transient step 25):
 ### 3.4 Floating DC nodes and gmin
 Every node gets gmin = 1e-12 S to ground, so the matrix is never structurally singular because of capacitor-only or gate-only nodes. That is numerics, not physics,
 so the topology check (§3.10) **detects DC-floating nodes** (no DC path to ground once capacitors are opened and MOSFET gates treated as open) and:
-- in live mode, shows a hollow-ring node marker and the note "No DC path: its voltage is decided by leakage, which a real circuit doesn't promise";
-- at the bench, **refuses to pass** if any DC-floating node connects to a MOSFET gate, a CMOS/op-amp input or a comparator input (real parts would do anything).
+- in live mode, shows a hollow-ring node marker and the note "No DC path: its voltage is decided by leakage, which a built circuit doesn't promise";
+- at the bench, **refuses to pass** if any DC-floating node connects to a MOSFET gate, a CMOS/op-amp input or a comparator input (catalogue parts would do anything).
 - Textbook-bin capacitors (EB) include a 1 GΩ internal bleed (shown in the Codex) so EB 3-4 has a defined DC solution with < 0.5 % error (CAP-01 note).
 
 ### 3.5 Transient analysis (decision: fixed step, trapezoidal, with BE restarts)
@@ -636,7 +636,7 @@ so the topology check (§3.10) **detects DC-floating nodes** (no DC path to grou
 (20 points/decade by default, plus mask-edge frequencies, plus refinement near detected peaks/notches: golden-section on |H| to 1e-4 relative), assemble Y(jω) and solve with
 **complex LU** (`core.numerics.clu`). 4. H(f) = V(out)/V(in) for the ticket's AC source of magnitude 1.
 - If any op-amp output sits within 0.5 V of a rail at the OP, or any BJT is saturated, the Bode plotter shows a warning ("small-signal plot is meaningless: your amp is clipped
-  at DC") and the bench fails AC specs with that reason. This stops cheese and teaches something real.
+  at DC") and the bench fails AC specs with that reason. This stops cheese and teaches the reason.
 - Cross-check property (§9.3): for linear circuits, steady-state transient amplitude at f equals |H(f)| within 1 %.
 
 ### 3.7 Behavioural macro-models
@@ -646,7 +646,7 @@ so the topology check (§3.10) **detects DC-floating nodes** (no DC path to grou
  gain stage: VCCS  i₁ = Imax·tanh(gm·(v+ − v−)/Imax)  into node x; x has R1 = 1 MΩ and C1 to the midpoint ref
              gm = A0/R1;  C1 = A0/(2π·GBW·R1)  (dominant pole fp = GBW/A0)
              Imax = SR·C1  → output slew is limited to ±SR (single-pole slew model, the classic macro)
- clamps:     x limited to [V− + foot, V+ − head] by soft diodes (Is 1e-15, N 1), so rails clip and recover realistically (no windup)
+ clamps:     x limited to [V− + foot, V+ − head] by soft diodes (Is 1e-15, N 1), so rails clip and recover without windup
  output:     VCVS y = x; then output resistance Ro and short-circuit limit: i_out = Isc·tanh((y − v_out)/(Isc·Ro))
  supply:     Iq from V+ to V− always; output current is drawn from V+ when sourcing and V− when sinking (softplus blend), so op-amp self-heating
              P = (V+ − v_out)·i_src + (v_out − V−)·i_snk + (V+ − V−)·Iq is correct, and a shorted output can overheat the package
@@ -654,7 +654,7 @@ so the topology check (§3.10) **detects DC-floating nodes** (no DC path to grou
  "ideal" variant (Textbook bin): A0 = 1e6, no pole, rails ±15 V hard clamps, Ro = 0
 ```
 **Comparator (LM393)**: the same input stage with A0 = 2e5 and a fast pole (response 1.3 µs), open-collector output (an NPN switch to V−, Ron 50 Ω, sink limit 16 mA). Needs a pull-up.
-**555 (NE555)**: the real internal structure at block level. 3×5 kΩ divider (so CV works), two comparators (event-driven, thresholds 2/3 and 1/3 of Vcc via the divider), SR flip-flop state,
+**555 (NE555)**: the internal structure of the NE555 at block level. 3×5 kΩ divider (so CV works), two comparators (event-driven, thresholds 2/3 and 1/3 of Vcc via the divider), SR flip-flop state,
 reset pin, discharge = switch to GND (Ron 10 Ω) when Q = 0, output = VCVS to Vcc−1.7 V (high) or 0.1 V (low) with Ro 10 Ω and a ±200 mA limit, supply current 2 mA (5 V)…9 mA (15 V)
 interpolated (TI NE555 datasheet). Comparator events use the event mechanism of §3.5.
 **Linear regulator (7805, LM317)**: a pass element that only sources current (diode-isolated, it cannot sink). It regulates V(out) − V(ref) toward Vreg (7805: ref = GND, 5.00 V;
@@ -683,7 +683,7 @@ Ideal sources exist only in Textbook bins.
 - **Multi-rate**: electrical time is µs-ms; thermal time is seconds. Live mode advances thermal state by a **fixed thermal step per live frame**
   (Δt_th = (1/30 s) × `thermalSpeed`, default 4×, Settings 1-16×), driven by the electrical sliding-window P_avg. Wall-clock time never enters the rules:
   Godot decides only *how many* frames to request (`advance(frames)`, §8.4), so a replay of the same action list is bit-identical (review fix: the original
-  "wall time" wording broke determinism). So a part takes a few real seconds to glow and then smoke, which is readable and dramatic. The **bench never waits**:
+  "wall time" wording broke determinism). So a part takes a few seconds to glow and then smoke, which is readable and dramatic. The **bench never waits**:
   it computes steady-state T = Ta + P_avg·θ.
 - **States and visuals**: Normal → **Warm** (P > rating or T > T_max·0.9: amber glow, faint tick sound) → **Hot** (T > T_max: orange/yellow glow, shimmer, sizzle) → **Smoke** (T > T_fail: the part fails).
   T_max and T_fail: resistor 155/250 °C (paint scorches; at Ta = 25 °C smoke arrives at about 2.6× rated power), semiconductor Tj,max/Tj,max + 25 °C, electrolytic 105/125 °C.
@@ -698,8 +698,8 @@ Ideal sources exist only in Textbook bins.
 |---|---|---|
 | Floating island | union-find component without GND | grey "unpowered island" tint; note; excluded from the matrix (or tied to GND via gmin) |
 | DC-floating node | graph with capacitors and gates removed: no path to GND | hollow marker; bench refusal rule (§3.4) |
-| Voltage-source loop | cycle in graph of {ideal V sources, inductors (DC), ammeters} | blocking explainer: "These sources fight each other: infinite current". Only possible with Textbook ideal sources. Real batteries and bench supplies have r or CC limit |
-| Shorted source | V-source with both terminals on one node | real battery: huge current through r, so battery heats and smokes; bench supply: goes CC (LED indicator); ideal: blocking explainer |
+| Voltage-source loop | cycle in graph of {ideal V sources, inductors (DC), ammeters} | blocking explainer: "These sources fight each other: infinite current". Only possible with Textbook ideal sources. Batteries and bench supplies have r or a CC limit |
+| Shorted source | V-source with both terminals on one node | battery: huge current through r, so battery heats and smokes; bench supply: goes CC (LED indicator); ideal: blocking explainer |
 | Current-source cutset | current source whose node set has no other path | explainer: "That current has nowhere to go" |
 | Unconnected pins | part pin on a pad with no other connection | small red pin dot; harmless |
 | Op-amp without negative feedback in a linear-spec ticket | DC OP saturated + no path out → in− | hint, not refusal (comparators are legitimate) |
@@ -721,7 +721,7 @@ Ideal sources exist only in Textbook bins.
 - **Live mode budget**: the sidecar advances a whole number of live frames per `advance(frames)` call; each frame is a ticket-defined
   sim-time quantum (`live.frameSim`, chosen so one frame costs ≤ 4 ms on the Pixel 9a and ≤ 8 ms on desktop), at 30 Hz live updates (Godot interpolates
   dots and glow at 60-120 Hz). Godot asks for fewer frames when it falls behind, never for "as much as fits in N ms" (that would make results depend on device speed).
-  If real time can't be reached (a 50 kHz buck needs 1e7 steps/s), the sim runs slower than real time and the HUD shows "sim ×0.003". Periodic tickets still look live because the scope
+  If wall-clock time can't be reached (a 50 kHz buck needs 1e7 steps/s), the sim runs slower than wall-clock time and the HUD shows "sim ×0.003". Periodic tickets still look live because the scope
   triggers on each new period. Scope samples are decimated in the engine to ≤ 1024 points/channel/frame.
 - **Bench budget**: each condition ≤ 25 000 steps (designer-checked in the level file and enforced by `bench-cost`); a full bench ≤ 2.0 s desktop / ≤ 5 s Pixel 9a, shown as a diegetic "bench running" animation (relay clicks per condition).
   The tolerance Monte Carlo (16 samples × conditions) runs **after a pass, in chunks**: Godot calls `runTolerance(k)` (k samples per call) in idle frames, progress is
@@ -730,7 +730,7 @@ Ideal sources exist only in Textbook bins.
 - **Periodic steady state cost** (review): mains tickets settle with `settle: 'periodic'` (≤ 50 periods); at 50 Hz with dt = T/200 that is ≤ 10 000 steps. Stretch tickets with long settling
   (8-2 phase shift ≈ 200 ms at 1 kHz; 8-3 buck LC settling ≈ 10-20 ms at 50 kHz) exceed 25 000 steps as written, so they **start from an averaged-model steady state**
   (8-3: inductor current and output capacitor pre-set from the averaged buck solution; named in the Codex) or use dt = T/100; `bench-cost` decides.
-- **Audio from the sim**: the speaker monitor plays the steady-state period from the bench (or the last two live sweeps), resampled to 48 kHz and looped with crossfade. It never needs real-time electrical simulation.
+- **Audio from the sim**: the speaker monitor plays the steady-state period from the bench (or the last two live sweeps), resampled to 48 kHz and looped with crossfade. It never needs live electrical simulation.
 - **Determinism (review fix, binding)**: all rule code uses core `dmath` (fdlibm) for exp/log/sin/cos/pow/tanh/atan2 and never `Math.exp`/`**`
   (`src/determinism.test.ts` enforces it), so results are **bit-identical** on desktop Node 22, nodejs-mobile 18 on Android and the leaderboard server. Same inputs,
   same step sequence, same iteration order, no wall clock, no `Map` iteration over unordered keys in solver paths. Goldens therefore hash **everything exactly**,
@@ -768,7 +768,7 @@ copper traces); thermal RC per part with estimated τ; transformer ideal + windi
   **Review status (2026-11-09):** a second scripted pricing pass also failed (DigiKey and Tayda return 403, Mouser times out, LCSC pages show no tiers,
   aggregator snippets disagree with each other); only 1N4007 ≈ $0.05 @100 (DigiKey listing, Diotec/Lumimax) and LM7805 TO-220 ≈ $0.58-1.55 @100 (Mouser via aggregator) came back.
   Decision: every price below is a **game value** (`priceSource: 'game-estimate-2026'`), shown in the Codex as "approximate distributor price, qty 100",
-  until the M3 data-entry task records real listings **through a browser** (BUILD-PLAN task M3-D2). Prices only drive the cost metric and the wallet; relative
+  until the M3 data-entry task records catalogue listings **through a browser** (BUILD-PLAN task M3-D2). Prices only drive the cost metric and the wallet; relative
   order matters more than cents (a 1 W resistor must cost more than a ¼ W one; a litz coil more than a plain one; an IRLZ44N more than a 2N7000), and a
   test asserts those orderings. The `in` pack's prices derive from the same table (× its stated rate). Physics parameters are never game values: those must be `verified`.
 - Disagreements between a vendor's product page and its datasheet go to the **datasheet**, with the conflict noted (for example NE5532).
@@ -819,7 +819,7 @@ copper traces); thermal RC per part with estimated τ; transformer ideal + windi
 | MCP6002 (dual) | 1.8-6 V; GBW 1 MHz; SR 0.6 V/µs; rail-to-rail in/out (≈ 25 mV); Isc ±23 mA at 5.5 V | Microchip DS20001733L [V] | V | 0.20 |
 | LM393 (dual comparator) | 2-36 V; open collector, sink 6 mA min / 21 mA typ at VOL 1.5 V (VOL 0.4 V max at 4 mA); response 1.3 µs; CM V− … V+−1.5 V (V+−2 V over temperature) | TI SLCS005AH [V] | V | 0.08 |
 | NE555 | 4.5-16 V; output ±200 mA; VOH ≈ Vcc − 1.7 V typ at 100 mA (5 V); Icc 2 mA (5 V) … 9 mA (15 V) typ, output high, no load; thresholds 2/3 and 1/3 Vcc | TI NE555 SLFS022 [V] | V | 0.10 |
-| LM7805 (LM340) | 5.0 V ±4 %; dropout 2 V at 1 A; θJA 54 °C/W TO-220; θJC 4 °C/W; thermal shutdown > 150 °C; short-circuit 2.1 A, peak 2.4 A (review-corrected); note: SNOSBT0L's JEDEC table gives RθJA 23.9 °C/W for TO-220 (NDE) vs 54 in the application text; the game uses 54 (free-air, no copper, the realistic hobby case) and says so in the Codex | TI LM340 SNOSBT0L [V] | V | 0.15 |
+| LM7805 (LM340) | 5.0 V ±4 %; dropout 2 V at 1 A; θJA 54 °C/W TO-220; θJC 4 °C/W; thermal shutdown > 150 °C; short-circuit 2.1 A, peak 2.4 A (review-corrected); note: SNOSBT0L's JEDEC table gives RθJA 23.9 °C/W for TO-220 (NDE) vs 54 in the application text; the game uses 54 (free-air, no copper, the common hobby case) and says so in the Codex | TI LM340 SNOSBT0L [V] | V | 0.15 |
 | LM317 | Vref 1.25 V (1.2-1.3); Iadj 50 µA typ (100 max); min load 3.5 mA typ (10 max); dropout ≈ 2 V; 1.5 A | TI SLVS044Z [V] | V | 0.25 |
 
 ### 4.4 Sources and instruments
@@ -877,7 +877,7 @@ dialogs, no tables over the board. Data appears *on* objects: glow, dots, needle
   When the trace sits entirely in the band, the band **locks**: a soft chime, the band turns green, and "LOCK" lights on a small VFD. Failing samples flash red at bench time. Readouts in a VFD font:
   V/div, s/div, trigger, measurements.
 - **Bode plotter** (ch7): an amber vector-display look. Magnitude and phase curves, the mask as hatched forbidden regions, a cursor readout.
-- **DMM**: a chunky yellow handheld with an LCD and a rotary dial. The probes are real objects dragged to pads; the dial clicks.
+- **DMM**: a chunky yellow handheld with an LCD and a rotary dial. The probes are objects you drag to pads; the dial clicks.
 - **Bench supply / function generator**: seven-segment red displays and knobs (mouse wheel, pad stick or touch drag to turn).
 - **Thermal camera** (ch4): a false-colour overlay toggle with °C labels on hot parts.
 
@@ -992,7 +992,7 @@ light, smoke icon); scope trace thickness setting.
 
 ## 7. Teaching
 
-### 7.1 Coach (from real state, 1-1 Torch example)
+### 7.1 Coach (from bench state, 1-1 Torch example)
 Steps advance on **engine queries**, never on timers (GIGAWATT pattern). Text follows the input device.
 | # | Shown when | Text (mouse; touch/pad variants auto-swap verbs) | Advances when |
 |---|---|---|---|
@@ -1029,7 +1029,7 @@ Each failure class has an explainer template filled from the engine's state at t
 | Saturated at DC (AC spec) | "The Bode plot needs the amp to sit mid-rail. Your OUT is stuck at +10.5 V because the + input is above the − input with no feedback." |
 | Oscillator dies | "Loop gain at 955 Hz is 0.83 (needs ≥ 1): the RC ladder attenuates by 29, your amp gains 24. Raise Rf to ≥ 29 × R." |
 | Band miss | "OUT crossed 6.32 V at **1.08 s** (spec 0.95-1.05 s). τ looks right (1 MΩ × 1 µF), but the scope probe's 10 MΩ makes a divider: Thevenin R = 0.91 MΩ, final V = 9.09 V. Use smaller R, bigger C." |
-| Floating gate / node | "Q1's gate isn't connected to anything with a DC path. A real FET's gate holds random charge and could be on or off. Add a pull-down (100 kΩ)." |
+| Floating gate / node | "Q1's gate isn't connected to anything with a DC path. A FET's gate holds random charge and could be on or off. Add a pull-down (100 kΩ)." |
 | Convergence | "The solver couldn't settle. Two diodes back-to-back across a source with no resistance have no finite answer. Add a resistor." |
 Explainers are written in plain words first, then the equation. The full Codex page is one tap away. **The failure log** in the Codex keeps every explainer you have triggered (with replay), so the player's own mistakes become
 their study notes.
@@ -1091,7 +1091,7 @@ Rules (GIGAWATT ARCHITECTURE.md): `sim/` and `data/` never import `engine/`. Eve
 | Core API | Used for | Notes |
 |---|---|---|
 | `lu(A: Float64Array, n)` → factor with partial pivoting, `solve(f, b)`, `refactorInPlace` | DC/transient | must expose the pivot magnitudes (singular detection) and allow factor reuse |
-| `clu(Are, Aim, n)` complex LU + solve | AC | split real/imag arrays, no object-per-complex |
+| `clu(Are, Aim, n)` complex LU + solve | AC | split re/im arrays, no object-per-complex |
 | `dampedNewton({residual, jacobianSolve, limit?: (xNew, xOld) => x, maxIter, tol})` | DC OP | the **`limit` hook** is required for pnjlim/fetlim. CIRCUITS keeps its own MNA-specific loop if the core's signature can't take it |
 | `integrators`: BE/TRAP coefficient helpers | companions | trivial. CIRCUITS's companions stay in CIRCUITS |
 | `rng(seed)` | Monte Carlo, encore seeds, kicks | seeded, splittable |
@@ -1440,7 +1440,7 @@ class A/B, crossover distortion) · user-made tickets shared via codes · leader
 | **Phone performance** (Monte Carlo, dense LU at n = 48) | the sidecar on Android is slower | MNA dim ≤ 48, flop-budget gate per ticket (`bench-cost`), flat Float64Array LU, LU reuse, device bypass, chunked Monte Carlo, live "sim ×k" indicator, measured on the Pixel in M2 (vertical slice) |
 | **Data accuracy** (prices, LED fits, thermal τ, some op-amp specs) | recall-sourced numbers creep in | `verified` flag + CI provenance test; datasheet-wins rule; Codex "estimate" labels |
 | **Band/par tuning** | E-series granularity makes bands accidentally impossible or trivial | calibrate-levels margin report; director sign-off for > 10 % changes; the solvability bot in CI |
-| **Teaching correctness** (textbook idealisation vs real models) | students may see "0.6925 V, not 0.7 V" as wrong | EB "Reality check" makes the gap the lesson; model setting explicit in every oracle; educator critic each round |
+| **Teaching correctness** (textbook idealisation vs catalogue models) | students may see "0.6925 V, not 0.7 V" as wrong | EB "Beyond the textbook" makes the gap the lesson; model setting explicit in every oracle; educator critic each round |
 | **Determinism across platforms** | `Math.exp` differences would break goldens, replays and server verification | dmath everywhere (determinism test), exact goldens on waveforms, verify `samples` checked by the server registry test, a Node-18-vs-Node-22 CI job running the goldens |
 | **Leaderboard verify cost** | the server caps verification at 2000 ms CPU | verify perf test ≤ 1000 ms per must-ship ticket's worst board; no Monte Carlo in verify; verification cache by solution hash on the server |
 | **Region seam rots** (only `global` ships) | untested seams break silently | pack-switch solvability + leak tests in CI on every commit (§12.4) |
@@ -1511,16 +1511,16 @@ export const nodeVerifier: GameVerifier = adaptForScores(verify, { // thin adapt
 - Flow on a pass: `exportSolution()` → `Scores.submit(levelId, code, metrics)` → the bench report shows the local result immediately; the histogram fills in
   when `histogram_ready` arrives (cached first, then fresh). Offline is silent: a small "queued" chip on the report, sent later.
 - `region_ruleset` = the active pack id; `game_version` = `config/version`. QA and CI use `CB_SCORES=mock` (the addon's in-process mock) and never touch a
-  real server.
+  production server.
 
 ### 11.5 Histogram UI and the empty-state fallback
 - The bench report has a strip of four mini-histograms (one per metric) with the player's marker, the par line (from the level file) and "top N%" text;
   tapping one opens the full histogram and the top-10 list (nicknames optional). Bars use the phosphor palette on the CRT style; colour is not the only cue
   (marker + text).
 - **Empty state / offline with no cache**: the strip shows the **solver-bot population** distribution from `data/par/<id>.json` (the same data that sets par),
-  drawn hatched and labelled **"Practice population (simulated). Online scores appear when available."** It is never mixed with real data and never shown
+  drawn hatched and labelled **"Practice population (simulated). Online scores appear when available."** It is never mixed with players' scores and never shown
   as if it were players (this replaces the original "simulated bot histograms" as the primary feature).
-- With fewer than 20 real players on a board the real histogram is shown with the label "Early days: N players".
+- With fewer than 20 players on a board the players' histogram is shown with the label "Early days: N players".
 
 ---
 
@@ -1533,7 +1533,7 @@ Physics and engine rules are region-independent. Everything regional is data in 
 | Pack | Status in v0.1 | Setting | Currency | Mains | Exam-bridge set | Syllabus map |
 |---|---|---|---|---|---|---|
 | `global` | **ships, default** | Lantern Lane, Wren (§1.2) | US$ (`$1.25`, `1,234.5`) | 230 V ±10 %, 50 Hz (IEC 60038) | neutral exam-style cards (§2.5, §2.8 EB tickets as written) | generic topic tags |
-| `in` | **draft, not shipped** (debug builds only) | Signal Gully, Meera Aunty (Appendix A) | ₹ (USD × 84 at the pack's stated rate; lakh grouping) | 230 V ±10 %, 50 Hz (CEA regulations) | NCERT/JEE cards (real quotes allowed with sources; to be sourced in v0.2) | NCERT XII chapters + JEE topics |
+| `in` | **draft, not shipped** (debug builds only) | Signal Gully, Meera Aunty (Appendix A) | ₹ (USD × 84 at the pack's stated rate; lakh grouping) | 230 V ±10 %, 50 Hz (CEA regulations) | NCERT/JEE cards (quotes allowed with sources; to be sourced in v0.2) | NCERT XII chapters + JEE topics |
 | `na` | **test-only** (never shipped) | `global` names | US$ | 120 V, 60 Hz (ANSI C84.1 range A: 114-126 V; the ticket conditions use ±10 % like the others) | `global` set | generic |
 
 ### 12.2 What lives in a pack (`src/regions/<id>/index.ts` via core `defineRegion` + `data.ts`; `godot/regions/<id>/`)
@@ -1585,7 +1585,7 @@ spec card plus a **target band** drawn on your scope. You build on a perfboard, 
 
 Why this frame:
 - It is a *game* and not a lab. You are someone who can fix anything, and every success has a face: the customer, their gadget and their reaction.
-- Every spec is realistic: real gadgets with real loads, mains tolerance (230 V ±10 %, as in India), battery sag and heat inside a box.
+- Every spec is a household gadget with a stated load, mains tolerance (230 V ±10 %, as in India), battery sag and heat inside a box.
 - It is relatable for the core Indian audience: everyone knows a Lamington Road or Nehru Place stall, and the capacitive-dropper
   nightlight and the 7805 wall-wart are things they have seen. It still reads as charming and exotic to the global Steam audience.
 - It supports an upgrade loop that is also the syllabus: new instruments (2-channel scope, function generator, thermal camera,
@@ -1620,7 +1620,7 @@ voices (as GIGAWATT's named customers did). There is no combat, no timer pressur
 - Currency ₹, integer rupees, lakh/crore grouping (`1,23,456`); price = US$ (qty 100, same source as `global`) × 84 ₹/$ (the original design's fixed rate;
   the pack states the rate and its date in the Codex). Cost leaderboards are separate per ruleset.
 - Mains: 230 V rms ±10 %, 50 Hz ±1 %, per the CEA (Measures relating to Safety and Electric Supply) Regulations **[R: citation to be verified before the pack ships]**.
-- Exam-bridge set: NCERT XII / JEE cards. User decision 1 allows real NCERT/JEE quotes with sources; the v0.1 cards are "NCERT-style (adapted)" with our own
+- Exam-bridge set: NCERT XII / JEE cards. User decision 1 allows NCERT/JEE quotes with sources; the v0.1 cards are "NCERT-style (adapted)" with our own
   numbers, and four AC oracles are "NCERT XII ch7 exercise (type recalled, number unverified)". A source-checking pass with the physical books is
   required before this pack ships.
 - Syllabus map: concept ids → NCERT Physics XII chapter/section (ch2 capacitance, ch3 current electricity, ch6 EMI, ch7 AC, ch14 semiconductors) and JEE Main topics.
