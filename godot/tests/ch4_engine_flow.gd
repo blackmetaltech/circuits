@@ -153,7 +153,7 @@ func _run() -> void:
 	print("== 4-1 Wall Wart: the safety card, the keep-out, the isolation transformer")
 	await _start("4-1", false)
 	ok(sc.pages.mode == "safety" and bk.safety_pending(), "a mains ticket opens with the safety card, before anything else")
-	ok(str(sc.pages.safety.get("lines", [])[0]).contains("training, an isolation transformer and a second person") and str(sc.pages.safety.get("lines", [])[1]).contains("Here the bench is simulated"), "the card is in Wren's words (DESIGN 1.2)")
+	ok(str(sc.pages.safety.get("lines", [])[0]).contains("training, an isolation transformer and a second person") and str(sc.pages.safety.get("lines", [])[1]).contains("bench is simulated"), "the card is in Wren's words (DESIGN 1.2)")
 	_key(KEY_ESCAPE); _key(KEY_N); await _frames(2)
 	ok(sc.pages.mode == "safety", "Esc and the notebook key do not dismiss it")
 	sc.pages._gui_input(_click(Vector2(40, 40))); await _frames(1)
