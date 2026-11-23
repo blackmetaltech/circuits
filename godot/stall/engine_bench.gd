@@ -337,6 +337,13 @@ func move_part(uid: String, x: int, y: int, rot: int) -> Dictionary:
 	_after_edit()
 	return {"ok": r.get("ok", false), "msg": str(r.get("message", "")) if not r.get("ok", false) else ""}
 
+## Change a placed part's value in place: its legs and wires stay (0.5: a repair swaps a value, it does not rebuild the board).
+## The engine snaps to the values the ticket's box stocks and refuses others.
+func set_value(uid: String, v: float) -> Dictionary:
+	var r := _act("setValue", [uid, v])
+	if bool(r.get("ok", false)): _after_edit()
+	return r
+
 func delete_part(uid: String) -> void:
 	var p := part_by(uid)
 	if p.is_empty() or p.fixed: return

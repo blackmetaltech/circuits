@@ -1083,6 +1083,7 @@ func _unhandled_input(e: InputEvent) -> void:
 			if mb.pressed:
 				var fam: Dictionary = over_tray.fam
 				tray_step(_fam_key(fam), fam.items, tray_index(fam) + (1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else -1))
+		elif mb.pressed and tool == "select" and _wheel_value(mb.position, 1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else -1): pass
 		elif mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed: g_dist = clampf(g_dist * 0.9, 0.12, 1.6)
 		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed: g_dist = clampf(g_dist * 1.1, 0.12, 1.6)
 		elif mb.button_index == MOUSE_BUTTON_MIDDLE: _drag = "pan" if mb.pressed else ""
@@ -1279,7 +1280,10 @@ func _set_pick_hl(it: Dictionary) -> void:
 		var n = parts3d.get(str(d.id), null) if d.kind == "part" else wires3d.get(str(d.id), null)
 		if n and is_instance_valid(n) and n.has_method("set_highlight"): n.set_highlight(on)
 	_pick_hl = it
-	hover_tip = ("%s: right-click removes it" % str(it.get("label", "wire"))) if not it.is_empty() else ""
+	var has_vals := false
+	if not it.is_empty() and str(it.kind) == "part":
+		for p in backend.parts: if str(p.uid) == str(it.id) and p.get("value", null) != null and not bool(p.get("fixed", false)): has_vals = true
+	hover_tip = ("%s: %sright-click removes it" % [str(it.get("label", "wire")), "wheel changes the value, " if has_vals else ""]) if not it.is_empty() else ""
 	changed.emit()
 var hover_tip := ""
 
@@ -1610,4 +1614,28 @@ func _demo(name: String) -> void:
 			at.call(1.2, func(): toggle_power())
 			at.call(3.0, func(): undo())
 			at.call(4.2, func(): toggle_power())
+
+## 0.5: the wheel over a placed part steps its value through what the box stocks for it (wires stay), so a repair swaps a value
+## in place. False when the mouse is not over a part with values (the wheel then zooms as before).
+func _wheel_value(mp: Vector2, dir: int) -> bool:
+	if not (mb_wheel_ok()): return false
+	var it := _pick_item(mp)
+	if it.is_empty() or str(it.kind) != "part": return false
+	var part := {}
+	for p in backend.parts: if str(p.uid) == str(it.id): part = p
+	if part.is_empty() or part.get("value", null) == null or bool(part.get("fixed", false)): return false
+	var vals: Array = []
+	for d in drawer():
+		if str(d.get("partId", "")) == str(part.partId) and d.get("value", null) != null and not vals.has(float(d.value)): vals.append(float(d.value))
+	if vals.size() < 2: return false
+	vals.sort()
+	var cur := float(part.value); var i := 0
+	for k in vals.size(): if absf(float(vals[k]) - cur) <= absf(float(vals[i]) - cur): i = k
+	var j := clampi(i + dir, 0, vals.size() - 1)
+	if j == i: note = "That is the %s value in the box." % ("largest" if dir > 0 else "smallest"); changed.emit(); return true
+	var r: Dictionary = backend.set_value(str(it.id), float(vals[j]))
+	note = str(r.get("message", r.get("msg", ""))); sync_board(); changed.emit()
+	return true
+
+func mb_wheel_ok() -> bool: return backend.has_method("set_value") and mode in ["job", "free"]
 
