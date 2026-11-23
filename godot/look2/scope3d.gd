@@ -24,6 +24,8 @@ class Screen extends Control:
 	const DIVW := 76.0
 	const DIVH := 39.0
 	var samples: Array = []
+	var samples2: Array = []   ## 0.7: channel 2 (D-tools-07), cyan, on its own volts per division
+	var vdiv2 := 5.0
 	var dt := 78e-6
 	var vdiv := 5.0
 	var tdiv := 0.002
@@ -88,6 +90,16 @@ class Screen extends Control:
 			var x := GX0 + float(i) * dt / tdiv * DIVW
 			if x > GX0 + 10 * DIVW: break
 			pts.append(Vector2(x, _vy(float(samples[i]))))
+		var pts2 := PackedVector2Array()
+		for i in samples2.size():
+			var x2 := GX0 + float(i) * dt / tdiv * DIVW
+			if x2 > GX0 + 10 * DIVW: break
+			pts2.append(Vector2(x2, clampf(_gy() - float(samples2[i]) / vdiv2 * DIVH, GY0 - 2.0, GY0 + 8.0 * DIVH + 2.0)))
+		if pts2.size() > 1:
+			var cy := Color(0.25, 0.8, 1.0)
+			draw_polyline(pts2, Color(cy.r, cy.g, cy.b, 0.10), 9.0, true)
+			draw_polyline(pts2, Color(cy.r, cy.g, cy.b, 0.24), 5.0, true)
+			draw_polyline(pts2, cy, 1.8, true)
 		if pts.size() > 1:
 			var yel := Color(1.0, 0.87, 0.14)
 			draw_polyline(pts, Color(yel.r, yel.g, yel.b, 0.10), 9.0, true)
@@ -117,6 +129,8 @@ class Screen extends Control:
 		draw_circle(Vector2(30, 39), 15, badge)
 		draw_string(_ui, Vector2(62, 61), _fmt_t(tdiv), HORIZONTAL_ALIGNMENT_LEFT, -1, FS, Color(0.86, 0.9, 0.92))
 		draw_string(_ui, Vector2(0, 61), "%s V/div" % _trim(vdiv), HORIZONTAL_ALIGNMENT_RIGHT, 786, FS, Color(1.0, 0.87, 0.14))
+		if not samples2.is_empty():   # CH2's scale under CH1's, in its trace colour
+			draw_string(_ui, Vector2(0, 61), "%s V/div" % _trim(vdiv2), HORIZONTAL_ALIGNMENT_RIGHT, 560, FS, Color(0.25, 0.8, 1.0))
 		# bottom strip: the first two measurements (max, min), as large as the bar above
 		draw_rect(Rect2(0, 402, 800, 78), Color(0.055, 0.065, 0.075))
 		draw_line(Vector2(0, 402), Vector2(800, 402), Color(0.25, 0.28, 0.3), 1.0)
@@ -206,6 +220,9 @@ func _build_probe() -> void:
 ## World position of the hook tip of the parked probe.
 func probe_tip_world() -> Vector3:
 	return _probe.to_global(_tip)
+
+func set_samples2(v: Array, vdiv: float) -> void:
+	_screen.samples2 = v; _screen.vdiv2 = vdiv; _screen.queue_redraw()
 
 func set_samples(v: Array, dt: float, vdiv: float, tdiv: float) -> void:
 	_screen.samples = v; _screen.dt = dt; _screen.vdiv = vdiv; _screen.tdiv = tdiv; _screen.queue_redraw()

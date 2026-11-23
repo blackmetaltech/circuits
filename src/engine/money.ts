@@ -28,7 +28,14 @@ export function tipLeft(s: NodeState, def: LevelDef, tk: TicketState): number {
 }
 
 export const upgradePrice = (s: NodeState, id: string): number => prices(s)[`upgrade:${id}`] ?? 0;
-export const hasDial = (s: NodeState): boolean => s.mode === 'sandbox' || s.progress.upgrades.includes(DIAL);
+/** 0.7 (D-tools-07): the bench tools the wallet buys, cheapest first. Each changes a diagnosis; the sandbox has them all. */
+export const TOOLS = [
+  { id: DIAL, nameKey: 'upgrade.dial.name', whatKey: 'upgrade.dial.what' },
+  { id: 'thermal-camera', nameKey: 'upgrade.camera.name', whatKey: 'upgrade.camera.what' },
+  { id: 'scope-ch2', nameKey: 'upgrade.ch2.name', whatKey: 'upgrade.ch2.what' },
+] as const;
+export const hasTool = (s: NodeState, id: string): boolean => s.mode === 'sandbox' || s.progress.upgrades.includes(id);
+export const hasDial = (s: NodeState): boolean => hasTool(s, DIAL);
 
 /** A condition's name for the dial: the i18n key cond.<id> when there is one, else the id as the level wrote it. */
 const COND_KEYS: Record<string, string> = { fresh: 'cond.fresh', tired: 'cond.tired', nominal: 'cond.nominal', reset: 'cond.reset' };

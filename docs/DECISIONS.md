@@ -223,3 +223,27 @@
   capacitor instead (220 to 470 uF: 1.98 s to 4.22 s), because that result does not depend on the transistor's gain. Cut, written
   down: no new conditions on 1-3 or 2-1; the TIP120 gain fix (solve the stage gain so the composite meets 1000 at 0.5 A with the
   shunts in) moves every TIP120 golden and waits for the lead's call.
+
+- **D-first-timer-07 (2026-11-25, Ingrid Solheim, Game Lead).** The five 1-1 blockers from Leo's 0.6 run, each fixed where it
+  happened. (1) Esc also drops the lit part; the wheel cannot change it until the pointer leaves and comes back. (2) Right-click
+  removes only what is lit, and a wire is named by its ends ("Removed the wire from IN to the heater leg. Ctrl+Z puts it back.").
+  (3) Picking a part says what to do next, and a drag from the tray released over the board places it. (4) A wire end snaps one
+  hole over only when exactly one leg or pad is that close; a wire that joins a source's plus straight to its minus is refused
+  in the bench with the reason, before the release (the ring turns red). The engine only warns (an agent or a test may still
+  draw it), because a refusal there would change what the solver accepts. (5) The key values of fixed parts are a ticket line
+  at spec size ("On the board: a 50 ohm heater, OUT to GND. The supply gives 12 V at IN."). Strongest argument against (4)
+  (nobody has made it yet; I write it down myself): a short is a lesson, and a refusal takes it away. Answer: the lesson the first chapter teaches is
+  the current limit, and a short on a bench supply only trips its limit with no reading to learn from; 4-x keep their fuses
+  for that lesson. Cut, written down: a confirmation before removing a part (undo is enough), a drag-to-place for parts already
+  on the board (move stays click-then-click).
+
+- **D-tools-07 (2026-11-25, Ingrid Solheim, Game Lead).** Dagny (0.6): "after the $15 dial the wallet buys nothing". A ladder of
+  three bench tools, each changing a diagnosis: the condition dial ($15, 0.6), the thermal camera ($30: every job, not only
+  chapter 4's; see a part heat before it burns) and the scope's second channel ($45: input and output on one screen, which
+  chapter 6's gain, clipping and slew jobs are built to show). They are offered on the ticket after a job is paid (the moment
+  the wallet has just grown), two at a time, greyed with the price while the money is short. The testbed and the free bench own
+  them all; learning stays free. The second channel is gated in the bench only: the engine's attachProbe still takes channel 2
+  in any mode (tests and agents use it), so the purchase buys the clip and the trace, not a solver feature. Strongest argument
+  against (Mateo, D-money-06): tools should be objects bought at the bench, not keys on a ticket. Answer: agreed as the
+  direction; the shelf objects need models and a place on the bench, and chapter 6 comes first. Cut, written down: Dagny's
+  current clamp, part tester and organiser; tool boxes on a shelf; a price check by Mateo of $30 and $45 against the fees.

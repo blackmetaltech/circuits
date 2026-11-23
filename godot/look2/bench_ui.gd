@@ -377,6 +377,7 @@ func _job_card() -> void:
 		_ink(v, "Collected by %s. Paid %s." % [str(t.get("customer", "")), bench.paid_text()], 19, INK, f_sans)
 		var st := Stamp.new(); st.font = f_engr; st.custom_minimum_size = Vector2(0, 90); st.mouse_filter = Control.MOUSE_FILTER_IGNORE; v.add_child(st)
 		_key(v, "Next job", func(): bench.next_job(), "", true)
+		_tool_shelf(v)
 		return
 	if bench.backend.safety_pending():
 		_safety_card(v); return
@@ -439,6 +440,18 @@ func _safety_card(v: VBoxContainer) -> void:
 
 ## 0.6 condition dial: on a ticket the bench tests in more than one condition, the paper offers the dial (bought once with the
 ## wallet) and, once owned, one key per condition for the live bench. The formal TEST still runs every condition.
+## 0.7 tool ladder (D-tools-07, Dagny): after a job is paid, the next tools on the shelf, with what each one shows and its price.
+## Too little money: the key is greyed and still says the price.
+func _tool_shelf(v: VBoxContainer) -> void:
+	var left: Array = bench.tools().filter(func(t): return not bool(t.owned))
+	if left.is_empty(): return
+	_ink(v, "Bench tools. Wallet %s." % bench.backend.wallet_text, 17, INK, f_semi)
+	for t in left.slice(0, 2):
+		var id := str(t.id)
+		var k := _key(v, "Buy the %s  %s" % [str(t.name).to_lower(), str(t.priceText)], func(): bench.buy_tool(id), "", false, false)
+		k.disabled = bench.backend.wallet_minor < int(t.price)
+		_ink(v, str(t.what), 15, Color(0.30, 0.28, 0.25), f_sans)
+
 func _dial_row(v: VBoxContainer) -> void:
 	var d = bench.backend.bench_q.get("dial", null)
 	if not (d is Dictionary) or (d.get("conds", []) as Array).size() < 2 or bench.backend.passed: return
@@ -610,14 +623,22 @@ func _default_idx(items: Array) -> int:
 	return items.size() / 2
 
 ## SI value text with 3 significant digits: 0.000072 V -> "72.0 µV", 0.0171478 A -> "17.1 mA".
-static func si(v: float, unit: String) -> String:
+static func si(v: float, unit: String, extra := 0) -> String:
 	var a := absf(v)
 	for e in [[1e3, "k"], [1.0, ""], [1e-3, "m"], [1e-6, "µ"]]:
 		if a >= float(e[0]) * 0.9995 or e[1] == "µ":
 			var x := v / float(e[0])
-			var d := 2 if absf(x) < 10.0 else (1 if absf(x) < 100.0 else 0)
+			var d := (2 if absf(x) < 10.0 else (1 if absf(x) < 100.0 else 0)) + extra
 			return "%s %s%s" % [String.num(x, d), e[1], unit]
-	return "%s %s" % [String.num(v, 3), unit]
+	return "%s %s" % [String.num(v, 3 + extra), unit]
+
+## The number a si() text stands for, in base units ("14 mA" -> 0.014).
+static func si_value(t: String, unit: String) -> float:
+	var parts := t.split(" ", false)
+	if parts.is_empty(): return 0.0
+	var u := parts[1] if parts.size() > 1 else unit
+	var p := u.substr(0, maxi(0, u.length() - unit.length()))
+	return float(parts[0]) * float({"k": 1e3, "": 1.0, "m": 1e-3, "µ": 1e-6}.get(p, 1.0))
 
 func _canvas_h() -> float: return get_viewport().get_visible_rect().size.y
 
@@ -641,6 +662,7 @@ func _tools() -> void:
 	_key(h, "Select", func(): bench.esc(), "Esc", false, bench.tool == "select")
 	_key(h, "Wire", func(): bench.set_tool("wire"), "W", false, bench.tool == "wire")
 	_key(h, "Scope probe", func(): bench.set_tool("probe"), "P", false, bench.tool == "probe")
+	if bench.mode in ["job", "free"] and bench.has_tool("scope-ch2"): _key(h, "Scope CH2", func(): bench.set_tool("probe2"), "Shift+P", false, bench.tool == "probe2")
 	_key(h, "Meter leads", func(): bench.set_tool("red"), "M", false, bench.tool in ["red", "black"])
 	_key(h, "Undo", func(): bench.undo(), "Ctrl+Z")
 	_key(h, "Schematic", func(): toggle_schematic(), "Tab", false, schem)

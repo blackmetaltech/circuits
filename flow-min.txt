@@ -8,7 +8,7 @@ ch5_engine_flow 46
 drag_flow 6
 layout_flow 8710
 look2_async_flow 7
-look2_ch1_flow 130
+look2_ch1_flow 144
 look2_ch23_flow 123
 look2_ch45_flow 247
 look2_frame_flow 72
@@ -16,6 +16,7 @@ look2_pad_flow 18
 look2_save_flow 4
 look2_swap_flow 17
 look2_testbed_flow 40
+look2_tools_flow 18
 n5_flow 96
 save_migrate_flow 13
 sfx_flow 42

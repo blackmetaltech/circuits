@@ -52,7 +52,8 @@ var ticket: Dictionary = {}         ## scene-facing ticket (see _load_ticket)
 var card: Dictionary = {}           ## ticketCard()
 var parts: Array = []               ## placed parts, scene shape {uid, partId, value, label, kind, x, y, rot, flip, fixed, variant, tag, pins:[[x,y],..]}
 var wires: Array = []               ## [{wid, a, b, path}]
-var probes := {"red": null, "black": null, "ch1": null}
+var probes := {"red": null, "black": null, "ch1": null, "ch2": null}
+var scope2_q: Dictionary = {}       ## 0.7: the scope query for channel 2 (D-tools-07), {} when its clip is not on the board
 var dial := "V"                     ## OFF | V | mA | Ω
 var powered := false
 var locked := false                 ## the engine's live LOCK (band held, powered, nothing smoked)
@@ -126,9 +127,10 @@ func _live_worker() -> void:
 		var r: Dictionary = bridge._req({"fn": "act", "name": "advance", "args": [int(job.n)]})
 		var f: Dictionary = bridge._req({"fn": "q", "name": "liveFrame", "args": []})
 		var sc: Dictionary = bridge._req({"fn": "q", "name": "scope", "args": [1]})
+		var sc2: Dictionary = bridge._req({"fn": "q", "name": "scope", "args": [2]}) if bool(job.get("ch2", false)) else {}
 		var d: Dictionary = bridge._req({"fn": "q", "name": "dmm", "args": []})
 		_lmx.lock()
-		_done = {"epoch": int(job.epoch), "game": r.get("game", null), "frame": f.get("result", {}), "scope": sc.get("result", {}), "dmm": d.get("result", {})}
+		_done = {"epoch": int(job.epoch), "game": r.get("game", null), "frame": f.get("result", {}), "scope": sc.get("result", {}), "scope2": sc2.get("result", {}), "dmm": d.get("result", {})}
 		_busy = false
 		_lmx.unlock()
 
@@ -145,11 +147,12 @@ func _step_async(n: int) -> void:
 		bridge._cache.clear()
 		frame = got.frame if got.frame is Dictionary else {}
 		var sc = got.scope; scope_q = sc if sc is Dictionary else {}
+		var sc2 = got.get("scope2", {}); scope2_q = sc2 if sc2 is Dictionary else {}
 		var d = got.dmm; dmm_q = d if d is Dictionary else {}
 		_apply_live()
 		_rebuild_model()
 	if not busy:
-		_lmx.lock(); _job = {"n": n, "epoch": _epoch}; _busy = true; _lmx.unlock()
+		_lmx.lock(); _job = {"n": n, "epoch": _epoch, "ch2": probes.get("ch2", null) != null}; _busy = true; _lmx.unlock()
 		_sem.post()
 func _q(name: String, args: Array = []): return bridge.q(name, args)
 
@@ -166,7 +169,7 @@ func open_ticket(id: String) -> bool:
 		return false
 	powered = false; locked = false; passed = false; smoked.clear(); temps.clear(); hold = 0.0; t = 0.0; _accum = 0.0; _was_lock = false
 	jockey_step_i = 1   # a new ticket starts at the 1 mm jockey step
-	probes = {"red": null, "black": null, "ch1": null}; dial = "OFF"; dmm_used = false; dmm_loaded = false
+	probes = {"red": null, "black": null, "ch1": null, "ch2": null}; scope2_q = {}; dial = "OFF"; dmm_used = false; dmm_loaded = false
 	frame = {}; last_result = {}; _bench_key = ""; _smoke_seen.clear(); _coach_max = 0
 	# a repair's parts that arrived burnt (0.4.0, Noor): the first frame that "sees" them smoked must not read as a fresh burn
 	# ("LED burnt: too much current") of a circuit the player wired right. Filled before _load_ticket, whose first frame already
@@ -474,15 +477,16 @@ func set_running(on: bool) -> void: _act("setRunning", [on])
 ## which: "red" | "black" (DMM leads) | "ch1" (the scope clip). Returns the engine's answer so the scene can show a teaching refusal.
 func set_probe(which: String, pad) -> Dictionary:
 	var r: Dictionary
-	if which == "ch1":
-		r = _act("attachProbe", [1, pad]) if pad != null else _act("detachProbe", [1])
+	if which == "ch1" or which == "ch2":
+		var c := 1 if which == "ch1" else 2
+		r = _act("attachProbe", [c, pad]) if pad != null else _act("detachProbe", [c])
 	else:
 		r = _act("dmmLead", [which, pad])
 	if r.get("ok", false): probes[which] = pad; _bench_key = ""   # something has been measured: a refused bench may try again by itself
 	else: probes[which] = null
-	dmm_used = dmm_used or (pad != null and which != "ch1")
+	dmm_used = dmm_used or (pad != null and not which.begins_with("ch"))
 	_refresh_board(); _refresh_live(); _rebuild_model()
-	if which != "ch1" and probes.red != null and probes.black != null and dial == "V" and powered: dmm_loaded = true
+	if not which.begins_with("ch") and probes.red != null and probes.black != null and dial == "V" and powered: dmm_loaded = true
 	return {"ok": bool(r.get("ok", false)), "msg": str(r.get("message", "")) if not r.get("ok", false) else ""}
 
 func set_dial(mode: String) -> void:
@@ -582,8 +586,8 @@ func _refresh_board() -> void:
 	selectors = bench_q.get("selectors", []) if bench_q.get("selectors", null) is Array else []
 	var ins: Dictionary = bench_q.get("instruments", {})
 	var sc: Dictionary = ins.get("scope", {}) if ins.get("scope", null) is Dictionary else {}
-	probes.ch1 = null
-	for pr in sc.get("probes", []): if int(pr.ch) == 1: probes.ch1 = [int(pr.pad[0]), int(pr.pad[1])]
+	probes.ch1 = null; probes.ch2 = null
+	for pr in sc.get("probes", []): probes["ch%d" % int(pr.ch)] = [int(pr.pad[0]), int(pr.pad[1])]
 	var dm: Dictionary = ins.get("dmm", {}) if ins.get("dmm", null) is Dictionary else {}
 	probes.red = [int(dm.red[0]), int(dm.red[1])] if dm.get("red", null) is Array else null
 	probes.black = [int(dm.black[0]), int(dm.black[1])] if dm.get("black", null) is Array else null
@@ -644,6 +648,8 @@ func _refresh_live() -> void:
 	else: frame = {}
 	var sc = _q("scope", [1])
 	scope_q = sc if sc is Dictionary else {}
+	var sc2 = _q("scope", [2]) if probes.get("ch2", null) != null else {}
+	scope2_q = sc2 if sc2 is Dictionary else {}
 	var d = _q("dmm")
 	dmm_q = d if d is Dictionary else {}
 	_apply_live()
@@ -902,6 +908,7 @@ func _rebuild_model() -> void:
 	for p in parts: bd.parts.append(p)
 	for w in wires: bd.wires.append({"wid": w.wid, "path": w.path})
 	if probes.ch1 != null: bd.probes.append({"ch": 1, "pad": probes.ch1})
+	if probes.ch2 != null: bd.probes.append({"ch": 2, "pad": probes.ch2})
 	var sets: Array = []
 	for n in frame.get("nodes", []): sets.append({"v": float(n.v), "pads": n.pads})
 	var cur_w := {}; var cur_p := {}; var spd_w := {}; var spd_p := {}; var rat := {}; var temps_m := {}; var smoked_l: Array = []

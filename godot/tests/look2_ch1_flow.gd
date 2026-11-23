@@ -133,6 +133,9 @@ func _run() -> void:
 			ok(not wb.backend.passed, "the bench fails the device as it came in")
 			if wb.backend.powered: wb.toggle_power()
 			if id == "1-1":
+				# 0.7 (Leo, 1-2: "13.97 mA" read "14 mA" and failed): a value just outside the band shows the digits that say so
+				ok(wb.band_si("led", 0.009996, "A") == "9.996 mA", "1-1: 9.996 mA under the 10 mA edge is not shown as 10 mA (%s)" % wb.band_si("led", 0.009996, "A"))
+				ok(wb.band_si("led", 0.01512, "A") == BenchUI.si(0.01512, "A"), "1-1: a value well inside the band keeps the short form (%s)" % wb.band_si("led", 0.01512, "A"))
 				# 0.7 (Leo): right-click on the burnt LED fits a fresh one; the burn explanation goes with the burnt part
 				wb._hit("psu_output"); await _frames(3)
 				var bu := ""

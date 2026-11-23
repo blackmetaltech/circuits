@@ -30,6 +30,7 @@ import { liveRig } from './ticket-run';
 import { balanceFormula, rSide } from './nullcheck';
 import { say } from './text';
 import { buildDebrief, starsRule } from './debrief';
+import { hasTool } from './money';
 import { makeUiQueries, scopeTarget, shoebox } from './ui';
 
 const regionString = (region: string, key: string): string => { const v = REGIONS.get(region).strings[key]; if (v === undefined) throw new Error(`Region '${region}' has no string '${key}'.`); return v; };
@@ -238,7 +239,7 @@ export function makeQueries(defs: readonly LevelDef[]): Record<string, QueryFn<N
         mains: def.mains ? { safetyRead: o.tk.safetyRead === true, firstView: !s.progress.codexSeen.includes('mains-safety'), vrms: (def.supplies.find((x) => x.kind === 'mains') as { vrms: number } | undefined)?.vrms ?? 0, hz: (def.supplies.find((x) => x.kind === 'mains') as { f: number } | undefined)?.f ?? 0,
           ribbon: t('safety.ribbon'), title: t('safety.card.title'), lines: [t('safety.card.1'), t('safety.card.2'), t('safety.card.3'), t('safety.card.4', { mentor })], button: t('safety.card.button'), keepOut: t('safety.keepout'), isolation: t('safety.isolation') } : null,
         selectors: (def.selectors ?? []).map((sd) => ({ id: sd.id, label: t(sd.labelKey), options: sd.options.map((x) => t(x.labelKey)), index: o.tk.sel?.[sd.id] ?? sd.initial })),
-        camera: def.chapter === 4,
+        camera: def.chapter === 4 || hasTool(s, 'thermal-camera'),   // 0.7 (D-tools-07): bought, it comes to every job
       };
     },
     /** The board with part names, rotated pin pads and ratings, probes and meter. */

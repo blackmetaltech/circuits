@@ -551,6 +551,8 @@ func hand_back() -> void:
 	set_tool("select")
 	if probe_node: probe_node.visible = false
 	if probe_cable: probe_cable.visible = false
+	if probe2_node: probe2_node.visible = false
+	if probe2_cable: probe2_cable.visible = false
 	backend.set_probe("ch1", null)
 	case_node.set_state("handed"); handed = true; if sfx: sfx.play("page", 0.7)
 	if not backend.powered: backend.set_power(true)
@@ -743,36 +745,49 @@ func sync_board() -> void:
 	_refresh_targets()   # 0.5: the target rings follow the board
 
 func _probes() -> void:
-	var pad = backend.probes.get("ch1", null)
+	_probe_draw(1); _probe_draw(2)
+
+## 0.7: one scope probe on the board per channel (CH1 yellow ring, CH2 cyan, D-tools-07), with its ground clip and its cable to the scope.
+var probe2_node: Node3D
+var probe2_cable: MeshInstance3D
+func _probe_draw(ch: int) -> void:
+	var pad = backend.probes.get("ch%d" % ch, null)
+	var node: Node3D = probe_node if ch == 1 else probe2_node
+	var cable: MeshInstance3D = probe_cable if ch == 1 else probe2_cable
 	if pad == null:
-		if probe_node: probe_node.visible = false
-		if probe_cable: probe_cable.visible = false
+		if node: node.visible = false
+		if cable: cable.visible = false
 		return
-	if probe_node == null:
-		probe_node = Node3D.new(); add_child(probe_node)
+	var rc := Color(0.95, 0.8, 0.1) if ch == 1 else Color(0.2, 0.75, 0.95)
+	if node == null:
+		node = Node3D.new(); add_child(node)
 		var pm := MeshKit.mat(Color(0.14, 0.145, 0.155), 0.55)
-		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0.001, 0.012, 0.003), Vector3(0.012, 0.017, 0.045)]), 0.0022, 16), pm)
-		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0.0001, 0.0118, 0.0004), Vector3(0.0012, 0.0124, 0.0048)]), 0.0029, 16), pm)   # finger guard
-		MeshKit.add(probe_node, MeshKit.tube(PackedVector3Array([Vector3(0, 0.003, 0), Vector3(0, 0.013, -0.002)]), 0.0014, 10), MeshKit.mat(Color(0.25, 0.26, 0.28), 0.5))
+		MeshKit.add(node, MeshKit.tube(PackedVector3Array([Vector3(0.001, 0.012, 0.003), Vector3(0.012, 0.017, 0.045)]), 0.0022, 16), pm)
+		MeshKit.add(node, MeshKit.tube(PackedVector3Array([Vector3(0.0001, 0.0118, 0.0004), Vector3(0.0012, 0.0124, 0.0048)]), 0.0029, 16), pm)   # finger guard
+		MeshKit.add(node, MeshKit.tube(PackedVector3Array([Vector3(0, 0.003, 0), Vector3(0, 0.013, -0.002)]), 0.0014, 10), MeshKit.mat(Color(0.25, 0.26, 0.28), 0.5))
 		var hook := PackedVector3Array()
 		for i in 10: hook.append(Vector3(0.0012 * sin(i * 0.6), 0.003 - i * 0.0004, 0.0012 * cos(i * 0.6) - 0.0012))
-		MeshKit.add(probe_node, MeshKit.tube(hook, 0.00035, 6), MeshKit.m("steel"))
+		MeshKit.add(node, MeshKit.tube(hook, 0.00035, 6), MeshKit.m("steel"))
 		var ring := TorusMesh.new(); ring.inner_radius = 0.0021; ring.outer_radius = 0.0028
-		MeshKit.add(probe_node, ring, MeshKit.mat(Color(0.95, 0.8, 0.1), 0.4, 0.0, {"emission": Color(0.95, 0.8, 0.1), "emission_energy": 0.4}), Vector3(0.009, 0.016, 0.034), Vector3(1.46, deg_to_rad(-15.0), 0))
-	probe_node.visible = true
+		MeshKit.add(node, ring, MeshKit.mat(rc, 0.4, 0.0, {"emission": rc, "emission_energy": 0.4}), Vector3(0.009, 0.016, 0.034), Vector3(1.46, deg_to_rad(-15.0), 0))
+		if ch == 1: probe_node = node
+		else: probe2_node = node
+	node.visible = true
 	var top := board.pad_world(int(pad[0]), int(pad[1]))
-	probe_node.global_position = top
+	node.global_position = top
 	var from := top + Vector3(0.012, 0.017, 0.045)
-	if probe_node.has_meta("gnd"): (probe_node.get_meta("gnd") as Node).queue_free()
+	if node.has_meta("gnd"): (node.get_meta("gnd") as Node).queue_free()
 	for c in board.connectors:
 		if str(c.role) == "ground":
 			var g := board.pad_world(int(c.pad[0]), int(c.pad[1])) + Vector3(0, 0.012, 0)
 			var gm := MeshKit.add(self, MeshKit.tube(_catenary(top + Vector3(0.006, 0.014, 0.022), g, 0.01, 12), 0.0007, 6), MeshKit.m("black_plastic"))
 			MeshKit.add(gm, MeshKit.rounded_box(Vector3(0.0025, 0.002, 0.007), 0.0006), MeshKit.m("black_plastic"), g)
-			probe_node.set_meta("gnd", gm); break
-	var to: Vector3 = (scope.global_position + Vector3(0.11, 0.03, 0.08)) if scope else Vector3(-0.2, 0.03, -0.17)
-	if probe_cable: probe_cable.queue_free()
-	probe_cable = MeshKit.add(self, MeshKit.tube(MeshKit.round_corners(PackedVector3Array([from, from + Vector3(0.0, -0.01, 0.05), Vector3(to.x, 0.004, from.z + 0.05), to]), 0.04, 6), 0.0013, 8), MeshKit.mat(Color(0.12, 0.12, 0.13), 0.55))
+			node.set_meta("gnd", gm); break
+	var to: Vector3 = (scope.global_position + Vector3(0.11 + 0.035 * (ch - 1), 0.03, 0.08)) if scope else Vector3(-0.2, 0.03, -0.17)
+	if cable: cable.queue_free()
+	cable = MeshKit.add(self, MeshKit.tube(MeshKit.round_corners(PackedVector3Array([from, from + Vector3(0.0, -0.01, 0.05), Vector3(to.x, 0.004, from.z + 0.05), to]), 0.04, 6), 0.0013, 8), MeshKit.mat(Color(0.12, 0.12, 0.13), 0.55))
+	if ch == 1: probe_cable = cable
+	else: probe2_cable = cable
 
 var _lead_sig := ""
 func _meter_leads() -> void:
@@ -916,6 +931,8 @@ func _live(dt: float) -> void:
 		var v: Array = backend.scope_q.get("v", []) if backend.powered and backend.probes.get("ch1", null) != null else []
 		var vpd: Array = backend.bench_q.get("instruments", {}).get("scope", {}).get("voltsPerDiv", [5.0, 5.0]) if backend.bench_q.get("instruments", {}).get("scope", null) is Dictionary else [5.0, 5.0]
 		_call(scope, "set_samples", [v, float(backend.scope_q.get("dt", 7.8125e-5)), float(vpd[0]), float(backend.scope_q.get("timePerDiv", 0.002))])
+		var v2: Array = backend.scope2_q.get("v", []) if backend.powered and backend.probes.get("ch2", null) != null else []
+		_call(scope, "set_samples2", [v2, float(vpd[1]) if vpd.size() > 1 else float(vpd[0])])
 		_call(scope, "set_status", ["RUN" if backend.powered else "STOP"])
 		var lines: Array = []
 		if not v.is_empty():
@@ -1104,7 +1121,7 @@ func ray_pad(mp: Vector2) -> Vector2i:
 	var pad: Vector2i = board.pad_at_world(hit)
 	# wires and leads go onto legs: a player aims at the leg as drawn, which stands above its pad. If the board-level pad is empty
 	# and the ray at leg height lands on a pad with a leg or a wire end, take that one (Noor: clicks landed "one row short").
-	if tool in ["wire", "red", "black", "probe"] and not _pad_used(pad):
+	if tool in ["wire", "red", "black", "probe", "probe2"] and not _pad_used(pad):
 		for h in [0.003, 0.006, 0.010, 0.014, 0.020, 0.028]:   # 0.6: up to a tall body's top (1-3's heater)
 			var hit2 = _plane_at(h).intersects_ray(o, d)
 			if hit2 == null: continue
@@ -1154,7 +1171,7 @@ func connect_targets() -> Array:
 	return out
 
 func _refresh_targets() -> void:
-	if board: board.set_targets(connect_targets() if tool in ["wire", "red", "black", "probe"] else [])
+	if board: board.set_targets(connect_targets() if tool in ["wire", "red", "black", "probe", "probe2"] else [])
 
 func _pad_used(pad: Vector2i) -> bool:
 	if pad.x < 0: return false
@@ -1186,7 +1203,7 @@ func set_tool(t: String) -> void:
 	# 0.6 (Tess, 15 minutes on 1-1): in the wide views the battery hid its own leads. A wire, lead or probe tool picked there moves
 	# the camera to the top-down board view (key 5); keys 1-4 still go back.
 	# Rui (0.6 replay): the jump threw away his zoom; it happens only while the camera still sits where the view key put it.
-	if t in ["wire", "red", "black", "probe"] and tool != t and view in [1, 2] and not _cam_moved() and mode in ["job", "free"] and board != null and not case_closed():
+	if t in ["wire", "red", "black", "probe", "probe2"] and tool != t and view in [1, 2] and not _cam_moved() and mode in ["job", "free"] and board != null and not case_closed():
 		set_view(5)
 	tool = t
 	if t != "place": _clear_ghost()
@@ -1300,7 +1317,7 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_5: set_view(5)
 			KEY_TAB: ui.toggle_schematic()
 			KEY_W: set_tool("wire")
-			KEY_P: set_tool("probe")
+			KEY_P: set_tool("probe2" if k.shift_pressed and has_tool("scope-ch2") else "probe")
 			KEY_M: set_tool("red")
 			KEY_ESCAPE: esc()
 			KEY_R:
@@ -1335,8 +1352,8 @@ func _hover(mp: Vector2, qa := false) -> void:
 	var ok := pad.x >= 0
 	# a wire end or a meter lead on a pad with no leg connects nothing: the marker turns red before the click, not after (Noor)
 	var dead := tool in ["wire", "red", "black"] and ok and not _pad_used(pad)
-	board.set_hover(pad.x, pad.y, ok and tool in ["wire", "probe", "red", "black", "place"], Color(0.9, 0.18, 0.12) if dead else (Color(0.91, 0.64, 0.24) if tool != "probe" else Color(0.95, 0.85, 0.2)))
-	if tool in ["wire", "red", "black", "probe"] and ok:
+	board.set_hover(pad.x, pad.y, ok and tool in ["wire", "probe", "probe2", "red", "black", "place"], Color(0.9, 0.18, 0.12) if dead else (Color(0.91, 0.64, 0.24) if tool != "probe" else Color(0.95, 0.85, 0.2)))
+	if tool in ["wire", "red", "black", "probe", "probe2"] and ok:
 		# 0.5 (Noor): every pad says what is there, a connector, a leg or a wire end, before the click
 		var t4 := "No leg here: this end would connect nothing" if dead else pad_tip(pad)
 		if t4 != hover_tip and (t4 != "" or _pad_tip_shown): hover_tip = t4; _pad_tip_shown = t4 != ""; changed.emit()
@@ -1388,8 +1405,8 @@ func _left(pressed: bool, mp: Vector2) -> void:
 					if _wire_click and wire_from.x >= 0 and pad != wire_from:   # click, then click: the second click ends the wire
 						_commit_wire(wire_from, pad); wire_from = Vector2i(-1, -1); _wire_click = false; _clear_wire_preview()
 					else: wire_from = pad; _wire_click = false
-			"probe":
-				if pad.x >= 0: var r2 := backend.set_probe("ch1", [pad.x, pad.y]); note = str(r2.get("msg", "")); set_tool("select")
+			"probe", "probe2":
+				if pad.x >= 0: var r2 := backend.set_probe("ch1" if tool == "probe" else "ch2", [pad.x, pad.y]); note = str(r2.get("msg", "")); set_tool("select")
 			"red", "black":
 				if pad.x >= 0:
 					if backend.dial == "OFF": backend.set_dial("V")
@@ -1777,6 +1794,32 @@ func buy_dial() -> void:
 	if sfx and r.get("ok", false): sfx.play("coin")
 	changed.emit()
 
+## 0.7 tool ladder (D-tools-07): the bench tools the wallet buys, cheapest first, from the engine ([] on the classic backend).
+## Cached per mode, ticket and wallet (the rail asks on every rebuild).
+var _tools_key := ""
+var _tools: Array = []
+func tools() -> Array:
+	if not backend.has_method("_q"): return []
+	var key := "%s|%s|%d|%d" % [mode, ticket_id, backend.wallet_minor, _tools_buys]
+	if key != _tools_key:
+		var r = backend._q("tools", [])
+		_tools = r if r is Array else []; _tools_key = key
+	return _tools
+var _tools_buys := 0
+
+func has_tool(id: String) -> bool:
+	for t in tools(): if str(t.id) == id: return bool(t.owned)
+	return false
+
+func buy_tool(id: String) -> void:
+	var r: Dictionary = backend._act("buyUpgrade", [id])
+	_tools_buys += 1
+	note = str(r.get("message", "")); backend.refresh_wallet(); backend._refresh_board()
+	if r.get("ok", false):
+		if sfx: sfx.play("coin")
+		if id == "thermal-camera" and mode == "job": backend.camera_ok = true
+	changed.emit()
+
 func set_condition(id: String) -> void:
 	var r: Dictionary = backend._act("setCondition", [id if id != "" else null])
 	note = str(r.get("message", "")); backend._refresh_board(); backend._refresh_live(); backend._rebuild_model()
@@ -1815,7 +1858,10 @@ func live_specs() -> Dictionary:
 		if has_i: out["ipin"] = BenchUI.si(float(backend.scope_view.get("value", 0.0)) / 1000.0, "A")
 		return out
 	var g = backend.card.get("gauge", null)
-	if g is Dictionary and str(backend.scope_view.get("text", "")) != "": out[str(g.spec)] = _sig3(backend.scope_view)
+	if g is Dictionary and str(backend.scope_view.get("text", "")) != "":
+		out[str(g.spec)] = _sig3(backend.scope_view)
+		var gu := str(g.get("unit", ""))
+		if gu != "": out[str(g.spec)] = band_si(str(g.spec), BenchUI.si_value("%s %s" % [str(backend.scope_view.get("value", 0.0)), str(backend.scope_view.get("unit", gu))], gu), gu)
 	# 0.6 (Noor on 1-2): LED 1 showed the live gauge while LEDs 2 and 3 showed the last test (the tired battery), so a series
 	# chain read as three different currents. Every current spec on a part now reads the live frame, as the gauge does, and a
 	# current is shown as its size: the battery's "-19.6 mA" (current into its plus terminal) reads "19.6 mA" delivered.
@@ -1828,8 +1874,25 @@ func live_specs() -> Dictionary:
 		var fp: Dictionary = backend._frame_part(uid)
 		if fp.is_empty(): continue
 		var amps := backend.led_current(uid) if fp.has("led") else (float(fp.pins[0].i) if fp.has("pins") and (fp.pins as Array).size() > 0 else 0.0)
-		out[str(s.id)] = BenchUI.si(_shown_current(str(s.id), amps), "A")
+		out[str(s.id)] = band_si(str(s.id), _shown_current(str(s.id), amps), "A")
 	return out
+
+## 0.7 (Leo, 1-2): 13.97 mA read "14 mA" and failed a 14-20 mA band. When rounding would put the shown number on the other side
+## of a band edge from the true value, show one or two more digits ("13.97 mA").
+func band_si(id: String, v: float, unit: String) -> String:
+	var t := BenchUI.si(v, unit)
+	var lo = null; var hi = null
+	for src in [backend.card, backend.ticket]:
+		for tg in (src as Dictionary).get("targets", []):
+			if str(tg.get("id", "")) == id: lo = tg.get("lo", null); hi = tg.get("hi", null)
+	if lo == null or hi == null: return t
+	var flip := float(hi) <= 0.0   # a band at or below zero is shown as a size (_shown_current)
+	var inside := func(x: float) -> bool: return (-x if flip else x) >= float(lo) and (-x if flip else x) <= float(hi)
+	var truth: bool = inside.call(v)
+	for extra in [1, 2]:
+		if inside.call(BenchUI.si_value(t, unit)) == truth: return t
+		t = BenchUI.si(v, unit, extra)
+	return t
 
 ## Ravi (0.6): a current shows as its size only when the spec's whole band is at or below zero (1-2's battery: -25 mA .. 0, current
 ## into its plus terminal while it delivers). A band that crosses zero keeps the sign, because the sign is the lesson there (2-2's
@@ -1867,7 +1930,7 @@ func spec_text(id: String, v: float) -> String:
 	var g = backend.card.get("gauge", null)
 	if eu == "" and g is Dictionary and str(g.get("spec", "")) == id: eu = str(g.get("unit", ""))
 	if eu == "A": v = _shown_current(id, v)   # Ravi: the size only where the band is all at or below zero (1-2's battery)
-	if eu != "" and id != "ipin": return BenchUI.si(v, eu)   # the engine's own unit (level probe or gauge): 2-1 printed "3.27 W" when "with" matched " w"
+	if eu != "" and id != "ipin": return band_si(id, v, eu)   # the engine's own unit (level probe or gauge): 2-1 printed "3.27 W" when "with" matched " w"
 	var words := nm.replace(",", " ").replace("(", " ").replace(")", " ").split(" ", false)
 	var unit := "V"
 	if "current" in words or "ma" in words or id.begins_with("i"): unit = "A"

@@ -11,7 +11,7 @@ import { makeProbe } from '../sim/mna/tran';
 import { si, sig } from '../sim/explain';
 import type { Circuit } from '../sim/mna/types';
 import type { Rig } from '../sim/rig';
-import { DIAL, condLabel, hasDial, tipLeft, tipStep, upgradePrice } from './money';
+import { DIAL, TOOLS, condLabel, hasDial, hasTool, tipLeft, tipStep, upgradePrice } from './money';
 import { t } from '../i18n';
 import { REGIONS } from '../regions';
 import { formatMinor } from '../regions/data';
@@ -367,6 +367,12 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       const geo = { x: xi, y: yi, rot: ri, flip: flip === true }, pads = pinPads(geo, d), bad = checkPartSpot(o.tk.board, d, geo) ?? null;
       const p = bad ?? problem('');
       return { ok: bad === null, partId: d.id, pins: d.pins.map((name, i) => ({ name, pad: pads[i]! })), problem: bad ? say(p.key, p.vars) : null };
+    },
+
+    /** 0.7 (D-tools-07): the bench tools, cheapest first: name, what it does, price, owned (the sandbox owns them all). */
+    tools: (s) => {
+      const pack = REGIONS.get(s.region);
+      return TOOLS.map((x) => { const price = upgradePrice(s, x.id); return { id: x.id, name: t(x.nameKey), what: t(x.whatKey), price, priceText: formatMinor(price, pack), owned: hasTool(s, x.id) }; });
     },
 
     /** 0.7: would a wire from pad a to pad b short a source (a supply's plus to its minus, a battery's legs)? The plain sentence for the hover. */

@@ -21,7 +21,7 @@ import {
 import { q, snap125 } from './quant';
 import { MAX_WIRES, newScope, newTicketProgress, pushFailure, pushUndo, type BoardSnapshot, type NodeState, type TicketState } from './state';
 import { faultSmoked, levelDefOf, openTicketIn, refBoard, unmetAfter } from './tickets';
-import { DIAL, condLabel, hasDial, tipLeft, upgradePrice } from './money';
+import { DIAL, TOOLS, condLabel, hasDial, tipLeft, upgradePrice } from './money';
 import { benchTicket, evalHint, liveCfg, liveRig, probeOn, sweepKey } from './ticket-run';
 import { refuse, refuseKey, say } from './text';
 import { danglingEnds, padWhat, shortAcross, wireContacts } from './touch';
@@ -526,10 +526,11 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       (tk.sel ??= {})[sid] = i; touch(tk); resetLive(tk.live);
       return ok(say('selector.set', { id: sid, label: t(sd!.options[i]!.labelKey) }), { id: sid, index: i });
     },
-    /** 0.6 (D-money-06): buy a bench upgrade with the wallet. Only the condition dial exists. */
+    /** 0.6 (D-money-06), 0.7 (D-tools-07): buy a bench tool with the wallet: the condition dial, the thermal camera, the scope's second channel. */
     buyUpgrade: (s, id: unknown) => {
-      const uid = str(id, 'id'), pack = REGIONS.get(s.region), name = say('upgrade.dial.name').toLowerCase();
-      if (uid !== DIAL) refuseKey('err.upgrade.unknown', { id: uid });
+      const uid = str(id, 'id'), pack = REGIONS.get(s.region), tool = TOOLS.find((x) => x.id === uid);
+      if (!tool) refuseKey('err.upgrade.unknown', { id: uid });
+      const name = say(tool!.nameKey).toLowerCase();
       if (s.progress.upgrades.includes(uid)) refuseKey('err.upgrade.owned', { name });
       const price = upgradePrice(s, uid);
       if (s.progress.wallet < price) refuseKey('err.upgrade.money', { name, price: formatMinor(price, pack), wallet: formatMinor(s.progress.wallet, pack) });
