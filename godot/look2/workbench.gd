@@ -1582,7 +1582,34 @@ func live_specs() -> Dictionary:
 		return out
 	var g = backend.card.get("gauge", null)
 	if g is Dictionary and str(backend.scope_view.get("text", "")) != "": out[str(g.spec)] = _sig3(backend.scope_view)
+	# 0.6 (Noor on 1-2): LED 1 showed the live gauge while LEDs 2 and 3 showed the last test (the tired battery), so a series
+	# chain read as three different currents. Every current spec on a part now reads the live frame, as the gauge does, and a
+	# current is shown as its size: the battery's "-19.6 mA" (current into its plus terminal) reads "19.6 mA" delivered.
+	for s in backend.card.get("specs", []):
+		var pr := str(s.get("probe", ""))
+		var m := _re_ipart().search(pr)
+		if m == null or out.has(str(s.id)): continue
+		var uid := _nth_part(m.get_string(1), int(m.get_string(2)))
+		if uid == "": continue
+		var fp: Dictionary = backend._frame_part(uid)
+		if fp.is_empty(): continue
+		var amps := backend.led_current(uid) if fp.has("led") else backend.part_current(uid)
+		out[str(s.id)] = BenchUI.si(amps, "A")
 	return out
+
+static var _re_ip: RegEx
+static func _re_ipart() -> RegEx:
+	if _re_ip == null: _re_ip = RegEx.create_from_string("^\\s*i\\(@([a-z0-9-]+)#(\\d+)\\)\\s*$")
+	return _re_ip
+
+## The engine's `@partId#n`: the n-th part of that kind in board order (fixed parts included), as src/sim/rig.ts resolves it.
+func _nth_part(pid: String, n: int) -> String:
+	var k := 0
+	for p in backend._all_parts:
+		if str(p.get("partId", "")) == pid:
+			k += 1
+			if k == n: return str(p.uid)
+	return ""
 
 ## The scope's gauge value with three significant digits ("14.9551 mA" -> "15.0 mA").
 static func _sig3(sv: Dictionary) -> String:
@@ -1596,6 +1623,7 @@ func spec_text(id: String, v: float) -> String:
 	for s in backend.ticket.get("specs", []): if str(s.id) == id: nm = str(s.get("name", "")).to_lower(); eu = str(s.get("unit", ""))
 	var g = backend.card.get("gauge", null)
 	if eu == "" and g is Dictionary and str(g.get("spec", "")) == id: eu = str(g.get("unit", ""))
+	if eu == "A": v = absf(v)   # a current is shown as its size (the battery's terminal current is negative when it delivers)
 	if eu != "" and id != "ipin": return BenchUI.si(v, eu)   # the engine's own unit (level probe or gauge): 2-1 printed "3.27 W" when "with" matched " w"
 	var words := nm.replace(",", " ").replace("(", " ").replace(")", " ").split(" ", false)
 	var unit := "V"

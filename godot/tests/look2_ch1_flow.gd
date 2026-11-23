@@ -136,6 +136,12 @@ func _run() -> void:
 		wb.backend.set_dial("V"); wb.backend.set_probe("red", cs[0].pad); wb.backend.set_probe("black", cs[1].pad); await _step(0.2)
 		wb.run_test(); await _frames(5)
 		ok(wb.backend.passed, "the bench passes %s" % id)
+		if id == "1-2":
+			# 0.6: a series chain reads one current on all three LEDs, live, and the battery's current reads as a size (it showed
+			# "-19.6 mA" and LEDs 2 and 3 carried the tired-battery test while LED 1 was live)
+			var ls: Dictionary = wb.live_specs()
+			ok(ls.has("led1") and ls.get("led1") == ls.get("led2") and ls.get("led2") == ls.get("led3"), "1-2: the three LEDs in series read the same live current (%s)" % str(ls))
+			ok(ls.has("ibat") and not str(ls.ibat).begins_with("-") and wb.spec_text("ibat", -0.0196) == "19.6 mA", "1-2: the battery current reads as a size (%s, %s)" % [str(ls.get("ibat", "")), wb.spec_text("ibat", -0.0196)])
 		if id == "2-1": ok(wb.spec_text("vout", 3.27) == "3.27 V", "the measured value carries the engine's unit (%s; it read \"3.27 W\")" % wb.spec_text("vout", 3.27))
 		if id == "1-5":
 			wb.changed.emit(); await _frames(3)
