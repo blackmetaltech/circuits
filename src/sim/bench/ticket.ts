@@ -98,7 +98,16 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
       if (s.kind === 'level' || s.kind === 'band' || s.kind === 'metric' || s.kind === 'predict') {
         const orig = s.kind === 'predict' ? s.of.probe : s.probe;
         const probe = rig0.resolve(orig);
-        if (probe === null) { failures.push({ key: 'bench.part.missing', vars: { id: s.id, probe: orig, cond: cond.id } }); failedIds.add(s.id); continue; }
+        if (probe === null) {
+          // 0.6 (Asha on 1-3): a probed connector wired straight to another connector is the same net under the other name. Say
+          // that, not "not on the board yet". (Reading the net under either name would let a wire between two connectors pass 2-3.)
+          const vm = /^\s*v\(\s*([a-z0-9_]+)\s*\)\s*$/i.exec(orig), cn = rig0.conn.connectorNodes;
+          const own = vm ? Object.keys(cn).find((c) => c.toLowerCase() === vm[1]!.toLowerCase()) : undefined;
+          const other = own !== undefined && cn[own]! >= 0 ? Object.keys(cn).find((c) => c !== own && cn[c] === cn[own]) : undefined;
+          if (own !== undefined && other !== undefined) failures.push({ key: 'bench.conn.joined', vars: { id: s.id, conn: own, other, cond: cond.id } });
+          else failures.push({ key: 'bench.part.missing', vars: { id: s.id, probe: orig, cond: cond.id } });
+          failedIds.add(s.id); continue;
+        }
         for (const n of nodesOf(probe)) if (!loads.includes(n)) loads.push(n);
         if (s.kind === 'predict') {
           const entered = inp.predictions[s.id];

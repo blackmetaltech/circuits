@@ -229,6 +229,7 @@ export const en: Record<string, string> = {
   // bench
   'bench.pass': 'Bench passed for ticket {id}: {stars} {starWord}, cost {cost}.',
   'bench.fail': 'Bench failed for ticket {id}: {n} {problems}. Open the bench report to see what to fix.',
+  'bench.conn.joined': '{conn} is wired straight to {other}, so nothing sits between them to test. Take that wire out and build the fix between {other} and {conn}.',
   'bench.part.missing': 'The test "{id}" looks at {probe}, but that part is not on the board yet ({cond} test).',
   'bench.predict.missing': 'You have not entered a prediction for "{id}" yet ({cond} test).',
   'pay.explain': 'fee {fee} + {perStar} per new star',
