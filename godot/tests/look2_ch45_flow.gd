@@ -200,7 +200,8 @@ func _run() -> void:
 			for u in wb.parts3d: if str((wb.parts3d[u] as Part3D).part.get("partId", "")) == "lm7805": reg = wb.parts3d[u]
 			var tc := float(wb.backend._frame_part(str(reg.part.uid)).get("temp", 0.0)) if reg else 0.0
 			var mo: Material = (reg.body_meshes[0] as MeshInstance3D).material_override if reg else null
-			ok(wb.thermal and mo is StandardMaterial3D and (mo as StandardMaterial3D).emission_enabled and (mo as StandardMaterial3D).emission.is_equal_approx(Part3D.thermal_colour(tc)), "T switches the camera on: the 7805 shows its engine temperature (%.0f C) in false colour" % tc)
+			# the material follows the temperature in 0.5 C steps, so compare with the temperature it was set for, and that with the engine's
+			ok(wb.thermal and mo is StandardMaterial3D and (mo as StandardMaterial3D).emission_enabled and (mo as StandardMaterial3D).emission.is_equal_approx(Part3D.thermal_colour(reg._thermal)) and absf(reg._thermal - tc) < 1.0, "T switches the camera on: the 7805 shows its engine temperature (%.0f C, drawn at %.1f C) in false colour" % [tc, reg._thermal])
 			ok(tc > 45.0 and wb.thermal_text().contains("C"), "the camera reads the hottest part: %s" % wb.thermal_text())
 			wb._unhandled_input(e); await _step(0.2)
 			ok(not wb.thermal and (reg.body_meshes[0] as MeshInstance3D).material_override != mo, "T again switches it off and the parts look as before")
