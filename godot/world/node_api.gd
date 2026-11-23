@@ -39,6 +39,7 @@ const PART_TABLE := [
 	["inst-probe", "PROBE", ""], ["lm7805", "REG", "to220"], ["lm317", "REG", "to220"], ["load-cc", "LOAD", "block2"], ["zener-", "D", "axial2"],
 	["rheostat", "R", "axial2"], ["trimmer", "R", "axial2"], ["galvanometer", "GALVO", "block2"], ["slidewire", "SLIDE", "slide3"], ["blackbox", "BOXED", "block2"],
 	["adc-in", "LOAD", "block2"], ["cable-loop", "LOAD", "block2"], ["pullup-", "LOAD", "block2"], ["logic-in", "LOAD", "block2"], ["relay-", "RELAY", "relay5"], ["cell-", "BAT", "block2"],
+	["tl072", "OPAMP", "dip8"], ["lm358", "OPAMP", "dip8"], ["lm741", "OPAMP", "dip8"], ["ne5532", "OPAMP", "dip8"], ["mcp6002", "OPAMP", "dip8"], ["opamp-textbook", "OPAMP", "dip8"], ["lm393", "CMP", "dip8"],   # chapter 6 (0.7)
 ]
 const BAT_LABEL := {"bat-pp3": "9 V", "bat-pp3-tired": "9 V", "bat-aa": "1.5 V", "bat-cr2032": "3 V"}
 

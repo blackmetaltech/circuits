@@ -9,9 +9,10 @@ signal changed
 
 const P := MeshKit.PITCH
 const TICKET := "5-1"   ## the chapter-5 showcase slice
-## The bench campaign: all five chapters in the engine's order (D-bench-ch23, D-bench-ch45). The classic stall is an option.
+## The bench campaign: all six chapters in the engine's order (D-bench-ch23, D-bench-ch45, chapter 6 in 0.7). The classic stall is an option.
 const BENCH_JOBS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4",
-	"4-1", "4-2", "4-3", "4-4", "4-5", "5-1", "5-2", "5-3", "5-4", "5-5"]
+	"4-1", "4-2", "4-3", "4-4", "4-5", "5-1", "5-2", "5-3", "5-4", "5-5",
+	"6-1", "6-2", "6-3", "6-4", "6-5", "6-6", "6-7"]
 const CH1 := BENCH_JOBS   # old name, kept for the flows
 var ticket_id := "1-1"
 
@@ -836,14 +837,20 @@ func _cables() -> void:
 	var pr: Vector3 = _call(psu, "post_world", [0]) if psu and psu.has_method("post_world") else Vector3(0.28, 0.04, -0.17)
 	var pb: Vector3 = _call(psu, "post_world", [1]) if psu and psu.has_method("post_world") else Vector3(0.31, 0.04, -0.17)
 	# the bench supply's leads go to the ticket's own supply connectors (5-1: V12/GND, 1-3: IN/GND); a battery ticket uses no supply
-	var plus := ""; var minus := ""
-	for sd in backend.card.get("supplies", []):
-		if str(sd.get("kind", "")) == "bench": plus = str(sd.get("plus", "")); minus = str(sd.get("minus", "")); break
+	var plus := ""; var minus := ""; var neg := ""
+	var benches: Array = []
+	for sd in backend.card.get("supplies", []): if str(sd.get("kind", "")) == "bench": benches.append(sd)
+	if not benches.is_empty(): plus = str(benches[0].get("plus", "")); minus = str(benches[0].get("minus", ""))
+	# chapter 6: a second bench rail whose plus is the first one's minus is the -V rail of a dual supply (COM in the middle)
+	if benches.size() > 1 and str(benches[1].get("plus", "")) == minus and mode != "free" and psu != null: neg = str(benches[1].get("minus", ""))
 	if plus == "" and ticket_id == TICKET: plus = "V12"; minus = "GND"
 	if mode == "free": plus = "V12"; minus = "GND"
+	if psu and psu.has_method("set_dual"): psu.set_dual(neg != "")
+	if neg != "": pb = _call(psu, "post_world", [1])
 	if plus != "":
 		add.call(pr, post.call(plus), red, 0.06)
 		add.call(pb, post.call(minus), blk, 0.05)
+	if neg != "": add.call(_call(psu, "post_world", [2]), post.call(neg), MeshKit.mat(Color(0.05, 0.16, 0.48), 0.45, 0.0, {"clearcoat": 0.3}), 0.055)
 	if iso_box and iso_box.visible:   # 4-1: the isolated mains leads (brown live, blue neutral) from the transformer's outlet to L and N
 		for sd in backend.card.get("supplies", []):
 			if str(sd.get("kind", "")) != "mains": continue
@@ -1673,6 +1680,13 @@ const OPEN_LINE := {
 	"5-3": "Empty board. Diodes, a transistor and resistors: make Y low only when A and B are both high.",
 	"5-4": "Case open. IN from the synth, OUT to the amplifier. One transistor, gain about ten.",
 	"5-5": "Exam rig open. Predict first, then build and probe.",
+	"6-1": "Case open. A TL072 on +-12 V. Look where the 470 k feedback resistor lands: pin 3 is the + input.",
+	"6-2": "Case open. The probe feeds 10 k into pin 2, and the probe itself sits behind 100 k.",
+	"6-3": "Case open. One LM358 stage at a gain of 100. The second op-amp in the chip (pins 5 to 7) is unused.",
+	"6-4": "Case open. An LM741 drives the cleaner. Clip the scope on OUT and look at the shape.",
+	"6-5": "Case open. The NTC probe sits on the 5 V pad. An LM393 compares it with half of 5 V, with nothing from OUT back to pin 3.",
+	"6-6": "Your own generator. 11 k in, 22 nF from OUT to pin 2, and nothing else across the capacitor.",
+	"6-7": "Exam rig open. Predict first, then build and probe.",
 }
 const ARRIVE_LINE := {
 	"1-1": "Lio put the torch on the counter. It does not light.",
@@ -1698,6 +1712,13 @@ const ARRIVE_LINE := {
 	"5-3": "{c}'s robotics club has run out of logic chips. They need a NAND gate built from parts.",
 	"5-4": "{c}'s synth is too quiet for the amplifier. It needs a preamp with a gain of about ten.",
 	"5-5": "The exam rig is on the bench: a common-emitter amplifier. No customer: this one is graded.",
+	"6-1": "{c}'s mic preamp is dead: its output is stuck at a rail and the mic does nothing.",
+	"6-2": "{c}'s pH meter reads about a tenth of the right value, and below zero.",
+	"6-3": "{c}'s mic preamp sounds dull. The treble is gone above a few kHz.",
+	"6-4": "{c}'s ultrasonic cleaner barely hums. Its piezo gets a small triangle instead of a big sine.",
+	"6-5": "{c}'s incubator relay chatters on and off around 50 C.",
+	"6-6": "Your function generator's triangle output sits down at the rail, flattened.",
+	"6-7": "The exam rig is on the bench: a summing amplifier. No customer: this one is graded.",
 }
 ## The slide wire's jockey (2-2, 2-4): a press or drag on the wire puts it under the pointer, the wheel, the arrow keys (and LB / RB
 ## on the pad, over the wire) step it by the engine's step (10, 1 or 0.1 mm; J or the right stick key changes it).
@@ -1747,7 +1768,7 @@ func arrival_line() -> String: return str(ARRIVE_LINE.get(ticket_id, "The device
 func first_open_ticket() -> String:
 	if not _campaign: return CH1[0]
 	var done := {}
-	for ch in [1, 2, 3, 4, 5]:
+	for ch in [1, 2, 3, 4, 5, 6]:
 		for row in backend.progress(ch).get("tickets", []): if bool(row.get("done", false)): done[str(row.id)] = true
 	for id in CH1: if not done.has(id): return id
 	return CH1[0]

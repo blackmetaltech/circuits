@@ -282,7 +282,7 @@ func _title() -> void:
 	var first: Button
 	if not title_settings:
 		first = _key(v, "Jobs", func(): bench.start_job(), "", true)
-		_lab(v, "Repairs in five chapters, an exam at the end of each.", 17, dim, f_sans, true)
+		_lab(v, "Repairs in six chapters, an exam at the end of each.", 17, dim, f_sans, true)
 		_key(v, "Testbed", func(): Testbed.load_device(bench, "torch"))
 		_lab(v, "Six devices to probe, break and step through.", 17, dim, f_sans, true)
 		_key(v, "Free bench", func(): bench.start_free())

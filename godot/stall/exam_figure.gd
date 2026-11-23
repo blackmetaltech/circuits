@@ -14,6 +14,7 @@ static func draw(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, asks: Ar
 	if str(fig.get("kind", "node")) == "caps": _draw_caps(ci, r, fig, ink, asks, small); return
 	if str(fig.get("kind", "node")) == "zener": _draw_zener(ci, r, fig, ink, asks, small); return
 	if str(fig.get("kind", "node")) == "amp": _draw_amp(ci, r, fig, ink, asks, small); return
+	if str(fig.get("kind", "node")) == "sum": _draw_sum(ci, r, fig, ink, asks, small); return
 	var k := minf(r.size.x / DESIGN.x, r.size.y / DESIGN.y)
 	var o := r.position + (r.size - DESIGN * k) * 0.5
 	var P := func(x: float, y: float) -> Vector2: return o + Vector2(x, y) * k
@@ -227,6 +228,43 @@ static func _draw_amp(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, ask
 	_gnd(ci, P.call(212, 330), k, ink, w)
 	S.text(ci, f, "\u03b2 = %s,  VBE = %s V" % [EngineBench._g(float(a.get("beta", 100))), EngineBench._g(float(a.get("vbe", 0.7)))], P.call(60, 384), int(fs * 0.9), ink)
 	if not asks.is_empty() and not small: S.text(ci, f, "find:  " + "   ".join(asks), P.call(60, 22), fs, S.INK_RED)
+
+## The 6-7 figure: three sources, each through its own resistor, into the op-amp's - input; Rf from OUT (the M pad) back to it; + to
+## ground; the rails printed. All numbers are the engine's (figure.sources, figure.load = Rf, figure.sum.rails).
+static func _draw_sum(ci: CanvasItem, r: Rect2, fig: Dictionary, ink: Color, asks: Array, small: bool) -> void:
+	var k := minf(r.size.x / DESIGN.x, r.size.y / DESIGN.y)
+	var o := r.position + (r.size - DESIGN * k) * 0.5
+	var P := func(x: float, y: float) -> Vector2: return o + Vector2(x, y) * k
+	var w := maxf(1.6, 3.0 * k); var f := S.hand()
+	var fs := int(maxf(9.0, (20.0 if not small else 30.0) * k))
+	var kohm := func(v: float) -> String: return "%s k\u03a9" % EngineBench._g(v / 1000.0)
+	var srcs: Array = fig.get("sources", [])
+	var rf: Dictionary = fig.get("load", {})
+	var nx := 236.0; var ny := 220.0          # the - input node
+	# the op-amp triangle: - at (256, 220), + at (256, 268), OUT at (340, 244)
+	ci.draw_polyline(PackedVector2Array([P.call(256, 196), P.call(256, 292), P.call(340, 244), P.call(256, 196)]), ink, w)
+	S.text(ci, f, "\u2212", P.call(262, 228), fs, ink); S.text(ci, f, "+", P.call(262, 276), fs, ink)
+	_wire(ci, [P.call(nx, ny), P.call(256, ny)], ink, w)
+	_wire(ci, [P.call(256, 268), P.call(236, 268), P.call(236, 300)], ink, w); _gnd(ci, P.call(236, 300), k, ink, w)
+	_wire(ci, [P.call(340, 244), P.call(400, 244)], ink, w)
+	ci.draw_circle(P.call(400, 244), 6.0 * k + 1.0, ink); S.text(ci, f, "M pad", P.call(370, 276), int(fs * 0.9), ink)
+	# Rf over the top, from the node to OUT
+	_wire(ci, [P.call(nx, ny), P.call(nx, 140), P.call(268, 140)], ink, w); _zig(ci, P.call(268, 140), P.call(340, 140), 9.0 * k, ink, w)
+	_wire(ci, [P.call(340, 140), P.call(380, 140), P.call(380, 244)], ink, w)
+	S.text(ci, f, "%s  %s" % [str(rf.get("name", "Rf")), kohm.call(float(rf.get("ohm", 10000)))], P.call(270, 122), int(fs * 0.9), ink)
+	# the three inputs, one row each, all meeting at the node
+	for i in mini(3, srcs.size()):
+		var s: Dictionary = srcs[i]; var rr: Dictionary = s.get("r", {})
+		var y := 160.0 + float(i) * 60.0
+		S.text(ci, f, "%s = %s V" % [str(s.get("name", "V")), EngineBench._g(float(s.get("volts", 0)))], P.call(20, y + 7), int(fs * 0.9), ink)
+		ci.draw_circle(P.call(110, y), 4.0 * k + 1.0, ink)
+		_wire(ci, [P.call(110, y), P.call(130, y)], ink, w); _zig(ci, P.call(130, y), P.call(200, y), 9.0 * k, ink, w)
+		_wire(ci, [P.call(200, y), P.call(nx, y), P.call(nx, ny)], ink, w)
+		S.text(ci, f, "%s  %s" % [str(rr.get("name", "R")), kohm.call(float(rr.get("ohm", 0)))], P.call(128, y - 14), int(fs * 0.8), ink)
+	ci.draw_circle(P.call(nx, ny), 5.0 * k + 1.0, ink)
+	var sm: Dictionary = fig.get("sum", {})
+	S.text(ci, f, "rails \u00b1%s V" % EngineBench._g(float(sm.get("rails", 15))), P.call(270, 360), int(fs * 0.9), ink)
+	if not asks.is_empty() and not small: S.text(ci, f, "find:  " + "   ".join(asks), P.call(20, 40), fs, S.INK_RED)
 
 ## A capacitor symbol (two plates) centred at `c`: horizontal flow (plates vertical) or vertical flow (plates horizontal); `c` is the first plate's centre, the second plate sits 14 design px further along the flow.
 static func _cap_h(ci: CanvasItem, c: Vector2, k: float, ink: Color, w: float) -> void:

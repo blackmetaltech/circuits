@@ -39,6 +39,13 @@ const DEVICES := {
 	"5-3": ["ROBOCLUB", "LOGIC BOARD  5 V", Color(0.10, 0.30, 0.55), Color(0.95, 0.80, 0.15)],
 	"5-4": ["JUNO MUSIC", "SYNTH PREAMP  9 V", Color(0.12, 0.12, 0.13), Color(0.90, 0.35, 0.45)],
 	"5-5": ["EXAM", "AMPLIFIER TEST RIG", Color(0.50, 0.52, 0.54), Color(0.12, 0.30, 0.62)],
+	"6-1": ["STREETAMP", "BUSKING MIC PREAMP  +-12 V", Color(0.55, 0.12, 0.10), Color(0.95, 0.85, 0.30)],
+	"6-2": ["ACIDIX", "BENCH PH METER  INPUT STAGE", Color(0.88, 0.90, 0.92), Color(0.10, 0.45, 0.40)],
+	"6-3": ["STUDIO NINE", "MIC PREAMP  40 dB  LM358", Color(0.16, 0.17, 0.20), Color(0.70, 0.72, 0.75)],
+	"6-4": ["SONICLEAN", "ULTRASONIC CLEANER DRIVER  50 kHz", Color(0.20, 0.42, 0.62), Color(0.93, 0.93, 0.90)],
+	"6-5": ["HATCHWELL", "INCUBATOR THERMOSTAT  5 V", Color(0.94, 0.88, 0.70), Color(0.75, 0.30, 0.12)],
+	"6-6": ["BENCH", "OWN FUNCTION GENERATOR  RAMP STAGE", Color(0.24, 0.30, 0.36), Color(0.88, 0.88, 0.84)],
+	"6-7": ["EXAM", "SUMMING AMPLIFIER TEST RIG", Color(0.50, 0.52, 0.54), Color(0.12, 0.30, 0.62)],
 }
 ## 0.7 (CRITIQUE-0.6, Sigrid: "the testbed boards have no device shell"): the testbed's appliances, keyed "tb-<device id>".
 const TESTBED := {

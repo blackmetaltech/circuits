@@ -87,6 +87,7 @@ func _build() -> void:
 			elif pid.begins_with("fan-"): PartsLab.fan_leads(self)
 			elif pid == "led-strip": PartsLab.led_strip(self)
 			elif pid == "amp-load": PartsLab.amp_input(self)
+			elif pid == "ntc-10k": PartsLab.ntc_probe(self)
 			elif footprint == "block2": _terminals()
 			else: _module(str(part.get("label", pid)), 2)
 
@@ -351,7 +352,7 @@ func _adc() -> void:
 
 ## An exam-rig source: a grey module with its EMF printed and + and - marks over the pads.
 func _vsource() -> void:
-	_body(MeshKit.rounded_box(Vector3(6 * P + 0.006, 0.009, 0.012), 0.001), MeshKit.m("grey_plastic"), Vector3(3 * P, 0.0055, 0))
+	_body(MeshKit.rounded_box(Vector3(6 * P + 0.006, 0.009, 0.0088), 0.001), MeshKit.m("grey_plastic"), Vector3(3 * P, 0.0055, 0))   # 8.8 mm wide: 6-7 stands three side by side at 2 pitches (10 mm); 12 mm merged them into one slab
 	_labels.append(MeshKit.label(self, str(part.get("label", "E")).to_upper(), 0.00006, Vector3(3 * P, 0.0102, 0), Color(0.95, 0.95, 0.92), true))
 	_labels.append(MeshKit.label(self, "+", 0.0001, Vector3(0.002, 0.0102, 0), Color(0.95, 0.3, 0.2)))
 	_labels.append(MeshKit.label(self, "−", 0.0001, Vector3(6 * P - 0.002, 0.0102, 0), Color(0.8, 0.8, 0.8)))

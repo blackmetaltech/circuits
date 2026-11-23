@@ -10,7 +10,8 @@ layout_flow 8710
 look2_async_flow 7
 look2_ch1_flow 144
 look2_ch23_flow 123
-look2_ch45_flow 247
+look2_ch45_flow 248
+look2_ch6_flow 189
 look2_frame_flow 72
 look2_pad_flow 18
 look2_save_flow 4

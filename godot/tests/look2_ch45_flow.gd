@@ -146,7 +146,7 @@ func _run() -> void:
 	wb = Workbench.new(); root.add_child(wb)
 	await _frames(20)
 	wb.start_job(); await _frames(10)   # the campaign starts here (a first start_job resets the unlocks)
-	ok(Workbench.BENCH_JOBS.slice(13) == ORDER, "the bench campaign runs chapters 4 and 5 in the engine's order after 3-4")
+	ok(Workbench.BENCH_JOBS.slice(13, 23) == ORDER, "the bench campaign runs chapters 4 and 5 in the engine's order after 3-4")
 	wb.backend.unlock_through("4-1")
 	wb.start_job("4-1"); await _frames(10)
 	ok(not wb._showcase, "4-1 from the campaign is a job, not the showcase")
@@ -226,7 +226,10 @@ func _run() -> void:
 		nb.pressed.emit(); await _frames(10)
 		var i := ORDER.find(id)
 		if i + 1 < ORDER.size(): ok(wb.mode == "job" and wb.ticket_id == ORDER[i + 1], "Next job after %s opens %s (%s)" % [id, ORDER[i + 1], wb.ticket_id])
-	ok(wb.mode == "title", "after 5-5, the last job, the bench goes back to the title")
+	# 0.7: chapter 6 follows 5-5 (its own flow, look2_ch6_flow, plays it); here Next job opens 6-1 and the title is one key away
+	ok(wb.mode == "job" and wb.ticket_id == "6-1", "after 5-5, Next job opens 6-1, the first job of chapter 6 (%s)" % wb.ticket_id)
+	wb.back_to_title(); await _frames(5)
+	ok(wb.mode == "title", "and the bench goes back to the title from there")
 	wb.changed.emit(); await _frames(3)
 	var stale := false
 	for lb in wb.find_children("*", "Label", true, false): if (lb as Label).text.contains("classic 2D stall"): stale = true

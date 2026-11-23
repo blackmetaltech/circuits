@@ -65,20 +65,31 @@ func _init() -> void:
 	MeshKit.add(self, MeshKit.rounded_box(Vector3(0.0185, 0.0110, 0.006), 0.0025, 2), MeshKit.mat(Color(0.62, 0.38, 0.08), 0.45, 0.0, {"normal": 0.0}), Vector3(tx, ty, Z0 + 0.003))
 	MeshKit.label(self, "TEST", 0.00006, Vector3(tx, ty, Z0 + 0.0062), Color(0.08, 0.06, 0.03), false, Vector3.ZERO)
 	Instruments3D.hit(self, "psu_test", Vector3(0.019, 0.014, 0.02), Vector3(tx, ty, Z0 + 0.008))
-	# binding posts: red +, black -
-	for k in 2:
-		var px := 0.0 if k == 0 else 0.035
+	# binding posts: red +, black - (COM), and a blue - for the second rail of a dual supply (chapter 6: +-12 V), shown only on those tickets
+	for k in 3:
+		var px := [0.0, 0.035, 0.052][k] as float
 		var py := CY - 0.0525
-		var col := MeshKit.mat(Color(0.55, 0.035, 0.03) if k == 0 else Color(0.035, 0.035, 0.04), 0.4, 0.0, {"normal": 0.05})
-		Instruments3D.cyl(self, 0.0092, 0.004, MeshKit.m("steel"), Vector3(px, py, Z0 + 0.002), Vector3(PI / 2, 0, 0))
-		Instruments3D.cyl(self, 0.0075, 0.012, col, Vector3(px, py, Z0 + 0.006), Vector3(PI / 2, 0, 0))
-		var kn := Node3D.new(); kn.position = Vector3(px, py, Z0 + 0.0125); kn.rotation.x = PI / 2; add_child(kn)
+		var grp := Node3D.new(); add_child(grp); _post_groups.append(grp)
+		var col := MeshKit.mat([Color(0.55, 0.035, 0.03), Color(0.035, 0.035, 0.04), Color(0.05, 0.16, 0.48)][k] as Color, 0.4, 0.0, {"normal": 0.05})
+		Instruments3D.cyl(grp, 0.0092, 0.004, MeshKit.m("steel"), Vector3(px, py, Z0 + 0.002), Vector3(PI / 2, 0, 0))
+		Instruments3D.cyl(grp, 0.0075, 0.012, col, Vector3(px, py, Z0 + 0.006), Vector3(PI / 2, 0, 0))
+		var kn := Node3D.new(); kn.position = Vector3(px, py, Z0 + 0.0125); kn.rotation.x = PI / 2; grp.add_child(kn)
 		MeshKit.add(kn, Instruments3D.knurl_mesh(0.0076, 0.0085, 0.009, 18), col, Vector3(0, 0.0, 0))
 		Instruments3D.cyl(kn, 0.0034, 0.0006, MeshKit.m("black_epoxy"), Vector3(0, 0.0046, 0), Vector3.ZERO, 16)
 		var tip := Node3D.new(); tip.position = Vector3(0, 0.0052, 0); kn.add_child(tip)
 		_posts.append(tip)
-		MeshKit.label(self, "+" if k == 0 else "−", 0.00009, Vector3(px, py + 0.0135, Z0 + 0.0001), Color(0.9, 0.3, 0.25) if k == 0 else Color(0.8, 0.82, 0.85), false, Vector3.ZERO)
+		var lab_col: Color = [Color(0.9, 0.3, 0.25), Color(0.8, 0.82, 0.85), Color(0.45, 0.62, 0.95)][k]
+		_post_labels.append(MeshKit.label(grp, ["+", "−", "−"][k] as String, 0.00009, Vector3(px, py + 0.0135, Z0 + 0.0001), lab_col, false, Vector3.ZERO))
+	set_dual(false)
 	set_values(0.0, 0.0); set_output(false)
+
+var _post_groups: Array = []
+var _post_labels: Array = []
+## Dual rails (chapter 6): the black post becomes COM and moves left, the blue post (the second rail's minus) shows at the right.
+func set_dual(on: bool) -> void:
+	(_post_groups[1] as Node3D).position.x = -0.009 if on else 0.0
+	(_post_groups[2] as Node3D).visible = on
+	(_post_labels[1] as Label3D).text = "COM" if on else "−"
 
 func _fmt(v: float, dec: int) -> String:
 	return ("%." + str(dec) + "f") % clampf(v, 0.0, 99.99 if dec == 2 else 9.999)
@@ -91,6 +102,6 @@ func set_output(on: bool) -> void:
 	_led_mat.emission_energy_multiplier = 3.0 if on else 0.0
 	_led_mat.albedo_color = Color(0.1, 0.55, 0.2) if on else Color(0.05, 0.2, 0.08)
 
-## World position of the front tip of a binding post (0 red, 1 black).
+## World position of the front tip of a binding post (0 red, 1 black / COM, 2 blue: the second rail's minus).
 func post_world(i: int) -> Vector3:
-	return (_posts[clampi(i, 0, 1)] as Node3D).global_position
+	return (_posts[clampi(i, 0, 2)] as Node3D).global_position

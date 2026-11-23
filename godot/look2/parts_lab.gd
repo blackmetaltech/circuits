@@ -318,3 +318,19 @@ static func amp_input(n: Part3D) -> void:
 	for i in 2:
 		var x := float(i) * L
 		n._lead([Vector3(x, -T, 0), Vector3(x, 0.0050, 0), Vector3(L * 0.5 + (x - L * 0.5) * 0.3, 0.0050, 0)], 0.0005)
+
+## ------------------------------------------------------------------------------------------------ chapter 6 (0.7)
+
+## 6-5: the incubator's NTC probe. A steel sleeve with the black thermistor bead at its tip lies along the footprint; two leads run
+## from the sleeve's back into the two pads. The label says what it is: 10 k at 25 C.
+static func ntc_probe(n: Part3D) -> void:
+	var L := 6.0 * P
+	var steel := MeshKit.mat(Color(0.74, 0.75, 0.77), 0.25, 1.0)
+	n._body(MeshKit.tube(PackedVector3Array([Vector3(L * 0.22, 0.0062, 0.0050), Vector3(L * 0.86, 0.0062, 0.0050)]), 0.0026, 18), steel)
+	var bead := SphereMesh.new(); bead.radius = 0.0030; bead.height = 0.0056
+	MeshKit.add(n, bead, MeshKit.mat(Color(0.05, 0.05, 0.05), 0.35, 0.0, {"clearcoat": 0.6}), Vector3(L * 0.90, 0.0062, 0.0050))
+	_cyl(n, 0.0031, 0.0040, MeshKit.m("black_plastic"), Vector3(L * 0.20, 0.0062, 0.0050), Vector3(0, 0, PI / 2), 18)   # the strain relief
+	n._labels.append(MeshKit.label(n, "NTC 10 k", 0.000045, Vector3(L * 0.55, 0.0089, 0.0050), Color(0.10, 0.10, 0.11), true))
+	for i in 2:
+		var x := float(i) * L
+		n._lead([Vector3(x, -T, 0), Vector3(x, 0.0040, 0), Vector3(L * 0.16, 0.0060, 0.0050)], 0.0005)

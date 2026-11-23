@@ -38,9 +38,16 @@ const FLAVOUR := {
 	"5-3": {"gadget": "gate", "ask": "We need a NAND and have no chips.", "thanks": "A NAND from loose parts. Now we can build anything."},
 	"5-4": {"gadget": "synth", "ask": "My synth is too quiet.", "thanks": "Ten times louder and clean."},
 	"5-5": {"gadget": "exam", "ask": "Predict first, then probe.", "thanks": "The numbers agree!"},
+	"6-1": {"gadget": "mic", "ask": "My preamp is stuck and the mic is dead.", "thanks": "Loud and clean. Back to the corner."},
+	"6-2": {"gadget": "phmeter", "ask": "My pH meter reads a tenth of the truth.", "thanks": "It reads true again."},
+	"6-3": {"gadget": "preamp", "ask": "The preamp sounds dull. The treble is gone.", "thanks": "The cymbals are back."},
+	"6-4": {"gadget": "piezo", "ask": "The cleaner gets a small triangle, not a big sine.", "thanks": "It hums at full swing."},
+	"6-5": {"gadget": "incubator", "ask": "The heater relay chatters around 50 C.", "thanks": "One click each way. The eggs are fine."},
+	"6-6": {"gadget": "generator", "ask": "Your generator's triangle is stuck on the rail.", "thanks": "Triangles again."},
+	"6-7": {"gadget": "exam", "ask": "Predict first, then probe.", "thanks": "The numbers agree!"},
 }
-const CHAPTER_TICKETS := {1: ["1-1", "1-2", "1-3", "1-4", "1-5"], 2: ["2-1", "2-2", "2-3", "2-4"], 3: ["3-1", "3-2", "3-3", "3-4"], 4: ["4-1", "4-2", "4-3", "4-4", "4-5"], 5: ["5-1", "5-2", "5-3", "5-4", "5-5"]}
-const ALL_TICKETS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4", "4-1", "4-2", "4-3", "4-4", "4-5", "5-1", "5-2", "5-3", "5-4", "5-5"]
+const CHAPTER_TICKETS := {1: ["1-1", "1-2", "1-3", "1-4", "1-5"], 2: ["2-1", "2-2", "2-3", "2-4"], 3: ["3-1", "3-2", "3-3", "3-4"], 4: ["4-1", "4-2", "4-3", "4-4", "4-5"], 5: ["5-1", "5-2", "5-3", "5-4", "5-5"], 6: ["6-1", "6-2", "6-3", "6-4", "6-5", "6-6", "6-7"]}
+const ALL_TICKETS := ["1-1", "1-2", "1-3", "1-4", "1-5", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4", "4-1", "4-2", "4-3", "4-4", "4-5", "5-1", "5-2", "5-3", "5-4", "5-5", "6-1", "6-2", "6-3", "6-4", "6-5", "6-6", "6-7"]
 ## The parts of chapter 2 that read better with a word under the value in the shoebox (presentation only).
 const PART_TAG := {"res-box": "box plug", "trimmer": "trimmer", "rheostat": "rheostat", "cap-cer": "ceramic", "cap-ideal": "exact", "1n4148": "diode", "zener-6v-ideal": "ideal Zener"}
 const DIAL_ENGINE := {"OFF": "off", "V": "dcv", "mA": "dca", "Ω": "ohm"}
@@ -221,9 +228,16 @@ func _load_ticket() -> void:
 	var tg: Dictionary = scope_q.get("target", {}) if scope_q.get("target", null) is Dictionary else {}
 	var supply := _supply_info()
 	var conns: Array = []
+	# chapter 6: a rail that is a bench supply's minus with ground as its plus is the negative rail (VN): it says "-", not "+"
+	var grounds := {}
+	for c in bench_q.get("connectors", []): if str(c.role) == "ground": grounds[str(c.id)] = true
+	var neg := {}
+	for sd in card.get("supplies", []): if str(sd.get("kind", "")) == "bench" and grounds.has(str(sd.get("plus", ""))): neg[str(sd.get("minus", ""))] = true
 	for c in bench_q.get("connectors", []):
 		var role := str(c.role)
-		conns.append({"id": str(c.id), "pad": [int(c.pad[0]), int(c.pad[1])], "role": "supply" if role in ["rail", "source"] else ("ground" if role == "ground" else role)})
+		var r2 := "supply" if role in ["rail", "source"] else ("ground" if role == "ground" else role)
+		if role == "rail" and neg.has(str(c.id)): r2 = "negrail"
+		conns.append({"id": str(c.id), "pad": [int(c.pad[0]), int(c.pad[1])], "role": r2})
 	ticket = {"id": id, "figure": card.get("figure", null), "pay_text": str(card.get("payText", "")), "star_rule": str(card.get("starRule", "")), "on_board": str(card.get("onBoard", "")), "title": str(card.get("title", "")), "customer": str(card.get("customer", "")), "brief": str(card.get("brief", "")),
 		"gadget": str(fl.get("gadget", "exam")), "ask": str(fl.get("ask", "")), "thanks": str(fl.get("thanks", "")),
 		"price": int(card.get("fee", 0)), "price_text": str(card.get("feeText", "")), "eb": bool(card.get("eb", false)),
@@ -997,10 +1011,20 @@ const REFS_CH5 := {
 	"5-4": {"parts": [["res-cf",68000,"0.25W",8,3,1],["res-cf",10000,"0.25W",8,9,1],["2n3904",null,"TO92",12,8,1],["res-cf",4700,"0.25W",12,3,1],["res-cf",390,"0.25W",12,11,1],["cap-el",0.00001,"16V",6,8,2],["cap-el",0.00001,"16V",14,8,0]], "wires": [[[2,1],[8,1],[8,3]],[[8,3],[12,3]],[[8,7],[8,9]],[[8,9],[12,9]],[[6,8],[6,7],[8,7]],[[2,8],[4,8]],[[12,7],[12,8]],[[12,8],[14,8]],[[16,8],[22,8]],[[12,10],[12,11]],[[12,15],[22,15],[22,14]],[[8,13],[8,15],[12,15]]], "clip": [22, 8]},
 	"5-5": {"parts": [["res-exact",565000,"ideal",4,4,0],["res-exact",3000,"ideal",11,2,1],["npn-textbook",null,"ideal",11,10,0]], "wires": [[[2,2],[2,4],[4,4]],[[2,2],[11,2]],[[8,4],[12,4],[12,10]],[[11,6],[11,8]],[[11,8],[11,10]],[[13,10],[13,14],[10,14]]], "pred": {"pib":20,"pic":2,"pvce":6,"pav":-232}},
 }
+## Chapter 6 (generated from src/data/levels/6-*.ts ref: the same parts and wires; clip = CH1 on OUT, or M on the exam).
+const REFS_CH6 := {
+	"6-1": {"parts": [["tl072",null,"DIP8",12,6,0],["res-cf",10000,"0.25W",5,7,0],["res-cf",470000,"0.25W",7,4,0]], "wires": [[[2,8],[4,8],[4,7],[5,7]],[[9,7],[12,7]],[[7,4],[7,6],[9,6],[9,7]],[[11,4],[12,4],[12,6]],[[11,4],[11,3],[22,3],[22,8]],[[12,8],[10,8],[10,13],[22,13],[22,14]],[[12,9],[12,11],[6,11],[6,14],[2,14]],[[15,6],[15,1],[2,1]]], "clip": [22, 8]},
+	"6-2": {"parts": [["tl072",null,"DIP8",12,6,0],["res-cf",10000,"0.25W",7,4,0],["res-cf",10000,"0.25W",5,10,0]], "wires": [[[2,8],[12,8]],[[12,7],[10,7]],[[7,4],[7,6],[10,6],[10,7]],[[10,7],[10,10],[9,10]],[[5,10],[4,10],[4,13],[22,13],[22,14]],[[11,4],[12,4],[12,6]],[[11,4],[11,3],[22,3],[22,8]],[[12,9],[12,11],[6,11],[6,14],[2,14]],[[15,6],[15,1],[2,1]]], "clip": [22, 8]},
+	"6-3": {"parts": [["lm358",null,"DIP8",12,6,0],["res-cf",10000,"0.25W",5,7,0],["res-cf",100000,"0.25W",7,4,0],["res-cf",10000,"0.25W",16,2,0],["res-cf",100000,"0.25W",16,11,0]], "wires": [[[2,8],[4,8],[4,7],[5,7]],[[9,7],[12,7]],[[7,4],[7,6],[9,6],[9,7]],[[11,4],[12,4],[12,6]],[[12,8],[10,8],[10,13],[22,13],[22,14]],[[12,9],[12,11],[6,11],[6,14],[2,14]],[[15,6],[15,1],[2,1]],[[11,4],[11,3],[16,3],[16,2]],[[20,2],[20,5],[17,5],[17,8],[16,8]],[[15,8],[16,8]],[[16,8],[16,11]],[[20,11],[20,8],[22,8]],[[15,7],[21,7],[21,8],[22,8]],[[15,9],[14,9],[14,12],[23,12],[23,14],[22,14]]], "clip": [22, 8]},
+	"6-4": {"parts": [["tl072",null,"DIP8",12,6,0],["res-cf",33000,"0.25W",7,4,0],["res-cf",8200,"0.25W",5,10,0]], "wires": [[[2,8],[12,8]],[[12,7],[10,7]],[[7,4],[7,6],[10,6],[10,7]],[[10,7],[10,10],[9,10]],[[5,10],[4,10],[4,13],[22,13],[22,14]],[[11,4],[12,4],[12,6]],[[11,4],[11,3],[22,3],[22,8]],[[12,9],[12,11],[6,11],[6,14],[2,14]],[[15,6],[15,1],[2,1]]], "clip": [22, 8]},
+	"6-5": {"parts": [["lm393",null,"DIP8",13,5,0],["res-cf",3600,"0.25W",5,9,1],["res-cf",10000,"0.25W",9,1,1],["res-cf",10000,"0.25W",9,9,1],["res-cf",4700,"0.25W",20,2,1],["res-cf",82000,"0.25W",14,10,0]], "wires": [[[3,8],[5,8],[5,9]],[[5,9],[7,9],[7,6],[13,6]],[[5,13],[5,14],[9,14]],[[9,13],[9,14]],[[9,14],[13,14]],[[13,14],[22,14]],[[13,8],[13,14]],[[9,1],[9,0]],[[9,5],[9,7]],[[9,9],[9,7]],[[9,7],[11,7]],[[11,7],[13,7]],[[16,5],[16,0]],[[16,0],[9,0]],[[9,0],[2,0],[2,1]],[[20,2],[20,0],[16,0]],[[13,5],[13,3],[18,3],[18,6],[20,6]],[[20,6],[20,8]],[[20,8],[22,8]],[[14,10],[11,10],[11,7]],[[18,10],[20,10],[20,8]]], "clip": [22, 8]},
+	"6-6": {"parts": [["tl072",null,"DIP8",12,6,0],["res-cf",11000,"0.25W",5,7,0],["cap-cer",2.2e-8,"50V",7,4,0],["res-cf",56000,"0.25W",7,2,0]], "wires": [[[2,8],[4,8],[4,7],[5,7]],[[9,7],[12,7]],[[7,4],[7,6],[9,6],[9,7]],[[11,4],[12,4]],[[12,4],[12,6]],[[11,4],[11,3],[22,3],[22,8]],[[12,8],[10,8],[10,13],[22,13],[22,14]],[[12,9],[12,11],[6,11],[6,14],[2,14]],[[15,6],[15,1],[2,1]],[[7,2],[6,2],[6,4],[7,4]],[[11,2],[12,2],[12,4]]], "clip": [22, 8]},
+	"6-7": {"parts": [["res-exact",10000,"ideal",8,1,0],["res-exact",5000,"ideal",8,3,0],["res-exact",20000,"ideal",8,5,0],["opamp-textbook",null,"ideal",14,6,0],["res-exact",10000,"ideal",13,12,0]], "wires": [[[2,2],[2,1],[8,1]],[[4,2],[5,2],[5,3],[8,3]],[[6,2],[7,2],[7,5],[8,5]],[[12,1],[13,1],[13,3]],[[12,3],[13,3]],[[13,3],[13,5]],[[12,5],[13,5]],[[13,5],[13,7]],[[13,7],[14,7]],[[13,7],[12,7],[12,12],[13,12]],[[17,12],[20,12],[20,8]],[[17,8],[20,8]],[[14,8],[11,8],[11,14],[10,14]],[[14,9],[14,10],[19,10],[19,15],[22,15]],[[17,7],[19,7],[19,2],[22,2]]], "clip": [20, 8], "pred": {"pv1":-4.75,"pv2":-9.5,"pv3":-14.25}},
+}
 
 ## Build the reference design for the open ticket straight through the engine (no UI). Returns true when every step was accepted.
 func build_ref(id: String) -> bool:
-	var R: Dictionary = REFS.get(id, REFS_CH2.get(id, REFS_CH3.get(id, REFS_CH4.get(id, REFS_CH5.get(id, {})))))
+	var R: Dictionary = REFS.get(id, REFS_CH2.get(id, REFS_CH3.get(id, REFS_CH4.get(id, REFS_CH5.get(id, REFS_CH6.get(id, {}))))))
 	if R.is_empty(): return false
 	var ok := true
 	clear_fault()

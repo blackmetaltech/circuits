@@ -4,7 +4,7 @@ extends Node3D
 ## grid labels and labelled header posts for the ticket's connectors. MeshKit conventions (pad (gx, gy) -> (gx*P, 0, gy*P)).
 
 const P := MeshKit.PITCH
-const ROLE_COL := {"source": Color(0.78, 0.16, 0.12), "supply": Color(0.78, 0.16, 0.12), "ground": Color(0.12, 0.2, 0.42), "load": Color(0.85, 0.55, 0.12)}
+const ROLE_COL := {"source": Color(0.78, 0.16, 0.12), "supply": Color(0.78, 0.16, 0.12), "ground": Color(0.12, 0.2, 0.42), "negrail": Color(0.10, 0.26, 0.62), "load": Color(0.85, 0.55, 0.12)}
 
 var w := 24
 var h := 16
@@ -68,7 +68,7 @@ func build(gw: int, gh: int, conns: Array) -> void:
 		var tp := p + Vector3(side * 0.0070, 0.0005, 0.0050 if front else -0.0046)   # above the pad rings (they showed through)
 		MeshKit.add(self, tab, MeshKit.mat(col.darkened(0.35), 0.9, 0.0, {"normal": 0.0, "rough_tex": false}), tp)
 		var role := str(c.get("role", ""))
-		var txt := str(c.id) + (" +" if role in ["supply", "source"] else (" −" if role == "ground" else ""))
+		var txt := str(c.id) + (" +" if role in ["supply", "source"] else (" −" if role in ["ground", "negrail"] else ""))
 		MeshKit.label(self, txt, 0.000068, tp + Vector3(0, 0.00025, 0), Color(0.97, 0.97, 0.95))
 	_ring_mesh = TorusMesh.new(); _ring_mesh.inner_radius = 0.0018; _ring_mesh.outer_radius = 0.0026; _ring_mesh.rings = 24; _ring_mesh.ring_segments = 8
 	_hover = MeshKit.add(self, _ring_mesh, _glow(Color(0.91, 0.64, 0.24)), Vector3.ZERO)
