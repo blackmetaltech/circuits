@@ -146,8 +146,26 @@ func _lcd(parent: Node, text: String, size := 22, col := LCD_ON) -> Label:
 func _key(parent: Node, text: String, cb: Callable, key := "", primary := false, active := false) -> Button:
 	_fonts2()
 	var b := Button.new(); b.focus_mode = Control.FOCUS_ALL
-	b.text = text if key == "" else "%s  %s" % [text, key]
+	b.text = text   # 0.6 (Sigrid): the shortcut is a small keycap inside the key, not a second word ("Power Space")
 	b.add_theme_font_override("font", f_semi); b.add_theme_font_size_override("font_size", fs(18))
+	var cap_w := 0.0
+	var cap: PanelContainer = null
+	if key != "":
+		var ks := fs(13)
+		cap = PanelContainer.new(); cap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var csb := StyleBoxFlat.new(); csb.bg_color = Color(0, 0, 0, 0.22) if not primary else Color(0, 0, 0, 0.14)
+		for k in ["corner_radius_top_left", "corner_radius_top_right", "corner_radius_bottom_left", "corner_radius_bottom_right"]: csb.set(k, 3)
+		csb.border_width_top = 1; csb.border_width_left = 1; csb.border_width_right = 1; csb.border_width_bottom = 2
+		csb.border_color = Color(0.55, 0.57, 0.60, 0.55) if not primary else Color(0.20, 0.14, 0.06, 0.6)
+		csb.content_margin_left = 5; csb.content_margin_right = 5; csb.content_margin_top = 0; csb.content_margin_bottom = 1
+		cap.add_theme_stylebox_override("panel", csb)
+		var kl := Label.new(); kl.text = key; kl.add_theme_font_override("font", f_mono if f_mono else f_sans); kl.add_theme_font_size_override("font_size", ks)
+		kl.add_theme_color_override("font_color", Color(0.62, 0.64, 0.67) if not primary else Color(0.22, 0.16, 0.08)); cap.add_child(kl)
+		var fnt: Font = f_mono if f_mono else f_sans
+		cap_w = fnt.get_string_size(key, HORIZONTAL_ALIGNMENT_LEFT, -1, ks).x + 12.0
+		b.add_child(cap)
+		cap.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+		cap.offset_left = -cap_w - 10.0; cap.offset_right = -10.0; cap.offset_top = -float(ks) * 0.7; cap.offset_bottom = float(ks) * 0.7
 	var top := Color(0.86, 0.58, 0.18) if primary else (Color(0.25, 0.26, 0.28) if active else Color(0.20, 0.21, 0.23))
 	for st in ["normal", "hover", "pressed", "focus", "disabled"]:
 		var sb := StyleBoxFlat.new(); sb.bg_color = top
@@ -157,7 +175,7 @@ func _key(parent: Node, text: String, cb: Callable, key := "", primary := false,
 		sb.border_width_bottom = 1 if st == "pressed" else 5
 		sb.border_color = top.darkened(0.55)
 		if active and st != "pressed": sb.border_color = Color(0.91, 0.64, 0.24); sb.border_width_bottom = 4
-		sb.content_margin_left = 14; sb.content_margin_right = 14
+		sb.content_margin_left = 14; sb.content_margin_right = 14 + (cap_w + 8.0 if cap_w > 0.0 else 0.0)
 		sb.content_margin_top = 10 if st == "pressed" else 7; sb.content_margin_bottom = 6
 		if st == "focus": sb.draw_center = false; sb.border_color = Color(1, 0.8, 0.4); sb.border_width_top = 2; sb.border_width_left = 2; sb.border_width_right = 2; sb.border_width_bottom = 2
 		b.add_theme_stylebox_override(st, sb)
@@ -468,7 +486,7 @@ func _predict_slip(v: Control, t: Dictionary) -> void:
 	for pr in preds:
 		_ink(v, str(pr.name).trim_prefix("Your prediction: "), 16, INK, f_sans)
 		var le := LineEdit.new(); le.placeholder_text = "a number in %s" % str(pr.get("unit", "")) if str(pr.get("unit", "")) != "" else "a number"
-		le.add_theme_font_override("font", f_type); le.add_theme_font_size_override("font_size", 18)
+		le.add_theme_font_override("font", f_type); le.add_theme_font_size_override("font_size", fs(18))
 		le.add_theme_color_override("font_color", INK); le.add_theme_color_override("font_placeholder_color", Color(0.38, 0.35, 0.31))
 		var sb := StyleBoxFlat.new(); sb.bg_color = Color(1.0, 0.99, 0.95); sb.border_color = Color(0.25, 0.22, 0.18); sb.set_border_width_all(2); sb.set_content_margin_all(6)
 		le.add_theme_stylebox_override("normal", sb); le.add_theme_stylebox_override("focus", sb)
@@ -607,7 +625,7 @@ func _tools() -> void:
 	if bench.handed: return
 	var v := _plate(Vector2(560, 0), "")
 	var pc: Control = v.get_parent()
-	var h := HBoxContainer.new(); h.add_theme_constant_override("separation", 8); v.add_child(h)
+	var h := HFlowContainer.new(); h.add_theme_constant_override("h_separation", 8); h.add_theme_constant_override("v_separation", 6); v.add_child(h)
 	_key(h, "Power", func(): bench.toggle_power(), "Space", false, bench.backend.powered)
 	if bench.mode == "job": _key(h, "Test", func(): bench.run_test(), "Enter", false)
 	for sl in bench.backend.selectors:
@@ -627,12 +645,27 @@ func _tools() -> void:
 	_key(h, "Schematic", func(): toggle_schematic(), "Tab", false, schem)
 	_key(h, "Menu", func(): bench.back_to_title())
 	var vk := _eng(h, "Views 1-5", 14); vk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	# 0.6: below 1280 px wide the rail was wider than the canvas and Power and Views fell off both edges (1078x800 shot)
-	var rw := pc.get_combined_minimum_size().x; var vw := get_viewport().get_visible_rect().size.x
-	var rk := minf(1.0, (vw - 24.0) / maxf(rw, 1.0)); pc.scale = Vector2(rk, rk)
-	pc.position.x = (vw - rw * rk) * 0.5
-	pc.position.y = _canvas_h() - 16.0 - pc.get_combined_minimum_size().y * rk
-	_rail_h = pc.get_combined_minimum_size().y * rk
+	# 0.6: below 1280 px wide the rail was wider than the canvas. Scaling it down (the first fix) made the text about 11 px at
+	# 1078 wide (Sigrid), so it wraps to a second row instead. A flow container learns its height only after layout, so the rows
+	# are counted here from the keys' own widths, and the plate is placed at once.
+	var vw := get_viewport().get_visible_rect().size.x
+	var pad_x := pc.get_combined_minimum_size().x - h.get_combined_minimum_size().x   # the plate's margins round the keys
+	var avail := vw - 24.0 - pad_x
+	var widths: Array = []; var row_h := 0.0
+	for c in h.get_children():
+		var ms: Vector2 = (c as Control).get_combined_minimum_size(); widths.append(ms.x); row_h = maxf(row_h, ms.y)
+	var natural := 0.0
+	for wd in widths: natural += float(wd) + 8.0
+	natural -= 8.0
+	var width := minf(natural, avail); var rows := 1; var x := 0.0
+	for wd in widths:
+		if x > 0.0 and x + float(wd) > width: rows += 1; x = 0.0
+		x += float(wd) + 8.0
+	h.custom_minimum_size = Vector2(width, rows * row_h + (rows - 1) * 6.0)
+	pc.reset_size()
+	var psz := pc.get_combined_minimum_size()
+	pc.position = Vector2((vw - psz.x) * 0.5, _canvas_h() - 16.0 - psz.y)
+	_rail_h = psz.y
 	# the hover tip and the meter reading sit on their own plate above the rail: a long tip used to widen the rail past the
 	# window and push Power and Test off the left edge at 1280 x 800 (phase C GPU shot of 2-3)
 	var tip: String = bench.hover_tip
@@ -641,6 +674,7 @@ func _tools() -> void:
 	var tv := _plate(Vector2.ZERO, "")
 	_tip_plate = tv.get_parent()
 	_tip_label = _eng(tv, tip, 13); _tip_label.add_theme_color_override("font_color", AMBER)   # 0.4.1: a small mirror; the meter's own face carries the reading
+	if tip == bench.thermal_text() and bench.thermal: _tip_label.text = tip   # the thermal camera's line in normal case (Sigrid)
 	(_tip_plate as Control).visible = tip != ""
 	_place_tip()
 
@@ -664,7 +698,7 @@ func _refresh_live() -> void:
 	if _tip_label and is_instance_valid(_tip_label) and bench.hover_tip == "" and b.dial != "OFF":
 		_tip_label.text = ("Meter  " + bench.meter_text()).to_upper(); _tip_plate.visible = true; _place_tip()
 	elif _tip_label and is_instance_valid(_tip_label) and bench.hover_tip == "" and bench.thermal:
-		_tip_label.text = bench.thermal_text().to_upper(); _tip_plate.visible = true; _place_tip()
+		_tip_label.text = bench.thermal_text(); _tip_plate.visible = true; _place_tip()
 	if _status and is_instance_valid(_status): _status.text = "POWER %s" % ("ON" if b.powered else "OFF")
 	if _readout and is_instance_valid(_readout): _readout.text = bench.readout_text()
 	if _meter and is_instance_valid(_meter): _meter.text = "METER  " + bench.meter_text()
