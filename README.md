@@ -4,16 +4,17 @@
 
 Customers bring broken devices to your bench. Open them, probe them, fix them with real parts, and hand them back.
 
-> **v0.4.0, pre-alpha.** Chapter 1, 2-1 and 2-3 play on the 3D bench; the rest plays in the classic 2D look. Linux and Windows builds on the [releases page](https://github.com/blackmetaltech/circuits/releases/latest).
+> **v0.4.1, pre-alpha.** Chapter 1, 2-1 and 2-3 play on the 3D bench; the rest plays in the classic 2D look. Linux and Windows builds on the [releases page](https://github.com/blackmetaltech/circuits/releases/latest).
 
-![The fan's driver without a flyback diode: the transistor burns and the scope catches the 2000 V kick](docs/readme/wb-failure.gif)
+![A burnt LED is replaced and burns again on 9 V: the ticket bills the part plus a $1.50 courier](docs/readme/wb-burn-1-1.gif)
 
 | | |
 |---|---|
-| ![](docs/readme/wb-case-open.gif)<br>**A repair arrives.** The case opens on the customer's own faulty board. | ![](docs/readme/wb-scope.gif)<br>**The scope runs live.** The fan driver switching at 100 Hz. |
-| ![](docs/readme/wb-sortbox-1-1.jpg)<br>**The bench.** Parts in a sorting box. Power and test on the supply. | ![](docs/readme/wb-weather-2-1.jpg)<br>**2-1 Weather station.** It reads low. The meter says 2.76 V. |
-| ![](docs/readme/wb-sealed-2-3.jpg)<br>**2-3 Sealed box.** Meter it, then build its twin. | ![](docs/readme/wb-cute-2-1.jpg)<br>**Cute mode.** Beads ride the wires that carry current. |
-| ![](docs/readme/wb-1280x800-2-1.jpg)<br>**Steam Deck size** (1280x800). | ![](docs/readme/wb-igpu-low-1-1.png)<br>**Low tier** on an integrated GPU (0.3 shot). |
+| ![](docs/readme/wb-pick-1-1.gif)<br>**Pick and place.** Take a part from the box. Drop it on the pads. | ![](docs/readme/wb-measure-2-1.gif)<br>**Measure, then fix.** 2.76 V before, 3.35 V after. |
+| ![](docs/readme/wb-supply-2-3.gif)<br>**The supply keys.** VOLTAGE steps the bench supply. TEST runs the bench test. | ![](docs/readme/wb-sortbox-1-1.jpg)<br>**Passed.** Printed tabs on the parts box. |
+| ![](docs/readme/wb-weather-2-1.jpg)<br>**2-1 Weather station.** It reads low. The meter's face says 2.76 V. | ![](docs/readme/wb-cute-2-1.jpg)<br>**Cute mode.** Beads ride the wires that carry current. |
+| ![](docs/readme/wb-sealed-2-3.jpg)<br>**2-3 Sealed box.** Meter it, then build its twin. | ![](docs/readme/wb-igpu-low-1-1.png)<br>**Low tier** on an integrated GPU (0.3 shot). 0.4.1 measures 8.4 ms a frame. |
+| ![](docs/readme/wb-1280x800-2-1.jpg)<br>**Steam Deck size** (1280x800). Every instrument in view. | |
 
 ## What you do
 
