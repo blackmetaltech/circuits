@@ -458,12 +458,23 @@ func set_view(v: int, snap := false) -> void:
 			# the board sits above the tray: aim below its centre and pull back on narrow (16:10) windows
 			var asp := get_viewport().get_visible_rect().size.aspect()
 			g_tgt = bb.get_center() + Vector3(-0.022, 0.0, 0.032); g_yaw = 0.0; g_pitch = deg_to_rad(-62.0); g_dist = clampf(bb.size.length() * 2.6 * (1.78 / maxf(asp, 1.2)), 0.22, 0.42)
-		2: g_tgt = Vector3(0.02, 0.04, -0.03); g_yaw = deg_to_rad(16.0); g_pitch = deg_to_rad(-26.0); g_dist = 0.92
+		2:
+			if mode == "title" or board == null: g_tgt = Vector3(0.02, 0.04, -0.03); g_yaw = deg_to_rad(16.0); g_pitch = deg_to_rad(-26.0); g_dist = 0.92   # the title's backdrop
+			else:
+				# 0.6 work view (Sigrid: the case was a quarter of the frame and the meter the biggest thing on screen): the open case
+				# about 45 % of the width, set right of the paper ticket. Visible width = 2 tan(19 deg) x aspect x distance.
+				var wp := work_pose(get_viewport().get_visible_rect().size.aspect())
+				g_tgt = wp[0]; g_yaw = wp[1]; g_pitch = wp[2]; g_dist = wp[3]
 		3: g_tgt = (scope.global_position + Vector3(-0.06, 0.075, 0)) if scope else Vector3(-0.3, 0.08, -0.25); g_yaw = deg_to_rad(14.0); g_pitch = deg_to_rad(-10.0); g_dist = 0.48
 		4: g_tgt = (fan.global_position + Vector3(0, 0.07, 0)) if fan else Vector3(0.03, 0.07, -0.24); g_yaw = deg_to_rad(-20.0); g_pitch = deg_to_rad(-14.0); g_dist = 0.42
 	if snap: tgt = g_tgt; yaw = g_yaw; pitch = g_pitch; dist = g_dist
 	_view_pose = [g_tgt, g_yaw, g_pitch, g_dist]
 	if ui: ui.call_deferred("_rebuild")
+
+## View 2's camera goal for a window aspect: [target, yaw, pitch, distance] (look2_frame_flow measures the case with it).
+func work_pose(aspect: float) -> Array:
+	var d := 0.39 * (1.6 / clampf(aspect, 1.25, 2.4))
+	return [board_centre() + Vector3(-0.115 * d, -0.004, 0.012), deg_to_rad(8.0), deg_to_rad(-40.0), d]
 
 func _update_camera(dt: float) -> void:
 	var k := 1.0 - exp(-dt * 6.0)
@@ -508,7 +519,7 @@ func start_job(id := "") -> void:
 	if OS.get_environment("CB_THERMAL") == "1": toggle_thermal()   # shot hook: chapter 4's thermal camera on
 	if OS.get_environment("CB_POWER_AT") != "":   # QA/clip hook: switch the bench on after N seconds (the clip shows the moment)
 		get_tree().create_timer(float(OS.get_environment("CB_POWER_AT"))).timeout.connect(func(): toggle_power())
-	if OS.get_environment("CB_OPEN") == "1": open_case(); set_view(int(OS.get_environment("CB_VIEW")) if OS.get_environment("CB_VIEW") != "" else 1, true)   # shot hook
+	if OS.get_environment("CB_OPEN") == "1": open_case(); set_view(int(OS.get_environment("CB_VIEW")) if OS.get_environment("CB_VIEW") != "" else 2, true)   # shot hook
 	if OS.get_environment("CB_DEMO") != "": _demo(OS.get_environment("CB_DEMO"))
 	if OS.get_environment("CB_OPEN_AT") != "":    # QA/clip hook: open the case after N seconds
 		get_tree().create_timer(float(OS.get_environment("CB_OPEN_AT"))).timeout.connect(func(): open_case())
@@ -517,7 +528,7 @@ func start_job(id := "") -> void:
 			var vv := int(part.get_slice("@", 0)); var tt := float(part.get_slice("@", 1))
 			get_tree().create_timer(tt).timeout.connect(func(): set_view(vv))
 	if OS.get_environment("CB_VIEW") != "": set_view(int(OS.get_environment("CB_VIEW")), true)
-	else: set_view(1)
+	else: set_view(2)   # 0.6: the work view (key 1 shows the whole bench)
 	sync_board(); changed.emit()
 	if OS.get_environment("CB_L2_GHOST") != "": _ghost_demo.call_deferred()
 	if cs == "handed": get_tree().create_timer(2.5).timeout.connect(func(): hand_back())
@@ -527,7 +538,7 @@ func case_closed() -> bool: return case_node != null and case_node.state != "ope
 func open_case() -> void:
 	if case_node == null or case_node.state == "open": return
 	case_node.set_state("open"); note = str(OPEN_LINE.get(ticket_id, "Case open. The board is on the bench.")); if sfx: sfx.play("clack")
-	set_view(1); changed.emit()
+	set_view(2); changed.emit()
 
 ## After a pass: the lid goes back on and the fan goes home running.
 func hand_back() -> void:

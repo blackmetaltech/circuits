@@ -34,6 +34,19 @@ func _initialize() -> void:
 			var hull := FrameCheck.box_hull(wb.cam, wb.dmm.get("_tilt"), Vector3(0.096, 0.21, 0.04), Vector3(0, 0, -0.005), asp)
 			for id in ["psu_output", "psu_test", "psu_volt"]:
 				ok(not FrameCheck.hit_covered(wb.cam, wb.psu, id, hull, asp), "%s %.2f: the meter leaves %s in view" % [t, asp, id])
+	# 0.6 (Sigrid: the case was a quarter of the frame): view 2, the work view a job opens in, shows the open case at about 45 % of
+	# the width, right of the paper ticket and above the tool rail, at 16:9, 16:10 and the 1078x800 window
+	for t in ["1-1", "4-1"]:
+		wb.backend.unlock_through(t); wb.start_job(t); for i in 5: await process_frame
+		wb.open_case(); for i in 3: await process_frame
+		ok(wb.view == 2, "%s: opening the case lands in the work view (view %d)" % [t, wb.view])
+		for asp: float in [1920.0 / 1080.0, 1.6, 1078.0 / 800.0]:
+			var wp: Array = wb.work_pose(asp)
+			wb.tgt = wp[0]; wb.yaw = wp[1]; wb.pitch = wp[2]; wb.dist = wp[3]; wb.g_tgt = wb.tgt; wb.g_yaw = wb.yaw; wb.g_pitch = wb.pitch; wb.g_dist = wb.dist; wb._update_camera(1.0)
+			var h := 1920.0 / asp
+			var r := FrameCheck.rect(wb.cam, wb.case_node, asp)
+			ok(r.size.x / 1920.0 > 0.38 and r.size.x / 1920.0 < 0.55, "%s %.2f: the case is %d %% of the width in the work view" % [t, asp, int(r.size.x / 19.2)])
+			ok(r.position.x > TICKET.end.x and r.end.x <= 1920.0 + SLACK and r.end.y <= h - 100.0, "%s %.2f: the case is right of the ticket and above the rail (x %d-%d, y %d-%d)" % [t, asp, r.position.x, r.end.x, r.position.y, r.end.y])
 	# 0.5 (Noor): with the wire tool, every connectable pad shows a ring, and the ground connector's tip says what it is
 	wb.start_job("1-1"); for i in 5: await process_frame
 	wb.open_case(); for i in 5: await process_frame
