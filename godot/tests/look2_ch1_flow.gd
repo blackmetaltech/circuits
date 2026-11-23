@@ -57,7 +57,7 @@ func _run() -> void:
 			ok(wb.sort_box.visible and wb.sort_box.slots.size() == 2, "the sorting box stands on the bench with the ticket's two parts (%d)" % wb.sort_box.slots.size())
 			var texts := []
 			for b in wb.find_children("*", "Button", true, false): texts.append((b as Button).text)
-			ok(not texts.any(func(t): return str(t).begins_with("Bench test")) and wb.find_children("*", "ScrollContainer", true, false).filter(func(n): return not str(n.name).begins_with("PaperScroll")).is_empty(), "no 2D tray and no bench control plate on screen (the paper ticket's own scroller, 0.5, is not a tray)")
+			ok(not texts.any(func(t): return str(t).begins_with("Bench test")) and wb.find_children("*", "ScrollContainer", true, false).is_empty(), "no 2D tray and no bench control plate on screen")
 			wb._hit("tray:1"); await _frames(2)
 			ok(wb.tool == "place" and str(wb.place_item.get("partId", "")) == str(wb.sort_box.slots[1].item.partId), "a click on a compartment picks its part (%s)" % str(wb.place_item.get("partId", "")))
 			wb.set_tool("select")
