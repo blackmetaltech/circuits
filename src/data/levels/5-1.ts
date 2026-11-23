@@ -4,7 +4,7 @@
 // BC547B: 200 mA over its 100 mA; Rb 8.2 k leaves the transistor in its active region (Vce 3 V and more, over its 625 mW); Rb 47 ohm asks the pin for 52 mA.
 // DEVIATIONS from DESIGN (each documented; none changes the lesson):
 //  1. The pin is a bench-driven source (SupplyDef 'pin') and the fan the catalogue's `fan-dc` fixture (R 60 ohm, L 10 mH; the catalogue's 5 mH was an estimate); the "pin damaged" case is a failed spec (pin current <= 20 mA), not a smoke event: the pin is the customer's, not a part.
-//  2. The bin has the E12 resistors 47 ohm - 47 kohm (the design names the TIP120 alternative with Rb 2.2 k: it is in the bin, its Vce(sat) in the macro is 0.83 V, so the fan reads 11.2 V: a pass with a thin margin, as the design says).
+//  2. The bin has the E12 resistors 47 ohm - 47 kohm (the design names the TIP120 alternative with Rb 2.2 k: it is in the bin, its Vce(sat) in the macro is 0.72 V, so the fan reads 11.28 V: a pass with a thin margin, as the design says).
 //     2N2222A and BC547B are UNVERIFIED catalogue rows (CAMPAIGN_BLOCKERS: onsemi answers 403 to a scripted fetch); the lesson (forced beta, Vceo, Ic) does not depend on the digits.
 //  3. The thermal rule is the steady-state average power of the part (TO-92: 625 mW at 25 C, derated by the thermal model); Stars: head = cost, par = the ref's cost.
 import { eseries } from '../eseries';

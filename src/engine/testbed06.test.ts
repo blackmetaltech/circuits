@@ -43,7 +43,7 @@ describe('testbed devices (0.6)', () => {
     e.act('power', [true]); for (let i = 0; i < 5; i++) e.act('advance', [1]);
     expect(frame().parts.find((p: any) => p.relay).relay.operated).toBe(true);
   });
-  it('relay timer, 220 uF swapped for 470 uF in place (the testbed break): the pull-in time scales with C, about 2.0 s to about 4.2 s', () => {
+  it('relay timer, 220 uF swapped for 470 uF in place (the testbed break): the pull-in time scales with C, about 1.9 s to about 4.0 s', () => {
     const t = (c: number | null) => {
       const { e, tk, frame } = load('relay_timer');
       if (c !== null) expect(e.act('setValue', [tk().board.parts.find((p) => p.partId === 'cap-el')!.uid, c]).ok).toBe(true);
@@ -53,7 +53,7 @@ describe('testbed devices (0.6)', () => {
     };
     const t1 = t(null), t2 = t(470e-6);
     expect(t1).toBeGreaterThan(1.8); expect(t1).toBeLessThan(2.2);
-    expect(t2).toBeGreaterThan(4.0); expect(t2).toBeLessThan(4.4);
+    expect(t2).toBeGreaterThan(3.8); expect(t2).toBeLessThan(4.2);         // 0.7 TIP120 gain fix: 1.86 s / 3.98 s (were 1.98 / 4.22)
     expect(t2 / t1).toBeGreaterThan(0.95 * 470 / 220); expect(t2 / t1).toBeLessThan(1.05 * 470 / 220);
   });
   it('dimmer, emitter resistor shorted (the testbed break): the transistor saturates and the strip takes about 0.28 A, above the 0.225 A the knob gives at its top', () => {
@@ -69,7 +69,7 @@ describe('testbed devices (0.6)', () => {
     const before = strip(run());
     expect(e.act('addWire', [[[18, 12], [22, 12]]]).ok).toBe(true);
     const f = run(), after = strip(f);
-    expect(before).toBeLessThan(0.1);
+    expect(before).toBeGreaterThan(0.09); expect(before).toBeLessThan(0.11);   // 0.101 A at the default 0.75 (0.085 before the 0.7 TIP120 gain fix)
     expect(after).toBeGreaterThan(0.26); expect(after).toBeLessThan(0.30);
     const q = f.parts.find((p: any) => p.uid === tk().board.parts.find((p) => p.partId === 'tip120')!.uid);
     expect(q.power / after).toBeLessThan(1.0);                           // Vce = P / I under 1 V: saturated, so the gain no longer sets the current
