@@ -167,6 +167,10 @@ func _key(parent: Node, text: String, cb: Callable, key := "", primary := false,
 ## The repair ticket: a paper card, typed, with the customer's words in handwriting and a red stamp when the job passes.
 func _paper(pos: Vector2, w: float) -> VBoxContainer:
 	_fonts2()
+	# 0.6: below 1280 px wide fs() raises every font to stay readable, so a 430 px paper wrapped into a tall column and ran off
+	# the bottom. The paper widens with the font floor (up to 40 % of the canvas), then _fit_paper scales it to the space left.
+	var grow := float(fs(17)) / 17.0
+	w = minf(w * grow, maxf(w, get_viewport().get_visible_rect().size.x * 0.40))
 	var p := PanelContainer.new(); p.position = pos; p.custom_minimum_size = Vector2(w, 0); p.rotation = deg_to_rad(-0.6)
 	var sb := StyleBoxFlat.new(); sb.bg_color = PAPER
 	for k in ["corner_radius_top_left", "corner_radius_top_right", "corner_radius_bottom_left", "corner_radius_bottom_right"]: sb.set(k, 2)
@@ -176,7 +180,16 @@ func _paper(pos: Vector2, w: float) -> VBoxContainer:
 	p.add_theme_stylebox_override("panel", sb)
 	_root.add_child(p)
 	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 6); p.add_child(v)
+	p.resized.connect(_fit_paper.bind(p))
 	return v
+
+## The paper never runs under the tool rail: if its laid-out height does not fit above the rail, it is scaled down to fit.
+func _fit_paper(p: Control) -> void:
+	if not is_instance_valid(p): return
+	var room := _canvas_h() - p.position.y - _rail_h - 72.0
+	var k := clampf(room / maxf(p.size.y, 1.0), 0.55, 1.0)
+	p.pivot_offset = Vector2.ZERO
+	if absf(p.scale.x - k) > 0.001: p.scale = Vector2(k, k)
 
 func _ink(parent: Node, text: String, size := 19, col := INK, font: Font = null, wrap := true) -> Label:
 	return _lab(parent, nb_units(text), size, col, font if font else f_type, wrap)
@@ -548,9 +561,12 @@ func _tools() -> void:
 	_key(h, "Schematic", func(): toggle_schematic(), "Tab", false, schem)
 	_key(h, "Menu", func(): bench.back_to_title())
 	var vk := _eng(h, "Views 1-5", 14); vk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	pc.position.x = (1920 - pc.get_combined_minimum_size().x) * 0.5
-	pc.position.y = _canvas_h() - 16.0 - pc.get_combined_minimum_size().y
-	_rail_h = pc.get_combined_minimum_size().y
+	# 0.6: below 1280 px wide the rail was wider than the canvas and Power and Views fell off both edges (1078x800 shot)
+	var rw := pc.get_combined_minimum_size().x; var vw := get_viewport().get_visible_rect().size.x
+	var rk := minf(1.0, (vw - 24.0) / maxf(rw, 1.0)); pc.scale = Vector2(rk, rk)
+	pc.position.x = (vw - rw * rk) * 0.5
+	pc.position.y = _canvas_h() - 16.0 - pc.get_combined_minimum_size().y * rk
+	_rail_h = pc.get_combined_minimum_size().y * rk
 	# the hover tip and the meter reading sit on their own plate above the rail: a long tip used to widen the rail past the
 	# window and push Power and Test off the left edge at 1280 x 800 (phase C GPU shot of 2-3)
 	var tip: String = bench.hover_tip
