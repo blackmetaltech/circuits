@@ -89,3 +89,10 @@ jobs:
           timeout 300 godot --headless --path godot -s res://tests/look2_async_flow.gd
           timeout 120 godot --headless --path godot -s res://tests/sfx_flow.gd
           XDG_DATA_HOME=$(mktemp -d /tmp/cbsave.XXXX) timeout 300 godot --headless --path godot -s res://tests/look2_save_flow.gd
+      - name: Classic stall flows (the 2D look is still an option on the title)
+        if: matrix.node == '22'
+        run: |
+          for f in boot_flow stall_flow drag_flow ch1_engine_flow ch2_engine_flow ch3_engine_flow ch4_engine_flow ch5_engine_flow n5_flow layout_flow; do
+            echo "== $f"; timeout 600 godot --headless --path godot -s res://tests/$f.gd || exit 1
+          done
+          XDG_DATA_HOME=$(mktemp -d /tmp/cbsave.XXXX) timeout 300 godot --headless --path godot -s res://tests/save_migrate_flow.gd
