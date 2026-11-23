@@ -76,6 +76,16 @@ func _run() -> void:
 	var pa0: Vector2 = wb.pad.pos; wb.pad.axes[JOY_AXIS_LEFT_X] = 1.0; wb.pad._process(0.05); var free_step: float = wb.pad.pos.x - pa0.x
 	wb.pad.pos = pa0; wb.hover_tip = "a part"; wb.pad._process(0.05); var aim_step: float = wb.pad.pos.x - pa0.x
 	wb.pad.axes[JOY_AXIS_LEFT_X] = 0.0; wb.hover_tip = ""
+	# 0.6 (Rui): a real mouse move hands control back, and an unplugged pad forgets its stick
+	wb.pad.active = true; wb.pad.axes[JOY_AXIS_LEFT_X] = 0.7
+	var rm := InputEventMouseMotion.new(); rm.position = wb.pad.pos + Vector2(200, 120); rm.relative = Vector2(30, 10)
+	wb.pad._input(rm)
+	ok(not wb.pad.active and wb.pad.axes.is_empty(), "a real mouse move hides the ring and clears the stick (active %s, axes %s)" % [str(wb.pad.active), str(wb.pad.axes)])
+	wb.pad.active = true; wb.pad.axes[JOY_AXIS_LEFT_X] = 0.7
+	var own := InputEventMouseMotion.new(); own.position = wb.pad.get_viewport().get_final_transform() * wb.pad.pos; own.relative = Vector2(12, 0)
+	wb.pad._input(own)
+	ok(wb.pad.active, "the ring's own move does not release it")
+	wb.pad.release()
 	ok(free_step > 0.0 and aim_step < free_step * 0.6, "the ring slows over a target (%.1f px vs %.1f px per step)" % [aim_step, free_step])
 	await _btn(JOY_BUTTON_Y); await _frames(5)
 	ok(not wb.backend.passed and not wb.last_failure.is_empty(), "Y runs the bench test (it fails the torch as it came in: %s)" % str(wb.last_failure.get("text", "")).left(60))

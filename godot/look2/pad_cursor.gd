@@ -31,13 +31,25 @@ func _ready() -> void:
 		if not has:
 			var jb := InputEventJoypadButton.new(); jb.button_index = int(pair[1]); jb.device = -1
 			InputMap.action_add_event(str(pair[0]), jb)
+	# 0.6 (Rui): after the pad was unplugged its last stick value stayed in `axes`, so the ring kept sending mouse moves every
+	# frame and the real mouse lost hover. An unplugged pad clears its axes; a real mouse move hands control back (_input).
+	Input.joy_connection_changed.connect(func(_d: int, connected: bool): if not connected: release())
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	z_index = 100
 
 func _on_bench() -> bool: return bench != null and str(bench.mode) != "title"
 
+## The mouse takes over: the ring hides and the sticks forget their last values.
+func release() -> void:
+	axes.clear(); active = false; queue_redraw()
+
 func _input(e: InputEvent) -> void:
+	if e is InputEventMouseMotion:
+		# the ring's own moves arrive at the ring (after the window transform); anything else is the real mouse
+		var mp := (e as InputEventMouseMotion).position
+		if active and mp.distance_to(get_viewport().get_final_transform() * pos) > 6.0 and mp.distance_to(pos) > 6.0: release()
+		return
 	if e is InputEventJoypadMotion:
 		var jm := e as InputEventJoypadMotion
 		axes[jm.axis] = jm.axis_value
@@ -122,8 +134,17 @@ func _key(kc: int) -> void:
 		var k := InputEventKey.new(); k.keycode = kc; k.physical_keycode = kc; k.pressed = down
 		Input.parse_input_event(k)
 
+## 0.6 (Rui, pad pass: "nothing tells me which button is the wire tool"): while the ring shows, a plate at the top right lists the pad.
+const LEGEND := ["A  click", "B  drop tool / remove", "D-pad up  wire", "D-pad down  meter leads", "LB / RB  value or zoom", "X  power    Y  test", "Right stick  orbit"]
+
 func _draw() -> void:
 	if not active or not _on_bench(): return
+	var f := ThemeDB.fallback_font; var fsz := 18; var lh := 24.0
+	var vs := get_viewport().get_visible_rect().size
+	var wpx := 290.0; var r := Rect2(vs.x - wpx - 16.0, 16.0, wpx, 14.0 + lh * LEGEND.size())
+	draw_rect(r, Color(0.045, 0.05, 0.058, 0.88)); draw_rect(r, Color(1.0, 0.78, 0.25, 0.6), false, 1.5)
+	for i in LEGEND.size():
+		draw_string(f, r.position + Vector2(12, 8 + lh * (i + 0.8)), str(LEGEND[i]), HORIZONTAL_ALIGNMENT_LEFT, -1, fsz, Color(0.92, 0.9, 0.84))
 	draw_arc(pos, 11.0, 0.0, TAU, 32, Color(0.0, 0.0, 0.0, 0.6), 4.0, true)
 	draw_arc(pos, 11.0, 0.0, TAU, 32, Color(1.0, 0.78, 0.25), 2.0, true)
 	draw_circle(pos, 2.0, Color(1.0, 0.78, 0.25))
