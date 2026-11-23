@@ -73,7 +73,7 @@ static func load_device(wb, id: String) -> bool:
 		if ok:
 			b._after_edit()
 			for pt in tb.get("pots", []):
-				for p in b.parts: if str(p.partId) == str(pt.partId): b._act("setPot", [str(p.uid), float(pt.alpha)]); wb.pot_alpha[str(p.uid)] = float(pt.alpha)
+				for p in b.parts: if str(p.partId) == str(pt.partId): b._act("setPot", [str(p.uid), float(pt.alpha)]); wb.pot_alpha[str(p.uid)] = float(pt.alpha); wb.sync_board(); var pn = wb.parts3d.get(str(p.uid), null); if pn: pn.set_knob(float(pt.alpha))
 	else: ok = b.build_ref(str(d.ticket))
 	if bool(d.get("safety", false)): b.read_safety()   # mains: the testbed is the isolated bench; the card was read on the job
 	b._act("setRunning", [true])

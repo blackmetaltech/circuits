@@ -1847,6 +1847,8 @@ func _wheel_value(mp: Vector2, dir: int) -> bool:
 		var a := clampf(float(pot_alpha.get(str(it.id), 0.5)) - 0.05 * dir, 0.0, 1.0)
 		pot_alpha[str(it.id)] = a
 		var rp: Dictionary = backend._act("setPot", [str(it.id), a])
+		var pn = parts3d.get(str(it.id), null)
+		if pn and pn.has_method("set_knob"): pn.set_knob(a)
 		note = "Knob at %d %%." % int(round((1.0 - a) * 100.0)) if rp.get("ok", false) else str(rp.get("message", ""))
 		changed.emit(); return true
 	if part.is_empty() or part.get("value", null) == null or bool(part.get("fixed", false)): return false

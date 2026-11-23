@@ -67,7 +67,7 @@ func _build() -> void:
 		"to92": _to92(pid)
 		"to220": _to220(pid)
 		"dip8": _dip8(pid)
-		"pot3": _module(str(part.get("label", pid)), 4)
+		"pot3": _panel_pot() if pid == "pot-panel" else _module(str(part.get("label", pid)), 4)
 		"slide3": PartsLab.slidewire(self)
 		"relay5": PartsLab.relay(self)
 		"xfmr4": PartsLab.transformer(self)
@@ -381,6 +381,28 @@ func set_needle(needle: float, uA: float) -> void:
 	if rd: rd.text = "%+.1f µA" % uA if absf(uA) >= 0.05 else "0.0 µA"
 
 ## The relay's armature: dropped onto the NO contact when the engine says it pulled in, up on NC when not.
+## 0.6 testbed dimmer: a panel potentiometer. A steel can on three legs, a threaded bush, a ridged knob with a white line; the knob
+## turns with the wiper (set_knob, from the engine's setPot).
+func _panel_pot() -> void:
+	for i in 3: _lead([Vector3(i * 2 * P, -MeshKit.BOARD_T, 0), Vector3(i * 2 * P, 0.003, 0), Vector3(i * 2 * P, 0.004, -0.004)])
+	var c := Vector3(2 * P, 0.0085, -0.006)
+	var can := CylinderMesh.new(); can.top_radius = 0.0085; can.bottom_radius = 0.0085; can.height = 0.007; can.radial_segments = 28
+	_body(can, MeshKit.mat(Color(0.62, 0.63, 0.64), 0.35, 0.9), c)
+	var bush := CylinderMesh.new(); bush.top_radius = 0.0035; bush.bottom_radius = 0.0035; bush.height = 0.004; bush.radial_segments = 16
+	MeshKit.add(self, bush, MeshKit.m("gold"), c + Vector3(0, 0.0055, 0))
+	var knob := Node3D.new(); knob.position = c + Vector3(0, 0.011, 0); add_child(knob)
+	var kc := CylinderMesh.new(); kc.top_radius = 0.0068; kc.bottom_radius = 0.0075; kc.height = 0.0065; kc.radial_segments = 24
+	MeshKit.add(knob, kc, MeshKit.mat(Color(0.08, 0.08, 0.09), 0.55))
+	var line := BoxMesh.new(); line.size = Vector3(0.0009, 0.0003, 0.0055)
+	MeshKit.add(knob, line, MeshKit.mat(Color(0.95, 0.95, 0.92), 0.6), Vector3(0, 0.0034, -0.0035))
+	anim["knob"] = knob
+	set_knob(0.5)
+
+## Wiper position 0..1 from end A: the knob's line sweeps 270 degrees.
+func set_knob(alpha: float) -> void:
+	var k = anim.get("knob", null)
+	if k: (k as Node3D).rotation.y = deg_to_rad(135.0 - 270.0 * (1.0 - clampf(alpha, 0.0, 1.0)))
+
 func set_relay(operated: bool, _mA: float) -> void:
 	var a: Node3D = anim.get("armature", null)
 	if a: a.rotation.z = deg_to_rad(-5.0) if operated else deg_to_rad(7.0)
