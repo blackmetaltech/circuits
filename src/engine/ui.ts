@@ -21,7 +21,7 @@ import type { NodeState, TicketState } from './state';
 import { isUnlocked, levelDefOf } from './tickets';
 import { bridgeScan, liveRig, probeOn } from './ticket-run';
 import { say } from './text';
-import { boardJunctions, danglingEnds, openPins, pinLabel } from './touch';
+import { boardJunctions, danglingEnds, openPins, pinLabel, shortAcross } from './touch';
 import { capFirst, nameVars, partNames } from './names';
 import { traceTarget } from './trace';
 
@@ -367,6 +367,15 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       const geo = { x: xi, y: yi, rot: ri, flip: flip === true }, pads = pinPads(geo, d), bad = checkPartSpot(o.tk.board, d, geo) ?? null;
       const p = bad ?? problem('');
       return { ok: bad === null, partId: d.id, pins: d.pins.map((name, i) => ({ name, pad: pads[i]! })), problem: bad ? say(p.key, p.vars) : null };
+    },
+
+    /** 0.7: would a wire from pad a to pad b short a source (a supply's plus to its minus, a battery's legs)? The plain sentence for the hover. */
+    wireShort: (s, a?: unknown, b?: unknown) => {
+      const o = defOf(s); if (!o) return { short: false, text: '' };
+      const pad = (v: unknown): Pad | null => (Array.isArray(v) && v.length === 2 && typeof v[0] === 'number' && typeof v[1] === 'number' ? [v[0], v[1]] as Pad : null);
+      const pa = pad(a), pb = pad(b); if (!pa || !pb) return { short: false, text: '' };
+      const txt = shortAcross(o.tk.board, o.def.supplies, [pa, pb]);
+      return { short: txt !== null, text: txt ?? '' };
     },
 
     /** The shoebox: the ticket's parts as a box of parts with prices (also in `ticketCard.shoebox`). */

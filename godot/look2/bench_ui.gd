@@ -396,6 +396,7 @@ func _job_card() -> void:
 		var nm := _ink(row, _short(str(s.get("id", "")), str(s.get("name", ""))), 18, INK, f_sans, true); nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var val := _ink(row, "—", 19, INK, f_type, false)
 		_spec_vals[str(s.id)] = [mark, val]
+	if str(t.get("on_board", "")) != "": _ink(v, str(t.on_board), 18, INK, f_sans)   # 0.7 (Leo): the key values of the fixed parts, at spec size
 	# 0.6 (D-money-06): build cost is a score, scored with the stars; it never leaves the wallet, so it is not on the money line
 	_ink(v, "Pays %s. Build cost %s." % [str(t.get("pay_text", "")).trim_prefix("fee "), str(bench.backend.last_result.get("costText", "$0.00"))], 17, Color(0.30, 0.28, 0.25), f_sans)
 	_ink(v, "Burnt parts %s   Wallet %s" % [bench.burn_cost_text(), bench.backend.wallet_text], 17, Color(0.30, 0.28, 0.25), f_sans)
@@ -637,7 +638,7 @@ func _tools() -> void:
 			var idx := i; var sid := str(sl.id)
 			_key(h, str(opts[i]), func(): bench.set_selector(sid, idx), "", false, int(sl.get("index", 0)) == i)
 	if bench.mode == "job" and bench.backend.camera_ok: _key(h, "Thermal", func(): bench.toggle_thermal(), "T", false, bench.thermal)
-	_key(h, "Select", func(): bench.set_tool("select"), "Esc", false, bench.tool == "select")
+	_key(h, "Select", func(): bench.esc(), "Esc", false, bench.tool == "select")
 	_key(h, "Wire", func(): bench.set_tool("wire"), "W", false, bench.tool == "wire")
 	_key(h, "Scope probe", func(): bench.set_tool("probe"), "P", false, bench.tool == "probe")
 	_key(h, "Meter leads", func(): bench.set_tool("red"), "M", false, bench.tool in ["red", "black"])

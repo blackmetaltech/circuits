@@ -221,7 +221,7 @@ func _load_ticket() -> void:
 	for c in bench_q.get("connectors", []):
 		var role := str(c.role)
 		conns.append({"id": str(c.id), "pad": [int(c.pad[0]), int(c.pad[1])], "role": "supply" if role in ["rail", "source"] else ("ground" if role == "ground" else role)})
-	ticket = {"id": id, "figure": card.get("figure", null), "pay_text": str(card.get("payText", "")), "star_rule": str(card.get("starRule", "")), "title": str(card.get("title", "")), "customer": str(card.get("customer", "")), "brief": str(card.get("brief", "")),
+	ticket = {"id": id, "figure": card.get("figure", null), "pay_text": str(card.get("payText", "")), "star_rule": str(card.get("starRule", "")), "on_board": str(card.get("onBoard", "")), "title": str(card.get("title", "")), "customer": str(card.get("customer", "")), "brief": str(card.get("brief", "")),
 		"gadget": str(fl.get("gadget", "exam")), "ask": str(fl.get("ask", "")), "thanks": str(fl.get("thanks", "")),
 		"price": int(card.get("fee", 0)), "price_text": str(card.get("feeText", "")), "eb": bool(card.get("eb", false)),
 		"specs": card.get("specs", []), "targets": card.get("targets", []), "conditions": card.get("conditions", []), "predictions": card.get("predictions", []),

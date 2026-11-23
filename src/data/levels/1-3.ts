@@ -44,6 +44,7 @@ export const L1_3: LevelDef = {
     parts: [{ partId: 'res-cf', value: 22, variant: '1W', x: 4, y: 2, rot: 0, flip: false }],
     wires: [[[2, 2], [4, 2]], [[8, 2], [14, 2]]],
   },
+  onBoard: 'ticket.1-3.onboard',
   scope: 'must',
   after: ['1-2'],
   pay: { fee: 500, perStar: 150 },

@@ -48,6 +48,7 @@ export const L1_1: LevelDef = {
     ],
     wires: [[[2, 2], [2, 5]], [[6, 5], [8, 5]], [[10, 5], [10, 2], [8, 2]]],
   },
+  onBoard: 'ticket.1-1.onboard',
   scope: 'must',
   pay: { fee: 300, perStar: 100 },
   gauge: { spec: 'led', unit: 'A' },

@@ -78,6 +78,7 @@ var g_pitch := -0.9
 var g_dist := 0.5
 var view := 2
 var _drag := ""
+var _tray_press := false   ## 0.7: the left button went down on a tray slot; a release over a hole places the part (drag from the tray)
 var _last_mouse := Vector2.ZERO
 
 func _ready() -> void:
@@ -1110,13 +1111,12 @@ func ray_pad(mp: Vector2) -> Vector2i:
 			var pad2: Vector2i = board.pad_at_world(hit2 - board.global_transform.basis.y.normalized() * h)
 			if _pad_used(pad2): return pad2
 		# 0.6 (Rui, Asha: neither found 1-3's heater leg): one hole off a leg or a connector, the end snaps to it
-		var best := Vector2i(-1, -1); var bd := 1e9
+		# 0.7 (Leo): with two targets one hole off (OUT and GND), the snap picked GND and shorted the supply. Snap only to a lone neighbour.
+		var best := Vector2i(-1, -1); var n_near := 0
 		for t in connect_targets():
 			var tp := Vector2i(int(t[0]), int(t[1]))
-			if absi(tp.x - pad.x) <= 1 and absi(tp.y - pad.y) <= 1:
-				var dd: float = board.pad_world(tp.x, tp.y).distance_to(hit)
-				if dd < bd: bd = dd; best = tp
-		if best.x >= 0: return best
+			if absi(tp.x - pad.x) <= 1 and absi(tp.y - pad.y) <= 1: n_near += 1; best = tp
+		if n_near == 1: return best
 	return pad
 
 ## The board plane raised by h metres (a part body or a leg top sits above the pads).
@@ -1194,15 +1194,42 @@ func set_tool(t: String) -> void:
 	_refresh_targets()
 	changed.emit()
 
+## 0.7 (Leo, 0.6 final): Esc put the tool down but left the part under the pointer lit, and the wheel still changed its value.
+## Esc now also drops that highlight; the part lights again only after the pointer has left it.
+var _esc_block := ""
+func esc() -> void:
+	var had := tool
+	set_tool("select")
+	_esc_block = str(_pick_hl.get("id", ""))
+	_set_pick_hl({})
+	note = "Nothing in hand." if had != "select" or _esc_block != "" else note
+	changed.emit()
+
 func pick_part(item: Dictionary) -> void:
 	place_item = item; place_rot = 0; set_tool("place")
 	_clear_ghost()
 	ghost = Part3D.make({"partId": item.partId, "kind": item.kind, "value": item.value, "variant": item.variant, "label": item.label, "footprint": item.footprint, "uid": "ghost"})
 	ghost.set_ghost(1); ghost.visible = false
 	if board: board.add_child(ghost)
+	# 0.7 (Leo): a drag from the tray left a ghost and no word on what to do with it
+	note = "%s in hand: click a hole on the board to put it down. R turns it, Esc puts it back." % str(item.get("label", "Part")).get_slice("  ", 0)
+	_tray_press = true
 
 func _clear_ghost() -> void:
 	if ghost: ghost.queue_free(); ghost = null
+
+## The engine's sentence when a wire from a to b would join a source's plus straight to its minus; "" when it would not.
+func short_text(a: Vector2i, b: Vector2i) -> String:
+	if a == b or a.x < 0 or b.x < 0 or not backend.has_method("_q"): return ""
+	var r = backend._q("wireShort", [[a.x, a.y], [b.x, b.y]])
+	return str(r.get("text", "")) if r is Dictionary and bool(r.get("short", false)) else ""
+
+## Draw the wire unless it would short a source: then refuse with the reason (the end stays where it was).
+func _commit_wire(a: Vector2i, b: Vector2i) -> void:
+	var sh := short_text(a, b)
+	if sh != "": note = "Not wired. " + sh; return
+	var rw := backend.add_wire([a.x, a.y], [b.x, b.y])
+	note = str(rw.get("note", rw.get("msg", "")))
 
 func _clear_wire_preview() -> void:
 	if wire_preview: wire_preview.queue_free(); wire_preview = null
@@ -1256,7 +1283,11 @@ func _unhandled_input(e: InputEvent) -> void:
 			var t3: String = {"psu_output": "OUTPUT: power on or off (Space)", "psu_test": "TEST: run the bench test (Enter)", "tray_page": "Next drawer of parts",
 				"psu_volt": "VOLTAGE %.2f V: wheel 0.1 V, Shift 0.01 V, Ctrl 1 V" % backend.supply_volts()}[hid]
 			if t3 != hover_tip: hover_tip = t3; changed.emit()
-		elif tool == "select" and _drag == "" and not case_closed(): _set_pick_hl(_pick_item(mm.position))
+		elif tool == "select" and _drag == "" and not case_closed():
+			var pit := _pick_item(mm.position)
+			if _esc_block != "" and str(pit.get("id", "")) == _esc_block: pit = {}
+			else: _esc_block = ""
+			_set_pick_hl(pit)
 		elif hover_tip != "" and _pick_hl.is_empty(): hover_tip = ""; changed.emit()
 	elif e is InputEventKey and e.pressed and not e.echo:
 		var k := e as InputEventKey
@@ -1271,7 +1302,7 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_W: set_tool("wire")
 			KEY_P: set_tool("probe")
 			KEY_M: set_tool("red")
-			KEY_ESCAPE: set_tool("select")
+			KEY_ESCAPE: esc()
 			KEY_R:
 				if tool == "place": place_rot = (place_rot + 1) % 4; _hover(get_viewport().get_mouse_position())
 			KEY_O: open_case()
@@ -1320,6 +1351,12 @@ func _hover(mp: Vector2, qa := false) -> void:
 		if a.distance_to(b) > 0.001:
 			var mid := (a + b) * 0.5 + Vector3(0, 0.006, 0)
 			wire_preview = MeshKit.add(self, MeshKit.tube(MeshKit.round_corners(PackedVector3Array([a, mid, b]), 0.01, 6), 0.0011, 8), MeshKit.mat(Color(0.91, 0.64, 0.24), 0.4, 0.0, {"alpha": 0.7, "emission": Color(0.91, 0.64, 0.24), "emission_energy": 0.6}))
+		# 0.7 (Leo): an end that would short the supply turns the ring red and says so before the release
+		var sh := short_text(wire_from, pad)
+		if sh != "":
+			board.set_hover(pad.x, pad.y, true, Color(0.9, 0.18, 0.12))
+			var t6 := "Not here: " + sh
+			if t6 != hover_tip: hover_tip = t6; _pad_tip_shown = true; changed.emit()
 
 func _left(pressed: bool, mp: Vector2) -> void:
 	if case_closed() and not handed:
@@ -1330,7 +1367,15 @@ func _left(pressed: bool, mp: Vector2) -> void:
 	if not pressed and _jockey_drag:
 		_jockey_drag = false; changed.emit(); return
 	var pad := ray_pad(mp)
+	if not pressed and _tray_press:
+		_tray_press = false
+		if tool == "place" and pad.x >= 0:   # 0.7 (Leo): a drag from the tray to the board places the part where it is let go
+			var rd := backend.place(place_item, pad.x, pad.y, place_rot)
+			note = str(rd.get("msg", "")); if rd.ok: set_tool("select")
+			changed.emit()
+		return
 	if pressed:
+		_tray_press = false
 		var hit := ray_hit(mp)
 		if pad.x < 0 and hit != "": _hit(hit); return
 		match tool:
@@ -1341,8 +1386,7 @@ func _left(pressed: bool, mp: Vector2) -> void:
 			"wire":
 				if pad.x >= 0:
 					if _wire_click and wire_from.x >= 0 and pad != wire_from:   # click, then click: the second click ends the wire
-						var rw := backend.add_wire([wire_from.x, wire_from.y], [pad.x, pad.y])
-						note = str(rw.get("note", rw.get("msg", ""))); wire_from = Vector2i(-1, -1); _wire_click = false; _clear_wire_preview()
+						_commit_wire(wire_from, pad); wire_from = Vector2i(-1, -1); _wire_click = false; _clear_wire_preview()
 					else: wire_from = pad; _wire_click = false
 			"probe":
 				if pad.x >= 0: var r2 := backend.set_probe("ch1", [pad.x, pad.y]); note = str(r2.get("msg", "")); set_tool("select")
@@ -1355,17 +1399,17 @@ func _left(pressed: bool, mp: Vector2) -> void:
 	else:
 		if tool == "wire" and wire_from.x >= 0:
 			if pad.x >= 0 and pad != wire_from:
-				var r := backend.add_wire([wire_from.x, wire_from.y], [pad.x, pad.y])
-				note = str(r.get("note", r.get("msg", "")))
+				_commit_wire(wire_from, pad)
 			elif pad == wire_from:
 				# released where it started: a click, not a drag (Noor clicked twice and nothing happened, 0.4 hand play). Stay armed.
 				_wire_click = true; note = "Wire from here: click the other end, or drag. Esc cancels."; changed.emit(); return
 			wire_from = Vector2i(-1, -1); _wire_click = false; _clear_wire_preview(); changed.emit()
 
 func _right_click(mp: Vector2) -> void:
-	if tool != "select": set_tool("select"); return
+	if tool != "select": esc(); return
 	var it := _pick_item(mp)
-	if it.is_empty(): return
+	# 0.7 (Leo): right-click took whatever was under the pointer. It removes only what is lit (the tip names it first).
+	if it.is_empty() or str(it.get("id", "")) != str(_pick_hl.get("id", "")): return
 	if it.kind == "part" and backend.replace_burnt(str(it.id)):
 		note = str(backend.last_note); _set_pick_hl({}); changed.emit(); return
 	if it.kind == "part":
@@ -1375,7 +1419,8 @@ func _right_click(mp: Vector2) -> void:
 		note = str(backend.last_note) if str(backend.last_note) != "" else "Removed the %s." % nm
 		if note.contains("along with"): note += " Ctrl+Z puts them back."
 	else:
-		backend.delete_wire(str(it.id)); note = "Removed a wire."
+		var wn := wire_name(str(it.id))
+		backend.delete_wire(str(it.id)); note = "Removed the wire %s. Ctrl+Z puts it back." % wn
 	_set_pick_hl({}); changed.emit()
 
 ## What the pointer is over on the board, in board pad units: the nearest removable part (its body runs between its first and
@@ -1432,9 +1477,25 @@ func _set_pick_hl(it: Dictionary) -> void:
 	var has_vals := false
 	if not it.is_empty() and str(it.kind) == "part":
 		for p in backend.parts: if str(p.uid) == str(it.id) and p.get("value", null) != null and not bool(p.get("fixed", false)): has_vals = true
-	hover_tip = ("%s: %sright-click removes it" % [str(it.get("label", "wire")), "wheel changes the value, " if has_vals else ""]) if not it.is_empty() else ""
+	var what := str(it.get("label", "")) if str(it.get("kind", "")) == "part" else "Wire %s" % wire_name(str(it.get("id", "")))
+	hover_tip = ("%s: %sright-click removes it" % [what, "wheel changes the value, " if has_vals else ""]) if not it.is_empty() else ""
 	changed.emit()
 var hover_tip := ""
+
+## 0.7: a wire named by its two ends ("from the battery + to the resistor's leg 1"), so a removal says what went.
+func wire_name(wid: String) -> String:
+	for w in backend.wires:
+		if str(w.wid) != wid: continue
+		var path: Array = w.path
+		if path.size() < 2: break
+		var a := _end_name(Vector2i(int(path[0][0]), int(path[0][1]))); var b := _end_name(Vector2i(int(path[-1][0]), int(path[-1][1])))
+		return "from %s to %s" % [a, b]
+	return ""
+
+func _end_name(pad: Vector2i) -> String:
+	var t := pad_tip(pad)
+	if t == "" or t == "A wire end": return "a hole"
+	return t.get_slice(":", 0)
 
 ## ------------------------------------------------------------------------------------------------ the sorting box (the parts tray)
 

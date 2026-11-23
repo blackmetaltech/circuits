@@ -2,6 +2,7 @@
 // Pure functions of the board. Only wire ENDS connect (src/sim/board/connectivity.ts), so an end that meets no pin, connector or other wire end connects nothing.
 import type { Board, Pad } from '../sim/board/types';
 import { padKey } from '../sim/board/grid';
+import { buildConnectivity } from '../sim/board/connectivity';
 import { pinPads } from '../sim/board/footprints';
 import { connName, getDef, occupancy, wirePads } from './board';
 import { say } from './text';
@@ -105,4 +106,22 @@ export function boardJunctions(b: Board): { crossings: { pad: Pad; a: string; b:
     if (n >= 3 || (wids.length >= 2)) { const [x, y] = k.split(',').map(Number); joins.push({ pad: [x!, y!], n }); }
   }
   return { crossings, joins };
+}
+
+/** 0.7 (Leo): a wire, drawn or not yet drawn, that joins a source's plus straight to its minus. The sources are the bench's supplies
+ *  (not a contact, which is a switch) and the fixed batteries / ideal sources on the board. Returns the plain sentence, or null. */
+export function shortAcross(b: Board, supplies: readonly { kind: string; plus: string; minus: string }[], extra?: [Pad, Pad]): string | null {
+  const board: Board = extra ? { ...b, wires: [...b.wires, { wid: '~probe', path: [extra[0], extra[1]] } as Board['wires'][number]] } : b;
+  const c = buildConnectivity(board, getDef);
+  for (const s of supplies) {
+    if (s.kind === 'contact') continue;
+    const a = c.connectorNodes[s.plus], z = c.connectorNodes[s.minus];
+    if (a !== undefined && a === z) return say('wire.short.supply', { a: connName(s.plus), b: connName(s.minus) });
+  }
+  for (const p of b.parts) {
+    if (!(p.partId.startsWith('bat-') || p.partId === 'ideal-vsource')) continue;
+    const n = c.pinNodes[p.uid];
+    if (n && n.length === 2 && n[0]! >= 0 && n[0] === n[1]) return say('wire.short.battery', { part: partName(b, p.uid) });
+  }
+  return null;
 }

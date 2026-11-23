@@ -24,7 +24,7 @@ import { faultSmoked, levelDefOf, openTicketIn, refBoard, unmetAfter } from './t
 import { DIAL, condLabel, hasDial, tipLeft, upgradePrice } from './money';
 import { benchTicket, evalHint, liveCfg, liveRig, probeOn, sweepKey } from './ticket-run';
 import { refuse, refuseKey, say } from './text';
-import { danglingEnds, padWhat, wireContacts } from './touch';
+import { danglingEnds, padWhat, shortAcross, wireContacts } from './touch';
 import { capFirst, nameVars, partName } from './names';
 
 type Defs = readonly LevelDef[];
@@ -209,7 +209,7 @@ function newWire(tk: TicketState, path: unknown, wid?: string): Wire {
 }
 
 /** The answer to a new wire: which pin / connector each end landed on, and a warning for an end that touches nothing. */
-function wireAdded(tk: TicketState, w: Wire): [string, Record<string, unknown>] {
+function wireAdded(tk: TicketState, w: Wire, def?: LevelDef): [string, Record<string, unknown>] {
   const ends = [w.path[0]!, w.path[w.path.length - 1]!] as Pad[], what = ends.map((e) => padWhat(tk.board, e, w.wid));
   const hang = danglingEnds(tk.board).filter((e) => e.wid === w.wid);
   let msg = say('wire.added', { wid: w.wid });
@@ -220,6 +220,7 @@ function wireAdded(tk: TicketState, w: Wire): [string, Record<string, unknown>] 
   for (const j of c.joins) msg += ' ' + say('wire.joins', { wid: w.wid, other: j.wid, pad: `${j.pad[0]},${j.pad[1]}` });
   for (const x of c.crossings) msg += ' ' + say('wire.crosses', { wid: w.wid, other: x.wid, pad: `${x.pad[0]},${x.pad[1]}` });
   for (const x of c.alongside) msg += ' ' + say('wire.alongside', { wid: w.wid, other: x.wid, n: x.pads });
+  const sh = shortAcross(tk.board, def?.supplies ?? []); if (sh) msg += ' ' + sh + ' ' + say('wire.short.undo');
   return [msg, { wid: w.wid, crossings: c.crossings, alongside: c.alongside, joins: c.joins, landed: ends.map((e, i) => ({ pad: e, kind: what[i]!.kind, text: what[i]!.text })), dangling: hang.map((h) => h.pad) }];
 }
 
@@ -343,14 +344,14 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       return ok(say('part.swapped', { ...nm(tk, p.uid), rating: r }));
     },
     addWire: (s, path: unknown) => {
-      const { tk } = open(s, defs), before = copyBoard(tk);
+      const { tk, def } = open(s, defs), before = copyBoard(tk);
       const w = newWire(tk, path);
       tk.board.wires.push(w); sortWires(tk.board); commit(tk, 'addWire', before);
-      return ok(...wireAdded(tk, w));
+      return ok(...wireAdded(tk, w, def));
     },
     /** Pad-to-pad wire: the engine picks a clean orthogonal route (the click-drag of the UI). */
     wire: (s, a: unknown, b: unknown) => {
-      const { tk } = open(s, defs), before = copyBoard(tk);
+      const { tk, def } = open(s, defs), before = copyBoard(tk);
       const pa = validPad(tk, a, 'a'), pb = validPad(tk, b, 'b');
       if (pa[0] === pb[0] && pa[1] === pb[1]) refuseKey('err.wire.samePad');
       // the two refusals that no route can fix get their own plain words: the same two pads are already joined, or an end sits under another wire's middle
@@ -366,7 +367,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       if (!found) refuseKey('err.wire.noRoute', { a: `${pa[0]},${pa[1]}`, b: `${pb[0]},${pb[1]}` });
       const w = newWire(tk, found);
       tk.board.wires.push(w); sortWires(tk.board); commit(tk, 'wire', before);
-      const [msg, extra] = wireAdded(tk, w);
+      const [msg, extra] = wireAdded(tk, w, def);
       return ok(msg, { ...extra, path: w.path });
     },
     /** Remove a wire by id, or every wire that ends on a pad. */

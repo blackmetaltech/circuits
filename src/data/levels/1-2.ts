@@ -55,6 +55,7 @@ export const L1_2: LevelDef = {
     ],
     wires: [[[2, 2], [2, 5]], [[6, 5], [8, 5]], [[10, 5], [14, 5]], [[16, 5], [18, 5]], [[20, 5], [20, 2], [8, 2]]],
   },
+  onBoard: 'ticket.1-2.onboard',
   scope: 'must',
   after: ['1-1'],
   pay: { fee: 400, perStar: 150 },

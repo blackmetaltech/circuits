@@ -261,6 +261,8 @@ export interface LevelDef {
   answers?: AnswerDef[];
   /** i18n key of the one-line spec printed on the ticket chit (chapter 2: the scope band is a null or a match, not a range). */
   specShort?: string;
+  /** 0.7 (Leo: "the heater's 50 ohm only in small print"): i18n key of one line on the ticket naming the key values of what is fixed on the board. */
+  onBoard?: string;
   /** Plain-words explainer for a missed level spec: 'divider' (2-1, the load on the bottom resistor). */
   explain?: 'divider' | 'bridge' | 'blackbox' | 'pot' | 'rc' | 'debounce' | 'coil' | 'caps' | 'rectifier' | 'zener' | 'regulator' | 'lm317' | 'zenerexam' | 'switch' | 'fet' | 'gate' | 'amp' | 'amplifierexam';
   /** Chapter 3: the scope's time trace and its tube (see TraceDef). */

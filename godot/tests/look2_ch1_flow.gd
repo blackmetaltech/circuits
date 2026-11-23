@@ -74,6 +74,40 @@ func _run() -> void:
 			var got: Vector2i = wb.ray_pad(wb.cam.unproject_position(wb.board.pad_world(off.x, off.y)))
 			ok(got == Vector2i(int(hp[0]), int(hp[1])), "1-3: a wire click one hole off the heater's leg %s snaps to it (got %s)" % [str(hp), str(got)])
 			wb.set_tool("select")
+			# 0.7 (Leo): a wire from IN to GND would short the bench supply: the ring says so and the wire is refused
+			var nw: int = wb.backend.wires.size()
+			ok(wb.short_text(Vector2i(2, 2), Vector2i(14, 8)).contains("short"), "1-3: IN to GND is named a short before the click (%s)" % wb.short_text(Vector2i(2, 2), Vector2i(14, 8)))
+			ok(wb.short_text(Vector2i(2, 2), Vector2i(14, 2)) == "", "1-3: IN to OUT is not a short")
+			wb._commit_wire(Vector2i(2, 2), Vector2i(14, 8))
+			ok(wb.backend.wires.size() == nw and str(wb.note).begins_with("Not wired."), "1-3: the shorting wire is refused with its reason (%s)" % wb.note)
+			# 0.7 (Leo): Esc drops the lit part, and the wheel no longer changes it
+			wb.set_tool("select"); await _frames(2)
+			var fw0: Dictionary = {}
+			for w in wb.backend.wires: if not bool(w.get("fixed", false)): fw0 = w
+			if not fw0.is_empty():
+				var wp: Array = fw0.path
+				var mid := wb.cam.unproject_position(wb.board.pad_world(int(wp[0][0]) + 3, int(wp[0][1])))
+				wb._set_pick_hl(wb._pick_item(mid)); await _frames(2)
+				ok(str(wb._pick_hl.get("kind", "")) == "wire" and str(wb.hover_tip).begins_with("Wire from"), "1-3: the lit wire is named by its ends (%s)" % wb.hover_tip)
+				wb.esc(); await _frames(2)
+				ok(wb._pick_hl.is_empty() and wb._esc_block != "", "1-3: Esc drops the highlight")
+				wb._right_click(mid); await _frames(2)
+				ok(wb.backend.wires.size() == nw, "1-3: right-click after Esc removes nothing (nothing is lit)")
+				wb._esc_block = ""; wb._set_pick_hl(wb._pick_item(mid)); wb._right_click(mid); await _frames(2)
+				ok(wb.backend.wires.size() == nw - 1 and str(wb.note).begins_with("Removed the wire from") and str(wb.note).contains("Ctrl+Z"), "1-3: right-click names the wire it removed (%s)" % wb.note)
+				wb.undo(); await _frames(2)
+				ok(wb.backend.wires.size() == nw, "1-3: Ctrl+Z puts the wire back")
+			# 0.7 (Leo): a drag from the tray to the board places the part where it is let go
+			var np: int = wb.backend.parts.size()
+			var it0: Dictionary = {}
+			for fam in wb.tray_families(): if it0.is_empty(): it0 = fam.items[0]
+			wb.pick_part(it0); await _frames(2)
+			ok(str(wb.note).contains("click a hole on the board"), "1-3: picking a part says what to do with it (%s)" % wb.note)
+			wb.set_view(5, true); await _frames(2)
+			wb._left(false, wb.cam.unproject_position(wb.board.pad_world(6, 12))); await _frames(2)
+			ok(wb.backend.parts.size() == np + 1 and wb.tool == "select", "1-3: released over the board, the dragged part is placed (%s)" % wb.note)
+			wb.undo(); await _frames(2)
+			wb.set_tool("select")
 		await _frames(3)
 		for i in (LevelBurnt.get(id, []) as Array):
 			var n = wb.parts3d.get(i, null)
@@ -234,6 +268,7 @@ func _run() -> void:
 	var ab: AABB = bm.global_transform * bm.get_aabb()
 	var top: Vector3 = ab.get_center() + Vector3(0, ab.size.y * 0.5, 0)   # the top of the body, as the player sees it
 	ok(top.y - wb.board.global_position.y > 0.002, "the resistor body stands above the board (%.4f m)" % (top.y - wb.board.global_position.y))
+	wb._set_pick_hl(wb._pick_item(wb.cam.unproject_position(top)))   # the pointer rests on the body first and lights it (0.7: right-click removes only what is lit)
 	wb._right_click(wb.cam.unproject_position(top))
 	ok(wb.backend.parts.size() == n_before - 1 and wb.note.contains("removed"), "right-click on a part's body removes it: %s" % wb.note)
 	ok(wb.note.contains("wire") and wb.note.contains("Ctrl+Z"), "and says which wires went with it (%s)" % wb.note)
