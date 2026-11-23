@@ -24,6 +24,8 @@ var _ghost := 0
 var _heat := 0.0
 var _smoked := false
 var _crack: MeshInstance3D
+var generic := false                ## true when the part fell back to a plain labelled box (no model of its own): the ch2/3 flow fails on it
+var anim := {}                     ## the nodes that move with an engine number (jockey, needle, armature, level window): see PartsLab
 
 static func make(p: Dictionary) -> Part3D:
 	var n := Part3D.new()
@@ -53,7 +55,9 @@ func _build() -> void:
 	var pid := str(part.get("partId", ""))
 	match footprint:
 		"axial2":
-			if kind == "R" or pid.begins_with("res"): _resistor(pid)
+			if pid == "rheostat": PartsLab.rheostat(self)
+			elif pid == "cap-ideal": PartsLab.ideal_cap(self)
+			elif kind == "R" or pid.begins_with("res"): _resistor(pid)
 			elif kind in ["D", "Z", "SCHOTTKY"] or pid.begins_with("1n") or pid.begins_with("bzx") or pid.begins_with("zener"): _diode(pid)
 			elif pid == "cap-cer": _ceramic()
 			else: _film_cap()
@@ -64,12 +68,20 @@ func _build() -> void:
 		"to220": _to220(pid)
 		"dip8": _dip8(pid)
 		"pot3": _module(str(part.get("label", pid)), 4)
+		"slide3": PartsLab.slidewire(self)
+		"relay5": PartsLab.relay(self)
 		_:
 			if pid.begins_with("bat-pp3"): _pp3(pid)
 			elif pid == "heater": _heater()
 			elif pid == "ideal-vsource": _vsource()
 			elif pid == "blackbox": _sealed()
 			elif pid == "adc-in": _adc()
+			elif pid == "galvanometer": PartsLab.galvo(self)
+			elif pid == "cell-2v" or pid == "cell-test": PartsLab.cell(self, pid == "cell-test")
+			elif pid == "cap-charged": PartsLab.charged_cap(self)
+			elif pid == "pullup-10k": PartsLab.pullup(self)
+			elif pid == "logic-in": PartsLab.logic_in(self)
+			elif pid == "cable-loop": PartsLab.cable_reel(self)
 			elif footprint == "block2": _terminals()
 			else: _module(str(part.get("label", pid)), 2)
 
@@ -247,6 +259,7 @@ func _dip8(pid: String) -> void:
 		_lead([Vector3(x, -MeshKit.BOARD_T, z), Vector3(x, 0.003, z), Vector3(x + inward, 0.0045, z)], 0.0004)
 
 func _terminals() -> void:
+	generic = true
 	var tm := MeshKit.mat(Color(0.12, 0.42, 0.22), 0.5, 0.0)
 	for i in 2:
 		var x := float(i) * 6.0 * P
@@ -328,10 +341,37 @@ func _vsource() -> void:
 	for i in 2: _lead([Vector3(float(i) * 6.0 * P, -MeshKit.BOARD_T, 0), Vector3(float(i) * 6.0 * P, 0.002, 0)])
 
 func _module(text: String, span: int) -> void:
+	generic = true
 	_body(MeshKit.rounded_box(Vector3(span * P + 0.006, 0.008, 0.010), 0.0008), MeshKit.m("black_plastic"), Vector3(span * P * 0.5, 0.005, 0))
 	_labels.append(MeshKit.label(self, text, 0.00004, Vector3(span * P * 0.5, 0.0091, 0)))
 
 ## ------------------------------------------------------------------------------------------------ states
+
+## The slide wire's jockey at `pos` (0..1 of the wire, the engine's own number) and its readout in cm.
+func set_jockey(pos: float) -> void:
+	var j: Node3D = anim.get("jockey", null)
+	if j == null: return
+	j.position.x = clampf(pos, 0.0, 1.0) * float(anim.get("len", 0.1))
+	var rd: Label3D = anim.get("readout", null)
+	if rd: rd.text = "%.2f cm" % (clampf(pos, 0.0, 1.0) * 100.0)
+
+## The galvanometer: `needle` is the engine's -1..+1 of full scale (a little past the stops), `uA` its microamps.
+func set_needle(needle: float, uA: float) -> void:
+	var nd: Node3D = anim.get("needle", null)
+	if nd == null: return
+	nd.rotation.y = -clampf(needle, -1.15, 1.15) * deg_to_rad(50.0)
+	var rd: Label3D = anim.get("readout", null)
+	if rd: rd.text = "%+.1f µA" % uA if absf(uA) >= 0.05 else "0.0 µA"
+
+## The relay's armature: dropped onto the NO contact when the engine says it pulled in, up on NC when not.
+func set_relay(operated: bool, _mA: float) -> void:
+	var a: Node3D = anim.get("armature", null)
+	if a: a.rotation.z = deg_to_rad(-5.0) if operated else deg_to_rad(7.0)
+
+## The charged capacitor's gauge bar, 0..1 of its full voltage.
+func set_level(k: float) -> void:
+	var r: Node3D = anim.get("level", null)
+	if r: r.scale.x = maxf(clampf(k, 0.0, 1.0), 0.02)
 
 func set_heat(k: float) -> void:
 	if _smoked or absf(k - _heat) < 0.01: return

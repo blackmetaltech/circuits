@@ -22,7 +22,13 @@ const DEVICES := {
 	"1-4": ["ZIPPY", "TOY CAR PACK  9 V", Color(0.66, 0.27, 0.05), Color(0.10, 0.10, 0.11)],
 	"1-5": ["EXAM", "KIRCHHOFF TEST RIG", Color(0.50, 0.52, 0.54), Color(0.12, 0.30, 0.62)],
 	"2-1": ["KAYA WX", "WEATHER STATION  ADC 3.3 V", Color(0.60, 0.61, 0.58), Color(0.10, 0.36, 0.60)],
+	"2-2": ["CABLECREW", "CABLE JUNCTION BOX  TEL", Color(0.34, 0.36, 0.33), Color(0.90, 0.45, 0.08)],
 	"2-3": ["TOMO", "SENSOR MODULE  SEALED", Color(0.12, 0.13, 0.14), Color(0.90, 0.72, 0.10)],
+	"2-4": ["EXAM", "POTENTIOMETER TEST RIG", Color(0.50, 0.52, 0.54), Color(0.12, 0.30, 0.62)],
+	"3-1": ["SNAPLITE", "CAMERA FLASH  READY LIGHT", Color(0.08, 0.08, 0.09), Color(0.80, 0.80, 0.82)],
+	"3-2": ["ARCADIA", "ARCADE BUTTON BOX  5 V", Color(0.50, 0.10, 0.45), Color(0.98, 0.82, 0.12)],
+	"3-3": ["GREENLINE", "IRRIGATION CONTROLLER  24 V", Color(0.16, 0.36, 0.20), Color(0.92, 0.92, 0.88)],
+	"3-4": ["EXAM", "CAPACITOR BANK TEST RIG", Color(0.50, 0.52, 0.54), Color(0.12, 0.30, 0.62)],
 	"5-1": ["BREEZE", "DESK FAN  12 V  0.2 A", Color(0.60, 0.60, 0.57), Color(0.10, 0.52, 0.56)],
 }
 static func device_of(ticket_id: String) -> Array:
@@ -63,6 +69,7 @@ func build(inner: Vector2, ticket_id: String, title: String, customer: String) -
 	MeshKit.add(lid, MeshKit.rounded_box(Vector3(0.056, 0.0007, 0.005), 0.0004), accent, Vector3(size.x * 0.22, 0.0028, 0.0105))
 	MeshKit.label(lid, str(dev[1]), 0.00006, Vector3(size.x * 0.22, 0.0032, 0.018), Color(0.10, 0.10, 0.11), true)
 	MeshKit.label(lid, "SERVICE: REMOVE 4 SCREWS", 0.000042, Vector3(size.x * 0.22, 0.0032, 0.026), Color(0.25, 0.25, 0.27), true)
+	_lid_props(ticket_id, accent, shell)
 	_lid_closed = Transform3D(Basis(), Vector3(0, size.y - 0.0165 + 0.0025, 0))
 	_lid_open = Transform3D(Basis(Vector3.UP, deg_to_rad(14.0)).rotated(Vector3.FORWARD, deg_to_rad(0.0)), Vector3(size.x + 0.055, -0.014, size.z * 0.75))
 	lid.transform = _lid_closed
@@ -79,6 +86,38 @@ func build(inner: Vector2, ticket_id: String, title: String, customer: String) -
 	var a0 := tag.position + Vector3(0.027, 0.001, -0.016).rotated(Vector3.UP, tag.rotation.y)
 	var str_pts := PackedVector3Array([a0, Vector3(-size.x * 0.5 - 0.006, -0.012, size.z * 0.5 - 0.02), Vector3(-size.x * 0.5 + 0.002, 0.004, size.z * 0.5 - 0.012)])
 	tag_string = MeshKit.add(self, MeshKit.tube(MeshKit.round_corners(str_pts, 0.01), 0.0004, 5), MeshKit.mat(Color(0.7, 0.66, 0.55), 0.9))
+
+## What makes each device look like itself on its lid: a camera flash has a lens ring and a flash window, the arcade box a big button and a
+## joystick stub, the irrigation controller a status lamp and a valve dial, the junction box two cable glands. Exams stay plain.
+func _lid_props(ticket_id: String, accent: Material, shell: Material) -> void:
+	var y := 0.0030
+	var dark := MeshKit.mat(Color(0.03, 0.03, 0.035), 0.5)
+	match ticket_id:
+		"3-1":
+			var ring := CylinderMesh.new(); ring.top_radius = 0.016; ring.bottom_radius = 0.016; ring.height = 0.003; ring.radial_segments = 32
+			MeshKit.add(lid, ring, MeshKit.m("anodised"), Vector3(-size.x * 0.22, y + 0.0010, -0.012))
+			var glass := CylinderMesh.new(); glass.top_radius = 0.011; glass.bottom_radius = 0.011; glass.height = 0.0034; glass.radial_segments = 32
+			MeshKit.add(lid, glass, MeshKit.mat(Color(0.05, 0.08, 0.16), 0.08, 0.0, {"clearcoat": 1.0, "normal": 0.0}), Vector3(-size.x * 0.22, y + 0.0012, -0.012))
+			MeshKit.add(lid, MeshKit.rounded_box(Vector3(0.030, 0.0030, 0.016), 0.002), MeshKit.mat(Color(0.95, 0.93, 0.80), 0.2, 0.0, {"alpha": 0.9, "emission": Color(0.9, 0.85, 0.6), "emission_energy": 0.15}), Vector3(size.x * 0.22, y + 0.0010, -0.030))
+		"3-2":
+			var dome := SphereMesh.new(); dome.radius = 0.011; dome.height = 0.011; dome.is_hemisphere = true; dome.radial_segments = 24; dome.rings = 8
+			MeshKit.add(lid, dome, MeshKit.mat(Color(0.86, 0.08, 0.06), 0.25, 0.0, {"clearcoat": 0.8}), Vector3(-size.x * 0.22, y + 0.0016, -0.014))
+			var stub := CylinderMesh.new(); stub.top_radius = 0.0035; stub.bottom_radius = 0.0045; stub.height = 0.010; stub.radial_segments = 16
+			MeshKit.add(lid, stub, dark, Vector3(size.x * 0.10, y + 0.005, -0.030))
+			var ball := SphereMesh.new(); ball.radius = 0.0065; ball.height = 0.013; ball.radial_segments = 16; ball.rings = 8
+			MeshKit.add(lid, ball, MeshKit.mat(Color(0.9, 0.1, 0.1), 0.3, 0.0, {"clearcoat": 0.5}), Vector3(size.x * 0.10, y + 0.011, -0.030))
+		"3-3":
+			var lamp := SphereMesh.new(); lamp.radius = 0.0045; lamp.height = 0.009; lamp.is_hemisphere = true; lamp.radial_segments = 16; lamp.rings = 6
+			MeshKit.add(lid, lamp, MeshKit.mat(Color(0.15, 0.95, 0.30), 0.2, 0.0, {"emission": Color(0.1, 0.8, 0.2), "emission_energy": 0.4}), Vector3(-size.x * 0.30, y + 0.0014, -0.034))
+			var dial := CylinderMesh.new(); dial.top_radius = 0.0105; dial.bottom_radius = 0.0105; dial.height = 0.004; dial.radial_segments = 28
+			MeshKit.add(lid, dial, MeshKit.m("anodised"), Vector3(-size.x * 0.22, y + 0.0014, -0.010))
+			MeshKit.add(lid, MeshKit.rounded_box(Vector3(0.0016, 0.0016, 0.0090), 0.0004), MeshKit.mat(Color(0.95, 0.95, 0.9), 0.4), Vector3(-size.x * 0.22, y + 0.0040, -0.0125), Vector3(0, deg_to_rad(35.0), 0))
+		"2-2":
+			for i in 2:
+				var gl := CylinderMesh.new(); gl.top_radius = 0.0075; gl.bottom_radius = 0.0075; gl.height = 0.006; gl.radial_segments = 20
+				MeshKit.add(lid, gl, dark, Vector3(-size.x * 0.30 + float(i) * 0.022, y + 0.0020, -0.030))
+				var nut := CylinderMesh.new(); nut.top_radius = 0.0095; nut.bottom_radius = 0.0095; nut.height = 0.0022; nut.radial_segments = 6
+				MeshKit.add(lid, nut, MeshKit.m("steel"), Vector3(-size.x * 0.30 + float(i) * 0.022, y + 0.0004, -0.030))
 
 func set_state(s: String, animate := true) -> void:
 	state = s
