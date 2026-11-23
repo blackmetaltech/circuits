@@ -79,25 +79,27 @@ function indexPage(chapters: number[]): string {
 <li><b>Take the ticket.</b> The customer's words, the specs the fix must meet, the pay.</li>
 <li><b>Open the case.</b> A repair comes with the customer's own faulty board. Probe it with the meter or the scope before you change it.</li>
 <li><b>Fix it.</b> Remove the bad work, place parts from the tray, wire them pad to pad.</li>
-<li><b>Power and test.</b> The bench test checks every spec in every condition with the power on. A part you burn comes out of the pay.</li>
+<li><b>Power and test.</b> The bench test checks every spec in every condition with the power on. A part you burn comes out of the pay. A customer who waits tips 40 % of the fee on a first-test pass; each failed test takes a quarter of it.</li>
 <li><b>Hand it back.</b> The lid goes on and the customer takes the device home.</li>
 </ol>
 <h2>The chapters</h2>
 <ul class="chapters">${list}</ul>
-<p>Chapter 1 and ticket 5-1 play on the new 3D workbench. The rest play in the classic 2D stall; the switch is on both title screens.</p>
+<p>All five chapters play on the 3D workbench. The classic 2D stall is an option on the title.</p>
+<h2>The condition dial</h2>
+<p>Costs $15.00 from the wallet. The live bench runs any of the ticket's test conditions, such as a tired battery, so you can check before you test. Free on the testbed and the free bench.</p>
 <h2>Free bench</h2>
 <p>Any part, the bench supply, the scope and the meter, with three save slots. On the workbench title.</p>
 <h2>Testbed</h2>
-<p>Load a pocket torch, a weather station input or a fan driver with its working board. Probe it, break it on purpose, then pause and step time to watch what happens.</p>`);
+<p>Six devices: a pocket torch, a weather station input, a fan driver, a phone charger stage, a lamp dimmer and a relay timer. Probe one, break it on purpose, then pause and step time to watch what happens.</p>`);
 }
 
 function controlsPage(): string {
   const rows: [string, string][] = [
     ['Left click a tray tile, then a pad', 'Place the part'], ['R', 'Turn the part before you place it'], ['W, then two pads', 'Run a wire'],
-    ['Right click a part or a wire', 'Remove it'], ['Space', 'Power on or off'], ['Enter', 'Bench test'], ['M', 'Meter leads (red, then black)'],
+    ['Right click a part or a wire', 'Remove it (a burnt part: fit a fresh one, wires kept)'], ['Space', 'Power on or off'], ['Enter', 'Bench test'], ['M', 'Meter leads (red, then black)'],
     ['P', 'Scope probe'], ['Tab', 'Schematic'], ['Ctrl+Z', 'Undo'], ['1 to 5', 'Camera views (5 looks straight down on the board)'],
     ['Right drag / middle drag / wheel', 'Orbit / pan / zoom'], ['Esc', 'Select tool'],
-    ['Wheel over a part on the board', 'Change its value in place (the wires stay)'], ['Wheel over the sorting box', 'Pick another value of that part'],
+    ['Rest on a part, then wheel', 'Change its value in place (the wires stay); on a knob, turn it'], ['T', 'Thermal camera (chapter 4)'], ['Wheel over the sorting box', 'Pick another value of that part'],
     ['Wheel over the VOLTAGE knob', 'Set the bench supply'], ['Left and Right, or the wheel over the slide wire', 'Move the jockey (J changes the step)'],
     ['K', 'Testbed: pause or run the simulation'], ['L', 'Testbed: one frame forward while paused'],
   ];
