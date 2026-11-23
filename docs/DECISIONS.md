@@ -201,3 +201,25 @@
   ch4/ch5 boards still arrive blank where the engine has no fault for them (4-1 to 4-4, 5-2 to 5-4; the brief and the empty board
   are the job); the strip's glow scales on its rated 0.3 A and does not model colour shift; the condition dial (D-money-06) is not
   exercised by the ch45 flow.
+
+- **D-conditions-06 (2026-11-23, Ravi, Domain Engineer).** D-money-06 left two tickets the live gauge alone cannot judge for me to
+  confirm: 1-3 also tested at 13.8 V, and 2-1 tested at the top of the battery's range. I checked both in the engine and add
+  neither. (1) 1-3 at 13.8 V. A series resistor scales with its supply: Ref A (22 ohm 1 W) puts 9.58 V on the heater at 13.8 V, so
+  the 7.85-8.40 V band cannot hold at both voltages with any resistor. Testing ratings only at 13.8 V does not bite either: power
+  rises by (13.8/12)^2 = 1.32, so only a part running at 76-100 % of its rating at 12 V would fail, and the bin (22, 27, 47, 51,
+  100 ohm at 1/4, 1/2, 1 W) has no passing build in that window. 22 ohm 1 W goes to 0.81 W, two 47 ohm 1/2 W to 0.41 W each, four
+  100 ohm 1/4 W to 0.21 W each, and all three pass in the engine. The corner would cost a test run and teach nothing. An aquarium
+  heater on a bench supply has no car battery either. (2) 2-1 at the top of the battery. A divider scales with its supply too. The
+  band is 3.30 V +-2 %, and 9.3 V is already +3.3 %. At 9.3 V the engine fails the reference (15k/82k, 3.46 V) and passes only the two
+  pairs that sit at the bottom of the band by luck (15k/56k, 2.7k/1.8k); at 9.6 V every pair fails. The level file already says this:
+  the supply-sag lesson belongs to 4-2, where a Zener holds the output from 13 V to 17 V, and that ticket tests both. Strongest
+  argument against: the dial ($15) then pays off in chapter 1 only on 1-2. Answer: twelve tickets already run more than one
+  condition (1-2, 2-3, 2-4, 3-2, 4-1 to 4-4, 5-1 to 5-4), so the dial has work from the second ticket on. A first-chapter corner that
+  no resistor can pass would be unfair, and one that nothing fails would be decoration. Found on the way: the 2-1 divider explainer
+  quotes the 9 V numbers whatever condition failed (3.35 V in its text for a 3.46 V miss). That is harmless while 2-1 has one condition
+  and must be fixed before it gets a second. The TIP120 model sets each stage's gain from bf(bf+1) = hFE and ignores the internal
+  8 k and 120 ohm, so at Vce 3 V its composite gain is about 530 at 0.26 A, about 700 at 0.5 A and 960 at 3.8 A, under the datasheet
+  minimum of 1000 at 0.5 A and 3 A. That is why 47 k in the relay timer never pulls the relay in (the coil stalls near 5 mA). The testbed break now swaps the
+  capacitor instead (220 to 470 uF: 1.98 s to 4.22 s), because that result does not depend on the transistor's gain. Cut, written
+  down: no new conditions on 1-3 or 2-1; the TIP120 gain fix (solve the stage gain so the composite meets 1000 at 0.5 A with the
+  shunts in) moves every TIP120 golden and waits for the lead's call.
