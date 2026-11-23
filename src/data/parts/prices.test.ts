@@ -31,11 +31,11 @@ describe('global prices (game estimates, integer US cents at qty 100)', () => {
 
   it('has no price for an unknown part:variant', () => {
     const known = new Set(PARTS.flatMap((x) => x.variants.map((v) => `${x.id}:${v.id}`)));
-    for (const k of Object.keys(PRICES_GLOBAL_CENTS)) if (!k.startsWith('service:')) expect(known.has(k), k).toBe(true);
+    for (const k of Object.keys(PRICES_GLOBAL_CENTS)) if (!k.startsWith('service:') && !k.startsWith('upgrade:')) expect(known.has(k), k).toBe(true);
   });
 
-  it('prices exactly the services the engine charges (the courier for a burnt part, the waiting customer\'s tip and its step)', () => {
-    expect(Object.keys(PRICES_GLOBAL_CENTS).filter((k) => k.startsWith('service:'))).toEqual(['service:rush', 'service:tip', 'service:tipStep']);
+  it('prices exactly the services the engine charges (the courier for a burnt part, the waiting customer\'s tip share and its step) and the one bench upgrade (0.6)', () => {
+    expect(Object.keys(PRICES_GLOBAL_CENTS).filter((k) => k.startsWith('service:') || k.startsWith('upgrade:'))).toEqual(['service:rush', 'service:tipShare', 'service:tipStepShare', 'upgrade:condition-dial']);
   });
 
   it('orders resistors by power: 1/6 W < 1/4 W < 1/2 W < 1 W < 2 W < 5 W wirewound', () => {

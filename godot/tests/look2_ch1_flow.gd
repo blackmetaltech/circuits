@@ -47,6 +47,12 @@ func _run() -> void:
 		var fw := 0
 		for w in wb.backend.wires: if str(w.wid).begins_with("xw"): fw += 1
 		ok((faulty + fw > 0) == repair, "the faulty board is on the bench (%d parts, %d wires)" % [faulty, fw])
+		if id == "1-2":
+			# 0.6 (D-money-06): 1-2 tests a fresh and a tired battery; the paper offers the condition dial, greyed out until the wallet has $15
+			wb.changed.emit(); await _frames(3)
+			var dk: Button = null
+			for b in wb.find_children("*", "Button", true, false): if (b as Button).text.begins_with("Buy the condition dial"): dk = b
+			ok(dk != null and dk.text.contains("$15.00") and dk.disabled == (wb.backend.wallet_minor < 1500), "1-2: the ticket offers the condition dial for $15.00 (wallet %s)" % wb.backend.wallet_text)
 		await _frames(3)
 		for i in (LevelBurnt.get(id, []) as Array):
 			var n = wb.parts3d.get(i, null)

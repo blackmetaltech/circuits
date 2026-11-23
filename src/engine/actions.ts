@@ -21,6 +21,7 @@ import {
 import { q, snap125 } from './quant';
 import { MAX_WIRES, newScope, newTicketProgress, pushFailure, pushUndo, type BoardSnapshot, type NodeState, type TicketState } from './state';
 import { faultSmoked, levelDefOf, openTicketIn, refBoard, unmetAfter } from './tickets';
+import { DIAL, condLabel, hasDial, tipLeft, upgradePrice } from './money';
 import { benchTicket, evalHint, liveCfg, liveRig, probeOn, sweepKey } from './ticket-run';
 import { refuse, refuseKey, say } from './text';
 import { danglingEnds, padWhat, wireContacts } from './touch';
@@ -523,6 +524,26 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       (tk.sel ??= {})[sid] = i; touch(tk); resetLive(tk.live);
       return ok(say('selector.set', { id: sid, label: t(sd!.options[i]!.labelKey) }), { id: sid, index: i });
     },
+    /** 0.6 (D-money-06): buy a bench upgrade with the wallet. Only the condition dial exists. */
+    buyUpgrade: (s, id: unknown) => {
+      const uid = str(id, 'id'), pack = REGIONS.get(s.region), name = say('upgrade.dial.name').toLowerCase();
+      if (uid !== DIAL) refuseKey('err.upgrade.unknown', { id: uid });
+      if (s.progress.upgrades.includes(uid)) refuseKey('err.upgrade.owned', { name });
+      const price = upgradePrice(s, uid);
+      if (s.progress.wallet < price) refuseKey('err.upgrade.money', { name, price: formatMinor(price, pack), wallet: formatMinor(s.progress.wallet, pack) });
+      s.progress.wallet -= price; s.progress.upgrades.push(uid);
+      return ok(say('upgrade.bought', { name, price: formatMinor(price, pack) }), { id: uid, price });
+    },
+    /** 0.6: the condition dial: the live bench runs test condition `id` of the open ticket (null: back to as specified). The formal test still runs every condition. */
+    setCondition: (s, id: unknown) => {
+      const { tk, def } = open(s, defs);
+      if (!hasDial(s)) refuseKey('err.cond.locked', { price: formatMinor(upgradePrice(s, DIAL), REGIONS.get(s.region)) });
+      if (id === null) { delete tk.liveCond; resetLive(tk.live); return ok(say('cond.set', { label: condLabel('nominal') })); }
+      const cid = str(id, 'id'), c = def.bench.conditions.find((x) => x.id === cid);
+      if (!c) refuseKey('err.cond.unknown', { id: cid, known: def.bench.conditions.map((x) => x.id).join(', ') });
+      tk.liveCond = cid; resetLive(tk.live);
+      return ok(say('cond.set', { label: condLabel(cid) }), { id: cid });
+    },
     /** The mains safety card has been read (it must be, once, before the first mains ticket opens its bench). */
     readSafety: (s) => {
       const { tk, def } = open(s, defs);
@@ -586,7 +607,7 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
         // burnt parts come out of the pay (never below zero; what is left over comes out of a later star bonus)
         // the waiting customer's tip (0.5, stakes): a customer job (not an exam, not the sandbox), first pass, from the player's own TEST
         const prices = REGIONS.get(s.region).data.prices;
-        const tip = waiting(s, def) && first && coached === true ? Math.max(0, (prices['service:tip'] ?? 0) - (prices['service:tipStep'] ?? 0) * (tk.failedTests ?? 0)) : 0;
+        const tip = waiting(s, def) && first && coached === true ? tipLeft(s, def, tk) : 0;   // 0.6: a share of the fee (money.ts)
         if (tip > 0) result.tip = tip;
         const burnt = Math.min(gross + tip, Math.max(0, (tk.burnCost ?? 0) - (tk.burnDeducted ?? 0))), pay = gross + tip - burnt;
         if (burnt > 0) { tk.burnDeducted = (tk.burnDeducted ?? 0) + burnt; result.burnt = burnt; }

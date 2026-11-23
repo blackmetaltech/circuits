@@ -173,12 +173,14 @@ export interface TicketState {
   burned?: boolean;
   /** Minor units: replacement price of every part the player burned on this ticket (a repair's arrived-burnt parts are free), and how much of it has come out of the pay so far. */
   burnCost?: number;
-  /** The player's own bench tests (the TEST key) that failed on this ticket: each takes `service:tipStep` off the waiting customer's tip (0.5). */
+  /** The player's own bench tests (the TEST key) that failed on this ticket: each takes a share of the waiting customer's tip (0.5; 0.6: money.ts). */
   failedTests?: number;
   burnDeducted?: number;
   tolerance: { done: number; total: number; failures: number } | null;
   /** Chapter 4: the position of each live switch (mains tolerance, load) by selector id; absent = the ticket's initial positions. */
   sel?: Record<string, number>;
+  /** 0.6 condition dial: the test condition the live bench runs (a bench condition id); absent = as specified. */
+  liveCond?: string;
   /** Chapter 4: the player has read the mains safety card of this ticket (it opens first, and cannot be skipped on the first view). */
   safetyRead?: boolean;
 }

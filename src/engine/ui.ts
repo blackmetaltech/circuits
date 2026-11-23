@@ -11,6 +11,7 @@ import { makeProbe } from '../sim/mna/tran';
 import { si, sig } from '../sim/explain';
 import type { Circuit } from '../sim/mna/types';
 import type { Rig } from '../sim/rig';
+import { DIAL, condLabel, hasDial, tipLeft, tipStep, upgradePrice } from './money';
 import { t } from '../i18n';
 import { REGIONS } from '../regions';
 import { formatMinor } from '../regions/data';
@@ -201,7 +202,7 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
       const o = defOf(s); if (!o) return null;
       const { tk, def } = o, b = tk.board, rig = liveRig(tk, def), ins = tk.instruments;
       return {
-        ticket: def.id, burnCost: tk.burnCost ?? 0, burnCostText: formatMinor(tk.burnCost ?? 0, REGIONS.get(s.region)), rushFeeText: formatMinor(REGIONS.get(s.region).data.prices['service:rush'] ?? 0, REGIONS.get(s.region)), ...waitingCard(s, def, tk), fault: def.fault ? true : false, w: b.w, h: b.h, connectors: b.connectors.map((c) => ({ id: c.id, pad: c.pad, role: c.role })),
+        ticket: def.id, burnCost: tk.burnCost ?? 0, burnCostText: formatMinor(tk.burnCost ?? 0, REGIONS.get(s.region)), rushFeeText: formatMinor(REGIONS.get(s.region).data.prices['service:rush'] ?? 0, REGIONS.get(s.region)), ...waitingCard(s, def, tk), dial: dialCard(s, def, tk), fault: def.fault ? true : false, w: b.w, h: b.h, connectors: b.connectors.map((c) => ({ id: c.id, pad: c.pad, role: c.role })),
         parts: b.parts.map((p) => {
           const d = getDef(p.partId)!, pads = pinPads(p, d), v = d.variants.find((x) => x.id === p.variant) ?? d.variants[0]!;
           return {
@@ -388,10 +389,15 @@ export function shoebox(s: NodeState, tk: TicketState, def: LevelDef): unknown[]
 
 /** The waiting customer's tip as the ticket shows it (0.5, stakes): what the next passing TEST would earn. Absent for exams, the
  *  sandbox and a ticket already passed. */
-function waitingCard(s: NodeState, def: LevelDef, tk: TicketState): { waiting?: boolean; tipLeft?: number; tipLeftText?: string; tipStepText?: string; failedTests?: number } {
+function waitingCard(s: NodeState, def: LevelDef, tk: TicketState): { waiting?: boolean; tipLeft?: number; tipLeftText?: string; tipStep?: number; tipStepText?: string; failedTests?: number } {
   if (s.mode === 'sandbox' || !def.pay || def.eb === true || s.progress.tickets[def.id]?.passed) return {};
-  const pack = REGIONS.get(s.region), pr = pack.data.prices;
-  const left = Math.max(0, (pr['service:tip'] ?? 0) - (pr['service:tipStep'] ?? 0) * (tk.failedTests ?? 0));
-  return { waiting: true, tipLeft: left, tipLeftText: formatMinor(left, pack), tipStepText: formatMinor(pr['service:tipStep'] ?? 0, pack), failedTests: tk.failedTests ?? 0 };
+  const pack = REGIONS.get(s.region);
+  const left = tipLeft(s, def, tk), step = tipStep(s, def);
+  return { waiting: true, tipLeft: left, tipLeftText: formatMinor(left, pack), tipStep: step, tipStepText: formatMinor(step, pack), failedTests: tk.failedTests ?? 0 };
 }
 
+/** 0.6 condition dial on the bench card: owned (or free in the sandbox), its price, the ticket's test conditions and the live one. */
+function dialCard(s: NodeState, def: LevelDef, tk: TicketState): { name: string; what: string; owned: boolean; price: number; priceText: string; wallet: number; conds: { id: string; label: string }[]; live: string } {
+  const pack = REGIONS.get(s.region), price = upgradePrice(s, DIAL);
+  return { name: t('upgrade.dial.name'), what: t('upgrade.dial.what'), owned: hasDial(s), price, priceText: formatMinor(price, pack), wallet: s.progress.wallet, conds: def.bench.conditions.map((c) => ({ id: c.id, label: condLabel(c.id) })), live: tk.liveCond ?? '' };
+}

@@ -363,12 +363,18 @@ func _job_card() -> void:
 		var nm := _ink(row, _short(str(s.get("id", "")), str(s.get("name", ""))), 18, INK, f_sans, true); nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var val := _ink(row, "—", 19, INK, f_type, false)
 		_spec_vals[str(s.id)] = [mark, val]
-	_ink(v, "Pays %s." % str(t.get("pay_text", "")).trim_prefix("fee "), 17, Color(0.30, 0.28, 0.25), f_sans)
-	_ink(v, "Parts %s   Burnt parts %s   Wallet %s" % [str(bench.backend.last_result.get("costText", "$0.00")), bench.burn_cost_text(), bench.backend.wallet_text], 17, Color(0.30, 0.28, 0.25), f_sans)
+	# 0.6 (D-money-06): build cost is a score, scored with the stars; it never leaves the wallet, so it is not on the money line
+	_ink(v, "Pays %s. Build cost %s." % [str(t.get("pay_text", "")).trim_prefix("fee "), str(bench.backend.last_result.get("costText", "$0.00"))], 17, Color(0.30, 0.28, 0.25), f_sans)
+	_ink(v, "Burnt parts %s   Wallet %s" % [bench.burn_cost_text(), bench.backend.wallet_text], 17, Color(0.30, 0.28, 0.25), f_sans)
 	if bool(bench.backend.bench_q.get("waiting", false)) and not bench.backend.passed:
-		# 0.5 stakes: the customer is waiting at the counter; each failed TEST takes some of the tip
+		# 0.5 stakes: the customer is waiting at the counter; each failed TEST takes some of the tip (0.6: a share of the fee; none on 1-1)
 		var left := int(bench.backend.bench_q.get("tipLeft", 0)); var who := str(t.get("customer", "The customer"))
-		_ink(v, ("%s is waiting: a %s tip if the next test passes. Each failed test takes %s off." % [who, str(bench.backend.bench_q.get("tipLeftText", "")), str(bench.backend.bench_q.get("tipStepText", ""))]) if left > 0 else ("%s is still waiting. The tip is gone; the fee is not." % who), 15, Color(0.16, 0.36, 0.52) if left > 0 else RED_INK, f_sans)
+		var step := int(bench.backend.bench_q.get("tipStep", 0))
+		var line := "%s is still waiting. The tip is gone; the fee is not." % who
+		if left > 0 and step == 0: line = "%s is waiting: a %s tip. \"First job? Take your time.\"" % [who, str(bench.backend.bench_q.get("tipLeftText", ""))]
+		elif left > 0: line = "%s is waiting: a %s tip if the next test passes. Each failed test takes %s off." % [who, str(bench.backend.bench_q.get("tipLeftText", "")), str(bench.backend.bench_q.get("tipStepText", ""))]
+		_ink(v, line, 15, Color(0.16, 0.36, 0.52) if left > 0 else RED_INK, f_sans)
+	_dial_row(v)
 	if int(bench.backend.bench_q.get("burnCost", 0)) > 0:
 		# a burn is a rush order: say what it costs, on the ticket, the moment it happens
 		_ink(v, "Each burnt part is a rush order: the part plus %s courier, out of your pay." % str(bench.backend.bench_q.get("rushFeeText", "")), 15, RED_INK, f_sans)
@@ -384,6 +390,23 @@ func _job_card() -> void:
 		if not short: _ink(v, "Ctrl+Z puts in a fresh part with the power off.", 15, Color(0.30, 0.28, 0.25), f_sans)
 	elif bench.note != "":
 		_ink(v, _two_sentences(bench.note), 17, Color(0.14, 0.20, 0.42), f_sans)
+
+## 0.6 condition dial: on a ticket the bench tests in more than one condition, the paper offers the dial (bought once with the
+## wallet) and, once owned, one key per condition for the live bench. The formal TEST still runs every condition.
+func _dial_row(v: VBoxContainer) -> void:
+	var d = bench.backend.bench_q.get("dial", null)
+	if not (d is Dictionary) or (d.get("conds", []) as Array).size() < 2 or bench.backend.passed: return
+	if not bool(d.get("owned", false)):
+		var k := _key(v, "Buy the condition dial  %s" % str(d.get("priceText", "")), func(): bench.buy_dial(), "", false, false)
+		k.disabled = int(d.get("wallet", 0)) < int(d.get("price", 0))
+		_ink(v, "The test runs %d conditions. The dial runs the live bench in each, before you test." % (d.conds as Array).size(), 15, Color(0.30, 0.28, 0.25), f_sans)
+		return
+	var row := HFlowContainer.new(); row.add_theme_constant_override("h_separation", 8); row.add_theme_constant_override("v_separation", 6); v.add_child(row)
+	_ink(row, "Live:", 17, INK, f_semi, false)
+	var live := str(d.get("live", ""))
+	for c in d.conds:
+		var cid := str(c.id)
+		_key(row, str(c.label), func(): bench.set_condition(cid), "", false, live == cid or (live == "" and cid == str(d.conds[0].id)))
 
 ## An exam, marked on the ticket (it lived only in the classic stall): your numbers against the bench, the stars, and the
 ## worked answer behind one key, so the ticket stays short until asked.

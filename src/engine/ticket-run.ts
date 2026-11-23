@@ -31,9 +31,11 @@ export const selectorOverrides = (def: LevelDef, tk: TicketState): RigOverride[]
 
 /** The live circuit: board + bench sources + scope probes + DMM + hidden parameters + smoked parts. */
 export function liveRig(tk: TicketState, def: LevelDef): Rig {
+  // 0.6 condition dial: the chosen test condition's settings ride on top of the selectors (and its ambient, if it has one)
+  const lc = tk.liveCond ? def.bench.conditions.find((c) => c.id === tk.liveCond) : undefined;
   const rig = buildRig({
     board: tk.board, getDef, supplies: def.supplies, supply: tk.instruments.supply, gen: tk.instruments.gen,
-    overrides: [...hiddenOverrides(def, tk), ...selectorOverrides(def, tk)], smoked: tk.live.smoked, ambientC: def.bench.ambientC, instruments: true, regTau: def.bench.regTau,
+    overrides: [...hiddenOverrides(def, tk), ...selectorOverrides(def, tk), ...(lc?.set ?? [])], smoked: tk.live.smoked, ambientC: lc?.ambientC ?? def.bench.ambientC, instruments: true, regTau: def.bench.regTau,
   });
   // a built-in clamp (3-3's coil current): CH1 shows the trace's own probe whether or not the clip is on the board
   if (def.trace?.mode === 'auto' && rig.circuit) { const r = rig.resolve(def.trace.probe); if (r !== null) rig.scope = [r, rig.scope[1]]; }

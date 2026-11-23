@@ -35,9 +35,14 @@ describe('CIRCUITS skeleton', () => {
     expect(e.act('openTicket', ['0-0']).message).toMatch(/already open.*close/i);
     expect(e.state.ticket!.id).toBe('0-0');
   });
-  it('actions of later milestones (upgrades, tolerance Monte Carlo, rewind, EB measurement, code loading) are not implemented yet and say so through the engine (unknown action)', () => {
+  it('actions of later milestones (tolerance Monte Carlo, rewind, EB measurement, code loading) are not implemented yet and say so through the engine (unknown action)', () => {
     const e = new Engine(GAME);
-    for (const a of ['buyUpgrade', 'runTolerance', 'rewind', 'submitMeasurement', 'realityCheck', 'loadSolution']) expect(e.act(a, []).message).toMatch(/Unknown action/);
+    for (const a of ['runTolerance', 'rewind', 'submitMeasurement', 'realityCheck', 'loadSolution']) expect(e.act(a, []).message).toMatch(/Unknown action/);
+  });
+  it('buyUpgrade exists since 0.6 (the condition dial, D-money-06) and refuses an unknown upgrade in plain words', () => {
+    const e = new Engine(GAME);
+    const r = e.act('buyUpgrade', ['laser']);
+    expect(r.ok).toBe(false); expect(r.message).toMatch(/no upgrade called laser/);
   });
   it('same seed, same game', () => {
     const run = (seed: number) => { const env = new Env(GAME); env.reset({ seed }); env.step({ name: 'openTicket', args: ['0-0'] }); env.step({ name: 'tick' }); env.step({ name: 'closeTicket' }); return env.hash(); };

@@ -1566,6 +1566,18 @@ func burn_cost_text() -> String:
 func set_selector(id: String, i: int) -> void:
 	backend.set_selector(id, i); changed.emit()
 
+## 0.6 condition dial (D-money-06): buy it once with the wallet, then run the live bench in any of the ticket's test conditions.
+func buy_dial() -> void:
+	var r: Dictionary = backend._act("buyUpgrade", ["condition-dial"])
+	note = str(r.get("message", "")); backend.refresh_wallet(); backend._refresh_board()
+	if sfx and r.get("ok", false): sfx.play("coin")
+	changed.emit()
+
+func set_condition(id: String) -> void:
+	var r: Dictionary = backend._act("setCondition", [id if id != "" else null])
+	note = str(r.get("message", "")); backend._refresh_board(); backend._refresh_live(); backend._rebuild_model()
+	changed.emit()
+
 ## The meter's own LCD text, or what to do to get one.
 func meter_text() -> String:
 	var d: Dictionary = backend.dmm()
