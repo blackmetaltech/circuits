@@ -74,6 +74,13 @@ describe('player-facing text never sells with "real X" (bible 09)', () => {
     expect(found).toEqual([]);
   });
 
+  it('the public docs the README links (DESIGN, STATUS, LOOK2), outside backticked identifiers', () => {
+    const found: string[] = [];
+    for (const f of ['docs/DESIGN.md', 'docs/STATUS.md', 'docs/LOOK2.md'])
+      readFileSync(join(ROOT, f), 'utf8').split('\n').forEach((l, i) => found.push(...hits(`${f}:${i + 1}`, l.replace(/`[^`]*`/g, ''))));
+    expect(found).toEqual([]);
+  });
+
   it('catches the phrases it is for', () => {
     for (const s of ['a repair bench where real circuits are the rules', 'Reality check: a junction', 'really sees', 'realistic parts'])
       expect(BANNED.test(s)).toBe(true);
