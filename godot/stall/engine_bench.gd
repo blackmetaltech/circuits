@@ -96,9 +96,61 @@ func _init(b = null) -> void:
 	if started: refresh_wallet()
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_PREDELETE and bridge != null and bridge.has_method("stop"): bridge.stop()
+	if what == NOTIFICATION_PREDELETE:   # (the live worker holds a reference to this object: the owner stops it first, stop_live_worker)
+		if bridge != null and bridge.has_method("stop"): bridge.stop()
 
-func _act(name: String, args: Array = []) -> Dictionary: return bridge.act(name, args)
+func _act(name: String, args: Array = []) -> Dictionary:
+	_epoch += 1   # an edit or a switch makes any frame the live worker is computing stale
+	return bridge.act(name, args)
+
+## ------------------------------------------------------------------------------------------------------------------ live worker
+## 0.6: the live simulation ran on the main thread, so 5-1's switching fan driver held each frame for 23-28 ms (the 4090 drew it in
+## about 4). With `async_live` (the 3D bench sets it) a worker thread asks the engine for the next frames while the main thread
+## renders; the result is applied one rendered frame later. Calls into the sidecar are serialised by the bridge's own mutex; a frame
+## computed before a later edit is dropped (the epoch). The classic stall keeps the synchronous path.
+var async_live := false
+var _epoch := 0
+var _thr: Thread
+var _sem: Semaphore
+var _lmx := Mutex.new()
+var _job := {}        ## {n, epoch} posted to the worker
+var _done := {}       ## {epoch, frame, scope, dmm, game} from the worker
+var _busy := false
+var _quit := false
+
+func _live_worker() -> void:
+	while true:
+		_sem.wait()
+		_lmx.lock(); var job := _job.duplicate(); var q := _quit; _lmx.unlock()
+		if q: return
+		var r: Dictionary = bridge._req({"fn": "act", "name": "advance", "args": [int(job.n)]})
+		var f: Dictionary = bridge._req({"fn": "q", "name": "liveFrame", "args": []})
+		var sc: Dictionary = bridge._req({"fn": "q", "name": "scope", "args": [1]})
+		var d: Dictionary = bridge._req({"fn": "q", "name": "dmm", "args": []})
+		_lmx.lock()
+		_done = {"epoch": int(job.epoch), "game": r.get("game", null), "frame": f.get("result", {}), "scope": sc.get("result", {}), "dmm": d.get("result", {})}
+		_busy = false
+		_lmx.unlock()
+
+func stop_live_worker() -> void:
+	if _thr == null: return
+	_lmx.lock(); _quit = true; _lmx.unlock(); _sem.post(); _thr.wait_to_finish(); _thr = null
+
+func _step_async(n: int) -> void:
+	if _thr == null:
+		_sem = Semaphore.new(); _thr = Thread.new(); _thr.start(_live_worker)
+	_lmx.lock(); var got := _done; _done = {}; var busy := _busy; _lmx.unlock()
+	if not got.is_empty() and int(got.epoch) == _epoch:
+		if got.game != null: bridge.g = got.game
+		bridge._cache.clear()
+		frame = got.frame if got.frame is Dictionary else {}
+		var sc = got.scope; scope_q = sc if sc is Dictionary else {}
+		var d = got.dmm; dmm_q = d if d is Dictionary else {}
+		_apply_live()
+		_rebuild_model()
+	if not busy:
+		_lmx.lock(); _job = {"n": n, "epoch": _epoch}; _busy = true; _lmx.unlock()
+		_sem.post()
 func _q(name: String, args: Array = []): return bridge.q(name, args)
 
 ## ------------------------------------------------------------------------------------------------------------------ tickets and progress
@@ -374,6 +426,18 @@ func clean_stray() -> int:
 			break
 	return n
 
+## 0.6 (Tess): right-click on a burnt part fits a fresh one in the same holes, wires kept (removing it took its wires with it, and
+## the bin's one LED could not go in while the burnt one sat on the board). Power goes off, as after Ctrl+Z.
+func replace_burnt(uid: String) -> bool:
+	if not smoked.has(uid) and not arrived_burnt.has(uid): return false
+	var r := _act("replaceSmoked", [uid])
+	if not r.get("ok", false): return false
+	smoked.erase(uid); _smoke_seen.erase(uid); arrived_burnt.erase(uid); _after_edit()
+	powered = false; frame = {}
+	event.emit("power", {"on": false, "auto": true, "silent": true})
+	last_note = "Fresh part in the same holes, wires kept. The power is off."
+	return true
+
 func delete_wire(wid: String) -> Dictionary:
 	var r := _act("unwire", [wid]); _after_edit()
 	return {"ok": bool(r.get("ok", false)), "msg": str(r.get("message", ""))}
@@ -580,9 +644,12 @@ func _refresh_live() -> void:
 	else: frame = {}
 	var sc = _q("scope", [1])
 	scope_q = sc if sc is Dictionary else {}
-	_scope_update()
 	var d = _q("dmm")
 	dmm_q = d if d is Dictionary else {}
+	_apply_live()
+
+func _apply_live() -> void:
+	_scope_update()
 	temps.clear(); smoked.clear()
 	for p in frame.get("parts", []):
 		temps[str(p.uid)] = _n(p.get("temp", 25.0))
@@ -730,8 +797,10 @@ func step(dt: float) -> void:
 	var n := int(_accum / FRAME_DT)
 	if n < 1: return
 	_accum = fposmod(_accum, FRAME_DT)
-	_act("advance", [mini(n, 8)])
-	_refresh_live(); _rebuild_model()
+	if async_live: _step_async(mini(n, 8))
+	else:
+		_act("advance", [mini(n, 8)])
+		_refresh_live(); _rebuild_model()
 	if locked and not passed:
 		hold += dt
 		# the formal check runs by itself once LOCK has held and every part is still cool: a part that is warming is left to play out (glow, then smoke) in real time

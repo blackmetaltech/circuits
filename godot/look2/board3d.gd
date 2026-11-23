@@ -62,9 +62,14 @@ func build(gw: int, gh: int, conns: Array) -> void:
 		var col: Color = ROLE_COL.get(str(c.get("role", "")), Color(0.5, 0.5, 0.5))
 		var tab := MeshKit.rounded_box(Vector3(0.016, 0.0002, 0.0075), 0.0003)   # 0.5: bigger, so the label reads in view 1
 		var side := -1.0 if int(pad[0]) < w / 2 else 1.0
-		var tp := p + Vector3(side * 0.0028 + side * 0.0055 - side * 0.0028, 0.0001, -0.0046)
+		# 0.6 (Tess): near the top edge the tab sat behind the pad, under a battery or a module: it goes in front of the pad there,
+		# and it says which side of the supply it is (+ or -), not only the connector's id
+		var front := int(pad[1]) <= 3
+		var tp := p + Vector3(side * 0.0055, 0.0001, 0.0050 if front else -0.0046)
 		MeshKit.add(self, tab, MeshKit.mat(col, 0.6, 0.0, {"normal": 0.0}), tp)
-		MeshKit.label(self, str(c.id), 0.0001, tp + Vector3(0, 0.00015, 0), Color(0.96, 0.96, 0.94))
+		var role := str(c.get("role", ""))
+		var txt := str(c.id) + (" +" if role in ["supply", "source"] else (" −" if role == "ground" else ""))
+		MeshKit.label(self, txt, 0.0001, tp + Vector3(0, 0.00015, 0), Color(0.96, 0.96, 0.94))
 	_ring_mesh = TorusMesh.new(); _ring_mesh.inner_radius = 0.0018; _ring_mesh.outer_radius = 0.0026; _ring_mesh.rings = 24; _ring_mesh.ring_segments = 8
 	_hover = MeshKit.add(self, _ring_mesh, _glow(Color(0.91, 0.64, 0.24)), Vector3.ZERO)
 	_hover.visible = false; _hover.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

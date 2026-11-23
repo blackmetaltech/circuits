@@ -94,6 +94,9 @@ func _ready() -> void:
 	var cl := CanvasLayer.new(); cl.add_child(ui); add_child(cl)
 	pad = PadCursor.new(); pad.bench = self; cl.add_child(pad)   # phase C: the gamepad drives a cursor ring and the bench's own keys
 	backend = EngineBench.new()
+	# 0.6: the live simulation on a worker thread in a real window (5-1 held frames for 23-28 ms on the main thread). Headless test
+	# flows step synchronously so their reads follow their steps; CB_SYNC_LIVE=1 forces the old path for comparison.
+	backend.async_live = DisplayServer.get_name() != "headless" and OS.get_environment("CB_SYNC_LIVE") != "1"
 	backend.event.connect(_on_event)
 	set_view(2, true)
 	var start := OS.get_environment("CB_L2")
@@ -567,6 +570,7 @@ func back_to_title() -> void:
 	set_view(2); changed.emit()
 
 func _after_open() -> void:
+	hover_tip = ""; _pick_hl = {}; _pad_tip_shown = false   # 0.6: the last ticket's tip stayed on the rail into the next job
 	for c in board_root.get_children(): c.queue_free()
 	parts3d.clear(); wires3d.clear(); _sig_parts = ""; _sig_wires = ""; last_failure = {}
 	capture_until = 0.0; _call(scope, "clear_capture")   # 0.5 (Noor): the testbed's 2000 V capture stayed on the scope into the next job
@@ -806,6 +810,9 @@ func _cables() -> void:
 
 ## ------------------------------------------------------------------------------------------------ live loop
 
+func _exit_tree() -> void:
+	if backend != null and is_instance_valid(backend): backend.stop_live_worker()
+
 func _process(dt: float) -> void:
 	_update_camera(dt)
 	if OS.get_environment("CB_FRAMETIME") != "": _frametime(dt)
@@ -967,7 +974,9 @@ func _on_event(name: String, data: Dictionary) -> void:
 					var xy := tg.substr(4).split(","); board.set_marks([[int(xy[0]), int(xy[1])]], Color(0.95, 0.4, 0.3))
 			changed.emit()
 		"bench_failed":
-			if last_failure.is_empty(): last_failure = {"title": "Bench test failed", "text": str(data.get("text", ""))}
+			# 0.6 (Tess on 1-2): the first failure's numbers stayed on the ticket through later tests ("LED 1: 3.71 mA" at 12 mA).
+			# Each failed test replaces the text; a burn's own explanation (it carries the part) stays until it is dealt with.
+			if last_failure.is_empty() or not last_failure.has("uid"): last_failure = {"title": "Last test failed", "text": str(data.get("text", ""))}
 			changed.emit()
 		"paid":
 			var st := int(data.get("stars", 0))
@@ -1107,6 +1116,10 @@ func ray_hit(mp: Vector2) -> String:
 	return str(c.get_meta("hit")) if c != null and c.has_meta("hit") else ""
 
 func set_tool(t: String) -> void:
+	# 0.6 (Tess, 15 minutes on 1-1): in the wide views the battery hid its own leads. A wire, lead or probe tool picked there moves
+	# the camera to the top-down board view (key 5); keys 1-4 still go back.
+	if t in ["wire", "red", "black", "probe"] and tool != t and view in [1, 2] and mode in ["job", "free"] and board != null and not case_closed():
+		set_view(5)
 	tool = t
 	if t != "place": _clear_ghost()
 	wire_from = Vector2i(-1, -1); _wire_click = false; _clear_wire_preview()   # any tool change (W again, Esc) drops a half-drawn wire
@@ -1284,6 +1297,8 @@ func _right_click(mp: Vector2) -> void:
 	if tool != "select": set_tool("select"); return
 	var it := _pick_item(mp)
 	if it.is_empty(): return
+	if it.kind == "part" and backend.replace_burnt(str(it.id)):
+		note = str(backend.last_note); _set_pick_hl({}); changed.emit(); return
 	if it.kind == "part":
 		var nm := str(it.label)
 		backend.delete_part(str(it.id))
@@ -1333,8 +1348,10 @@ func _pick_item(mp: Vector2) -> Dictionary:
 	return best
 
 var _pick_hl := {}
+var _pick_hl_ms := 0
 func _set_pick_hl(it: Dictionary) -> void:
 	if str(it.get("id", "")) == str(_pick_hl.get("id", "")): return
+	if str(it.get("id", "")) != "": _pick_hl_ms = Time.get_ticks_msec()
 	for d in [_pick_hl, it]:
 		if d.is_empty(): continue
 		var on: bool = d == it
@@ -1727,6 +1744,9 @@ func _wheel_value(mp: Vector2, dir: int) -> bool:
 	if not (mb_wheel_ok()): return false
 	var it := _pick_item(mp)
 	if it.is_empty() or str(it.kind) != "part": return false
+	# 0.6 (Tess: "I rolled the wheel over the board and the resistor turned into 1 k"): a wheel that sweeps over a part while zooming
+	# zooms. The value steps only once the pointer has rested on the part (its tip showing) for a moment.
+	if str(it.id) != str(_pick_hl.get("id", "")) or Time.get_ticks_msec() - _pick_hl_ms < 350: return false
 	var part := {}
 	for p in backend.parts: if str(p.uid) == str(it.id): part = p
 	if part.is_empty() or part.get("value", null) == null or bool(part.get("fixed", false)): return false
@@ -1740,7 +1760,10 @@ func _wheel_value(mp: Vector2, dir: int) -> bool:
 	var j := clampi(i + dir, 0, vals.size() - 1)
 	if j == i: note = "That is the %s value in the box." % ("largest" if dir > 0 else "smallest"); changed.emit(); return true
 	var r: Dictionary = backend.set_value(str(it.id), float(vals[j]))
-	note = str(r.get("message", r.get("msg", ""))); sync_board(); changed.emit()
+	note = str(r.get("message", r.get("msg", ""))); sync_board()
+	# 0.6: the hover tip kept the old value ("470 ohm resistor" after a step to 680): name the part again from the new board
+	var keep_ms := _pick_hl_ms; _pick_hl = {}; _set_pick_hl(_pick_item(mp)); _pick_hl_ms = keep_ms
+	changed.emit()
 	return true
 
 func mb_wheel_ok() -> bool: return backend.has_method("set_value") and mode in ["job", "free"]

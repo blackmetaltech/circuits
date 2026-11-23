@@ -56,6 +56,9 @@ static func apply_break(wb, brk: String) -> bool:
 	var b = wb.backend
 	for k: Dictionary in d.get("breaks", []):
 		if str(k.id) != brk: continue
+		# 0.6: a break lands with time stopped. The torch's LED burned in the first frame after the edit, before the player could
+		# pause, so Step had nothing left to show. Now Step (L) runs the frame in which it happens, with the engine's numbers.
+		if not wb.testbed_paused: b._act("setRunning", [false]); wb.testbed_paused = true
 		var ok := true
 		for step: Array in k.do:
 			match str(step[0]):
@@ -70,7 +73,7 @@ static func apply_break(wb, brk: String) -> bool:
 					var uid2 := ""
 					for p in b.parts: if int(p.get("x", -1)) == int(step[1]) and int(p.get("y", -1)) == int(step[2]): uid2 = str(p.uid)
 					ok = uid2 != "" and bool(b.set_value(uid2, float(step[3])).get("ok", false)) and ok
-		wb.note = "%s. %s" % [str(k.name), str(k.what)]
+		wb.note = "%s. %s Paused: Step (L) runs one frame, Run (K) goes on." % [str(k.name), str(k.what)]
 		wb.sync_board(); wb.changed.emit()
 		return ok
 	return false

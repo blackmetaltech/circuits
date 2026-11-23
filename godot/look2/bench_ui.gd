@@ -31,7 +31,9 @@ func _ready() -> void:
 	_rebuild()
 
 func _process(_dt: float) -> void:
-	if bench.mode != "title": _refresh_live(); queue_redraw()
+	if bench.mode != "title":
+		_refresh_live(); queue_redraw()
+		if bench.tool in ["wire", "red", "black", "probe"]: _place_tip()
 
 func toggle_schematic() -> void: schem = not schem; _rebuild()
 
@@ -49,6 +51,7 @@ func _panel(pos: Vector2, size: Vector2, accent := Color(0, 0, 0, 0)) -> PanelCo
 
 ## Canvas font size that lands at >= 16 real pixels in this window (the canvas stretches: at 1280x800 one canvas px is 0.67 px).
 func fs(n: int) -> int:
+	if DisplayServer.get_name() == "headless": return n   # no screen pixels to protect; the flows lay out at the design size
 	var vis := get_viewport().get_visible_rect().size
 	var k := float(DisplayServer.window_get_size().x) / maxf(vis.x, 1.0)
 	return maxi(n, int(ceil(16.0 / maxf(k, 0.1))))
@@ -190,6 +193,16 @@ func _fit_paper(p: Control) -> void:
 	var k := clampf(room / maxf(p.size.y, 1.0), 0.55, 1.0)
 	p.pivot_offset = Vector2.ZERO
 	if absf(p.scale.x - k) > 0.001: p.scale = Vector2(k, k)
+
+## 0.6 (Tess skipped the wire notes: they stacked to six lines over the board): the ticket shows a note's first two sentences.
+static func _two_sentences(t: String) -> String:
+	var n := 0; var i := 0
+	while i < t.length() - 1:
+		if t[i] == "." and t[i + 1] == " ":
+			n += 1
+			if n == 2: return t.substr(0, i + 1)
+		i += 1
+	return t
 
 func _ink(parent: Node, text: String, size := 19, col := INK, font: Font = null, wrap := true) -> Label:
 	return _lab(parent, nb_units(text), size, col, font if font else f_type, wrap)
@@ -370,7 +383,7 @@ func _job_card() -> void:
 		if cut > 0 and cut < full.length() - 2: _ink(v, "Why: " + full.substr(cut + 2).strip_edges(), 15, Color(0.30, 0.28, 0.25), f_sans)
 		if not short: _ink(v, "Ctrl+Z puts in a fresh part with the power off.", 15, Color(0.30, 0.28, 0.25), f_sans)
 	elif bench.note != "":
-		_ink(v, bench.note, 17, Color(0.14, 0.20, 0.42), f_sans)
+		_ink(v, _two_sentences(bench.note), 17, Color(0.14, 0.20, 0.42), f_sans)
 
 ## An exam, marked on the ticket (it lived only in the classic stall): your numbers against the bench, the stars, and the
 ## worked answer behind one key, so the ticket stays short until asked.
@@ -584,6 +597,12 @@ func _place_tip() -> void:
 	_tip_plate.reset_size()
 	var sz := _tip_plate.get_combined_minimum_size()
 	_tip_plate.position = Vector2((1920 - sz.x) * 0.5, _canvas_h() - 16.0 - _rail_h - 10.0 - sz.y)
+	# 0.6 (Tess saw the pad name once, by accident: it sat at the bottom, far from where she looked): with a wire, lead or probe in
+	# hand the name of the pad follows the cursor
+	if bench.tool in ["wire", "red", "black", "probe"] and bench.hover_pad.x >= 0 and bench.hover_tip != "":
+		var vr := get_viewport().get_visible_rect().size
+		var mp := get_global_mouse_position() + Vector2(34, 30)
+		_tip_plate.position = Vector2(clampf(mp.x, 8.0, vr.x - sz.x - 8.0), clampf(mp.y, 8.0, _canvas_h() - _rail_h - 24.0 - sz.y))
 
 var _tip_label: Label
 func _refresh_live() -> void:

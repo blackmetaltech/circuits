@@ -276,7 +276,7 @@ func _pp3(pid: String) -> void:
 	var tired := pid.ends_with("tired")
 	var body := MeshKit.mat(Color(0.06, 0.06, 0.065), 0.4, 0.0, {"clearcoat": 0.5})
 	var band := MeshKit.mat(Color(0.42, 0.33, 0.16) if not tired else Color(0.36, 0.34, 0.31), 0.5, 0.4, {"clearcoat": 0.2})   # muted brass: the old orange read as glowing
-	var c := Vector3(3 * P, 0.0082, -0.010)
+	var c := Vector3(3 * P, 0.0082, -0.019)   # 0.6 (Tess): two rows back, so its leads and the + and GND pads they land on show
 	_body(MeshKit.rounded_box(Vector3(0.036, 0.016, 0.022), 0.002), body, c)
 	MeshKit.add(self, MeshKit.rounded_box(Vector3(0.024, 0.0162, 0.0222), 0.0018), band, c + Vector3(0.002, 0, 0))
 	MeshKit.add(self, MeshKit.rounded_box(Vector3(0.004, 0.012, 0.016), 0.001), MeshKit.m("black_plastic"), c + Vector3(-0.020, 0, 0))   # the snap
@@ -284,7 +284,7 @@ func _pp3(pid: String) -> void:
 	for i in 2:
 		var x := float(i) * 6.0 * P
 		var lead := MeshKit.mat(Color(0.75, 0.10, 0.08) if i == 0 else Color(0.06, 0.06, 0.06), 0.5)
-		MeshKit.add(self, MeshKit.tube(MeshKit.round_corners(PackedVector3Array([c + Vector3(-0.022, -0.002, -0.003 + i * 0.006), Vector3(x - 0.002, 0.004, -0.008), Vector3(x, 0.0015, 0)]), 0.004, 3), 0.0008, 6), lead)
+		MeshKit.add(self, MeshKit.tube(MeshKit.round_corners(PackedVector3Array([c + Vector3(-0.022, -0.002, -0.003 + i * 0.006), Vector3(x - 0.002, 0.005, -0.009), Vector3(x, 0.0015, 0)]), 0.004, 3), 0.0008, 6), lead)
 		_lead([Vector3(x, -MeshKit.BOARD_T, 0), Vector3(x, 0.0015, 0)])
 	_labels.append(MeshKit.label(self, "+", 0.00008, Vector3(0, 0.0004, 0.0045), Color(0.9, 0.2, 0.15)))
 
