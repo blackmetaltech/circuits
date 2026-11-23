@@ -145,3 +145,18 @@
   never scripts a result. K pauses and runs the simulation, L steps one frame (pad: left and right stick press). Cut, written
   down: the phone charger stage (4-1 is a mains ticket and needs the safety card flow on the free bench); free choice of fault
   (open, short, drift) on any part; a slow-motion speed control.
+
+- **D-money-06 (2026-11-23, Ingrid Solheim, Game Lead; design by Mateo Arriaga, Game Designer).** Dagny's 0.5 line: "a fine on a
+  wallet that buys nothing". (1) The waiting customer's tip is 40 % of the fee, to the nearest $0.25 ($3 → $1.25, $5 → $2.00,
+  $9 → $3.50); each failed TEST takes 25 % of the starting tip, to the nearest $0.05. On 1-1, the first ticket, a failed test costs
+  nothing and the customer says "First job? Take your time." I proposed 30 %; Mateo moved it to 40 % because 30 % paid the first
+  tickets less than the old flat $2.00. (2) The wallet buys one thing: the condition dial, $15.00, reachable after three or four
+  tickets even with every tip lost. It runs the live bench in any of the ticket's test conditions (1-2: fresh or tired battery;
+  5-2: the MOSFET threshold corners), so the player can check before pressing TEST: money protects tips. The sandbox and the
+  testbed have it free; learning stays free. (3) "Parts $x" left the money line: in Learner mode parts never leave the wallet. It is
+  "Build cost", a score next to the pay terms. Strongest argument against (Mateo's own): paying to see how a device behaves locks
+  part of the testbed behind money. Answer: the testbed and the free bench have the dial for nothing; only a customer's job charges
+  for checking before the test. Cut, written down: the dial as a boxed object on the bench shelf (Mateo wants it bought on the
+  bench, not in a menu; 0.6 puts a key on the paper ticket); the scope's second channel, MIN/MAX hold and a part organiser as
+  purchases; two more tickets whose pass the live gauge cannot judge (1-3 at 13.8 V, 2-1 at the top of the battery's range) wait
+  for Ravi to confirm the numbers, because they move goldens and the stars' par.
