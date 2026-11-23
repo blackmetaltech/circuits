@@ -22,7 +22,7 @@ The bench controls live on the instruments, burnt parts hurt, and chapter 2's we
 - Removing a part says which wires went with it, and Ctrl+Z puts them back. A wire end or meter lead aimed at a pad with no leg shows red before the click.
 - The bench's flop limit covers the whole bench, not each test condition (systems review of the linear cost constants).
 - The hover tip and meter reading sit on their own plate above the tool rail.
-- The release adds the Windows and macOS builds from CI to the locally smoke-tested release.
+- A Windows (x64) build is published with the release, built from the tag and smoke-run under wine (not yet on real Windows). No macOS build this release: the CI export lacked the macOS template binary, and that failure also stopped CI's Windows build; the release workflow now treats macOS as best-effort.
 
 ### Fixed
 - A part that arrived burnt (the torch's LED) was announced as a fresh burn, "LED burnt: too much current", when you powered a circuit you had wired right. The ticket now says the customer burnt it and how to swap it. Both looks.

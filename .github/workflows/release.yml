@@ -107,7 +107,10 @@ jobs:
         run: |
           mkdir -p godot/build/linux godot/build/windows godot/build/macos
           godot --headless --path godot --import || true
-          for p in Linux Windows macOS; do godot --headless --path godot --export-release "$p" || exit 1; done
+          # Linux and Windows must export; macOS is best-effort (v0.4.0: the 4.7.2 template archive had no universal macOS binary,
+          # and the loop's exit took Windows down with it)
+          for p in Linux Windows; do godot --headless --path godot --export-release "$p" || exit 1; done
+          godot --headless --path godot --export-release macOS || echo "::warning::macOS export failed; the release ships without macOS"
           ls -R godot/build
       - uses: actions/upload-artifact@v4
         with:
@@ -118,6 +121,7 @@ jobs:
 
   package:
     needs: export
+    continue-on-error: ${{ startsWith(matrix.target, 'macos') }}   # a missing macOS export must not block Linux and Windows
     strategy:
       fail-fast: false
       matrix:
