@@ -57,6 +57,18 @@ static func device(id: String) -> Dictionary:
 	return {}
 
 ## Open `id` on the free bench: the ticket's board in the sandbox, its reference fix built, power off, time running.
+## 0.7 (Sigrid, CRITIQUE-0.6): the device's own shell around its board, opened, lid set aside; no repair tag (nobody brought it in).
+static func _shell(wb, id: String, name: String) -> void:
+	if wb.board == null: return
+	if wb.case_node: wb.case_node.queue_free(); wb.case_node = null
+	var c := DeviceCase.new(); wb.board_root.add_child(c)
+	c.build(Vector2((wb.board.w + 3) * wb.P, (wb.board.h + 3) * wb.P), "tb-" + id, name, "the testbed")
+	c.global_position = wb.board.to_global(Vector3((wb.board.w - 1) * wb.P * 0.5, 0, (wb.board.h - 1) * wb.P * 0.5))
+	c.set_state("open", false)
+	if c.tag: c.tag.visible = false
+	if c.tag_string: c.tag_string.visible = false
+	wb.case_node = c
+
 static func load_device(wb, id: String) -> bool:
 	var d := device(id)
 	if d.is_empty(): return false
@@ -67,6 +79,7 @@ static func load_device(wb, id: String) -> bool:
 	b.set_power(false)
 	if not b.open_ticket(str(d.ticket)): return false
 	wb._after_open()   # Sigrid (0.6): the host ticket's own board and connectors; the 3D bench kept 5-1's (a fan where 5-2's strip is, FAN and COLL labels)
+	_shell(wb, id, str(d.name))
 	var ok := true
 	if d.has("board"):
 		# a board that is not the ticket's own repair (src/data/testbed.ts through the testbedBoard query), on the host ticket's bench

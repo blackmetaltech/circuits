@@ -40,7 +40,18 @@ const DEVICES := {
 	"5-4": ["JUNO MUSIC", "SYNTH PREAMP  9 V", Color(0.12, 0.12, 0.13), Color(0.90, 0.35, 0.45)],
 	"5-5": ["EXAM", "AMPLIFIER TEST RIG", Color(0.50, 0.52, 0.54), Color(0.12, 0.30, 0.62)],
 }
+## 0.7 (CRITIQUE-0.6, Sigrid: "the testbed boards have no device shell"): the testbed's appliances, keyed "tb-<device id>".
+const TESTBED := {
+	"tb-torch": ["LUMO", "POCKET TORCH  9 V PP3", Color(0.10, 0.10, 0.11), Color(0.95, 0.72, 0.12)],
+	"tb-station": ["KAYA WX", "WEATHER STATION  ADC 3.3 V", Color(0.60, 0.61, 0.58), Color(0.10, 0.36, 0.60)],
+	"tb-fan": ["BREEZE", "DESK FAN  12 V  0.2 A", Color(0.60, 0.60, 0.57), Color(0.10, 0.52, 0.56)],
+	"tb-charger": ["VOLTEX", "PHONE CHARGER  230 V IN  5 V", Color(0.93, 0.93, 0.91), Color(0.20, 0.45, 0.85)],
+	"tb-dimmer": ["LUMINA", "LAMP DIMMER  12 V LED", Color(0.36, 0.25, 0.16), Color(0.92, 0.80, 0.55)],
+	"tb-relay_timer": ["TIMEX-R", "RELAY TIMER  12 V  2 S", Color(0.18, 0.30, 0.22), Color(0.92, 0.60, 0.12)],
+}
+
 static func device_of(ticket_id: String) -> Array:
+	if TESTBED.has(ticket_id): return TESTBED[ticket_id]
 	return DEVICES.get(ticket_id, ["SERVICE", "DEVICE UNDER REPAIR", Color(0.18, 0.19, 0.20), Color(0.91, 0.64, 0.24)])
 
 ## inner: the board's footprint (x, z size) in metres; the shell is built around it with walls, its floor under the standoffs.

@@ -90,6 +90,7 @@ func _run() -> void:
 	ok(not wb.backend.parts.any(func(p): return str(p.partId) == "cap-el"), "break: the smoothing capacitor comes out")
 	ok(Testbed.load_device(wb, "dimmer"), "the lamp dimmer loads on 5-2's bench")
 	ok(wb.note == "Lamp dimmer loaded. Space powers it.", "the note does not repeat the card: %s" % wb.note)
+	ok(wb.case_node != null and wb.case_node.state == "open" and not wb.case_node.tag.visible, "0.7: the dimmer stands in its own open shell, no repair tag (Sigrid)")
 	wb.toggle_power(); await _frames(2)
 	ok(wb.backend.powered and wb.note == "Powered. Space switches it off.", "0.7: after Space the note no longer says Space powers it (%s)" % wb.note)
 	wb.toggle_power(); await _frames(2)
