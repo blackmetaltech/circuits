@@ -39,7 +39,7 @@ Five chapters are built (23 tickets). Three more are designed.
 | **5 Switches & Gain** | The transistor as a switch (forced gain, flyback diodes), MOSFET thresholds and heat, diode-transistor logic, the common-emitter amplifier and its bias | Fan Driver · 3.3 V Gate · Gate Builder · Synth Preamp · Exam: CE Amplifier |
 | 6 Op-Amp Alley · 7 Tone & Resonance · 8 Oscillate *(designed)* | Op-amps, filters, resonance, oscillators | |
 
-Cute mode puts beads on every wire that carries current. In the classic look it gives LEDs faces. Each one shows a real quantity.
+Cute mode shows current as beads riding the wires. In the classic look, LEDs get faces.
 
 ## Honest by design
 
@@ -71,7 +71,7 @@ pnpm bridge                              # builds the engine sidecar → godot/s
 godot --headless --path godot --import   # once, and after adding class_name scripts
 godot --path godot                       # play
 ```
-Needs Node.js 18+ and Godot 4.7.2. To just play, take the Linux zip from the [releases page](https://github.com/blackmetaltech/circuits/releases) (Node.js is bundled).
+Needs Node.js 18+ and Godot 4.7.2. To just play, download a build from the [releases page](https://github.com/blackmetaltech/circuits/releases).
 
 ## Architecture
 ```
