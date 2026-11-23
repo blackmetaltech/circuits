@@ -46,7 +46,9 @@ function chargeBurn(s: NodeState, tk: TicketState, uid: string): void {
   if (sandbox(s)) return;
   const p = tk.board.parts.find((x) => x.uid === uid);
   if (!p || p.fixed) return;
-  tk.burnCost = (tk.burnCost ?? 0) + partPrice(REGIONS.get(s.region), p.partId, p.variant, p.value);
+  // a rush replacement: the part's price plus the courier (service:rush, per burnt part; phase C, D-burn-rush)
+  const pack = REGIONS.get(s.region);
+  tk.burnCost = (tk.burnCost ?? 0) + partPrice(pack, p.partId, p.variant, p.value) + (pack.data.prices['service:rush'] ?? 0);
 }
 
 const binList = (def: LevelDef): string => def.bin.map((b) => getDef(b.partId)?.id ?? b.partId).join(', ');

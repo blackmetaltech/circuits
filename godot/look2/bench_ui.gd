@@ -298,6 +298,9 @@ func _job_card() -> void:
 		_spec_vals[str(s.id)] = [mark, val]
 	_ink(v, "Pays %s." % str(t.get("pay_text", "")).trim_prefix("fee "), 17, Color(0.30, 0.28, 0.25), f_sans)
 	_ink(v, "Parts %s   Burnt parts %s   Wallet %s" % [str(bench.backend.last_result.get("costText", "$0.00")), bench.burn_cost_text(), bench.backend.wallet_text], 17, Color(0.30, 0.28, 0.25), f_sans)
+	if int(bench.backend.bench_q.get("burnCost", 0)) > 0:
+		# a burn is a rush order: say what it costs, on the ticket, the moment it happens
+		_ink(v, "Each burnt part is a rush order: the part plus %s courier, out of your pay." % str(bench.backend.bench_q.get("rushFeeText", "")), 15, RED_INK, f_sans)
 	_predict_slip(v, t)
 	var f: Dictionary = bench.last_failure
 	if not f.is_empty() and not bench.backend.passed:

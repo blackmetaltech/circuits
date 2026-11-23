@@ -53,7 +53,7 @@ describe('repair tickets arrive faulty', () => {
 });
 
 describe('burnt parts cost money', () => {
-  it('1-1: an LED the player burns is billed at its price and comes out of the pay', () => {
+  it('1-1: an LED the player burns is billed as a rush replacement (its price plus the courier) and comes out of the pay', () => {
     const e = open('1-1');
     for (const a of clearFaultActions(def('1-1'))) ok(e, a.name, ...(a.args ?? []));
     ok(e, 'placePart', 'led-red-5mm', null, '5mm', 4, 5, 0, false); ok(e, 'addWire', [[2, 2], [2, 5], [4, 5]]); ok(e, 'addWire', [[6, 5], [6, 2], [8, 2]]);
@@ -63,16 +63,19 @@ describe('burnt parts cost money', () => {
     expect(smoked.length).toBe(1);
     const price = partPrice(REGIONS.get((e.state as NodeState).region), 'led-red-5mm', '5mm', null);
     expect(price).toBeGreaterThan(0);
-    expect(tk(e).burnCost).toBe(price);
-    expect((e.q('bench') as any).burnCost).toBe(price);
+    const rush = REGIONS.get((e.state as NodeState).region).data.prices['service:rush']!;
+    expect(rush).toBe(150);                                                  // US$1.50: a burn is no longer a rounding error on a $5 job
+    expect(tk(e).burnCost).toBe(price + rush);
+    expect((e.q('bench') as any).burnCost).toBe(price + rush);
+    expect((e.q('bench') as any).rushFeeText).toBe('$1.50');
     ok(e, 'power', false);
     const uid = smoked[0]!; ok(e, 'deletePart', uid);
     const ref = refActions(def('1-1')).slice(clearFaultActions(def('1-1')).length);
     for (const a of ref) ok(e, a.name, ...(a.args ?? []));
     const r = e.q('benchResult') as any;
     expect(r.pass).toBe(true);
-    expect((e.state as NodeState).progress.wallet).toBe(300 + 2 * 100 - price);
-    expect(tk(e).burnDeducted).toBe(price);
+    expect((e.state as NodeState).progress.wallet).toBe(300 + 2 * 100 - price - rush);
+    expect(tk(e).burnDeducted).toBe(price + rush);
   });
   it('the sandbox never bills a burn', () => {
     const e = new Engine(GAME, { mode: 'sandbox' }); e.autosave = false; ok(e, 'openTicket', '1-1');

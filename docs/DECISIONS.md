@@ -57,3 +57,10 @@
   first; Tomasz checks the meter-resolution claim); 2-3 a dead sealed module (open-circuit volts and short-circuit amps first);
   2-4 the exam rig's slide wire with the wrong rheostat (volts across the wire first). Cut line, written now: if the layer slips,
   2-1 and 2-3 ship on the bench and 2-2 and 2-4 stay classic, labelled.
+
+- **D-burn-rush (2026-11-23, Ingrid Solheim, Game Lead).** A part the player burns on a customer's job is billed as a rush
+  replacement: its price plus a courier fee (`service:rush`, US$1.50 in the global pack, converted in derived packs), per burnt
+  part, out of the pay. Why: Dagny scored tension 5 because a $0.04 transistor against a $10 job does not hurt. One burn on 1-1
+  now costs $1.53 of a $5 job; three burns eat most of it. The ticket says so the moment it happens. Cut, written down: customer
+  deadlines and a reputation score were considered and left out of this layer (both need a campaign clock and a save field);
+  they go to the next layer's list. The sandbox still never bills; arrived-burnt parts are still free.

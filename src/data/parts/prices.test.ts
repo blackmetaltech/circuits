@@ -31,7 +31,11 @@ describe('global prices (game estimates, integer US cents at qty 100)', () => {
 
   it('has no price for an unknown part:variant', () => {
     const known = new Set(PARTS.flatMap((x) => x.variants.map((v) => `${x.id}:${v.id}`)));
-    for (const k of Object.keys(PRICES_GLOBAL_CENTS)) expect(known.has(k), k).toBe(true);
+    for (const k of Object.keys(PRICES_GLOBAL_CENTS)) if (!k.startsWith('service:')) expect(known.has(k), k).toBe(true);
+  });
+
+  it('prices exactly the services the engine charges (service:rush, the courier for a burnt part)', () => {
+    expect(Object.keys(PRICES_GLOBAL_CENTS).filter((k) => k.startsWith('service:'))).toEqual(['service:rush']);
   });
 
   it('orders resistors by power: 1/6 W < 1/4 W < 1/2 W < 1 W < 2 W < 5 W wirewound', () => {
