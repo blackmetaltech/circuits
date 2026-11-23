@@ -896,7 +896,8 @@ func _frametime(dt: float) -> void:
 		_ft.sort()
 		var s := 0.0
 		for x in _ft: s += x
-		print("FRAMETIME avg %.2f ms  p95 %.2f ms  frames %d  size %s x%s  tier %s  method %s  gpu %s" % [1000.0 * s / _ft.size(), 1000.0 * _ft[int(_ft.size() * 0.95)], _ft.size(), str(get_viewport().get_visible_rect().size), str(get_viewport().scaling_3d_scale), quality, RenderingServer.get_current_rendering_method(), RenderingServer.get_video_adapter_name()])
+		# 0.6: p99 and the worst frame too: the live simulation runs every 1/30 s, so at a high frame rate p95 hid its frames
+		print("FRAMETIME avg %.2f ms  p95 %.2f ms  p99 %.2f ms  max %.2f ms  live %s  frames %d  size %s x%s  tier %s  method %s  gpu %s" % [1000.0 * s / _ft.size(), 1000.0 * _ft[int(_ft.size() * 0.95)], 1000.0 * _ft[int(_ft.size() * 0.99)], 1000.0 * _ft[_ft.size() - 1], "worker" if backend.async_live else "main", _ft.size(), str(get_viewport().get_visible_rect().size), str(get_viewport().scaling_3d_scale), quality, RenderingServer.get_current_rendering_method(), RenderingServer.get_video_adapter_name()])
 		get_tree().quit()
 
 ## ------------------------------------------------------------------------------------------------ engine events

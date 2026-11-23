@@ -85,5 +85,6 @@ jobs:
           timeout 600 godot --headless --path godot -s res://tests/look2_testbed_flow.gd
           timeout 300 godot --headless --path godot -s res://tests/look2_pad_flow.gd
           timeout 300 godot --headless --path godot -s res://tests/look2_frame_flow.gd
+          timeout 300 godot --headless --path godot -s res://tests/look2_async_flow.gd
           timeout 120 godot --headless --path godot -s res://tests/sfx_flow.gd
           XDG_DATA_HOME=$(mktemp -d /tmp/cbsave.XXXX) timeout 300 godot --headless --path godot -s res://tests/look2_save_flow.gd
