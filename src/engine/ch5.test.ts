@@ -188,7 +188,7 @@ describe('5-5 EB: CE Amplifier', () => {
     const e = open('5-5'); const c = q(e, 'ticketCard'); expect(JSON.stringify(c)).not.toMatch(/232|2\.00 mA|\b6\.00 V\b/);   // no answer leaked before the prediction is locked
     const e2 = exam(R.predictions!); const b = bench(e2); expect(b.pass, texts(b)).toBe(true); expect(b.stars).toBe(3); expect(b.measured.ic).toBeCloseTo(0.002, 5); expect(b.measured.vce).toBeCloseTo(6, 1);
     expect(b.debrief.node).toBe('amp'); expect(b.debrief.working.join(' ')).toMatch(/IB = \(12 - 0\.7\) \/ 565 kΩ = 20 uA/); expect(b.debrief.working.join(' ')).toMatch(/gm = IC \/ 25\.85 mV = 2 mA \/ 25\.85 mV = 77\.36 mS/);
-    expect(b.debrief.working.join(' ')).toMatch(/Reality check: a real junction .* 0\.6728 V/); expect(b.debrief.working.join(' ')).toMatch(/2\.00\d mA/); expect(b.debrief.working.join(' ')).toMatch(/Swap beta = 300: the same base current asks 6 mA/);
+    expect(b.debrief.working.join(' ')).toMatch(/Beyond the textbook: a silicon junction .* 0\.6728 V/); expect(b.debrief.working.join(' ')).toMatch(/2\.00\d mA/); expect(b.debrief.working.join(' ')).toMatch(/Swap beta = 300: the same base current asks 6 mA/);
     expect(b.debrief.working.join(' ')).toMatch(/Av = -gm x RC = -77\.36 mS x 3 kΩ = -232\.1/);
   });
   it('wrong predictions still pass the build with one star and show the working; a wrong RB fails the build with the arithmetic', () => {

@@ -1,10 +1,10 @@
-# 🔌 CIRCUITS: a repair bench where real circuits are the rules
+# 🔌 CIRCUITS: fix broken electronics on your own bench
 
 **[Changelog](CHANGELOG.md)** · **[Design](docs/DESIGN.md)** · **[Status](docs/STATUS.md)** · **[The new look](docs/LOOK2.md)**
 
-Customers bring broken devices to your bench. Open them, probe them, fix them with real parts, and hand them back.
+Customers bring broken devices to your bench. Open them, measure them, swap the faulty parts, and hand them back.
 
-> **v0.4.1, pre-alpha.** Chapter 1, 2-1 and 2-3 play on the 3D bench; the rest plays in the classic 2D look. Linux and Windows builds on the [releases page](https://github.com/blackmetaltech/circuits/releases/latest).
+> **v0.4.2, pre-alpha.** Chapter 1, 2-1 and 2-3 play on the 3D bench; the rest plays in the classic 2D look. Linux and Windows builds on the [releases page](https://github.com/blackmetaltech/circuits/releases/latest).
 
 ![A burnt LED is replaced and burns again on 9 V: the ticket bills the part plus a $1.50 courier](docs/readme/wb-burn-1-1.gif)
 
