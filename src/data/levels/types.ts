@@ -30,7 +30,17 @@ export type SupplyDef =
   | { id: string; kind: 'mains'; plus: string; minus: string; vrms: number; f: number }
   /** Chapter 5: a driven logic pin of the customer's board (the microcontroller pin of 5-1, the gate inputs of 5-3, the line-out of 5-4): a source of `v` volts behind the output resistance `rOut`. A condition sets `v` (a logic low is NOT 0 V: 0.4 V), or `pwm: 1` to
    *  switch it between `v` and 0 V at `f` Hz with the given duty (the 100 Hz on / off test of 5-1). `sine` > 0: instead a sine of that peak amplitude about `v` at `f` Hz (the synth line-out of 5-4). */
-  | { id: string; kind: 'pin'; plus: string; minus: string; v: number; rOut: number; f?: number; duty?: number; sine?: number };
+  | { id: string; kind: 'pin'; plus: string; minus: string; v: number; rOut: number; f?: number; duty?: number; sine?: number;
+      /** Chapter 6: the AC magnitude the pin carries in an AC analysis (a Bode `mask` spec needs one source with `ac: 1`: 6-3). */
+      ac?: number;
+      /** Chapter 6: the low level of the `pwm` square (default 0 V): 6-6's generator swings -0.95 / +1.05 V. */
+      lo?: number;
+      /** Chapter 6: start as a square (`pwm` 1) rather than a DC level, without a condition setting it (6-6). */
+      pwm?: number };
+
+/** Chapter 6 (6-5): the temperature program of a fixed NTC part during the bench run (and the live sweep from power-on): PWL points (seconds, deg C), plus deterministic
+ *  noise on the probe of +-`noiseK` kelvin, a new value every `noiseDt` seconds (seeded: every run is the same run). The noise stands for the electrical noise on the sensor line. */
+export interface HeatDef { part: string; pts: [number, number][]; noiseK?: number; noiseDt?: number; seed?: number }
 
 /** A live switch on the bench (chapter 4): a few positions, each a set of overrides exactly like a bench condition (the mains tolerance, the load). The bench plan still lists every condition it runs; the selector only chooses what the LIVE view shows. */
 export interface SelectorDef {
@@ -82,6 +92,8 @@ export interface BenchPlan {
   testLoads?: { id: string; a: string; b: string; r: number }[];
   /** Chapter 4 (4-3): the linear regulator's internal thermal shutdown runs on a compressed clock: its time constant is this many SECONDS for a bare TO-220 (a sink variant keeps its ratio), so cycling fits a bench window and a scope sweep. */
   regTau?: number;
+  /** Chapter 6 (6-5): the probe temperature of a fixed NTC follows this program during the run (see HeatDef). */
+  heat?: HeatDef;
   /** Chapter 4 (4-3): the junction limit the ratings check applies to semiconductors (deg C), tighter than the part's own maximum ("Tj <= 125 C at Ta = 40 C"). */
   tjLimit?: number;
   /** Chapter 5: a spec that applies only in the listed conditions (spec id -> condition ids): the NAND truth table asks for a high output in three of its four tests and a low one in the fourth. */
@@ -132,7 +144,7 @@ export interface GaugeDef {
 /** The printed exam figure of an exam-bridge ticket (DESIGN §2.5: the one place a schematic is allowed): sources, each through its own resistor, meet at a named node; a load resistor runs to ground. */
 export interface ExamFigure {
   /** 'node' (default): the 1-5 nodal figure. 'pot': the 2-4 slide-wire potentiometer figure. 'caps': the 3-4 capacitor cards. */
-  kind?: 'node' | 'pot' | 'caps' | 'zener' | 'amp';
+  kind?: 'node' | 'pot' | 'caps' | 'zener' | 'amp' | 'sum';
   /** Name of the common node (printed on the figure). */
   node: string;
   sources: { name: string; volts: number; r: { name: string; ohm: number } }[];
@@ -145,6 +157,8 @@ export interface ExamFigure {
   zener?: { volts: number; rs: number; vz: number; izMin: number; rl: number };
   /** kind 'amp': the 5-5 card: a supply, a base resistor, a collector resistor, a transistor with its gain and the 0.7 V drop. */
   amp?: { vcc: number; rb: number; rc: number; beta: number; vbe: number };
+  /** kind 'sum': the 6-7 card: `sources` each through its resistor into the - input of an op-amp, `load` is the feedback resistor Rf, the + input on GND, rails +-`rails` volts. */
+  sum?: { rails: number };
 }
 
 /** A number the player works out and enters on the ticket's slip (ticket 2-2: the distance to the fault). Checked by the bench against a hidden parameter: truth = hidden[`hidden`] / `per`, within `tol`. */
@@ -264,7 +278,7 @@ export interface LevelDef {
   /** 0.7 (Leo: "the heater's 50 ohm only in small print"): i18n key of one line on the ticket naming the key values of what is fixed on the board. */
   onBoard?: string;
   /** Plain-words explainer for a missed level spec: 'divider' (2-1, the load on the bottom resistor). */
-  explain?: 'divider' | 'bridge' | 'blackbox' | 'pot' | 'rc' | 'debounce' | 'coil' | 'caps' | 'rectifier' | 'zener' | 'regulator' | 'lm317' | 'zenerexam' | 'switch' | 'fet' | 'gate' | 'amp' | 'amplifierexam';
+  explain?: 'divider' | 'bridge' | 'blackbox' | 'pot' | 'rc' | 'debounce' | 'coil' | 'caps' | 'rectifier' | 'zener' | 'regulator' | 'lm317' | 'zenerexam' | 'switch' | 'fet' | 'gate' | 'amp' | 'amplifierexam' | 'opamp';
   /** Chapter 3: the scope's time trace and its tube (see TraceDef). */
   trace?: TraceDef;
   /** Engraved slots on the board where a bin part belongs (2-2, 2-4): a clear outlined spot between two pads, shown until a part of `partId` is placed. */

@@ -24,5 +24,6 @@ import { RLY } from './relay';
 import { FUSE } from './fuse';
 import { SWT } from './swt';
 import { CCL } from './ccl';
+import { NTCT } from './ntct';
 
-export const DEVICES: Readonly<Record<string, Device>> = Object.freeze({ R, V, I, BAT, BENCH, AM, E, G, C, L, D, Q, DAR, M, T, OA, CMP, TMR, REG, LOGIC, RLY, FUSE, SWT, CCL });
+export const DEVICES: Readonly<Record<string, Device>> = Object.freeze({ R, V, I, BAT, BENCH, AM, E, G, C, L, D, Q, DAR, M, T, OA, CMP, TMR, REG, LOGIC, RLY, FUSE, SWT, CCL, NTCT });

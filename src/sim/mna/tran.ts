@@ -256,6 +256,25 @@ function nextBreakpoint(ws: TranWork, t: number): number {
   return ws.bpHint < bp.length ? bp[ws.bpHint] : Infinity;
 }
 
+/** Element kinds with no stored energy on the circuit's time scale: memoryless devices, sources, and the op-amp / comparator macros whose internal pole (microseconds) is far
+ *  shorter than any bench step. A circuit made only of these is quasi-static: its state at a time is its DC operating point there. */
+const QUASI_STATIC = new Set(['R', 'V', 'I', 'BAT', 'BENCH', 'AM', 'E', 'G', 'D', 'Q', 'DAR', 'M', 'OA', 'CMP', 'LOGIC', 'NTCT', 'SWT']);
+const quasiStatic = (ckt: Circuit): boolean => ckt.elements.every((e) => QUASI_STATIC.has(e.dev.kind));
+/**
+ * The quasi-static rescue (chapter 6, 6-5): a comparator with positive feedback (a Schmitt trigger) switches regeneratively, far faster than the smallest step (its loop gain is ~1e5 over a
+ * 1.9 us pole), and at the switch point the step's Newton system has a fold: the only solution is on the other branch and Newton cannot reach it. When every halving and the rescue pass
+ * have failed AND the circuit is quasi-static, the step is solved as the DC operating point at tNew (the full homotopy chain of solveOp, seeded by the last accepted step) and the macros'
+ * internal history is re-seeded there: the switch is taken to finish within the step, which is what a 1.3 us comparator does inside a 20 us step. Only ever tried where the
+ * stepper used to give up, so no trajectory that converged before changes. Null when the DC solve fails too.
+ */
+function quasiStaticStep(ckt: Circuit, st: TranState, xs: Float64Array, tNew: number, lambda: number): Float64Array | null {
+  const state = st.state.slice();
+  const op = solveOp(ckt, { x0: xs, time: tNew, lambda, gmin: st.gmin, state });
+  if (!op.ok) return null;
+  for (const e of ckt.elements) e.dev.initState?.(e, op.x, st.state);
+  return op.x;
+}
+
 /** Advance up to k accepted steps (until tStop). Returns the number taken and a failure (state is left at the last accepted step). */
 export function tranAdvance(ws: TranWork, st: TranState, k: number, cb?: (s: StepInfo) => void): { steps: number; failure: TranFailure | null } {
   const ckt = ws.ckt;
@@ -276,6 +295,10 @@ export function tranAdvance(ws: TranWork, st: TranState, k: number, cb?: (s: Ste
       if (!r.ok && r.failure!.code !== 'singular' && st.h * 0.5 < st.h0 / MIN_H_DIVISOR * (1 - 1e-12)) {   // out of halvings: the rescue pass before giving up
         r = newton(ws, st.gmin, tNew, rampAt(st.ramp, tNew), method, hs, xs, true, false, true);
         st.stats.newtonIters += r.iters;
+      }
+      if (!r.ok && r.failure!.code !== 'singular' && st.h * 0.5 < st.h0 / MIN_H_DIVISOR * (1 - 1e-12) && quasiStatic(ckt)) {   // still stuck: a circuit with no stored energy may jump to its DC point
+        const q = quasiStaticStep(ckt, st, xs, tNew, rampAt(st.ramp, tNew));
+        if (q) { ws.x.set(q); r = { ok: true, iters: 0, failure: null }; }
       }
       if (!r.ok) {
         st.stats.rejected++;

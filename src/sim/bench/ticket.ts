@@ -67,7 +67,7 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
   let missingAny = false;
   for (const cond of plan.conditions) {
     if (missingAny) break;
-    const rig0 = buildRig({ board: inp.board, getDef: inp.getDef, supplies: inp.supplies, supply: inp.supply, gen: inp.gen, overrides: [...inp.hidden, ...(cond.set ?? [])], ambientC: cond.ambientC ?? plan.ambientC, probeLoads: [], testLoads: plan.testLoads, regTau: plan.regTau });
+    const rig0 = buildRig({ board: inp.board, getDef: inp.getDef, supplies: inp.supplies, supply: inp.supply, gen: inp.gen, overrides: [...inp.hidden, ...(cond.set ?? [])], ambientC: cond.ambientC ?? plan.ambientC, probeLoads: [], testLoads: plan.testLoads, regTau: plan.regTau, heat: plan.heat });
     for (const sp of plan.specs) {
       if (plan.only?.[sp.id] && !plan.only[sp.id]!.includes(cond.id)) continue;
       const probes = sp.kind === 'match' ? [sp.a, sp.b] : sp.kind === 'predict' ? (sp.truth !== undefined ? [] : [sp.of.probe]) : sp.kind === 'level' || sp.kind === 'band' || sp.kind === 'metric' ? [sp.probe] : [];
@@ -78,7 +78,7 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
   for (const cond of plan.conditions) {
     const overrides: RigOverride[] = [...inp.hidden, ...(cond.set ?? [])];
     const ta = cond.ambientC ?? plan.ambientC;
-    const mk = (probeLoads: string[]) => buildRig({ board: inp.board, getDef: inp.getDef, supplies: inp.supplies, supply: inp.supply, gen: inp.gen, overrides, ambientC: ta, probeLoads, testLoads: plan.testLoads, regTau: plan.regTau });
+    const mk = (probeLoads: string[]) => buildRig({ board: inp.board, getDef: inp.getDef, supplies: inp.supplies, supply: inp.supply, gen: inp.gen, overrides, ambientC: ta, probeLoads, testLoads: plan.testLoads, regTau: plan.regTau, heat: plan.heat });
     const rig0 = mk([]);
     // resolve spec probes against the board; a spec whose part is not on the board fails with a teaching key
     const specs: BenchSpec[] = [], loads: string[] = [];

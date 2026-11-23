@@ -32,6 +32,8 @@ export interface OpOptions {
   homotopy?: boolean;
   /** Stages to skip (tests and diagnostics: measure each homotopy stage on its own). Default none. */
   skip?: readonly OpStrategy[];
+  /** Time at which time-dependent sources and elements are evaluated (default 0): the transient's quasi-static rescue solves the DC point at the step's time. */
+  time?: number;
 }
 export interface Failure { code: 'topology' | 'singular' | 'noConverge'; key: string; vars: Record<string, string | number>; nodes: string[]; elements: string[] }
 export type OpStrategy = 'linear' | 'newton' | 'gmin' | 'source' | 'pseudo';
@@ -227,14 +229,14 @@ export function solveOp(ckt: Circuit, o: OpOptions = {}): OpResult {
   if (ckt.linear) {
     const x = new Float64Array(ckt.dim);
     c.x.set(o.x0 ?? x);
-    assemble(ckt, c, { gmin, lambda });
+    assemble(ckt, c, { gmin, lambda, time: o.time ?? 0 });
     const f = ws.solver.factor(c.A);
     if (!f.ok) return fail(ckt, explainSingular(ckt, c.A, f.badColumn), 1);
     ws.solver.solve(c.b, x);
     return { ok: true, x, iterations: 1, strategy: 'linear', issues: ckt.issues, failure: null };
   }
 
-  const base = { gmin, lambda, reltol: o.reltol, vntol: o.vntol, abstol: o.abstol, ws, state: o.state };
+  const base = { gmin, lambda, reltol: o.reltol, vntol: o.vntol, abstol: o.abstol, ws, state: o.state, time: o.time };
   const maxIter = o.maxIter ?? 150;
   const tried: OpStrategy[] = [];
   let total = 0;

@@ -8,7 +8,7 @@
 //  - the bench supply is the BENCH device (ideal in CV mode until the CC task), the generator is an ideal V source behind rOut (default 50 ohm).
 import type { PartDef, PartKind } from '../data/parts/types';
 import { INSTRUMENTS } from '../data/parts';
-import type { SupplyDef } from '../data/levels/types';
+import type { HeatDef, SupplyDef } from '../data/levels/types';
 import type { Board, Pad } from './board/types';
 import { boardToNetlist } from './mna/netlist';
 import { compileNetlist } from './mna/compile';
@@ -40,6 +40,8 @@ export interface RigInput {
   testLoads?: readonly { id: string; a: string; b: string; r: number }[];
   /** Chapter 4: seconds of the compressed thermal clock of a bare TO-220 regulator (see BenchPlan.regTau); absent = the real 60 s. */
   regTau?: number;
+  /** Chapter 6 (6-5): the temperature program of a fixed NTC (BenchPlan.heat): its resistor becomes a time-programmed NTCT element. */
+  heat?: HeatDef;
 }
 
 export interface Rig {
@@ -80,6 +82,18 @@ export function genWave(g: RigGen): Wave {
     case 'triangle': return pulse(lo, hi, 0, { rise: T / 2, fall: T / 2, period: T });
     default: return pulse(lo, hi, 0.1 * T - 1e-9, { rise: 1e-9, fall: 1e-9, period: T });
   }
+}
+
+/** The probe temperature of a heat program (deg C over time) as a PWL: the program's points, plus seeded noise of +-noiseK every noiseDt seconds. Pure: the same def gives the same wave. */
+export function heatWave(h: HeatDef): Wave {
+  const pts = h.pts, tEnd = pts[pts.length - 1]![0];
+  const base = (t: number): number => { for (let k = 1; k < pts.length; k++) if (t <= pts[k]![0]) { const [t0, y0] = pts[k - 1]!, [t1, y1] = pts[k]!; return t1 > t0 ? y0 + ((t - t0) / (t1 - t0)) * (y1 - y0) : y1; } return pts[pts.length - 1]![1]; };
+  if (!h.noiseK || !h.noiseDt) return pwl(pts.map(([t, y]) => [t, y]));
+  let a = (h.seed ?? 1) >>> 0;
+  const rnd = (): number => { a = (a + 0x6d2b79f5) >>> 0; let x = a; x = Math.imul(x ^ (x >>> 15), x | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };   // mulberry32
+  const out: [number, number][] = [], n = Math.round(tEnd / h.noiseDt);
+  for (let k = 0; k <= n; k++) { const t = k * h.noiseDt; out.push([t, base(t) + (k === 0 || k === n ? 0 : (2 * rnd() - 1) * h.noiseK)]); }
+  return pwl(out);
 }
 
 /** The closedness (0 open, 1 closed) of a contact over time: it closes at `press` with the bounce pattern `k` (open / close times after the first contact), and opens again at `release`
@@ -157,7 +171,10 @@ export function buildRig(inp: RigInput): Rig {
     }
     else if (s.kind === 'pin') {   // the customer's driven pin: a source behind rOut; a condition may set v, pwm (1 = 100 Hz style on / off) and sine
       const mid = nodeNames.length; nodeNames.push(`${s.id}#o`);
-      add({ id: s.id, kind: 'V', owner: s.id, nodes: [mid, b], p: { v: s.v, pwm: 0, f: s.f ?? 100, duty: s.duty ?? 0.5, sine: s.sine ?? 0 } });
+      const p: Record<string, number> = { v: s.v, pwm: s.pwm ?? 0, f: s.f ?? 100, duty: s.duty ?? 0.5, sine: s.sine ?? 0 };
+      if (s.ac !== undefined) p.ac = s.ac;
+      if (s.lo !== undefined) p.vlo = s.lo;
+      add({ id: s.id, kind: 'V', owner: s.id, nodes: [mid, b], p });
       add({ id: `${s.id}.r`, kind: 'R', owner: s.id, nodes: [mid, a], p: { r: s.rOut } });
       sources.push(s.id);
     }
@@ -174,7 +191,7 @@ export function buildRig(inp: RigInput): Rig {
   // a pin's wave follows its (possibly overridden) parameters: a sine about v, or a pwm square between v and 0 V, else a plain DC level
   for (const e of elements) if (e.kind === 'V' && e.p.pwm !== undefined && e.p.duty !== undefined) {
     if (e.p.sine > 0) e.wave = sine(e.p.sine, e.p.f, 0, e.p.v);
-    else if (e.p.pwm === 1) { const T = 1 / e.p.f; e.wave = pulse(0, e.p.v, e.p.duty * T - 2e-6, { rise: 1e-6, fall: 1e-6, period: T }); }
+    else if (e.p.pwm === 1) { const T = 1 / e.p.f; e.wave = pulse(e.p.vlo ?? 0, e.p.v, e.p.duty * T - 2e-6, { rise: 1e-6, fall: 1e-6, period: T }); }
   }
   // the mains' voltage and frequency are picked by the condition / selector (`vrms`, `f`)
   for (const e of elements) if (e.kind === 'V' && e.p.vrms !== undefined && e.wave?.k === 'sine') e.wave = sine(e.p.vrms * SQRT2, e.p.f ?? e.wave.f);
@@ -182,6 +199,14 @@ export function buildRig(inp: RigInput): Rig {
   for (const e of elements) {
     if (e.kind === 'CCL' && e.p.cc === 1) e.wave = ccWave(e.p.i, e.p.ton ?? 0);
     if (e.kind === 'REG') { e.p.ta = inp.ambientC ?? 25; if (inp.regTau !== undefined) e.p.tau = (inp.regTau * e.p.tau) / 60; }
+  }
+  // chapter 6 (6-5): a fixed NTC whose probe temperature follows the heat program becomes a time-programmed thermistor (its own R25 and B)
+  if (inp.heat) {
+    const part = board.parts.find((p) => p.uid === inp.heat!.part), d = part ? getDef(part.partId) : undefined;
+    if (part && d?.kind === 'NTC') {
+      const wave = heatWave(inp.heat);
+      elements = elements.map((e) => (e.owner === part.uid && e.kind === 'R' ? { ...e, kind: 'NTCT', p: { r25: d.model.R25!, b: d.model.B!, t0: d.model.T0 ?? 298.15 }, wave } : e));
+    }
   }
   // a contact's bounce pattern is picked by the condition (`key: 'pattern'`)
   for (const e of elements) if (e.kind === 'SWT') { const sd = inp.supplies.find((x) => x.id === e.owner); if (sd && sd.kind === 'contact') e.wave = contactWave(sd, Math.round(e.p.pattern ?? 0)); }
