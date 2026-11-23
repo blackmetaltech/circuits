@@ -45,6 +45,7 @@ func _run() -> void:
 	await _frames(120)
 	if explore: print("EXPLORE torch bridge smoked=", _smoked_ids(), " note=", wb.note.left(120))
 	ok(_smoked_ids().has("led-red-5mm"), "the LED straight on 9 V burns (%s)" % str(_smoked_ids()))
+	ok(str(wb.last_failure.get("title", "")).contains("LED burnt") and str(wb.last_failure.get("text", "")) != "", "the card names the burn and the engine says why (%s)" % str(wb.last_failure.get("title", "")))
 	Testbed.load_device(wb, "torch"); await _frames(5)
 	ok(_smoked_ids().is_empty() and not wb.backend.powered, "Reset brings the working torch back, power off")
 	Testbed.apply_break(wb, "small_r"); await _power_and_run(120)
@@ -70,6 +71,9 @@ func _run() -> void:
 	Testbed.apply_break(wb, "no_diode"); await _frames(150)
 	if explore: print("EXPLORE fan no_diode smoked=", _smoked_ids(), " note=", wb.note.left(120))
 	ok(_smoked_ids().has("2n2222a"), "no flyback diode: the transistor burns (%s)" % str(_smoked_ids()))
+	Testbed.load_device(wb, "torch"); await _frames(3)
+	ok(wb.last_failure.is_empty() and wb.smoke_fx.is_empty(), "switching device clears the burn note and the smoke")
+	ok(not bool(wb.scope.get("_screen").get("cap")), "and the scope's capture")
 	# pause and step
 	Testbed.load_device(wb, "torch"); await _power_and_run(30)
 	Testbed.set_running(wb, false); await _frames(2)

@@ -568,6 +568,9 @@ func back_to_title() -> void:
 func _after_open() -> void:
 	for c in board_root.get_children(): c.queue_free()
 	parts3d.clear(); wires3d.clear(); _sig_parts = ""; _sig_wires = ""; last_failure = {}
+	capture_until = 0.0; _call(scope, "clear_capture")   # 0.5 (Noor): the testbed's 2000 V capture stayed on the scope into the next job
+	for sfx_node in smoke_fx: if is_instance_valid(sfx_node): sfx_node.queue_free()
+	smoke_fx.clear()
 	board = Board3D.new(); board_root.add_child(board)
 	board.build(int(backend.ticket.board.w), int(backend.ticket.board.h), backend.ticket.board.connectors)
 	var c := Vector3((board.w - 1) * P * 0.5, 0, (board.h - 1) * P * 0.5)

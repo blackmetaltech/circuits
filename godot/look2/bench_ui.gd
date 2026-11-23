@@ -284,6 +284,11 @@ func _testbed_card() -> void:
 	var st := _key(row2, "Step", func(): Testbed.step_once(bench), "L", false, false)
 	st.disabled = not bench.testbed_paused
 	if bench.note != "": _ink(fv, bench.note, 17, Color(0.14, 0.20, 0.42), f_sans)
+	# 0.5 (Noor): a break that burns a part said nothing about the burn. The engine's own explanation shows here, as on a job.
+	var f: Dictionary = bench.last_failure
+	if not f.is_empty():
+		_ink(fv, str(f.get("title", "")), 18, RED_INK, f_semi)
+		if str(f.get("text", "")) != "": _ink(fv, str(f.get("text", "")), 17, INK, f_sans)
 
 func _job_card() -> void:
 	var t: Dictionary = bench.backend.ticket
