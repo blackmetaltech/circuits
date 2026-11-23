@@ -925,7 +925,12 @@ func _live(dt: float) -> void:
 	_call(fan, "set_speed", [clampf(fi / 0.2, 0.0, 1.0) if backend.powered else 0.0])
 	# supply, MCU, meter
 	var amps := 0.0
-	for n2 in f.get("parts", []): if str(n2.uid) == "f1": amps = fi
+	# 0.7: the supply's own output current from the engine (it showed fixed part f1's current, so 6-1's ±12 V read 0.000 A);
+	# on a dual rail the display is the + rail's
+	var sups: Array = f.get("supplies", [])
+	if not sups.is_empty(): amps = float(sups[0].get("i", 0.0))
+	else:
+		for n2 in f.get("parts", []): if str(n2.uid) == "f1": amps = fi
 	_call(psu, "set_output", [backend.powered]); _call(psu, "set_values", [backend.supply_volts() if backend.supply_volts() > 0 else 12.0, amps if backend.powered else 0.0])
 	var sel := pin_mode()
 	_call(mcu, "set_powered", [backend.powered]); _call(mcu, "set_pin_mode", [sel])
@@ -945,7 +950,9 @@ func _live(dt: float) -> void:
 		if not v.is_empty():
 			var mx := -1e9; var mn := 1e9
 			for x in v: mx = maxf(mx, float(x)); mn = minf(mn, float(x))
-			lines = ["max %s V" % EngineBench._g(mx, 3), "min %s V" % EngineBench._g(mn, 3)]
+			# 0.7: "max 0.463 V" overran the strip and lost its V; under a volt the strip reads in mV ("max 463 mV")
+			var mv := maxf(absf(mx), absf(mn)) < 1.0
+			lines = ["max %s %s" % [EngineBench._g(mx * (1000.0 if mv else 1.0), 3), "mV" if mv else "V"], "min %s %s" % [EngineBench._g(mn * (1000.0 if mv else 1.0), 3), "mV" if mv else "V"]]
 			if sel == "100 Hz": lines.append("Freq 100 Hz")
 		_call(scope, "set_measure", [lines])
 	for s in smoke_fx:
