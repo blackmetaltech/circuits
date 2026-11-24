@@ -8,6 +8,7 @@ import type { PartDef } from '../data/parts/types';
 import type { Pad } from '../sim/board/types';
 import { pinPads } from '../sim/board/footprints';
 import { makeProbe } from '../sim/mna/tran';
+import { terminalCurrents } from '../sim/mna/stamp';
 import { si, sig } from '../sim/explain';
 import type { Circuit } from '../sim/mna/types';
 import type { Rig } from '../sim/rig';
@@ -277,8 +278,13 @@ export function makeUiQueries(deps: UiDeps): Record<string, QueryFn<NodeState>> 
         return { part: uid, kind, failureId: f?.id ?? null, key: f?.kind ?? 'smoke.thermal', text: tk.live.notes?.[uid] ?? (f ? (deps.explained ? deps.explained({ key: f.kind, vars: f.vars }, tk, o.def, log.filter((x) => x.ticket === tk.id && x.id < f.id).length + (s.progress.tickets[tk.id]?.attempts ?? 0)) : say(f.kind, nameVars(tk.board, f.vars))) : '') };
       });
       const contacts = o.def.supplies.filter((x) => x.kind === 'contact').map((x) => { const ce = sol?.ckt.elements.find((y) => y.el.id === x.id); return { id: x.id, a: x.plus, b: x.minus, closed: !!ce && tk.live.powered && (sol!.state[ce.so] ?? 0) >= 0.5 }; });
+      // 0.7: each bench supply's output current, for the supply's AMPS display (it showed fixed part f1's current, 0 A on most tickets)
+      const supplies = o.def.supplies.filter((x) => x.kind === 'bench').map((x) => {
+        const ce = sol?.ckt.elements.find((y) => y.el.id === x.id);
+        return { id: x.id, plus: x.plus, minus: x.minus, i: ce && sol && tk.live.powered ? sig(Math.abs(terminalCurrents(ce, sol.x, sol.state)[0]!), 5) : 0 };
+      });
       return {
-        contacts, valid: !!sol, powered: tk.live.powered, paused: tk.live.paused === true, frame: tk.live.frame, t: tk.live.t, status: tk.live.status,
+        contacts, supplies, valid: !!sol, powered: tk.live.powered, paused: tk.live.paused === true, frame: tk.live.frame, t: tk.live.t, status: tk.live.status,
         issues: tk.live.issues.map((i) => ({ key: i.key, text: text(i) })),
         vmin: sig(nodes.vmin, 5), vmax: sig(nodes.vmax, 5), nodes: (nodes.nodes as { v: number; norm: number }[]).map((n) => ({ ...n, v: sig(n.v, 5), norm: r4(n.norm) })), ambient: th.ambient,
         parts, wires: cur.wires.map((w) => ({ wid: w.wid, i: sig(w.i, 5), speed: dotSpeed(w.i) })), events,
