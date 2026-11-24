@@ -477,7 +477,8 @@ func set_view(v: int, snap := false) -> void:
 func work_pose(aspect: float) -> Array:
 	# Sigrid's re-score: the case in the lower half and the scope and supply screens in the top third (the 3-1 curve is the proof)
 	var d := 0.43 * (1.6 / clampf(aspect, 1.25, 2.4))
-	return [board_centre() + Vector3(-0.115 * d, 0.01, -0.04), deg_to_rad(8.0), deg_to_rad(-29.0), d * 1.04]
+	# 0.7 (Sigrid): the scope's top line (time/div, volts/div) sat half above the frame on every chapter 6 job: aimed 1.4 cm higher, 6 % further back (the frame flow holds the case above the rail)
+	return [board_centre() + Vector3(-0.115 * d, 0.024, -0.04), deg_to_rad(8.0), deg_to_rad(-29.0), d * 1.10]
 
 func _update_camera(dt: float) -> void:
 	var k := 1.0 - exp(-dt * 6.0)
