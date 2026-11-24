@@ -80,6 +80,8 @@ export interface BenchPlan {
   period?: number;
   measurePeriods?: number;
   maxPeriods?: number;
+  /** Periodic settle: how alike two periods must be (rms difference over half the swing; the bench's default 0.005). */
+  settleTol?: number;
   ic?: 'zero' | 'op';
   conditions: Condition[];
   /** Specs. Probes may use part tokens: `i(@led-red-5mm#1)` = current of the first placed LED, `v(@led-red-5mm#1.A,@led-red-5mm#1.K)` = across its pins. */

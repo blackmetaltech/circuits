@@ -8,12 +8,16 @@
 // raw); here the generator is a bench pin whose edges take 1 us and the bench step is 2 us, so the spike is not there to read (the test checks max - min against the turning points).
 // DEVIATIONS from DESIGN (each documented):
 //  1. The generator is a bench pin ('pin' with the new `pwm` and `lo`: -0.95 / +1.05 V, 50 ohm), not the player's generator, so its offset cannot be dialled away.
-//  2. The bench switches on with the capacitor empty and measures after 60 ms (DESIGN: "steady after 50 ms"; 49 time constants of Rf C = 1.23 ms): long enough for the arrival's
-//     drift (207 V/s) to reach the rail, so the bench sees what the customer saw. The centre spec is the window's mean (-0.243 V against +-0.3 V: a 57 mV margin; DESIGN quotes 0.255 V).
+//  2. The bench switches on with the capacitor empty and measures once the output repeats period after period (DESIGN: "steady after 50 ms"; deviation 5): the arrival's
+//     drift (207 V/s) has reached the rail by then, so the bench sees what the customer saw. The centre spec is the window's mean (-0.243 V against +-0.3 V: a 57 mV margin; DESIGN quotes 0.255 V).
 //  3. The bin is E24 (11 kohm is E24) and the ceramic E6 capacitors (cap-cer, Sandbox-grade data: CAMPAIGN_BLOCKERS). Rails: two fixed bench supplies.
 //  4. A shape spec DESIGN does not have: THD of OUT at most 25 % (the bench's thd over four periods). Without it, pulling the TL072 passed the
 //     bench (found by checkAllLevels: deletePart x1 -> runBench): 11 k and 22 nF alone hand the square to OUT, 2.0 Vpp centred at +0.035 V.
 //     The square reads 42.9 %, the ref's triangle 12.14 % (an ideal triangle is 12.1 %).
+//  5. (0.7, CI time) The bench steps 20 us (was 2 us) and settles 'periodic' (two periods alike within 0.05 % of the half swing, at most 70), not a fixed
+//     60 ms: the ref settles in about 10 ms, the arrival only once it rides the rail (10.5 V at 207 V/s: about 51 ms). checkAllLevels on this level: 145 s -> 8.8 s.
+//     Against 2 us / 60 ms: ref 2.0285 -> 2.0283 Vpp, centre -0.2433 -> -0.2434 V, THD 12.139 -> 12.135 %; arrival centre -9.874 -> -9.876 V;
+//     Rf 10 k 1.4717 -> 1.4709 Vpp; chip pulled 42.88 % THD (unchanged), centre +0.035 -> +0.046 V. 50 us moved the ref by 4 mV: not used.
 import { eseries } from '../eseries';
 import type { LevelDef } from './types';
 
@@ -45,7 +49,7 @@ export const L6_6: LevelDef = {
     { id: 'psn', kind: 'bench', plus: 'GND', minus: 'VN', fixed: 12 },
     { id: 'sq', kind: 'pin', plus: 'IN', minus: 'GND', v: 1.05, lo: -0.95, rOut: 50, f: 1000, duty: 0.5, pwm: 1 },
   ],
-  instruments: { supply: { v: 12, ilim: 0.1 }, scope: { timePerDiv: 2e-4, voltsPerDiv: [1, 1] } },
+  instruments: { supply: { v: 12, ilim: 0.1 }, scope: { timePerDiv: 1e-3, voltsPerDiv: [1, 1] } },   // 0.7 (Ingrid): a 10 ms sweep, so the live view shows the centre settling, not only the first 2 ms of drift
   bin: [
     { partId: 'tl072', max: 1 },
     { partId: 'res-cf', values: eseries('E24', 1e3, 1e6), variants: ['0.25W'], max: 4 },
@@ -53,7 +57,8 @@ export const L6_6: LevelDef = {
   ],
   constraints: { maxParts: 5 },
   bench: {
-    h: 2e-6, settle: 0.06, period: 1e-3, measurePeriods: 4, ic: 'zero', ambientC: 25,
+    // 20 us and a periodic settle (0.7, CI time): the same verdicts and numbers to 1 mV, 16x cheaper (header, deviation 5)
+    h: 2e-5, settle: 'periodic', settleTol: 0.0005, maxPeriods: 70, period: 1e-3, measurePeriods: 4, ic: 'zero', ambientC: 25,
     conditions: [{ id: '1 kHz square' }],
     specs: [
       { kind: 'metric', id: 'vpp', probe: 'v(out)', metric: 'vpp', lo: 1.8, hi: 2.2 },

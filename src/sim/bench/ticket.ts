@@ -130,7 +130,7 @@ export function runTicketBench(inp: TicketBenchInput): TicketBenchOut {
     const psIds = rig.sources.filter((id) => ckt.elementIndex[id] !== undefined);
     for (const id of psIds) full.push({ kind: 'level', id: `__ps:${id}`, probe: `p(${id})`, lo: -BIG, hi: BIG });
     const opts: BenchOptions = {
-      h: plan.h, settle: plan.settle, window: plan.window, period: plan.period, measurePeriods: plan.measurePeriods, maxPeriods: plan.maxPeriods,
+      h: plan.h, settle: plan.settle, window: plan.window, period: plan.period, measurePeriods: plan.measurePeriods, maxPeriods: plan.maxPeriods, settleTol: plan.settleTol,
       ic: plan.ic, ratings: (w) => { const rr = checkRatings(rig, rig.rated, w, { ta, tjLimit: plan.tjLimit }); for (const c of rr.failures) causes.push({ key: c.key, vars: { ...c.vars, cond: cond.id } }); return { violations: rr.violations, smoked: rr.smoked }; }, condition: cond.id,
     };
     // the flop limit is for the whole bench (DESIGN 3.11), not each condition (Tomasz, 11-23): a condition may use only what is left
