@@ -649,12 +649,15 @@ static func si_value(t: String, unit: String) -> float:
 
 func _canvas_h() -> float: return get_viewport().get_visible_rect().size.y
 
-## The tool rail: keycaps along the bottom edge, the view keys engraved at its end.
+## The tool rail: keycaps along the bottom edge, the view keys engraved at its start.
+const RAIL_GAP := 5.0   ## 0.7 (Sigrid): 8 px wrapped one key onto a second row at 1280 wide
 func _tools() -> void:
 	if bench.handed: return
 	var v := _plate(Vector2(560, 0), "")
 	var pc: Control = v.get_parent()
-	var h := HFlowContainer.new(); h.add_theme_constant_override("h_separation", 8); h.add_theme_constant_override("v_separation", 6); v.add_child(h)
+	var h := HFlowContainer.new(); h.add_theme_constant_override("h_separation", RAIL_GAP); h.add_theme_constant_override("v_separation", 6); v.add_child(h)
+	# 0.7 (Sigrid): at the end of the rail "VIEWS 1-5" wrapped alone onto a second row; at its start a wrap carries a key instead
+	var vk := _eng(h, "Views 1-5", 14); vk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_key(h, "Power", func(): bench.toggle_power(), "Space", false, bench.backend.powered)
 	if bench.mode == "job": _key(h, "Test", func(): bench.run_test(), "Enter", false)
 	for sl in bench.backend.selectors:
@@ -674,7 +677,6 @@ func _tools() -> void:
 	_key(h, "Undo", func(): bench.undo(), "Ctrl+Z")
 	_key(h, "Schematic", func(): toggle_schematic(), "Tab", false, schem)
 	_key(h, "Menu", func(): bench.back_to_title())
-	var vk := _eng(h, "Views 1-5", 14); vk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	# 0.6: below 1280 px wide the rail was wider than the canvas. Scaling it down (the first fix) made the text about 11 px at
 	# 1078 wide (Sigrid), so it wraps to a second row instead. A flow container learns its height only after layout, so the rows
 	# are counted here from the keys' own widths, and the plate is placed at once.
@@ -685,12 +687,12 @@ func _tools() -> void:
 	for c in h.get_children():
 		var ms: Vector2 = (c as Control).get_combined_minimum_size(); widths.append(ms.x); row_h = maxf(row_h, ms.y)
 	var natural := 0.0
-	for wd in widths: natural += float(wd) + 8.0
-	natural -= 8.0
+	for wd in widths: natural += float(wd) + RAIL_GAP
+	natural -= RAIL_GAP
 	var width := minf(natural, avail); var rows := 1; var x := 0.0
 	for wd in widths:
 		if x > 0.0 and x + float(wd) > width: rows += 1; x = 0.0
-		x += float(wd) + 8.0
+		x += float(wd) + RAIL_GAP
 	h.custom_minimum_size = Vector2(width, rows * row_h + (rows - 1) * 6.0)
 	pc.reset_size()
 	var psz := pc.get_combined_minimum_size()

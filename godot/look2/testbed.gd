@@ -67,6 +67,7 @@ static func _shell(wb, id: String, name: String) -> void:
 	c.set_state("open", false)
 	if c.tag: c.tag.visible = false
 	if c.tag_string: c.tag_string.visible = false
+	c.front_brand("tb-" + id)
 	wb.case_node = c
 
 static func load_device(wb, id: String) -> bool:

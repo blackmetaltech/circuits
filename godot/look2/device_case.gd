@@ -159,3 +159,13 @@ func set_state(s: String, animate := true) -> void:
 		tw.tween_property(lid, "transform", lift, 0.45)
 		tw.tween_property(lid, "transform", target, 0.45)
 	state_changed.emit(s)
+
+## 0.7 (Sigrid): an open testbed box said "torch" only on its lid, in 6 px type behind the meter. The brand and what the device is,
+## moulded large on the front wall that faces the bench camera, in the accent colour.
+func front_brand(ticket_id: String) -> void:
+	var dev := device_of(ticket_id)
+	var wall_y := size.y * 0.5 - 0.0165
+	var face := size.z * 0.5 + 0.0003
+	var col: Color = dev[3]
+	MeshKit.label(self, str(dev[0]), 0.00013, Vector3(0, wall_y + 0.004, face), col, false, Vector3.ZERO)
+	MeshKit.label(self, str(dev[1]).get_slice("  ", 0), 0.00006, Vector3(0, wall_y - 0.007, face), col.lerp(Color(0.92, 0.92, 0.9), 0.35), false, Vector3.ZERO)
