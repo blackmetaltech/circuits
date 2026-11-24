@@ -36,10 +36,10 @@ describe('templates filled from a solved state', () => {
     const rep = checkRatings({ netlist: c.netlist }, [R], { t: [0, 1], series: { 'p(R2)': flat(2, p), 'v(a,0)': flat(2, v), 'i(R2)': flat(2, v / 22) } }, { ta: 25 });
     const e = X.explainFailure(rep.findings[0], { resistance: { R2: 22 } });
     expect(e.key).toBe('explain.resistor.power');
-    expect(e.vars).toMatchObject({ part: 'R2', p: 0.612, rated: 0.25, v: 3.67, r: '22 Ω', ratio: 2.4, rNext: 1, rEach: '44 Ω', pEach: 0.306 });
+    expect(e.vars).toMatchObject({ part: 'R2', p: 0.612, rated: 0.25, v: 3.67, r: '22 Ω', ratio: 2.4, rNext: 1, rEach: '47 Ω', rPair: '23.5 Ω', pEach: 0.327 });   // 0.7 (Mina): the split names a part that exists (E12 47 Ω, not 44 Ω), and its watts follow
     expect(text(e)).toContain('R2 dissipated 0.612 W but is rated 0.25 W');
     expect(text(e)).toContain('P = I²R = (0.167 A)² × 22 Ω');
-    expect(text(e)).toContain('two 44 Ω resistors in parallel share it (0.306 W each)');
+    expect(text(e)).toContain('two 47 Ω resistors in parallel (23.5 Ω together) share it, about 0.327 W each');
   });
   it('LED overcurrent: LED straight across a 9 V battery with 1.7 ohm', () => {
     const c = circ('D1 a 0 LEDr\n.model LEDr led(is=1.19e-17 n=2 rs=9.9)', (nl) => nl.elements.push({ id: 'B1', kind: 'BAT', owner: 'p0', nodes: [1, 0], p: { emf: 9, r: 1.7 } }));
@@ -146,7 +146,7 @@ describe('locales', () => {
     expect([...new Set(used)].sort()).toEqual([...keys].sort());
   });
   it('every explain.* string has plain-words text and balanced placeholders; checkLocales is clean', () => {
-    expect(keys.length).toBe(47 + Object.keys(ch4En).filter((k) => k.startsWith('explain.')).length + Object.keys(ch5En).filter((k) => k.startsWith('explain.')).length + Object.keys(ch6En).filter((k) => k.startsWith('explain.')).length);
+    expect(keys.length).toBe(49 + Object.keys(ch4En).filter((k) => k.startsWith('explain.')).length + Object.keys(ch5En).filter((k) => k.startsWith('explain.')).length + Object.keys(ch6En).filter((k) => k.startsWith('explain.')).length);
     expect(checkLocales({ en: all, fr: { ...all } }, 'en')).toEqual({ missing: [], extra: [], badPlaceholders: [] });
     for (const k of keys) expect(all[k].match(/\{/g)?.length, k).toBe(all[k].match(/\}/g)?.length);
   });

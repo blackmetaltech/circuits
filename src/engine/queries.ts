@@ -5,6 +5,8 @@ import { dmath } from '@core/numerics';
 import type { QueryFn } from '@core/kit';
 import { PARTS } from '../data/parts';
 import type { LevelDef } from '../data/levels/types';
+import type { Connectivity } from '../sim/board/connectivity';
+import type { PlacedPart } from '../sim/board/types';
 import type { Pad } from '../sim/board/types';
 import { pinPads } from '../sim/board/footprints';
 import { checkRatings, ratingProbes } from '../sim/ratings';
@@ -65,6 +67,32 @@ function debounceTrace(tk: TicketState, def: LevelDef, r: number, c: number, vSr
   }
   const end = 0.1, dtl = k.release - k.press, vRel = vSrc * dmath.exp(-dtl / (r * c));
   return { vStart: vSrc, vLow: vRel, vAtRelease: vRel, vHigh: vSrc - (vSrc - vRel) * dmath.exp(-(end - k.release) / ((r + rPull) * c)), tPress: k.press, tRelease: k.release, rPull, fromScope: false };
+}
+/** The parts that lie on some loop through `led` (a simple path between its two pin nodes that does not use the LED itself):
+ *  board parts join the nodes of their pins, bench and pin supplies join their two connectors. Tiny boards: a bounded search. */
+function loopParts(conn: Connectivity, parts: readonly PlacedPart[], def: LevelDef, led: string): Set<string> {
+  const adj = new Map<number, { to: number; id: string }[]>();
+  const edge = (a: number | undefined, b: number | undefined, id: string): void => {
+    if (a === undefined || b === undefined || a < 0 || b < 0 || a === b) return;
+    (adj.get(a) ?? adj.set(a, []).get(a)!).push({ to: b, id }); (adj.get(b) ?? adj.set(b, []).get(b)!).push({ to: a, id });
+  };
+  for (const q of parts) { const ns = conn.pinNodes[q.uid] ?? []; for (let i = 0; i < ns.length; i++) for (let j = i + 1; j < ns.length; j++) edge(ns[i], ns[j], q.uid); }
+  for (const su of def.supplies) if ('plus' in su && 'minus' in su) edge(conn.connectorNodes[su.plus], conn.connectorNodes[su.minus], `supply:${su.id}`);
+  const [a, b] = conn.pinNodes[led] ?? [];
+  const out = new Set<string>();
+  if (a === undefined || b === undefined || a < 0 || b < 0) return out;
+  const seen = new Set<number>([a]), path: string[] = [];
+  let budget = 20000;
+  const walk = (n: number): void => {
+    if (--budget < 0) return;
+    if (n === b) { for (const id of path) out.add(id); return; }
+    for (const e of adj.get(n) ?? []) {
+      if (e.id === led || seen.has(e.to)) continue;
+      seen.add(e.to); path.push(e.id); walk(e.to); path.pop(); seen.delete(e.to);
+    }
+  };
+  walk(a);
+  return out;
 }
 function explainCtx(tk: TicketState | null, def: LevelDef | undefined, prior = 0): ExplainContext {
   const kinds: Record<string, string> = {};
@@ -185,11 +213,17 @@ function explainCtx(tk: TicketState | null, def: LevelDef | undefined, prior = 0
     const d = getDef(p.partId); if (!d) continue;
     kinds[p.uid] = d.kind;
     if (d.kind === 'R' || d.kind === 'HEATER') (ctx.resistance as Record<string, number>)[p.uid] = p.value ?? d.model.R ?? 0;
+    if (d.kind === 'R') { const vals = def.bin.find((b) => b.partId === p.partId)?.values; if (Array.isArray(vals)) ((ctx.binValues ??= {}) as Record<string, readonly number[]>)[p.uid] = vals; }
     if (d.kind === 'CE') (ctx.electrolytic as string[]).push(p.uid);
     if (d.kind === 'LED') {
       const v = d.variants.find((x) => x.id === p.variant) ?? d.variants[0]!, iw = v.ratings.IFwork ?? 0.02, m = d.model;
       const vf = m.N! * 0.025852 * dmath.log(iw / m.Is! + 1) + iw * m.Rs!;
-      (ctx.led as Record<string, LedLoop>)[p.uid] = { vSupply, vForward: vf, rSource, rLed: m.Rs! + (m.N! * 0.025852) / iw, rRes, rWhat, nLeds, model: { Is: m.Is!, N: m.N!, Rs: m.Rs! }, iRated: v.ratings.IF };
+      // 0.7 (Mina): only the resistors in this LED's own loop limit its current; a resistor lying unwired is named as such, never "in the loop"
+      const inLoop = loopParts(rig.conn, tk.board.parts, def, p.uid);
+      const mine = resistors.filter((r) => inLoop.has(r.uid)), loose = resistors.filter((r) => !inLoop.has(r.uid));
+      const rIn = mine.reduce((a, r) => a + (r.value ?? 0), 0), whatIn = mine.length === 1 ? names[mine[0]!.uid]! : `${mine.length} resistors`;
+      const rLoose = loose.length === 0 ? undefined : loose.length === 1 ? names[loose[0]!.uid]! : `${loose.length} resistors`;
+      (ctx.led as Record<string, LedLoop>)[p.uid] = { vSupply, vForward: vf, rSource, rLed: m.Rs! + (m.N! * 0.025852) / iw, rRes: rIn, rWhat: whatIn, rLoose, nLeds, model: { Is: m.Is!, N: m.N!, Rs: m.Rs! }, iRated: v.ratings.IF };
     }
   }
   return ctx;

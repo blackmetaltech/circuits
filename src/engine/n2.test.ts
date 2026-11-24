@@ -25,7 +25,7 @@ describe('N2: part names, never ids', () => {
     const e = open('1-1'); const msgs: string[] = [];
     msgs.push(ok(e, 'placePart', ...LED, 8, 5, 0, false).message);
     msgs.push(ok(e, 'placePart', 'res-cf', 100, '0.25W', 2, 5, 0, false).message);
-    expect(msgs[0]).toBe('Placed the LED.'); expect(msgs[1]).toBe('Placed the 100 Ω ¼ W resistor.');
+    expect(msgs[0]).toBe('Placed the LED. Its legs touch nothing yet: wire each leg.'); expect(msgs[1]).toBe('Placed the 100 Ω ¼ W resistor. Its legs touch nothing yet: wire each leg.');   // 0.7 (Mina): both land on empty pads
     msgs.push(ok(e, 'movePart', 'p2', 2, 8).message, ok(e, 'rotatePart', 'p2').message, ok(e, 'setValue', 'p2', 220).message, ok(e, 'deletePart', 'p2').message);
     for (const m of msgs) expect(m, m).not.toMatch(NO_ID);
     expect(msgs[2]).toMatch(/^The 100 Ω ¼ W resistor moved/); expect(msgs[5]).toMatch(/^The 220 Ω ¼ W resistor removed/);

@@ -49,13 +49,18 @@ const POWER_RATINGS = [0.125, 0.25, 0.5, 1, 2, 3, 5, 10, 25, 50, 100];
 const CAP_VOLTAGES = [6.3, 10, 16, 25, 35, 50, 63, 100, 160, 250, 400, 450];
 /** Margin asked of a replacement part (assumption: 30 % on voltage, 50 % on power). */
 export const VOLTAGE_MARGIN = 1.3, POWER_MARGIN = 1.5;
+/** The smallest E12 value at or above x (what to fit when x is the least resistance that keeps the current down). */
+const e12AtLeast = (x: number): number => { let dec = 1; while (dec * 10 <= x) dec *= 10; while (dec > x) dec /= 10; for (const k of [...E12, 10]) if (k * dec >= x * (1 - 1e-9)) return k * dec; return 10 * dec; };
 const firstAtLeast = (table: readonly number[], x: number): number => table.find((v) => v >= x) ?? table[table.length - 1];
 
 // ---------------------------------------------------------------- §7.3 templates
-export function explainResistorPower(a: { part: string; v: number; r: number; p: number; rated: number }): Explained {
+/** `values`: the resistances the ticket's shoebox offers for this part (0.7, Mina: "two 44 Ω" is not a part anyone can pick); the split uses the one nearest 2R, or the nearest E12 value. */
+export function explainResistorPower(a: { part: string; v: number; r: number; p: number; rated: number; values?: readonly number[] }): Explained {
+  const want = 2 * a.r, pool = a.values && a.values.length > 0 ? a.values : null;
+  const each = pool ? pool.reduce((x, y) => (Math.abs(dmath.log(y / want)) < Math.abs(dmath.log(x / want)) ? y : x)) : nearestE12(want);
   return { key: 'explain.resistor.power', vars: {
     ...pn(a.part), p: sig(a.p), rated: sig(a.rated), v: sig(a.v), i: sig(Math.sqrt(a.p / a.r)), r: si(a.r, 'Ω'), ratio: sig(a.p / a.rated, 2),
-    rNext: firstAtLeast(POWER_RATINGS, a.p * POWER_MARGIN), rEach: si(2 * a.r, 'Ω'), pEach: sig(a.p / 2),
+    rNext: firstAtLeast(POWER_RATINGS, a.p * POWER_MARGIN), rEach: si(each, 'Ω'), rPair: si(sig(each / 2, 3), 'Ω'), pEach: sig((a.p * (each / 2) / a.r) / 2),
   } };
 }
 /** What the loop around a burned LED holds, from the live board: its own numbers (source, resistors, how many LEDs) and how many times the player has already burned one here. */
@@ -65,6 +70,8 @@ export interface LedLoop {
   rRes?: number;
   /** How the player's name for the resistor(s): "the 100 Ω ¼ W resistor", "2 resistors". */
   rWhat?: string;
+  /** Resistors on the board that are not in the LED's loop (wired to nothing, or elsewhere), by name; undefined when none. */
+  rLoose?: string;
   /** LEDs on the board. */
   nLeds?: number;
   /** The LED's model, so a thermal burn (power known, current not) can be turned back into a current. */
@@ -87,11 +94,12 @@ export function explainLedOvercurrent(a: { part: string; i: number; iRated: numb
   const many = (L.nLeds ?? 1) > 1;
   const key = many ? 'explain.led.overcurrent.many'
     : rRes > 0 ? (again ? 'explain.led.overcurrent.res.again' : 'explain.led.overcurrent.res.first')
+    : L.rLoose ? (again ? 'explain.led.overcurrent.bare.again.loose' : 'explain.led.overcurrent.bare.first.loose')
     : (again ? 'explain.led.overcurrent.bare.again' : 'explain.led.overcurrent.bare.first');
   return { key, vars: {
     ...pn(a.part), i: sig(a.i), iRated: sig(a.iRated), iMA: sig(a.i * 1000), iRatedMA: sig(a.iRated * 1000), iWantMA: sig(iWant * 1000), rSource: sig(L.rSource, 2), rLed: sig(L.rLed, 2),
     vSupply: sig(L.vSupply), vForward: sig(L.vForward), vLeft: sig(L.vSupply - L.vForward), iWant: sig(iWant), rSeries: si(nearestE12((L.vSupply - L.vForward) / iWant), 'Ω'),
-    rRes: si(rRes, 'Ω'), rWhat: L.rWhat ?? 'a resistor',
+    rRes: si(rRes, 'Ω'), rWhat: L.rWhat ?? 'a resistor', rLoose: L.rLoose ?? '', RLoose: capFirst(L.rLoose ?? ''), rExact: si(sig((L.vSupply - L.vForward) / iWant, 3), 'Ω'), rUp: si(e12AtLeast((L.vSupply - L.vForward) / iWant), 'Ω'),
   } };
 }
 export function explainElecOvervoltage(a: { part: string; v: number; vRated: number }): Explained {
@@ -396,6 +404,9 @@ export function explainLevelMiss(f: BenchFailure, ctx: MissCtx = {}): Explained 
   const dead = q === 'i' && Math.abs(val) < 1e-6;
   if (dead) { vars.value = 0; return { key: kind === 'LED' ? 'bench.plain.i.zero.led' : 'bench.plain.i.zero', vars }; }
   const low = val < a;
+  // 0.7 (Mina): a value just outside the band must not print as the edge it missed ("14 mA, but it needs 14 to 20 mA"): add digits until it reads outside
+  const edge = (low ? a : Math.min(b, 1e5)) * k, x = val * k;
+  for (let d = 3; d <= 8 && (low ? Number(vars.value) >= edge : Number(vars.value) <= edge); d++) vars.value = sig(x, d);
   if (cond === 'tired' && q === 'i' && low && open === 'band') return { key: 'bench.plain.i.low.band.tired', vars };
   return { key: `bench.plain.${q}.${low ? 'low' : 'high'}.${open}`, vars };
 }
@@ -416,6 +427,8 @@ function explainStuck(f: BenchFailure, ctx: MissCtx = {}): Explained | null {
 export interface ExplainContext {
   /** Part names and kinds for the plain-words bench failures (explainLevelMiss). */
   miss?: MissCtx;
+  /** Resistor part id -> the values the ticket's shoebox offers for its kind of part (so a suggestion names a part that exists). */
+  binValues?: Readonly<Record<string, readonly number[]>>;
   /** Resistance of each part id, ohms (to turn a power finding into V = sqrt(P R)). */
   resistance?: Readonly<Record<string, number>>;
   /** Part ids that are electrolytic capacitors. */
@@ -526,7 +539,7 @@ function explainRaw(f: BenchFailure, ctx: ExplainContext): Explained {
       const r = ctx.resistance?.[part];
       if (r === undefined) break;
       const p = num('value' in v ? 'value' : 'P'), rated = num('limit' in v ? 'limit' : 'Prated');
-      return explainResistorPower({ part, v: Math.sqrt(p * r), r, p, rated });
+      return explainResistorPower({ part, v: Math.sqrt(p * r), r, p, rated, values: ctx.binValues?.[part] });
     }
     case 'rating.cap.voltage': if (ctx.electrolytic?.includes(part)) {
       const vv = num('value'), lim = num('limit');

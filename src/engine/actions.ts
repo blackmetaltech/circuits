@@ -296,7 +296,10 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
       const part = newPart(s, tk, def, { partId, value, rating, x, y, rot, flip });
       tk.board.parts.push(part); sortParts(tk.board); commit(tk, 'placePart', before);
       const d = getDef(part.partId)!;
-      return ok(say(d.kind === 'CE' ? 'part.placed.polar' : 'part.placed', { ...nm(tk, part.uid), name: t(d.nameKey) }), { uid: part.uid, value: part.value, variant: part.variant });
+      // 0.7 (Mina): a part dropped where none of its legs meets a wire end, a pad or another leg is not in any circuit yet: say so
+      const loose = buildConnectivity(tk.board, getDef).unconnectedPins.filter((u) => u.uid === part.uid).length;
+      const tail = loose > 0 && loose === d.pins.length ? ' ' + say('part.placed.loose') : '';
+      return ok(say(d.kind === 'CE' ? 'part.placed.polar' : 'part.placed', { ...nm(tk, part.uid), name: t(d.nameKey) }) + tail, { uid: part.uid, value: part.value, variant: part.variant });
     },
     movePart: (s, uid: unknown, x: unknown, y: unknown) => {
       const { tk } = open(s, defs), p = partOf(tk, uid, true), before = copyBoard(tk);
@@ -620,10 +623,11 @@ export function makeActions(defs: Defs): Record<string, ActionFn<NodeState>> {
         if (rec.best === null || (result.metrics[head] ?? 0) < (rec.best[head] ?? 0)) rec.best = { ...result.metrics };
         const pack = REGIONS.get(s.region);
         s.log.push({ tick: s.tick, level: 'good', text: say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }) });
-        return ok((autoPower ? say('bench.autoPower') + ' ' : '') + say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }), { pass: true, stars: result.stars, metrics: result.metrics, pay: result.pay ?? 0, burnt: result.burnt ?? 0, tip: result.tip ?? 0, tipText: formatMinor(result.tip ?? 0, pack), autoPowered: autoPower });
+        return ok(say('bench.pass', { id: tk.id, stars: result.stars, cost: formatMinor(result.metrics.cost, pack) }) + (autoPower ? ' ' + say('bench.autoPower') : ''), { pass: true, stars: result.stars, metrics: result.metrics, pay: result.pay ?? 0, burnt: result.burnt ?? 0, tip: result.tip ?? 0, tipText: formatMinor(result.tip ?? 0, pack), autoPowered: autoPower });
       }
       if (coached === true && waiting(s, def) && !rec.passed) tk.failedTests = (tk.failedTests ?? 0) + 1;
-      return ok((autoPower ? say('bench.autoPower') + ' ' : '') + say('bench.fail', { id: tk.id, n: result.failures.length }), { pass: false, stars: 0, metrics: result.metrics, autoPowered: autoPower, failedTests: tk.failedTests ?? 0 });
+      // 0.7 (Mina): the result first, the power note after it
+      return ok(say('bench.fail', { id: tk.id, n: result.failures.length }) + (autoPower ? ' ' + say('bench.autoPower') : ''), { pass: false, stars: 0, metrics: result.metrics, autoPowered: autoPower, failedTests: tk.failedTests ?? 0 });
     },
 
     // ---- history
