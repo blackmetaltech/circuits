@@ -98,6 +98,7 @@ func _ready() -> void:
 	if OS.get_environment("CB_CUTE") != "": cute = OS.get_environment("CB_CUTE") == "1"
 	ui = load("res://look2/bench_ui.gd").new(); ui.bench = self
 	var cl := CanvasLayer.new(); cl.add_child(ui); add_child(cl)
+	cl.visible = OS.get_environment("CB_NOUI") == ""   # 0.7: CB_NOUI=1 hides the ticket and rail, for site stills (Sigrid: "a control hint is not a selling line")
 	pad = PadCursor.new(); pad.bench = self; cl.add_child(pad)   # phase C: the gamepad drives a cursor ring and the bench's own keys
 	backend = EngineBench.new()
 	# 0.6: the live simulation on a worker thread in a real window (5-1 held frames for 23-28 ms on the main thread). Headless test
