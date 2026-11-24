@@ -212,6 +212,9 @@ func _run() -> void:
 		await _bench()
 		ok(wb.backend.passed, "the bench passes %s (%s)" % [id, wb.note.left(90)])
 		ok(wb.backend.wallet_minor > w0, "%s pays (%d -> %d)" % [id, w0, wb.backend.wallet_minor])
+		if id == "6-4":
+			var thd_t: String = wb.spec_text("thd", float(wb.backend.last_result.get("measured", {}).get("thd", -1.0)))
+			ok(thd_t.ends_with(" %") and not thd_t.contains("V"), "6-4: the distortion row reads in percent (%s; it read \"10.1 mV\")" % thd_t)
 		wb.changed.emit(); await _frames(3)
 		if eb:
 			var marked := false

@@ -1961,6 +1961,8 @@ func spec_text(id: String, v: float) -> String:
 	if eu == "A": v = _shown_current(id, v)   # Ravi: the size only where the band is all at or below zero (1-2's battery)
 	if eu != "" and id != "ipin": return band_si(id, v, eu)   # the engine's own unit (level probe or gauge): 2-1 printed "3.27 W" when "with" matched " w"
 	var words := nm.replace(",", " ").replace("(", " ").replace(")", " ").split(" ", false)
+	# 0.7 (6-4 on the low tier): a distortion row printed its 0.0101 % as "10.1 mV"; a band in percent prints in percent
+	if "%" in words or "distortion" in words: return "%s %%" % EngineBench._g(v, 3)
 	var unit := "V"
 	if "current" in words or "ma" in words or id.begins_with("i"): unit = "A"
 	elif "power" in words or "w" in words or "watts" in words: unit = "W"
