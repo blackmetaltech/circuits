@@ -78,6 +78,7 @@ pnpm bridge                              # builds the engine sidecar → godot/s
 godot --headless --path godot --import   # once, and after adding class_name scripts
 godot --path godot                       # play
 ```
+`make run` does all of the above and starts the game in a window (`make help` lists the other targets).
 Needs Node.js 18+ and Godot 4.7.2. To just play, download a build from the [releases page](https://github.com/blackmetaltech/circuits/releases).
 
 ## Architecture
